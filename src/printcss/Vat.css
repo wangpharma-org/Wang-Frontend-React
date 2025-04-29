@@ -1,0 +1,214 @@
+.quotation-container {
+    font-family: 'Fahkwang', sans-serif;
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    color: #000
+  }
+  
+  @media print {
+    .page-break {
+      page-break-before: always;
+    }
+  }
+  
+  .header,
+  .title,
+  .invoice-info,
+  .totals,
+  .footer {
+    margin-bottom: 5px;
+  }
+  
+  .title h1 {
+    margin: 0;
+    font-size: 28px;
+    text-align: center;
+  }
+  
+  .title h3 {
+    margin: 0;
+    font-size: 18px;
+    text-align: center;
+    font-weight: normal;
+  }
+  
+  .product-table {
+  
+    border-collapse: collapse;
+  }
+  
+  .product-table th,
+  .product-table td {
+    border: 1px solid #000;
+    padding: 3px;
+    font-size: 14px;
+  }
+  
+  .product-table th {
+    background-color: #f0f0f0;
+  }
+  
+  .totals p {
+    text-align: right;
+    font-size: 14px;
+    margin: 0;
+  }
+  
+  .signatures {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+  }
+  
+  .signatures div {
+    width: 30%;
+    text-align: center;
+    font-size: 14px;
+  }
+  
+  .parent {
+    display: grid;
+    grid-template-columns: repeat(12, 0.5fr);
+    grid-template-rows: auto;
+    gap: 8px;
+    font-size: small;
+  }
+  
+  .invoice-info {
+    grid-column: span 8 / span 8;
+    grid-row: span 2 / span 2;
+    border: #000 solid 1px;
+    padding: 4px;
+  }
+  
+  .invoice-info2 {
+    grid-column: span 4 / span 4;
+    grid-row: span x;
+    grid-column-start: 9;
+    border: #000 solid 1px;
+    padding: 8px;
+  }
+  
+  .footer {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-template-rows: auto auto auto auto auto;
+    gap: 8px;
+    border: #000;
+    padding-top: 4px;
+  }
+  
+  .TotalText {
+    grid-column: span 8 / span 8;
+    grid-row: 1;
+  }
+  
+  .TotalNumTax {
+    grid-column: span 4 / span 4;
+    grid-row: span x;
+    grid-column-start: 9;
+  }
+  
+  .TotalNum {
+    grid-column: span 4 / span 4;
+    grid-row:span x;
+    grid-column-start: 9;
+    grid-row-start: auto;
+  }
+  
+  .CountPage {
+    grid-column: span 4 / span 4;
+    grid-column-start: 9;
+    grid-row-start: 4;
+  }
+  
+  .AccDep {
+    grid-column: span 2 / span 2;
+    grid-column-start: 6;
+    grid-row-start: 5;
+  }
+  
+  .CheckItems {
+    grid-column: span 3 / span 3;
+    grid-column-start: 8;
+    grid-row-start: 5;
+  }
+  
+  .Courier {
+    grid-column: span 2 / span 2;
+    grid-column-start: 11;
+    grid-row-start: 5;
+  }
+  
+  .Note {
+    grid-column: span 5 / span 5;
+    grid-row: span 2 / span 2;
+    grid-column-start: 1;
+    grid-row-start: 2;
+  }
+  
+  .Contact {
+    grid-column: span 5 / span 5;
+    grid-row: span 2 / span 2;
+    grid-column-start: 1;
+    grid-row-start: 4;
+  }
+  
+  .Payment {
+    grid-column: 7 / span 2;
+    grid-row: 2;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Fahkwang';
+    font-size: 12px;
+  }
+  
+  th {
+  
+    /* บน-ล่าง 6px | ซ้าย-ขวา 10px */
+    border: 1px solid #000;
+    padding: 2px 5px;
+    vertical-align: top;
+  }
+  
+  
+  
+  tbody td {
+    border-right: 1px solid #000;
+    border-left: 1px solid #000;
+    padding: 2px 5px;
+    vertical-align: top;
+  }
+  
+  th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+  }
+  
+  .text-right {
+    text-align: right;
+  }
+  
+  .product-name {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    /* จำกัดแค่ 1 บรรทัด */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal;
+    font-weight: bold;
+    line-height: 1em;
+    max-height: 1em;
+  }
+  
+  .lot-exp {
+    font-size: 0.85em;
+    color: #666;
+    min-height: 1.2em;
+    /* ล็อกความสูงให้พอดีบรรทัด */
+  }
