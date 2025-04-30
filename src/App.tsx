@@ -6,13 +6,31 @@ import Login from "./pages/Login";
 import RequireAuth from "./context/RequireAuth";
 import InvoiceVat from "./pages/InvoiceVat";
 import FormatVat from "./pages/FormatVat";
+import Home from "./pages/InvoiceHome";
+import InvoicePart from "./pages/InvoicePart";
 function App() {
   return (
     <>
       <Router>
-      {/* แสดง Navbar ทุกหน้าที่ไม่ใช่ '/format-vat' */}
       <Routes>
-        <Route path="/login" element={<Login />} />
+        <Route 
+          path="/" 
+          element={
+            <div>
+              <Navbar />
+              <Home />
+            </div>
+          } 
+        />
+        <Route 
+          path="/login" 
+          element={
+            <div>
+              <Navbar />
+              <Login />
+            </div>
+          } 
+        />
         <Route
           path="/invoice-all"
           element={
@@ -31,6 +49,17 @@ function App() {
               <Navbar />
               <RequireAuth>
                 <InvoiceVat />
+              </RequireAuth>
+            </>
+          }
+        />
+        <Route
+          path="/invoice-part"
+          element={
+            <>
+              <Navbar />
+              <RequireAuth>
+                <InvoicePart />
               </RequireAuth>
             </>
           }

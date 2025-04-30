@@ -7,7 +7,7 @@ import Barcode from "react-barcode";
 
 const maxRows = 15;
 
-function bahtText(amount: number): string {
+const bahtText = (amount: number): string => {
   const thaiNum = [
     "ศูนย์",
     "หนึ่ง",
@@ -70,7 +70,7 @@ function bahtText(amount: number): string {
 }
 
 
-export default function FormatVat() {
+const FormatVat = () => {
   const [invoices, setInvoices] = useState<any>(null);
   const [pages, setPages] = useState(0);
   const location = useLocation();
@@ -666,3 +666,4 @@ export default function FormatVat() {
     </div>
   );
 }
+export default FormatVat;

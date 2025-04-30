@@ -1,24 +1,22 @@
 import { useAuth } from "../context/AuthContext"
 import { useState } from "react";
 import logoMini from "../assets/logoMini.svg";
+import { useNavigate } from "react-router";
+
 const Login = () => {
-    const { login, isAuthenticated, userInfo, logout } = useAuth();
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
+    const { login, isAuthenticated, userInfo, logout } = useAuth()
+    const [username, setUsername] = useState('')
+    const [password, setPassword] = useState('')
+    const navigate = useNavigate()
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        const success = await login(username, password);
-        if (!success) alert('Login failed');
+        const success = await login(username, password)
+        if (!success) alert('Login failed')
     };
 
     if (isAuthenticated) {
-        return (
-          <div>
-            <p>Welcome, {userInfo?.username}</p>
-            <button onClick={logout}>Logout</button>
-          </div>
-        );
+        navigate('/')
     }
 
 
