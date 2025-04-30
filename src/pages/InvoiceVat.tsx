@@ -31,26 +31,25 @@ const InvoiceVat: React.FC<InvoiceTableProps> = () => {
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
-    const newSocket = io(`${import.meta.env.VITE_API_URL_INVOICE}/socket/vat`, {
+    const newSocket1 = io(`${import.meta.env.VITE_API_URL_INVOICE}/socket/vat`, {
       extraHeaders: {
         Authorization: `Bearer ${token}`,
       },
     });
-    setSocket(newSocket);
+    setSocket(newSocket1);
 
-    newSocket.on("connect", () => {
+    newSocket1.on("connect", () => {
       console.log("✅ Connected to WebSocket");
-      newSocket.emit("invoice:next");
     });
 
-    newSocket.on("invoice:available", () => {
+    newSocket1.on("invoice:available", () => {
         console.log("📢 Invoice available from server");
         if (invoice.length === 0 || currentIndex >= invoice.length) {
-            newSocket.emit("invoice:next");
+            newSocket1.emit("invoice:next");
         }
     });
 
-    newSocket.on("invoice:print", (data) => {
+    newSocket1.on("invoice:print", (data) => {
       console.log("📥 Received invoice:vat", data);
       if (Array.isArray(data) && data.length > 0) {
         setInvoice(data);
@@ -59,12 +58,12 @@ const InvoiceVat: React.FC<InvoiceTableProps> = () => {
       setLoading(false);
     });
 
-    newSocket.on("unauthorized", (error) => {
+    newSocket1.on("unauthorized", (error) => {
       console.error("❌ Unauthorized:", error.message);
     });
 
     return () => {
-      newSocket.disconnect();
+      newSocket1.disconnect();
     };
   }, []);
 

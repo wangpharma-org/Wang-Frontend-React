@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Socket, io } from "socket.io-client";
 import dayjs from "dayjs";
 
@@ -30,30 +30,33 @@ const InvoicePart: React.FC<InvoiceTableProps> = () => {
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
-    const newSocket = io(`${import.meta.env.VITE_API_URL_INVOICE}/socket/part`, {
-      extraHeaders: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const newSocket = io(
+      `${import.meta.env.VITE_API_URL_INVOICE}/socket/part`,
+      {
+        extraHeaders: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
     setSocket(newSocket);
 
     newSocket.on("connect", () => {
       console.log("✅ Connected to WebSocket");
-      newSocket.emit("invoice:next");
     });
 
     newSocket.on("invoice:available", () => {
-        console.log("📢 Invoice available from server");
-        if (invoice.length === 0 || currentIndex >= invoice.length) {
-            newSocket.emit("invoice:next");
-        }
+      console.log("📢 Invoice available from server");
+      if (invoice.length === 0 || currentIndex >= invoice.length) {
+        newSocket.emit("invoice:next");
+      }
     });
 
     newSocket.on("invoice:print", (data) => {
-      console.log("📥 Received invoice:vat", data);
+      console.log("📥 Received invoice:part", data);
       if (Array.isArray(data) && data.length > 0) {
         setInvoice(data);
-        setCurrentIndex(0)
+        setCurrentIndex(0);
       }
       setLoading(false);
     });
@@ -69,7 +72,7 @@ const InvoicePart: React.FC<InvoiceTableProps> = () => {
 
   useEffect(() => {
     if (invoice.length > 0 && currentIndex < invoice.length) {
-      console.log('Index :', currentIndex);
+      console.log("Index :", currentIndex);
       const currentInvoice = invoice[currentIndex];
       localStorage.removeItem("print_status");
       window.open(
@@ -77,11 +80,11 @@ const InvoicePart: React.FC<InvoiceTableProps> = () => {
         "_blank"
       );
     } else if (invoice.length > 0 && currentIndex >= invoice.length) {
-        console.log("✅ All current invoices printed");
-        setInvoice([]);
-        if (socket?.connected) {
-            socket.emit("invoice:next");
-        }
+      console.log("✅ All current invoices printed");
+      setInvoice([]);
+      if (socket?.connected) {
+        socket.emit("invoice:next");
+      }
     }
   }, [currentIndex, invoice]);
 
@@ -103,7 +106,6 @@ const InvoicePart: React.FC<InvoiceTableProps> = () => {
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
   }, [socket, invoice, currentIndex]);
-
 
   return (
     <div className="overflow-x-auto p-6">

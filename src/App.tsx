@@ -8,6 +8,7 @@ import InvoiceVat from "./pages/InvoiceVat";
 import FormatVat from "./pages/FormatVat";
 import Home from "./pages/InvoiceHome";
 import InvoicePart from "./pages/InvoicePart";
+import FormatPart from "./pages/FormatPart";
 function App() {
   return (
     <>
@@ -69,6 +70,14 @@ function App() {
           element={
             <RequireAuth>
               <FormatVat />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/format-part"
+          element={
+            <RequireAuth>
+              <FormatPart />
             </RequireAuth>
           }
         />
