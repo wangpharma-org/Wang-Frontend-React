@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useRef } from "react";
 import { useEffect, useState } from "react";
 import { Socket, io } from "socket.io-client";
 import dayjs from "dayjs";
+import { Bounce, Id, ToastContainer, toast } from 'react-toastify';
 
 interface Invoice {
   sh_running: string;
@@ -24,69 +25,120 @@ interface InvoiceTableProps {
 }
 
 const InvoiceList: React.FC<InvoiceTableProps> = () => {
-  const [invoice, setInvoice] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [offset, setOffset] = useState(0);
+  const [invoice, setInvoice] = useState<Invoice[]>([])
+  const [loading, setLoading] = useState(false)
+  const [socket, setSocket] = useState<Socket | null>(null)
+  const [offset, setOffset] = useState(0)
   const [none , setNone ] = useState(false) 
-  // const [newData, setNewData] = useState(false);
+  const [billCount, setBillCount] = useState(0);
+  const timeoutRef = useRef<number | undefined>(undefined);
+  const toastId = useRef<Id | undefined>(undefined);
 
   useEffect(() => {
-    const token = sessionStorage.getItem("access_token");
-    console.log(token);
+    const token = sessionStorage.getItem("access_token")
+    console.log(token)
     const newSocket = io(`${import.meta.env.VITE_API_URL_INVOICE}/socket/all`, {
       extraHeaders: {
         Authorization: `Bearer ${token}`,
       },
-    });
-    setSocket(newSocket);
+    })
+    setSocket(newSocket)
 
     newSocket.on("connect", () => {
-      console.log("✅ Connected to WebSocket");
-      newSocket.emit("invoice:get", { offset: 0, limit: 10 });
+      console.log("✅ Connected to WebSocket")
+      newSocket.emit("invoice:get", { offset: 0, limit: 10 })
     });
 
     newSocket.on("invoice:list", (data) => {
-      console.log("📥 Received invoice:list", data);
+      console.log("📥 Received invoice:list", data)
       if(data.length === 0) {
         setNone(true)
       } else {
         setNone(false)
       }
-      setInvoice(data);
-      setLoading(false);
+      setInvoice(data)
+      setLoading(false)
+    });
+
+    newSocket.on("invoice:notify", () => {
+      setBillCount((prev) => {
+        const newCount = prev + 1;
+        if (!toastId.current) {
+          toastId.current = toast.info(`มีรายการเข้ามาใหม่ ${newCount} รายการ`, {
+            position: "bottom-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: false,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+            theme: "light",
+            transition: Bounce,
+          });
+        } else {
+          toast.update(toastId.current, {
+            render: `มีรายการเข้ามาใหม่ ${newCount} รายการ`,
+            autoClose: 3000,
+          });
+        }
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => {
+          setBillCount(0);
+          if (toastId.current !== undefined) {
+            toast.dismiss(toastId.current);
+            toastId.current = undefined;
+          }
+        }, 3000);
+
+        return newCount;
+      });
     });
 
     newSocket.on("unauthorized", (error) => {
-      console.error("❌ Unauthorized:", error.message);
-    });
+      console.error("❌ Unauthorized:", error.message)
+    })
 
     return () => {
-      newSocket.disconnect();
-    };
-  }, []);
+      newSocket.disconnect()
+      newSocket.off("invoice:notify");
+      clearTimeout(timeoutRef.current);
+    }
+  }, [])
 
   const handleNext = () => {
-    if (loading) return;
-    if (none) return;
-    setLoading(true);
-    const newOfset = offset + 10;
-    console.log(offset, newOfset);
-    setOffset(newOfset);
-    socket?.emit("invoice:get", { offset: newOfset, limit: 10 });
-  };
+    if (loading) return
+    if (none || invoice.length<10) return
+    setLoading(true)
+    const newOfset = offset + 10
+    console.log(offset, newOfset)
+    setOffset(newOfset)
+    socket?.emit("invoice:get", { offset: newOfset, limit: 10 })
+  }
 
   const handleBack = () => {
-    if ((loading) || (offset < 10)) return;
-    setLoading(true);
-    const newOfset = offset - 10;
-    console.log(offset, newOfset);
-    setOffset(newOfset);
-    socket?.emit("invoice:get", { offset: newOfset, limit: 10 });
-  };
+    if ((loading) || (offset < 10)) return
+    setLoading(true)
+    const newOfset = offset - 10
+    console.log(newOfset)
+    setOffset(newOfset)
+    socket?.emit("invoice:get", { offset: newOfset, limit: 10 })
+  }
 
   return (
     <div className="overflow-x-auto p-6">
+      <ToastContainer
+        position="bottom-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick={false}
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+        transition={Bounce}
+        />
       <div className="inline-block min-w-full overflow-hidden rounded-lg shadow-md bg-white">
         <table className="min-w-full text-sm text-gray-800">
           <thead className="bg-gray-100 uppercase text-gray-700 text-sm font-semibold">
@@ -143,13 +195,13 @@ const InvoiceList: React.FC<InvoiceTableProps> = () => {
       <div className="w-full flex justify-center align-middle pt-5"><p className="text-base font-medium text-blue-500">รายการชุดที่ {(offset+10)/10}</p></div>
         <div className="w-full flex align-middle justify-center pt-3 gap-3">
           <button
-            className="pt-3 pb-3 pl-4.5 pr-4.5 cursor-pointer align-middle bg-blue-400 rounded-[100%] text-base text-white font-bold"
+            className={`pt-3 pb-3 pl-4.5 pr-4.5 cursor-pointer align-middle rounded-[100%] text-base text-white font-bold ${(offset < 10) ? 'bg-gray-400' : 'bg-blue-400'}`}
             onClick={handleBack}
           >
             &lt;
           </button>
           <button
-            className="pt-3 pb-3 pl-4.5 pr-4.5 cursor-pointer align-middle bg-blue-400 rounded-[100%] text-base text-white font-bold"
+            className={`pt-3 pb-3 pl-4.5 pr-4.5 cursor-pointer align-middl rounded-[100%] text-base text-white font-bold ${(none||invoice.length<10) ? 'bg-gray-400' :  'bg-blue-400'}`}
             onClick={handleNext}
           >
             &gt;

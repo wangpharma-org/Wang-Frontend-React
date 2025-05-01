@@ -1,0 +1,53 @@
+import reciept from "../assets/receipt.png";
+import order from "../assets/sent.png";
+import { useNavigate } from "react-router";
+const listMenu = [
+  {
+    id: 1,
+    name: "ใบกำกับสินค้า",
+    href: "/invoice-all",
+    imageSrc: reciept,
+  },
+  {
+    id: 2,
+    name: "จัดออเดอร์",
+    href: "/order-list",
+    imageSrc: order,
+  },
+];
+const Home = () => {
+  const navigate = useNavigate()
+  const handleNavigate = (link) => {
+    navigate(link)
+  }
+  return (
+    <div className="bg-white">
+      <div className="mx-auto max-w-2xl px-4 py-4 sm:px-6 sm:py-12 lg:max-w-7xl lg:px-8 cursor-pointer">
+        <h2 className="text-2xl font-bold tracking-tight text-gray-900">
+          เมนูหลัก
+        </h2>
+
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          {listMenu.map((menu) => (
+            <a
+              key={menu.id}
+              onClick={() => handleNavigate(menu.href)}
+              className="group flex flex-col items-center rounded-lg bg-white p-4 shadow hover:shadow-lg hover:scale-105 transition"
+            >
+              <div className="w-20 h-20 mb-2">
+                <img
+                  src={menu.imageSrc}
+                  className="w-full h-full rounded-md object-cover"
+                />
+              </div>
+              <h3 className="text-sm font-medium text-gray-800 group-hover:text-blue-500">
+                {menu.name}
+              </h3>
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+export default Home;

@@ -74,7 +74,7 @@ export default function Navbar() {
             </div>
           </div>
           <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0 gap-5">
-            { isAuthenticated ? <p className="text-white text-base">({userInfo?.emp_code}) {userInfo?.username} </p> : <p className="text-white text-base cursor-pointer" onClick={()=> navigate('/login')}>เข้าสู่ระบบ</p>}
+            { isAuthenticated ? <p className="text-white text-base hidden sm:block">({userInfo?.emp_code}) {userInfo?.username} </p> : <p className="text-white text-base cursor-pointer " onClick={()=> navigate('/login')}>เข้าสู่ระบบ</p>}
             { isAuthenticated && <p className="text-white text-base hover:text-red-500 cursor-pointer" onClick={logout}>Logut</p>}
           </div>
         </div>
