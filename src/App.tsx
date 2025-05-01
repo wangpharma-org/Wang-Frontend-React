@@ -6,9 +6,10 @@ import Login from "./pages/Login";
 import RequireAuth from "./context/RequireAuth";
 import InvoiceVat from "./pages/InvoiceVat";
 import FormatVat from "./pages/FormatVat";
-import Home from "./pages/InvoiceHome";
+import Home from "./pages/Home";
 import InvoicePart from "./pages/InvoicePart";
 import FormatPart from "./pages/FormatPart";
+import OrderList from "./pages/OrderList";
 function App() {
   return (
     <>
@@ -78,6 +79,14 @@ function App() {
           element={
             <RequireAuth>
               <FormatPart />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/order-list"
+          element={
+            <RequireAuth>
+              <OrderList />
             </RequireAuth>
           }
         />

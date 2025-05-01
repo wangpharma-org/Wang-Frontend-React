@@ -28,28 +28,30 @@ const InvoiceVat: React.FC<InvoiceTableProps> = () => {
   const [loading, setLoading] = useState(false);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [isOpen, setIsOpen] = useState<string[]>([])
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
-    const newSocket1 = io(`${import.meta.env.VITE_API_URL_INVOICE}/socket/vat`, {
+    const newSocket = io(`${import.meta.env.VITE_API_URL_INVOICE}/socket/vat`, {
       extraHeaders: {
         Authorization: `Bearer ${token}`,
       },
     });
-    setSocket(newSocket1);
+    setSocket(newSocket);
 
-    newSocket1.on("connect", () => {
+    newSocket.on("connect", () => {
       console.log("✅ Connected to WebSocket");
+      newSocket.emit("invoice:next");
     });
 
-    newSocket1.on("invoice:available", () => {
+    newSocket.on("invoice:available", () => {
         console.log("📢 Invoice available from server");
         if (invoice.length === 0 || currentIndex >= invoice.length) {
-            newSocket1.emit("invoice:next");
+            newSocket.emit("invoice:next");
         }
     });
 
-    newSocket1.on("invoice:print", (data) => {
+    newSocket.on("invoice:print", (data) => {
       console.log("📥 Received invoice:vat", data);
       if (Array.isArray(data) && data.length > 0) {
         setInvoice(data);
@@ -58,12 +60,12 @@ const InvoiceVat: React.FC<InvoiceTableProps> = () => {
       setLoading(false);
     });
 
-    newSocket1.on("unauthorized", (error) => {
+    newSocket.on("unauthorized", (error) => {
       console.error("❌ Unauthorized:", error.message);
     });
 
     return () => {
-      newSocket1.disconnect();
+      newSocket.disconnect();
     };
   }, []);
 
@@ -72,10 +74,13 @@ const InvoiceVat: React.FC<InvoiceTableProps> = () => {
       console.log('Index :', currentIndex);
       const currentInvoice = invoice[currentIndex];
       localStorage.removeItem("print_status");
-      window.open(
-        `/format-vat?sh_running=${currentInvoice.sh_running}`,
-        "_blank"
-      );
+      if(!isOpen.find((current) => current === currentInvoice.sh_running)) {
+        window.open(
+            `/format-vat?sh_running=${currentInvoice.sh_running}`,
+            "_blank"
+        );
+        setIsOpen(prev => [...prev, currentInvoice.sh_running]);
+      }
     } else if (invoice.length > 0 && currentIndex >= invoice.length) {
         console.log("✅ All current invoices printed");
         setInvoice([]);

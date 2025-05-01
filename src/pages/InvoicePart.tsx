@@ -27,6 +27,7 @@ const InvoicePart: React.FC<InvoiceTableProps> = () => {
   const [loading, setLoading] = useState(false);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [isOpen, setIsOpen] = useState<string[]>([])
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
@@ -75,10 +76,13 @@ const InvoicePart: React.FC<InvoiceTableProps> = () => {
       console.log("Index :", currentIndex);
       const currentInvoice = invoice[currentIndex];
       localStorage.removeItem("print_status");
-      window.open(
-        `/format-part?sh_running=${currentInvoice.sh_running}`,
-        "_blank"
-      );
+      if(!isOpen.find((current) => current === currentInvoice.sh_running)) {
+        window.open(
+            `/format-part?sh_running=${currentInvoice.sh_running}`,
+            "_blank"
+        );
+        setIsOpen(prev => [...prev, currentInvoice.sh_running]);
+      }
     } else if (invoice.length > 0 && currentIndex >= invoice.length) {
       console.log("✅ All current invoices printed");
       setInvoice([]);
