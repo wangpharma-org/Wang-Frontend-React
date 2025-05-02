@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
 
 interface Product {
     product_code: string;
@@ -42,6 +43,7 @@ function ProductList() {
     const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
     const [products, setProducts] = useState<any[]>([]);
     const [statusOrder, setStatusOrder] = useState<string>('');
+    const navigate = useNavigate();
 
     useEffect(() => {
         // mock data
@@ -197,9 +199,6 @@ function ProductList() {
         }
     };
 
-    const gotomainpage = () => {
-        window.location.href = "/Main_Order";
-    };
 
     // Calculate totals, picking, and pending counts
     const totalOrders = listproduct?.shoppingHeads.reduce((total, head) => total + head.shoppingOrders.length, 0) || 0;
@@ -228,7 +227,7 @@ function ProductList() {
         return (
             <div className="flex flex-col items-center mt-5">
                 <p className="font-bold text-2xl">ไม่มีรายการสินค้า</p>
-                <button onClick={gotomainpage} className="font-semibold text-xl mt-5 border px-2 py-1 bg-gray-200 shadow-md rounded-sm">
+                <button onClick={()=>navigate('/order-list')} className="font-semibold text-xl mt-5 border px-2 py-1 bg-gray-200 shadow-md rounded-sm">
                     กลับไปที่หน้าแรก
                 </button>
             </div>
@@ -291,7 +290,7 @@ function ProductList() {
                                 </svg>
                             </button>
                         </div>
-                        <div id="name" onClick={gotomainpage} className="flex pt-2 cursor-pointer text-center justify-center mx-auto">
+                        <div id="name" onClick={()=>navigate('/order-list')} className="flex pt-2 cursor-pointer text-center justify-center mx-auto">
                             <p>{listproduct?.mem_code}</p>&nbsp;
                             <p>{listproduct?.mem_name}</p>
                         </div>

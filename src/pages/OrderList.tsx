@@ -2,6 +2,7 @@ import Clock from "../components/Clock";
 import { useState, useEffect, useRef } from "react";
 import { Socket, io } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router";
 
 interface Product {
   product_floor: string;
@@ -54,11 +55,14 @@ const OrderList = () => {
   };
   const [selectedFloor, setSelectedFloor] = useState("");
   const { userInfo } = useAuth();
+  const navigate = useNavigate();
+  const [latestTimes, setLatestTimes] = useState<Record<string, Date>>({});
 
   console.log(userInfo);
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
     console.log(token);
+    console.log(`${import.meta.env.VITE_API_URL_ORDER}/socket/listorder`);
     const newSocket = io(
       `${import.meta.env.VITE_API_URL_ORDER}/socket/listorder`,
       {
@@ -109,7 +113,21 @@ const OrderList = () => {
     );
     setTotalPicking(totalStatusPicking);
 
-    
+    const latestByFloor: Record<string, Date> = {};
+
+    orderList.forEach((order) => {
+      order.shoppingHeads.forEach((sh) => {
+        const shTime = new Date(sh.sh_datetime);
+
+        sh.shoppingOrders.forEach((so) => {
+          const floor = so.product.product_floor;
+          if (!latestByFloor[floor] || shTime > latestByFloor[floor]) {
+            latestByFloor[floor] = shTime;
+          }
+        });
+      });
+    });
+    setLatestTimes(latestByFloor);
 
     console.log(orderList);
   }, [orderList]);
@@ -129,21 +147,21 @@ const OrderList = () => {
     };
   }, []);
 
-  const changeToPending = (mem_code:string) => {
-    if(socket?.connected) {
-        socket.emit("listorder:unpicking", {
-            mem_code: mem_code,
-        });
+  const changeToPending = (mem_code: string) => {
+    if (socket?.connected) {
+      socket.emit("listorder:unpicking", {
+        mem_code: mem_code,
+      });
     }
-  }
+  };
 
-  const changeToPicking = (mem_code:string) => {
-    if(socket?.connected) {
-        socket.emit("listorder:picking", {
-            mem_code: mem_code,
-        });
+  const changeToPicking = (mem_code: string) => {
+    if (socket?.connected) {
+      socket.emit("listorder:picking", {
+        mem_code: mem_code,
+      });
     }
-  }
+  };
 
   return (
     <div className="flex flex-col h-screen">
@@ -324,39 +342,46 @@ const OrderList = () => {
 
                     <div className="flex justify-between pt-2">
                       <div className="flex justify-start">
-                        {(order.emp_code_picking) && <div className="flex justify-start">
-                          <p>[{order.emp_code_picking}]</p>&nbsp;
-                          <p className="text-amber-600 font-bold">
-                            {order.emp_picking.emp_nickname}
-                          </p>
-                        </div>}
+                        {order.emp_code_picking && (
+                          <div className="flex justify-start">
+                            <p>[{order.emp_code_picking}]</p>&nbsp;
+                            <p className="text-amber-600 font-bold">
+                              {order.emp_picking.emp_nickname}
+                            </p>
+                          </div>
+                        )}
                       </div>
                       <div className="flex justify-center">
-                        <p>{order.emp.emp_nickname}</p>
-                      </div>
-                      <div className="flex justify-center">
-                        {order?.picking_status === 'picking' && (
-                        <div className="pr-1">
-                            <button className="border rounded-sm px-2 py-1 bg-green-600 text-white shadow-xl border-gray-300">
-                            ยืนยัน
-                          </button>
-                        </div>
-                        )}
-                        {order?.picking_status === 'picking' && (
-                        <div className="pr-1">
-                          <button className="border rounded-sm px-2 py-1 bg-amber-400 text-white shadow-xl border-gray-300">
-                              เริ่มจัด
-                          </button>
-                        </div>
-                        )}
+                        {order?.picking_status === "picking" &&
+                          order?.emp_code_picking === userInfo?.emp_code && (
+                            <div className="pr-1">
+                              <button className="border rounded-sm px-2 py-1 bg-green-600 text-white shadow-xl border-gray-300">
+                                ยืนยัน
+                              </button>
+                            </div>
+                          )}
+                        {order?.picking_status === "picking" &&
+                          order?.emp_code_picking === userInfo?.emp_code && (
+                            <div className="pr-1">
+                              <button
+                                className="border rounded-sm px-2 py-1 bg-amber-400 text-white shadow-xl border-gray-300 cursor-pointer z-50"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  changeToPending(order?.mem_code);
+                                }}
+                              >
+                                เปลี่ยน
+                              </button>
+                            </div>
+                          )}
                         {order?.picking_status === "pending" && (
                           <div className="pr-1">
-                            <button 
-                                className="border rounded-sm px-2 py-1 bg-green-500 text-white shadow-xl border-gray-300"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    changeToPicking(order?.mem_code);
-                                }}
+                            <button
+                              className="border rounded-sm px-2 py-1 bg-green-500 text-white shadow-xl border-gray-300"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                changeToPicking(order?.mem_code);
+                              }}
                             >
                               เริ่มจัด
                             </button>
@@ -403,7 +428,17 @@ const OrderList = () => {
                             <hr className="mt-2" />
                           </li>
                         ))}
-                        <button className="border rounded-sm px-3 py-2 text-xs w-full mb-2 bg-green-600 text-white hover:bg-lime-700">
+                        <button
+                          className="border rounded-sm px-3 py-2 text-xs w-full mb-2 bg-green-600 text-white hover:bg-lime-700"
+                          onClick={() => {
+                            if (order?.picking_status === "picking") {
+                              navigate("/product-list");
+                            } else {
+                              changeToPicking(order?.mem_code);
+                              navigate("/product-list");
+                            }
+                          }}
+                        >
                           จัดแบบรวมบิล
                         </button>
                       </ul>
@@ -418,11 +453,11 @@ const OrderList = () => {
       <footer className="p-2 bg-blue-400 text-white font-medium">
         <div className="footer flex items-end justify-around ">
           <div>
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-3">
               <div>
                 <button
                   onClick={() => setSelectedFloor("1")}
-                  className="border border-gray-500 rounded-sm bg-gray-400 shadow-lg p-1"
+                  className="border border-gray-500 rounded-sm bg-gray-400 shadow-lg px-2 py-1"
                 >
                   ชั้น 1
                 </button>
@@ -430,7 +465,7 @@ const OrderList = () => {
               <div>
                 <button
                   onClick={() => setSelectedFloor("2")}
-                  className="border border-gray-500 rounded-sm bg-yellow-500 shadow-lg p-1"
+                  className="border border-gray-500 rounded-sm bg-yellow-500 shadow-lg px-2 py-1"
                 >
                   ชั้น 2
                 </button>
@@ -438,7 +473,7 @@ const OrderList = () => {
               <div>
                 <button
                   onClick={() => setSelectedFloor("3")}
-                  className="border border-gray-500 rounded-sm bg-indigo-500 shadow-lg p-1"
+                  className="border border-gray-500 rounded-sm bg-indigo-500 shadow-lg px-2 py-1"
                 >
                   ชั้น 3
                 </button>
@@ -446,7 +481,7 @@ const OrderList = () => {
               <div>
                 <button
                   onClick={() => setSelectedFloor("4")}
-                  className="border border-gray-500 rounded-sm bg-red-500 shadow-lg p-1"
+                  className="border border-gray-500 rounded-sm bg-red-500 shadow-lg px-2 py-1"
                 >
                   ชั้น 4
                 </button>
@@ -454,7 +489,7 @@ const OrderList = () => {
               <div>
                 <button
                   onClick={() => setSelectedFloor("5")}
-                  className="border border-gray-500 rounded-sm bg-emerald-500 shadow-lg p-1"
+                  className="border border-gray-500 rounded-sm bg-emerald-500 shadow-lg px-2 py-1"
                 >
                   ชั้น 5
                 </button>
@@ -462,21 +497,31 @@ const OrderList = () => {
               <div>
                 <button
                   onClick={() => setSelectedFloor("")}
-                  className="border border-gray-500 rounded-sm bg-purple-500 shadow-lg p-1"
+                  className="border border-gray-500 rounded-sm bg-purple-500 shadow-lg px-2 py-1"
                 >
                   ยกลัง
                 </button>
               </div>
             </div>
 
-            <div className="flex justify-around p-1">
-              {["F2", "F3", "F4", "F5"].map((floor) => (
-                <div key={floor} className="border p-1">
+            <div className="flex justify-around p-1 mt-1">
+              {["2", "3", "4", "5"].map((floor) => (
+                <div key={floor} className="border px-2 py-1 w-18 rounded-sm">
                   <div className="flex justify-center">
-                    <p className="font-bold text-sm">{floor}</p>
+                    <p className="font-bold text-sm">F{floor}</p>
                   </div>
-                  <div className="text-[8px] flex justify-center">
-                    <p>22/04/68 12:09</p>
+                  <div className="text-sm flex justify-center">
+                    <p>
+                      {latestTimes[floor]
+                        ? new Date(latestTimes[floor]).toLocaleString("th-TH", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "-"}
+                    </p>
                   </div>
                 </div>
               ))}
