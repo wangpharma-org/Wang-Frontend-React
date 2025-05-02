@@ -1,5 +1,5 @@
 import Clock from "../components/Clock";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Socket, io } from "socket.io-client";
 
 interface Product {
@@ -45,34 +45,133 @@ const OrderList = () => {
   const [totalPicking, setTotalPicking] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedOption, setSelectedOption] = useState('เลือกตัวเลือก');
+  // const [openPopups, setOpenPopups] = useState<Record<string, boolean>>({});
+  const [openPopupId, setOpenPopupId] = useState<string | null>(null);
+  const popupRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const popupRef = useRef<HTMLDivElement | null>(null);
+  const togglePopup = (id: string) => {
+    setOpenPopupId((prev) => (prev === id ? null : id));
+  };
+  const [selectedFloor, setSelectedFloor] = useState("");
 
-  useEffect(() => {
-    const token = sessionStorage.getItem("access_token");
-    console.log(token);
-    const newSocket = io(
-      `${import.meta.env.VITE_API_URL_ORDER}/socket/listorder`,
-      {
-        extraHeaders: {
-          Authorization: `Bearer ${token}`,
+  const mockData: orderList[] = [
+    {
+      mem_id: 1,
+      mem_code: "MEM001",
+      mem_name: "Nine Pharmacy",
+      province: "Song Khla",
+      emp_code: "EMP001",
+      picking_status: "picking",
+      emp_code_picking: "EMP002",
+      emp: {
+        emp_nickname: "Nine",
+      },
+      emp_picking: {
+        emp_nickname: "Sainam",
+      },
+      shoppingHeads: [
+        {
+          sh_id: 1,
+          sh_running: "SH12283",
+          sh_datetime: "2025-04-25T02:16:46.312Z",
+          shoppingOrders: [
+            {
+              so_running: "SO00001",
+              so_procode: "PRO0001",
+              picking_status: "pending",
+              product: {
+                product_floor: "5",
+              },
+            },
+          ],
         },
-      }
-    );
-    setSocket(newSocket);
+      ],
+    },
+    {
+      mem_id: 2,
+      mem_code: "MEM002",
+      mem_name: "Pharmacy",
+      province: "Song Khla",
+      emp_code: "EMP002",
+      picking_status: "pending",
+      emp_code_picking: "EMP003",
+      emp: {
+        emp_nickname: "Nine",
+      },
+      emp_picking: {
+        emp_nickname: "Sainam",
+      },
+      shoppingHeads: [
+        {
+          sh_id: 2,
+          sh_running: "SH12285",
+          sh_datetime: "2025-04-25T02:16:46.312Z",
+          shoppingOrders: [
+            {
+              so_running: "SO00006",
+              so_procode: "PRO0004",
+              picking_status: "picking",
+              product: {
+                product_floor: "4",
+              },
+            },
+            {
+              so_running: "SO00008",
+              so_procode: "PRO0009",
+              picking_status: "pending",
+              product: {
+                product_floor: "4",
+              },
+            },
+          ],
+        },
+        {
+          sh_id: 3,
+          sh_running: "SH12286",
+          sh_datetime: "2025-04-25T02:16:46.312Z",
+          shoppingOrders: [
+            {
+              so_running: "SO00007",
+              so_procode: "PRO0008",
+              picking_status: "pending",
+              product: {
+                product_floor: "4",
+              },
+            },
+          ],
+        },
+      ],
+    },
 
-    newSocket.on("connect", () => {
-      console.log("✅ Connected to WebSocket");
-      newSocket.emit("listorder:get");
-    });
+  ];
 
-    newSocket.on("listorder:get", (data) => {
-      setOrderList(data);
-      setLoading(false);
-    });
+  // useEffect(() => {
+  //   const token = sessionStorage.getItem("access_token");
+  //   console.log(token);
+  //   const newSocket = io(
+  //     `${import.meta.env.VITE_API_URL_ORDER}/socket/listorder`,
+  //     {
+  //       extraHeaders: {
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //     }
+  //   );
+  //   setSocket(newSocket);
 
-    return () => {
-      newSocket.disconnect();
-    };
-  }, []);
+  //   newSocket.on("connect", () => {
+  //     console.log("✅ Connected to WebSocket");
+  //     newSocket.emit("listorder:get");
+  //   });
+
+  //   newSocket.on("listorder:get", (data) => {
+  //     setOrderList(data);
+  //     setLoading(false);
+  //   });
+
+  //   return () => {
+  //     newSocket.disconnect();
+  //   };
+  // }, []);
   useEffect(() => {
     const totalShoppingOrders = orderList.reduce(
       (total, order) =>
@@ -100,8 +199,20 @@ const OrderList = () => {
     setTotalPicking(totalStatusPicking);
   }, [orderList]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
+        setOpenPopupId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
-    <div>
+    <div className="flex flex-col h-screen">
       <header className="p-2 bg-blue-400 text-white font-medium">
         <div className="flex justify-between">
           <div>
@@ -161,16 +272,20 @@ const OrderList = () => {
         </div>
       </header>
 
-      <div className="content overflow-y-auto">
+      <div className="flex-grow overflow-y-auto">
         {loading && (
           <div className="flex justify-center font-bold text-2xl">
             <p>Loading...</p>
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-2 bg-gray-100 w-full">
-          {orderList.map((order) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-2 w-full">
+          {mockData.map((order) => {
             const allFloors = ["2", "3", "4", "5"];
+            const popupRef = (el: HTMLDivElement | null) => {
+              popupRefs.current[order.mem_code] = el;
+            };
+            const isOpen = openPopupId === order.mem_code;
 
             // สรุปจำนวนต่อ floor
             const floorSummary = order.shoppingHeads
@@ -190,10 +305,10 @@ const OrderList = () => {
             return (
               <div
                 key={order.mem_id}
-                className="mt-2 px-2 w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 bg-gray-100"
+                className="mt-2 px-2 w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2"
               >
-                <div className="w-full p-1 rounded-sm shadow-xl text-[10px] border cursor-pointer text-[#444444] bg-[#E6E6E6]">
-                  <div className="p-2 rounded-sm bg-[#E6E6E6] m-1">
+                <div onClick={() => togglePopup(order.mem_code)} className={`w-full p-1 rounded-sm shadow-xl text-[10px] border cursor-pointer text-[#444444] bg-gray-400 ${order.picking_status === "picking" ? "bg-green-400" : ""}`}>
+                  <div className="p-2 rounded-sm bg-white m-1">
                     <div className="flex justify-between">
                       <div className="flex justify-start">
                         <p>{order.mem_code}</p>&nbsp;<p>{order.mem_name}</p>
@@ -280,21 +395,27 @@ const OrderList = () => {
                         <p>{order.emp.emp_nickname}</p>
                       </div>
                       <div className="flex justify-center">
+                        {order?.picking_status === 'picking' && (
                         <div className="pr-1">
-                          <button className="border rounded-sm px-2 py-1 bg-[#00A65A] text-white shadow-xl border-gray-300">
+                            <button className="border rounded-sm px-2 py-1 bg-green-600 text-white shadow-xl border-gray-300">
                             ยืนยัน
                           </button>
                         </div>
+                        )}
+                        {order?.picking_status === 'picking' && (
                         <div className="pr-1">
                           <button className="border rounded-sm px-2 py-1 bg-amber-400 text-white shadow-xl border-gray-300">
-                            เปลี่ยน
+                              เริ่มจัด
                           </button>
                         </div>
+                        )}
+                        {order?.picking_status === 'pending' && (
                         <div className="pr-1">
                           <button className="border rounded-sm px-2 py-1 bg-amber-400 text-white shadow-xl border-gray-300">
                             เริ่มจัด
                           </button>
                         </div>
+                        )}
                         <div>
                           <button className="border rounded-sm px-2 py-1 bg-blue-400 text-white shadow-xl border-gray-300">
                             🖨️STK
@@ -303,8 +424,8 @@ const OrderList = () => {
                       </div>
                     </div>
                   </div>
-
-                  <div className="w-full bg-white border border-gray-300 rounded-b shadow-lg z-50">
+                  {isOpen && (
+                    <div ref={popupRef} className="w-full bg-white border border-gray-300 rounded-b shadow-lg z-50">
                     <ul>
                       {order.shoppingHeads.map((sh, index) => (
                         <li key={sh.sh_id} className="px-2 pb-2 text-xs">
@@ -337,12 +458,82 @@ const OrderList = () => {
                       </button>
                     </ul>
                   </div>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
       </div>
+      <footer className="p-2 bg-blue-400 text-white font-medium">
+      <div className="footer flex items-end justify-around ">
+      <div>
+        <div className="flex justify-between">
+          <div>
+            <button
+              onClick={() => setSelectedFloor("1")}
+              className="border border-gray-500 rounded-sm bg-gray-400 shadow-lg p-1"
+            >
+              ชั้น 1
+            </button>
+          </div>
+          <div>
+            <button
+              onClick={() => setSelectedFloor("2")}
+              className="border border-gray-500 rounded-sm bg-yellow-500 shadow-lg p-1"
+            >
+              ชั้น 2
+            </button>
+          </div>
+          <div>
+            <button
+              onClick={() => setSelectedFloor("3")}
+              className="border border-gray-500 rounded-sm bg-indigo-500 shadow-lg p-1"
+            >
+              ชั้น 3
+            </button>
+          </div>
+          <div>
+            <button
+              onClick={() => setSelectedFloor("4")}
+              className="border border-gray-500 rounded-sm bg-red-500 shadow-lg p-1"
+            >
+              ชั้น 4
+            </button>
+          </div>
+          <div>
+            <button
+              onClick={() => setSelectedFloor("5")}
+              className="border border-gray-500 rounded-sm bg-emerald-500 shadow-lg p-1"
+            >
+              ชั้น 5
+            </button>
+          </div>
+          <div>
+            <button
+              onClick={() => setSelectedFloor("")}
+              className="border border-gray-500 rounded-sm bg-purple-500 shadow-lg p-1"
+            >
+              ยกลัง
+            </button>
+          </div>
+        </div>
+
+        <div className="flex justify-around p-1">
+          {["F2", "F3", "F4", "F5"].map((floor) => (
+            <div key={floor} className="border p-1">
+              <div className="flex justify-center">
+                <p className="font-bold text-sm">{floor}</p>
+              </div>
+              <div className="text-[8px] flex justify-center">
+                <p>22/04/68 12:09</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+      </footer>
     </div>
   );
 };
