@@ -10,6 +10,7 @@ import Home from "./pages/Home";
 import InvoicePart from "./pages/InvoicePart";
 import FormatPart from "./pages/FormatPart";
 import OrderList from "./pages/OrderList";
+import ProductList from "./pages/ProductList";
 function App() {
   return (
     <>
@@ -85,9 +86,13 @@ function App() {
         <Route
           path="/order-list"
           element={
-            <RequireAuth>
               <OrderList />
-            </RequireAuth>
+          }
+        />
+        <Route
+          path="/product-list"
+          element={
+              <ProductList />
           }
         />
       </Routes>

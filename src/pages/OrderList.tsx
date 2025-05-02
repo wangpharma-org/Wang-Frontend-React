@@ -405,7 +405,7 @@ const OrderList = () => {
                         {order?.picking_status === 'picking' && (
                         <div className="pr-1">
                           <button className="border rounded-sm px-2 py-1 bg-amber-400 text-white shadow-xl border-gray-300">
-                              เริ่มจัด
+                              เปลี่ยน
                           </button>
                         </div>
                         )}
