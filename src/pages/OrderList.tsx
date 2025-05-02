@@ -216,7 +216,7 @@ const OrderList = () => {
       <header className="p-2 bg-blue-400 text-white font-medium">
         <div className="flex justify-between">
           <div>
-            <button className="rounded-sm px-3 py-1 text-black bg-white drop-shadow-xs">
+            <button className="bg-white rounded-sm px-3 py-1 text-black drop-shadow-xs">
               ลัง
             </button>
           </div>
