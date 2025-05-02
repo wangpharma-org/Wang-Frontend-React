@@ -307,7 +307,7 @@ const OrderList = () => {
                         return (
                           <div
                             key={floor}
-                            className={`flex-none px-1 py-1.5 mx-0.5 rounded shadow-sm text-center w-17 ${data.remaining>0 ? "bg-yellow-200":"bg-red-200"}`}
+                            className={`flex-none px-1 py-1.5 mx-0.5 rounded shadow-sm text-center w-17 ${data.remaining>0 ? "bg-yellow-200":"bg-green-200"}`}
                           >
                             <div className="text-xs font-bold">F{floor}</div>
                             <div className="text-[10px] text-gray-600">
