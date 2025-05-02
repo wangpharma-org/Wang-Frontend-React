@@ -307,7 +307,7 @@ const OrderList = () => {
                         return (
                           <div
                             key={floor}
-                            className={`flex-none px-1 py-1.5 mx-0.5 rounded shadow-sm text-center w-17 ${data.remaining>0 ? "bg-yellow-200":"bg-green-200"}`}
+                            className={`flex-none px-1 py-1.5 mx-0.5 rounded shadow-sm text-center w-17 ${data.remaining>0 ? "bg-yellow-200":"bg-red-200"}`}
                           >
                             <div className="text-xs font-bold">F{floor}</div>
                             <div className="text-[10px] text-gray-600">
@@ -332,27 +332,22 @@ const OrderList = () => {
                         </div>}
                       </div>
                       <div className="flex justify-center">
-                        {order?.picking_status === "picking" &&
-                          order?.emp_code_picking === userInfo?.emp_code && (
-                            <div className="pr-1">
-                              <button className="border rounded-sm px-2 py-1 bg-green-600 text-white shadow-xl border-gray-300">
-                                ยืนยัน
-                              </button>
-                            </div>
-                          )}
-                        {order?.picking_status === "picking" &&
-                          order?.emp_code_picking === userInfo?.emp_code && (
-                          <div className="pr-1">
-                            <button 
-                                className="border rounded-sm px-2 py-1 bg-amber-400 text-white shadow-xl border-gray-300 cursor-pointer z-50"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    changeToPending(order?.mem_code);
-                                }}
-                            >
-                              เปลี่ยน
-                            </button>
-                          </div>
+                        <p>{order.emp.emp_nickname}</p>
+                      </div>
+                      <div className="flex justify-center">
+                        {order?.picking_status === 'picking' && (
+                        <div className="pr-1">
+                            <button className="border rounded-sm px-2 py-1 bg-green-600 text-white shadow-xl border-gray-300">
+                            ยืนยัน
+                          </button>
+                        </div>
+                        )}
+                        {order?.picking_status === 'picking' && (
+                        <div className="pr-1">
+                          <button className="border rounded-sm px-2 py-1 bg-amber-400 text-white shadow-xl border-gray-300">
+                              เริ่มจัด
+                          </button>
+                        </div>
                         )}
                         {order?.picking_status === "pending" && (
                           <div className="pr-1">
