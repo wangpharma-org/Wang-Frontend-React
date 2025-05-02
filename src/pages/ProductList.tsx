@@ -171,10 +171,6 @@ function ProductList() {
             setListproduct(mockData);
         }, 1000);
     }, []);
-
-
-      
-
     const handleDoubleClick = (orderItem: ShoppingOrder) => {
         clickCountRef.current++;
 
@@ -248,9 +244,7 @@ function ProductList() {
             </div>
         );
     }
-
     return (
-
         <div className='flex flex-col h-screen'>
             <header className="p-2 bg-blue-400 text-white font-medium">
                 <div>
