@@ -41,6 +41,7 @@ function ProductList() {
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
     const [products, setProducts] = useState<any[]>([]);
+    const [statusOrder, setStatusOrder] = useState<string>('');
 
     useEffect(() => {
         // mock data
@@ -87,7 +88,7 @@ function ProductList() {
                                 product_name: "สินค้า B ชั้น2",
                                 product_image_url: "https://via.placeholder.com/150",
                                 product_barcode: "1234567890",
-                                product_floor: "1",
+                                product_floor: "2",
                                 product_addr: "Aisle 3",
                                 product_stock: "20",
                                 product_unit: "ชิ้น",
@@ -110,7 +111,7 @@ function ProductList() {
                                 product_name: "สินค้า C ชั้น3",
                                 product_image_url: "https://via.placeholder.com/150",
                                 product_barcode: "1234567890",
-                                product_floor: "1",
+                                product_floor: "3",
                                 product_addr: "Aisle 3",
                                 product_stock: "20",
                                 product_unit: "ชิ้น",
@@ -122,7 +123,7 @@ function ProductList() {
                     sh_running: "SH004",
                     shoppingOrders: [
                         {
-                            so_running: "SO003",
+                            so_running: "SO004",
                             so_amount: 10,
                             so_unit: "ชิ้น",
                             picking_status: "pending",
@@ -133,7 +134,7 @@ function ProductList() {
                                 product_name: "สินค้า D ชั้น4",
                                 product_image_url: "https://via.placeholder.com/150",
                                 product_barcode: "1234567890",
-                                product_floor: "1",
+                                product_floor: "4",
                                 product_addr: "Aisle 3",
                                 product_stock: "20",
                                 product_unit: "ชิ้น",
@@ -145,7 +146,7 @@ function ProductList() {
                     sh_running: "SH005",
                     shoppingOrders: [
                         {
-                            so_running: "SO003",
+                            so_running: "SO005",
                             so_amount: 10,
                             so_unit: "ชิ้น",
                             picking_status: "pending",
@@ -156,7 +157,7 @@ function ProductList() {
                                 product_name: "สินค้า E ชั้น5",
                                 product_image_url: "https://via.placeholder.com/150",
                                 product_barcode: "1234567890",
-                                product_floor: "1",
+                                product_floor: "5",
                                 product_addr: "Aisle 3",
                                 product_stock: "20",
                                 product_unit: "ชิ้น",
@@ -212,18 +213,7 @@ function ProductList() {
         { label: 'ชั้น 4', value: '4', color: 'bg-red-500' },
         { label: 'ชั้น 5', value: '5', color: 'bg-emerald-500' },
         { label: 'ยกลัง', value: 'box', color: 'bg-purple-500' }, // ถ้าคุณจะใช้ type พิเศษ
-      ];
-
-      const allProducts = listproduct
-      ? listproduct.shoppingHeads.flatMap((head) =>
-          head.shoppingOrders.map((order) => order.product)
-        )
-      : [];
-    
-    // filter ตามชั้น
-    const filteredProducts = selectedFloor
-    ? allProducts.filter((prod) => prod.product_floor === selectedFloor)
-    : [];
+    ];
 
     const submit = () => {
         console.log('Submit button clicked');
@@ -308,91 +298,99 @@ function ProductList() {
                     </div>
                 </div>
             </header>
-            <div className="content bg-white overflow-y-auto p-1 text-[#444444]">
+
+            <div className="content bg-white overflow-y-auto h-full p-1 text-[#444444]">
                 {listproduct.shoppingHeads.map((head, headIdx) => (
                     <div key={headIdx} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                        {head.shoppingOrders.map((orderItem, Orderindex) => (
-                            <div
-                                key={Orderindex}
-                                className={`p-2 rounded-sm mb-1 ${selectedItems.has(orderItem.so_running)
-                                    ? 'bg-green-400'
-                                    : orderItem.picking_status === 'picking'
-                                        ? 'bg-green-400'
-                                        : 'bg-gray-400'
-                                    }`}
-                            >
+                        {head.shoppingOrders.filter((orderItem) =>
+                            selectedFloor ? orderItem.product.product_floor === selectedFloor : true
+                        )
+                            .map((orderItem, Orderindex) => (
                                 <div
-                                    onClick={() => handleDoubleClick(orderItem)} // เพิ่ม onClick สำหรับดับเบิลคลิก
-                                    className="py-2 px-1 rounded-sm bg-[#E6E6E6] m-1 cursor-pointer"
+                                    key={Orderindex}
+                                    className={`p-2 rounded-sm mb-1 ${selectedItems.has(orderItem.so_running)
+                                        ? 'bg-green-400'
+                                        : orderItem.picking_status === 'picking'
+                                            ? 'bg-green-400'
+                                            : 'bg-gray-400'
+                                        }`}
                                 >
-                                    <div className="flex justify-stretch p-1">
-                                        <div className="w-1/3 border border-gray-500">
-                                            <img src={orderItem.product.product_image_url} className="w-25 h-25 object-cover" />
-                                        </div>
-                                        <div className="text-xs w-2/3 ml-1">
-                                            <div className="flex justify-between pt-1 px-1">
-                                                <p className="font-bold">{orderItem.product.product_name}</p>
-                                                <p>{head.sh_running}</p>
+                                    <div
+                                        onClick={() => handleDoubleClick(orderItem)} // เพิ่ม onClick สำหรับดับเบิลคลิก
+                                        className="py-2 px-1 rounded-sm bg-[#E6E6E6] m-1 cursor-pointer"
+                                    >
+                                        <div className="flex justify-stretch p-1">
+                                            <div className="w-1/3 border border-gray-500">
+                                                <img src={orderItem.product.product_image_url} className="w-25 h-25 object-cover" />
                                             </div>
-                                            <div className="flex justify-between pt-1 px-1">
-                                                <p>{orderItem.so_running}</p>
-                                                <p className="border border-[#613DB6] px-2 py-1 rounded-sm bg-violet-500 text-white">
-                                                    {orderItem.so_amount} {orderItem.so_unit}
+                                            <div className="text-xs w-2/3 ml-1">
+                                                <div className="flex justify-between pt-1 px-1">
+                                                    <p className="font-bold">{orderItem.product.product_name}</p>
+                                                    <p>{head.sh_running}</p>
+                                                </div>
+                                                <div className="flex justify-between pt-1 px-1">
+                                                    <p>{orderItem.so_running}</p>
+                                                    <p className="border border-[#613DB6] px-2 py-1 rounded-sm bg-violet-500 text-white">
+                                                        {orderItem.so_amount} {orderItem.so_unit}
+                                                    </p>
+                                                </div>
+                                                <div className="flex justify-between pt-1 px-1">
+                                                    <p className="text-amber-500 font-bold">{orderItem.product.product_code}</p>
+                                                    <p>เหลือ {orderItem.product.product_stock} {orderItem.product.product_unit}</p>
+                                                </div>
+                                                <div className="flex justify-between pt-1 px-1">
+                                                    <div className="flex font-semibold text-violet-600">
+                                                        <p>F{orderItem.product.product_floor}</p>&nbsp;<p>{orderItem.product.product_addr}</p>
+                                                    </div>
+                                                    <p className="font-semibold">[{orderItem.emp_code_floor_picking || ''}]</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-around py-2 text-[11px]">
+                                            {["หมด", "ไม่พอ", "ไม่เจอ", "เสีย", "ด้านล่าง"].map((label, idx) => (
+                                                <button key={idx} className="border text-white rounded-sm shadow-md bg-amber-500 py-1 px-2">{label}</button>
+                                            ))}
+                                        </div>
+                                        <div className="flex justify-between py-1 text-xs text-gray-500">
+                                            <div className="flex justify-start">
+                                                <p>{orderItem.emp_code_floor_picking ? 'จัดแล้ว' : 'ยังไม่จัด'}</p>&nbsp;
+                                                <p>
+                                                    {new Date(orderItem.so_picking_time || '').toLocaleDateString('th-TH', {
+                                                        year: 'numeric',
+                                                        month: '2-digit',
+                                                        day: '2-digit',
+                                                    })}{' '}
+                                                    {new Date(orderItem.so_picking_time || '').toLocaleTimeString('th-TH', {
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                        second: '2-digit',
+                                                    })}
                                                 </p>
                                             </div>
-                                            <div className="flex justify-between pt-1 px-1">
-                                                <p className="text-amber-500 font-bold">{orderItem.product.product_code}</p>
-                                                <p>เหลือ {orderItem.product.product_stock} {orderItem.product.product_unit}</p>
+                                            <div className="flex justify-end pr-5">
+                                                <button className="border-gray-300 border rounded-sm px-3 py-1 shadow-md bg-blue-400 text-white">STK</button>
                                             </div>
-                                            <div className="flex justify-between pt-1 px-1">
-                                                <div className="flex font-semibold text-violet-600">
-                                                    <p>F{orderItem.product.product_floor}</p>&nbsp;<p>{orderItem.product.product_addr}</p>
-                                                </div>
-                                                <p className="font-semibold">[{orderItem.emp_code_floor_picking || ''}]</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-around py-2 text-[11px]">
-                                        {["หมด", "ไม่พอ", "ไม่เจอ", "เสีย", "ด้านล่าง"].map((label, idx) => (
-                                            <button key={idx} className="border text-white rounded-sm shadow-md bg-amber-500 py-1 px-2">{label}</button>
-                                        ))}
-                                    </div>
-                                    <div className="flex justify-between py-1 text-xs text-gray-500">
-                                        <div className="flex justify-start">
-                                            <p>{orderItem.emp_code_floor_picking ? 'จัดแล้ว' : 'ยังไม่จัด'}</p>&nbsp;
-                                            <p>
-                                                {new Date(orderItem.so_picking_time || '').toLocaleDateString('th-TH', {
-                                                    year: 'numeric',
-                                                    month: '2-digit',
-                                                    day: '2-digit',
-                                                })}{' '}
-                                                {new Date(orderItem.so_picking_time || '').toLocaleTimeString('th-TH', {
-                                                    hour: '2-digit',
-                                                    minute: '2-digit',
-                                                    second: '2-digit',
-                                                })}
-                                            </p>
-                                        </div>
-                                        <div className="flex justify-end pr-5">
-                                            <button className="border-gray-300 border rounded-sm px-3 py-1 shadow-md bg-blue-400 text-white">STK</button>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
                     </div>
                 ))}
             </div>
-            <footer className="p-1 bg-blue-400 text-white font-medium">
-            {floorButtons.map((btn) => (
-          <button
-            key={btn.value}
-            onClick={() => setSelectedFloor(btn.value)}
-            className={`border border-gray-500 py-1 px-2 rounded-sm shadow-lg ${btn.color}`}
-          >
-            {btn.label}
-          </button>
-        ))}
+            <footer className="py-2 bg-blue-400 text-white font-medium flex justify-between ">
+                {floorButtons.map((btn) => (
+                    <button
+                        key={btn.value}
+                        onClick={() => setSelectedFloor((prev) => (prev === btn.value ? null : btn.value))}
+                        className={`border border-gray-500 py-1 px-2 rounded-sm shadow-lg 
+                            ${btn.color} 
+                            hover:bg-yellow-300 hover:text-black
+                            ${selectedFloor === btn.value ? 'ring-2 ring-yellow-300 text-black' : ''}
+                            `}
+                        >
+                        {btn.label}
+                    </button>
+                ))}
 
                 {showButton && (
                     <div>
