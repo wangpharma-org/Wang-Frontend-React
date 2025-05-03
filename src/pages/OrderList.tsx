@@ -53,7 +53,7 @@ const OrderList = () => {
   const togglePopup = (id: string) => {
     setOpenPopupId((prev) => (prev === id ? null : id));
   };
-  const [selectedFloor, setSelectedFloor] = useState("");
+  const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
   const { userInfo } = useAuth();
   const navigate = useNavigate();
   const [latestTimes, setLatestTimes] = useState<Record<string, Date>>({});
@@ -163,6 +163,15 @@ const OrderList = () => {
     }
   };
 
+  const floorButtons = [
+    { label: 'ชั้น 1', value: '1', color: 'bg-gray-400' },
+    { label: 'ชั้น 2', value: '2', color: 'bg-yellow-500' },
+    { label: 'ชั้น 3', value: '3', color: 'bg-indigo-500' },
+    { label: 'ชั้น 4', value: '4', color: 'bg-red-500' },
+    { label: 'ชั้น 5', value: '5', color: 'bg-emerald-500' },
+    { label: 'ยกลัง', value: 'box', color: 'bg-purple-500' }, // ถ้าคุณจะใช้ type พิเศษ
+  ];
+
   return (
     <div className="flex flex-col h-screen">
       <header className="p-2 bg-blue-400 text-white font-medium">
@@ -230,9 +239,15 @@ const OrderList = () => {
             <p>Loading...</p>
           </div>
         )}
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-2 w-full my-2">
-          {orderList.map((order) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full my-2">
+          {orderList.filter((order) => {
+            if (!selectedFloor) return true; // ถ้าไม่ได้เลือกชั้น ให้แสดงทั้งหมด
+            return order.shoppingHeads.some((head) =>
+              head.shoppingOrders.some(
+                (so) => so.product.product_floor === selectedFloor
+              )
+            );
+          }).map((order) => {
             const allFloors = ["2", "3", "4", "5"];
             const popupRef = (el: HTMLDivElement | null) => {
               popupRefs.current[order.mem_code] = el;
@@ -257,13 +272,13 @@ const OrderList = () => {
             return (
               <div
                 key={order.mem_id}
-                className="mt-2 px-3 w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2"
+                className="mt-2 px-3 w-full grid grid-cols-1 md:grid-cols-1 gap-3"
               >
+
                 <div
                   onClick={() => togglePopup(order.mem_code)}
-                  className={`w-full p-3 rounded-sm shadow-xl text-[10px] text-[#444444] bg-gray-400 ${
-                    order.picking_status === "picking" ? "bg-green-400" : ""
-                  }`}
+                  className={`w-full p-3 rounded-sm shadow-xl text-[10px] text-[#444444] ${order.picking_status === "picking" ? "bg-green-400" : "bg-gray-400"
+                    }`}
                 >
                   <div className="p-2 rounded-sm bg-white">
                     <div className="flex justify-between">
@@ -312,7 +327,7 @@ const OrderList = () => {
                           }
                         </p>
                         <p>(เหลือ/All)</p>
-                        <p>FLOOR</p>
+                        {/* <p>FLOOR</p> */}
                       </div>
                     </div>
 
@@ -325,11 +340,7 @@ const OrderList = () => {
                         return (
                           <div
                             key={floor}
-                            className={`flex-none px-1 py-1.5 mx-0.5 rounded shadow-sm text-center w-17 ${
-                              data.remaining > 0
-                                ? "bg-yellow-200"
-                                : "bg-green-200"
-                            }`}
+                            className={`flex-none px-1 py-1.5 mx-0.5 rounded shadow-sm text-center w-17 ${data.remaining > 0 ? "bg-yellow-200" : "bg-red-200"}`}
                           >
                             <div className="text-xs font-bold">F{floor}</div>
                             <div className="text-[10px] text-gray-600">
@@ -457,56 +468,19 @@ const OrderList = () => {
       <footer className="p-2 bg-blue-400 text-white font-medium">
         <div className="footer flex items-end justify-around ">
           <div>
-            <div className="flex justify-between gap-3">
-              <div>
-                <button
-                  onClick={() => setSelectedFloor("1")}
-                  className="border border-gray-500 rounded-sm bg-gray-400 shadow-lg px-2 py-1"
-                >
-                  ชั้น 1
-                </button>
-              </div>
-              <div>
-                <button
-                  onClick={() => setSelectedFloor("2")}
-                  className="border border-gray-500 rounded-sm bg-yellow-500 shadow-lg px-2 py-1"
-                >
-                  ชั้น 2
-                </button>
-              </div>
-              <div>
-                <button
-                  onClick={() => setSelectedFloor("3")}
-                  className="border border-gray-500 rounded-sm bg-indigo-500 shadow-lg px-2 py-1"
-                >
-                  ชั้น 3
-                </button>
-              </div>
-              <div>
-                <button
-                  onClick={() => setSelectedFloor("4")}
-                  className="border border-gray-500 rounded-sm bg-red-500 shadow-lg px-2 py-1"
-                >
-                  ชั้น 4
-                </button>
-              </div>
-              <div>
-                <button
-                  onClick={() => setSelectedFloor("5")}
-                  className="border border-gray-500 rounded-sm bg-emerald-500 shadow-lg px-2 py-1"
-                >
-                  ชั้น 5
-                </button>
-              </div>
-              <div>
-                <button
-                  onClick={() => setSelectedFloor("")}
-                  className="border border-gray-500 rounded-sm bg-purple-500 shadow-lg px-2 py-1"
-                >
-                  ยกลัง
-                </button>
-              </div>
-            </div>
+            {floorButtons.map((btn) => (
+              <button
+                key={btn.value}
+                onClick={() => setSelectedFloor((prev) => (prev === btn.value ? null : btn.value))}
+                className={`border border-gray-500 py-1 px-2 mx-1 rounded-sm shadow-lg 
+                            ${btn.color} 
+                            hover:bg-yellow-300 hover:text-black
+                            ${selectedFloor === btn.value ? 'ring-2 ring-yellow-300 text-black' : ''}
+                            `}
+              >
+                {btn.label}
+              </button>
+            ))}
 
             <div className="flex justify-around p-1 mt-1">
               {["2", "3", "4", "5"].map((floor) => (
@@ -518,12 +492,12 @@ const OrderList = () => {
                     <p>
                       {latestTimes[floor]
                         ? new Date(latestTimes[floor]).toLocaleString("th-TH", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
                         : "-"}
                     </p>
                   </div>
