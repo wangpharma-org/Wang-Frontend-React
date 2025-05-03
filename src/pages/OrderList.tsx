@@ -447,10 +447,10 @@ const OrderList = () => {
                           className="border rounded-sm px-3 py-2 text-xs w-full mb-2 bg-green-600 text-white hover:bg-lime-700"
                           onClick={() => {
                             if (order?.picking_status === "picking") {
-                              navigate("/product-list");
+                              navigate(`/product-list?mem_code=${order?.mem_code}`);
                             } else {
                               changeToPicking(order?.mem_code);
-                              navigate("/product-list");
+                              navigate(`/product-list?mem_code=${order?.mem_code}`);
                             }
                           }}
                         >
