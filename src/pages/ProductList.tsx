@@ -45,135 +45,135 @@ function ProductList() {
     const [statusOrder, setStatusOrder] = useState<string>('');
     const navigate = useNavigate();
 
-    useEffect(() => {
-        // mock data
-        const mockData: PickingData = {
-            mem_code: "M001",
-            mem_name: "พนักงานทดสอบ",
-            all_sh_running: ["SH001", "SH002", "SH003", "SH004", "SH005"],
-            shoppingHeads: [
-                {
-                    sh_running: "SH001",
-                    shoppingOrders: [
-                        {
-                            so_running: "SO001",
-                            so_amount: 5,
-                            so_unit: "ชิ้น",
-                            picking_status: "pending",
-                            emp_code_floor_picking: null,
-                            so_picking_time: new Date().toISOString(),
-                            product: {
-                                product_code: "P001",
-                                product_name: "สินค้า A ชั้น1",
-                                product_image_url: "https://via.placeholder.com/150",
-                                product_barcode: "1234567890",
-                                product_floor: "1",
-                                product_addr: "Aisle 3",
-                                product_stock: "20",
-                                product_unit: "ชิ้น",
-                            },
-                        },
-                    ],
-                },
-                {
-                    sh_running: "SH002",
-                    shoppingOrders: [
-                        {
-                            so_running: "SO002",
-                            so_amount: 10,
-                            so_unit: "ชิ้น",
-                            picking_status: "pending",
-                            emp_code_floor_picking: null,
-                            so_picking_time: new Date().toISOString(),
-                            product: {
-                                product_code: "P001",
-                                product_name: "สินค้า B ชั้น2",
-                                product_image_url: "https://via.placeholder.com/150",
-                                product_barcode: "1234567890",
-                                product_floor: "2",
-                                product_addr: "Aisle 3",
-                                product_stock: "20",
-                                product_unit: "ชิ้น",
-                            },
-                        },
-                    ],
-                },
-                {
-                    sh_running: "SH003",
-                    shoppingOrders: [
-                        {
-                            so_running: "SO003",
-                            so_amount: 10,
-                            so_unit: "ชิ้น",
-                            picking_status: "pending",
-                            emp_code_floor_picking: null,
-                            so_picking_time: new Date().toISOString(),
-                            product: {
-                                product_code: "P001",
-                                product_name: "สินค้า C ชั้น3",
-                                product_image_url: "https://via.placeholder.com/150",
-                                product_barcode: "1234567890",
-                                product_floor: "3",
-                                product_addr: "Aisle 3",
-                                product_stock: "20",
-                                product_unit: "ชิ้น",
-                            },
-                        },
-                    ],
-                },
-                {
-                    sh_running: "SH004",
-                    shoppingOrders: [
-                        {
-                            so_running: "SO004",
-                            so_amount: 10,
-                            so_unit: "ชิ้น",
-                            picking_status: "pending",
-                            emp_code_floor_picking: null,
-                            so_picking_time: new Date().toISOString(),
-                            product: {
-                                product_code: "P001",
-                                product_name: "สินค้า D ชั้น4",
-                                product_image_url: "https://via.placeholder.com/150",
-                                product_barcode: "1234567890",
-                                product_floor: "4",
-                                product_addr: "Aisle 3",
-                                product_stock: "20",
-                                product_unit: "ชิ้น",
-                            },
-                        },
-                    ],
-                },
-                {
-                    sh_running: "SH005",
-                    shoppingOrders: [
-                        {
-                            so_running: "SO005",
-                            so_amount: 10,
-                            so_unit: "ชิ้น",
-                            picking_status: "pending",
-                            emp_code_floor_picking: null,
-                            so_picking_time: new Date().toISOString(),
-                            product: {
-                                product_code: "P001",
-                                product_name: "สินค้า E ชั้น5",
-                                product_image_url: "https://via.placeholder.com/150",
-                                product_barcode: "1234567890",
-                                product_floor: "5",
-                                product_addr: "Aisle 3",
-                                product_stock: "20",
-                                product_unit: "ชิ้น",
-                            },
-                        },
-                    ],
-                },
-            ],
-        };
+    // useEffect(() => {
+    //     // mock data
+    //     const mockData: PickingData = {
+    //         mem_code: "M001",
+    //         mem_name: "พนักงานทดสอบ",
+    //         all_sh_running: ["SH001", "SH002", "SH003", "SH004", "SH005"],
+    //         shoppingHeads: [
+    //             {
+    //                 sh_running: "SH001",
+    //                 shoppingOrders: [
+    //                     {
+    //                         so_running: "SO001",
+    //                         so_amount: 5,
+    //                         so_unit: "ชิ้น",
+    //                         picking_status: "pending",
+    //                         emp_code_floor_picking: null,
+    //                         so_picking_time: new Date().toISOString(),
+    //                         product: {
+    //                             product_code: "P001",
+    //                             product_name: "สินค้า A ชั้น1",
+    //                             product_image_url: "https://via.placeholder.com/150",
+    //                             product_barcode: "1234567890",
+    //                             product_floor: "1",
+    //                             product_addr: "Aisle 3",
+    //                             product_stock: "20",
+    //                             product_unit: "ชิ้น",
+    //                         },
+    //                     },
+    //                 ],
+    //             },
+    //             {
+    //                 sh_running: "SH002",
+    //                 shoppingOrders: [
+    //                     {
+    //                         so_running: "SO002",
+    //                         so_amount: 10,
+    //                         so_unit: "ชิ้น",
+    //                         picking_status: "pending",
+    //                         emp_code_floor_picking: null,
+    //                         so_picking_time: new Date().toISOString(),
+    //                         product: {
+    //                             product_code: "P001",
+    //                             product_name: "สินค้า B ชั้น2",
+    //                             product_image_url: "https://via.placeholder.com/150",
+    //                             product_barcode: "1234567890",
+    //                             product_floor: "2",
+    //                             product_addr: "Aisle 3",
+    //                             product_stock: "20",
+    //                             product_unit: "ชิ้น",
+    //                         },
+    //                     },
+    //                 ],
+    //             },
+    //             {
+    //                 sh_running: "SH003",
+    //                 shoppingOrders: [
+    //                     {
+    //                         so_running: "SO003",
+    //                         so_amount: 10,
+    //                         so_unit: "ชิ้น",
+    //                         picking_status: "pending",
+    //                         emp_code_floor_picking: null,
+    //                         so_picking_time: new Date().toISOString(),
+    //                         product: {
+    //                             product_code: "P001",
+    //                             product_name: "สินค้า C ชั้น3",
+    //                             product_image_url: "https://via.placeholder.com/150",
+    //                             product_barcode: "1234567890",
+    //                             product_floor: "3",
+    //                             product_addr: "Aisle 3",
+    //                             product_stock: "20",
+    //                             product_unit: "ชิ้น",
+    //                         },
+    //                     },
+    //                 ],
+    //             },
+    //             {
+    //                 sh_running: "SH004",
+    //                 shoppingOrders: [
+    //                     {
+    //                         so_running: "SO004",
+    //                         so_amount: 10,
+    //                         so_unit: "ชิ้น",
+    //                         picking_status: "pending",
+    //                         emp_code_floor_picking: null,
+    //                         so_picking_time: new Date().toISOString(),
+    //                         product: {
+    //                             product_code: "P001",
+    //                             product_name: "สินค้า D ชั้น4",
+    //                             product_image_url: "https://via.placeholder.com/150",
+    //                             product_barcode: "1234567890",
+    //                             product_floor: "4",
+    //                             product_addr: "Aisle 3",
+    //                             product_stock: "20",
+    //                             product_unit: "ชิ้น",
+    //                         },
+    //                     },
+    //                 ],
+    //             },
+    //             {
+    //                 sh_running: "SH005",
+    //                 shoppingOrders: [
+    //                     {
+    //                         so_running: "SO005",
+    //                         so_amount: 10,
+    //                         so_unit: "ชิ้น",
+    //                         picking_status: "pending",
+    //                         emp_code_floor_picking: null,
+    //                         so_picking_time: new Date().toISOString(),
+    //                         product: {
+    //                             product_code: "P001",
+    //                             product_name: "สินค้า E ชั้น5",
+    //                             product_image_url: "https://via.placeholder.com/150",
+    //                             product_barcode: "1234567890",
+    //                             product_floor: "5",
+    //                             product_addr: "Aisle 3",
+    //                             product_stock: "20",
+    //                             product_unit: "ชิ้น",
+    //                         },
+    //                     },
+    //                 ],
+    //             },
+    //         ],
+    //     };
 
-        setTimeout(() => {
-            setListproduct(mockData);
-        }, 1000);
-    }, []);
+    //     setTimeout(() => {
+    //         setListproduct(mockData);
+    //     }, 1000);
+    // }, []);
     const handleDoubleClick = (orderItem: ShoppingOrder) => {
         clickCountRef.current++;
 
