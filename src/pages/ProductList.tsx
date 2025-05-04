@@ -68,6 +68,7 @@ function ProductList() {
       newSocket.emit("listproduct:get", mem_code);
     });
 
+
     newSocket.on("listproduct:get", (data) => {
       setListproduct(data);
       setLoading(false);
