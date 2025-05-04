@@ -234,6 +234,12 @@ const OrderList = () => {
     }
   };
 
+  const setButton = () =>{
+    setSearch('');
+    setSelectroute('เลือกเส้นทางขนส่ง');
+    setSelectedFloor(null)
+  }
+
   const routeButtons = [
     { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
     { id: 2, name: "หาดใหญ่", value: "หาดใหญ่" },
@@ -687,17 +693,20 @@ const OrderList = () => {
           </div>
         ) : (
           isFiltered && (
-            <div className="flex flex-col justify-center items-center font-bold text-2xl mt-4 text-red-500">
-              <p>ไม่พบข้อมูลที่ค้นหา</p>
-              {search && (
-                <p>{search}</p>
-              )}
-              {selectroute !== 'all' && (
-                <p>เส้นทาง: {selectroute}</p>
-              )}
-              {selectedFloor && (
-                <p>ชั้น: {selectedFloor}</p>
-              )}
+            <div className="flex flex-col justify-center items-center text-center">
+              <div className=" font-bold mt-4 text-red-500">
+                <p className="text-2xl ">ไม่พบข้อมูลที่ค้นหา</p>
+                {search && (
+                  <p className="text-xl ">{search}</p>
+                )}
+                {selectroute !== 'all' && (
+                  <p className="text-xl ">เส้นทาง: {selectroute}</p>
+                )}
+                {selectedFloor && (
+                  <p className="text-xl ">ชั้น: {selectedFloor}</p>
+                )}
+              </div>
+              <button onClick={setButton} className="px-5 py-1 border rounded-sm mt-2 text-2xl shadow-xl">คืนค่าเดิม</button>
             </div>
           )
         )}
