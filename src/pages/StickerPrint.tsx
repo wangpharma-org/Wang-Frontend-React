@@ -25,6 +25,7 @@ const StickerPrint = () => {
   const [isOpen, setIsOpen] = useState<number[]>([]);
   const [pendingTickets, setPendingTickets] = useState<FloorInfo[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedRoute, setSelectedRoute] = useState('');
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
     console.log(token);
@@ -59,21 +60,23 @@ const StickerPrint = () => {
 
   const route = [
     { route_code: "all", route_name: "ทั้งหมด" },
-    { route_code: "L1-1", route_name: "L1-2 สงขลา" },
+    { route_code: "L1-1", route_name: "L1-1 หาดใหญ่" },
+    { route_code: "L1-2", route_name: "L1-2 สงขลา" },
     { route_code: "L1-3", route_name: "L1-3 สะเดา" },
     { route_code: "L1-5", route_name: "L1-5 สทิงพระ" },
     { route_code: "L10", route_name: "L10 นครศรีฯ" },
+    { route_code: "L11", route_name: "L11 กระบี่" },
     { route_code: "L12", route_name: "L12 ภูเก็ต" },
     { route_code: "L13", route_name: "L13 สุราษฏร์ธานี" },
-    { route_code: "L16", route_name: "L16 ยาแห้งส่งฟรีทั่วไทย" },
+    { route_code: "L16", route_name: "L16 ยาแห้ง ส่งฟรี ทั่วไทย" },
     { route_code: "L17", route_name: "L17 พังงา" },
     { route_code: "L18", route_name: "L18 เกาะสมุย" },
     { route_code: "L19", route_name: "L19 พัทลุง-นครฯ" },
     { route_code: "L2", route_name: "L2 ปัตตานี" },
     { route_code: "L20", route_name: "L20 ชุมพร" },
     { route_code: "L21", route_name: "L21 เกาะลันตา" },
-    { route_code: "L3", route_name: "L3 สตูล" },
     { route_code: "L22", route_name: "L22 เกาะพะงัน" },
+    { route_code: "L3", route_name: "L3 สตูล" },
     { route_code: "L4", route_name: "L4 พัทลุง" },
     { route_code: "L4-1", route_name: "L4-1 พัทลุง VIP" },
     { route_code: "L5-1", route_name: "L5-1 นราธิวาส" },
@@ -81,7 +84,7 @@ const StickerPrint = () => {
     { route_code: "L6", route_name: "L6 ยะลา" },
     { route_code: "L7", route_name: "L7 เบตง" },
     { route_code: "L9", route_name: "L9 ตรัง" },
-    { route_code: "L9-1", route_name: "L9-1 กระบี่-ตรัง" },
+    { route_code: "L9-11", route_name: "L9-11 กระบี่-ตรัง" },
     { route_code: "Office", route_name: "Office รับเอง" },
   ];
 
@@ -199,6 +202,7 @@ const StickerPrint = () => {
         {route.map((route) => (
           <button
             key={route.route_code}
+            onChange={(e) => setSelectedRoute(e.target.route_code)}
             className="border-2 cursor-pointer border-blue-500 px-2 py-1 rounded-lg hover:bg-blue-500 hover:text-white transition"
           >
             {route.route_name}
@@ -224,8 +228,10 @@ const StickerPrint = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {(listPrintTicket || !loading) &&
-              listPrintTicket?.map((list, index) => (
+            {(listPrintTicket || !loading) && 
+              listPrintTicket
+              .filter((list) => !selectedRoute || list.route === selectedRoute)
+              .map((list, index) => (
                 <tr key={index} className={`${list.picking_status==='picking' ? "bg-green-100 hover:bg-green-200" : "bg-white hover:bg-gray-50"}`}>
                   <td className="px-6 py-4 text-center">{index + 1}</td>
                   <td className="px-6 py-4 text-center">{list.mem_code}</td>
