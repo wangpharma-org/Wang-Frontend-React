@@ -229,7 +229,7 @@ const OrderList = () => {
         }
       );
     } catch (error) {
-      sendPrintStatus.current = false;
+      // sendPrintStatus.current = false;
       console.error("Error printing sticker:", error);
     }
   };
@@ -689,14 +689,14 @@ const OrderList = () => {
           isFiltered && (
             <div className="flex flex-col justify-center items-center font-bold text-2xl mt-4 text-red-500">
               <p>ไม่พบข้อมูลที่ค้นหา</p>
+              {search && (
+                <p>{search}</p>
+              )}
               {selectroute !== 'all' && (
                 <p>เส้นทาง: {selectroute}</p>
               )}
               {selectedFloor && (
                 <p>ชั้น: {selectedFloor}</p>
-              )}
-              {search && (
-                <p>{search}</p>
               )}
             </div>
           )
