@@ -45,20 +45,36 @@ const OrderList = () => {
   const [loading, setLoading] = useState(true);
   const [totalProduct, setTotalShoppingOrders] = useState(0);
   const [totalPicking, setTotalPicking] = useState(0);
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedOption, setSelectedOption] = useState("เลือกตัวเลือก");
+  // const [isOpen, setIsOpen] = useState(false);
+  // const [selectedOption, setSelectedOption] = useState("เลือกตัวเลือก");
   const [openPopupId, setOpenPopupId] = useState<string | null>(null);
   const popupRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const popupRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const togglePopup = (id: string) => {
     setOpenPopupId((prev) => (prev === id ? null : id));
   };
+
+  const togglePopupMenu = () => {
+    setOpenMenu((prev) => !prev);
+  };
+
+  const toggleSearch = () => {
+    setShowInput((prev) => !prev);
+    console.log("showInput "+showInput);
+  };
+
+
   const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
+  const [selectroute, setSelectroute] = useState('เลือกเส้นทางขนส่ง');
   const { userInfo } = useAuth();
   const navigate = useNavigate();
   const [latestTimes, setLatestTimes] = useState<Record<string, Date>>({});
+  const [search, setSearch] = useState("");
+  const [showInput, setShowInput] = useState(false);
+  const [openMenu, setOpenMenu] = useState(false);
 
-  console.log(userInfo);
+  // console.log(userInfo);
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
     console.log(token);
@@ -139,13 +155,15 @@ const OrderList = () => {
         !popupRef.current.contains(event.target as Node)
       ) {
         setOpenPopupId(null);
+        setOpenMenu(false);
+        setShowInput(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [showInput]);
 
   const changeToPending = (mem_code: string) => {
     if (socket?.connected) {
@@ -163,6 +181,10 @@ const OrderList = () => {
     }
   };
 
+  const Btnlogout = () => {
+    console.log("logout❗❗")
+  };
+ 
   const floorButtons = [
     { label: 'ชั้น 1', value: '1', color: 'bg-gray-400' },
     { label: 'ชั้น 2', value: '2', color: 'bg-yellow-500' },
@@ -170,6 +192,36 @@ const OrderList = () => {
     { label: 'ชั้น 4', value: '4', color: 'bg-red-500' },
     { label: 'ชั้น 5', value: '5', color: 'bg-emerald-500' },
     { label: 'ยกลัง', value: 'box', color: 'bg-purple-500' }, // ถ้าคุณจะใช้ type พิเศษ
+  ];
+
+  const routeButtons = [
+    { id: 1, name: 'เส้นทางการขนส่ง', value: 'all' },
+    { id: 2, name: 'หาดใหญ่', value: 'หาดใหญ่' },
+    { id: 3, name: 'สงขลา', value: 'สงขลา' },
+    { id: 4, name: 'สะเดา', value: 'สะเดา' },
+    { id: 5, name: 'สทิงพระ', value: 'สทิงพระ' },
+    { id: 6, name: 'นครศรีธรรมราช', value: 'นครศรีธรรมราช' },
+    { id: 7, name: 'กระบี่', value: 'กระบี่' },
+    { id: 8, name: 'ภูเก็ต', value: 'ภูเก็ต' },
+    { id: 9, name: 'สุราษฎร์ธานี', value: 'สุราษฎร์ธานี' },
+    { id: 10, name: 'ยาแห้ง ส่งฟรี ทั่วไทย', value: 'ยาแห้ง ส่งฟรี ทั่วไทย' },
+    { id: 11, name: 'พังงา', value: 'พังงา' },
+    { id: 12, name: 'เกาะสมุย', value: 'เกาะสมุย' },
+    { id: 13, name: 'พัทลุง-นคร', value: 'พัทลุง-นคร' },
+    { id: 14, name: 'ปัตตานี', value: 'ปัตตานี' },
+    { id: 15, name: 'ชุมพร', value: 'ชุมพร' },
+    { id: 16, name: 'เกาะลันตา', value: 'เกาะลันตา' },
+    { id: 17, name: 'เกาะพะงัน', value: 'เกาะพะงัน' },
+    { id: 18, name: 'สตูล', value: 'สตูล' },
+    { id: 19, name: 'พัทลุง', value: 'พัทลุง' },
+    { id: 20, name: 'พัทลุง VIP', value: 'พัทลุง VIP' },
+    { id: 21, name: 'นราธิวาส', value: 'นราธิวาส' },
+    { id: 22, name: 'สุไหงโกลก', value: 'สุไหงโกลก' },
+    { id: 23, name: 'ยะลา', value: 'ยะลา' },
+    { id: 24, name: 'เบตง', value: 'เบตง' },
+    { id: 25, name: 'ตรัง', value: 'ตรัง' },
+    { id: 26, name: 'กระบี่-ตรัง', value: 'กระบี่-ตรัง' },
+    { id: 27, name: 'Office รับเอง', value: 'Office รับเอง' },
   ];
 
   return (
@@ -182,6 +234,11 @@ const OrderList = () => {
             </button>
           </div>
           <div>
+            {showInput && (
+              <div ref={popupRef} className="flex absolute ">
+                <input type="text" placeholder="พิมพ์ mem_code" value={search} onChange={(e) => setSearch(e.target.value)} className="p-1 border rounded-sm text-black bg-white flex z-10 h-8" />
+              </div>
+            )}
             <div className="flex justify-center text-sm">
               <Clock></Clock>
             </div>
@@ -197,61 +254,120 @@ const OrderList = () => {
             </div>
           </div>
           <div>
-            <button className="bg-white rounded-sm px-3 py-1 text-black drop-shadow-xs">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="size-6"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10.5 3.75a6.75 6.75 0 1 0 0 13.5 6.75 6.75 0 0 0 0-13.5ZM2.25 10.5a8.25 8.25 0 1 1 14.59 5.28l4.69 4.69a.75.75 0 1 1-1.06 1.06l-4.69-4.69A8.25 8.25 0 0 1 2.25 10.5Z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
+            <div className="flex ">
+              <button ref={buttonRef} onClick={toggleSearch} className="bg-white rounded-sm px-3 py-1 text-black drop-shadow-xs">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="size-6"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10.5 3.75a6.75 6.75 0 1 0 0 13.5 6.75 6.75 0 0 0 0-13.5ZM2.25 10.5a8.25 8.25 0 1 1 14.59 5.28l4.69 4.69a.75.75 0 1 1-1.06 1.06l-4.69-4.69A8.25 8.25 0 0 1 2.25 10.5Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
-        <div className="flex">
-          <div className="flex justify-start">
-            <button className="px-3 py-1">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="size-6"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M3 6.75A.75.75 0 0 1 3.75 6h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 6.75ZM3 12a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 12Zm0 5.25a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75a.75.75 0 0 1-.75-.75Z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
+        <div className="flex mt-1 ">
+          <div className="flex">
+            <div className="flex justify-start">
+              <button ref={buttonRef} onClick={togglePopupMenu} className="px-3 py-1">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="size-6"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M3 6.75A.75.75 0 0 1 3.75 6h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 6.75ZM3 12a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 12Zm0 5.25a.75.75 0 0 1 .75-.75h16.5a.75.75 0 0 1 0 1.5H3.75a.75.75 0 0 1-.75-.75Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div id="route-select" className="flex justify-center text-white w-full">
+            <select
+              value={selectroute}
+              onChange={(e) => setSelectroute(e.target.value)}
+              className="border border-gray-200 px-2 py-1 rounded text-black bg-white text-center flex justify-center w-full"
+            >
+              {routeButtons.map((route) => (
+                <option key={route.id} value={route.value} >
+                  {route.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+              &nbsp;
           </div>
         </div>
       </header>
 
-      <div className="flex-grow overflow-y-auto">
+      <div className="relative flex-grow overflow-y-auto">
         {loading && (
           <div className="flex justify-center font-bold text-2xl">
             <p>Loading...</p>
           </div>
         )}
+        <div >
+          {openMenu && (
+            <div ref={popupRef} className="fixed top-0 left-0 h-full z-50 w-3/5 sm:w-1/2 md:w-1/4 bg-blue-900 transition-transform duration-2000 ease-in-out transform translate-x-0">
+              <div id="infomation" className="p-4">
+                <div className="py-5">
+                  <div className="bg-gray-100 p-1 rounded-full w-18 h-18 mx-auto">
+                    <img className="rounded-full w-16 h-16 bg-white mx-auto"
+                      src="https://as2.ftcdn.net/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg" />
+                  </div>
+                  <p className="flex justify-center mt-2 text-white">{userInfo?.emp_code}</p>
+                  <p className="flex justify-center text-white">{userInfo?.username}</p>
+                </div>
+                <div className="flex justify-center px-3 text-white">
+                  <button onClick={Btnlogout} className="w-full mx-auto flex py-2 hover:bg-red-600 cursor-pointer text-center items-center font-light rounded-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none"
+                      viewBox="0 0 24 24" strokeWidth={1.2} stroke="currentColor"
+                      className="size-9 rounded-full mr-1 ml-1 p-1 text-white">
+                      <path strokeLinecap="round" strokeLinejoin="round"
+                        d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
+                    </svg>
+                    ออกจากระบบ
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full my-2">
+
           {orderList.filter((order) => {
-            if (!selectedFloor) return true; // ถ้าไม่ได้เลือกชั้น ให้แสดงทั้งหมด
-            return order.shoppingHeads.some((head) =>
-              head.shoppingOrders.some(
-                (so) => so.product.product_floor === selectedFloor
-              )
-            );
+            const matchFloor =
+              !selectedFloor ||
+              order.shoppingHeads.some((head) =>
+                head.shoppingOrders.some(
+                  (so) => so.product.product_floor === selectedFloor
+                )
+              );
+            const matchProvince = selectroute === "เลือกเส้นทางขนส่ง" || selectroute === "all" || order.province === selectroute;
+
+            const matchSearch = !search || order.mem_code.includes(search) || order.mem_name.includes(search);
+
+            return matchProvince && matchFloor && matchSearch;
+
           }).map((order) => {
             const allFloors = ["2", "3", "4", "5"];
             const popupRef = (el: HTMLDivElement | null) => {
               popupRefs.current[order.mem_code] = el;
             };
+            const popupsearch = (el: HTMLDivElement | null) => {
+              popupRefs.current[order.mem_code] = el;
+            };
+
             const isOpen = openPopupId === order.mem_code;
 
             // สรุปจำนวนต่อ floor
@@ -263,13 +379,14 @@ const OrderList = () => {
                   acc[floor] = { total: 0, remaining: 0 };
                 }
                 acc[floor].total += 1;
-                if (order.picking_status === "picking") {
+                if (order.picking_status === "pending") {
                   acc[floor].remaining += 1;
                 }
                 return acc;
               }, {} as Record<string, { total: number; remaining: number }>);
 
             return (
+
               <div
                 key={order.mem_id}
                 className="mt-2 px-3 w-full grid grid-cols-1 md:grid-cols-1 gap-3"
@@ -315,7 +432,7 @@ const OrderList = () => {
                           {
                             order.shoppingHeads
                               .flatMap((h) => h.shoppingOrders)
-                              .filter((so) => so.picking_status === "picking")
+                              .filter((so) => so.picking_status === "picking" || so.picking_status === "หมด" || so.picking_status === "ไม่พอ"|| so.picking_status === "ไม่เจอ"|| so.picking_status === "เสีย"|| so.picking_status === "ด้านล่าง")
                               .length
                           }
                         </p>
@@ -467,12 +584,13 @@ const OrderList = () => {
       </div>
       <footer className="p-2 bg-blue-400 text-white font-medium">
         <div className="footer flex items-end justify-around ">
-          <div>
+          <div className="w-full ">
+            <div className="flex justify-around">
             {floorButtons.map((btn) => (
               <button
                 key={btn.value}
                 onClick={() => setSelectedFloor((prev) => (prev === btn.value ? null : btn.value))}
-                className={`border border-gray-500 py-1 px-2 mx-1 rounded-sm shadow-lg 
+                className={` border border-gray-500 py-1 px-2 rounded-sm shadow-lg 
                             ${btn.color} 
                             hover:bg-yellow-300 hover:text-black
                             ${selectedFloor === btn.value ? 'ring-2 ring-yellow-300 text-black' : ''}
@@ -481,14 +599,15 @@ const OrderList = () => {
                 {btn.label}
               </button>
             ))}
+            </div>
 
-            <div className="flex justify-around p-1 mt-1">
+            <div className="p-1 mt-1 flex justify-center">
               {["2", "3", "4", "5"].map((floor) => (
-                <div key={floor} className="border px-2 py-1 w-18 rounded-sm">
+                <div key={floor} className="border px-2 py-1 w-18 rounded-sm w-full">
                   <div className="flex justify-center">
                     <p className="font-bold text-sm">F{floor}</p>
                   </div>
-                  <div className="text-sm flex justify-center">
+                  <div className="text-[8px] flex justify-center">
                     <p>
                       {latestTimes[floor]
                         ? new Date(latestTimes[floor]).toLocaleString("th-TH", {
