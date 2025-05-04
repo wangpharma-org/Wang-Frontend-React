@@ -36,6 +36,7 @@ interface PickingData {
   mem_name: string;
   shoppingHeads: ShoppingHead[];
   all_sh_running: string[];
+  emp_code_picking: string;
 }
 
 function ProductList() {
@@ -94,6 +95,7 @@ function ProductList() {
       );
       setCanSubmit(!hasPending);
     }
+    console.log(listproduct)
   }, [listproduct]);
 
   useEffect(() => {
@@ -503,10 +505,10 @@ function ProductList() {
               submitPicking()
               navigate('/order-list')
             }}
-            disabled={!CanSubmit}
-            className={`w-full px-3 py-1 shadow-md text-lg rounded-sm font-semibold  text-white mt-3 ${CanSubmit ? "bg-green-400" : "bg-gray-400"}`}
+            disabled={!CanSubmit || userInfo?.emp_code !== listproduct.emp_code_picking}
+            className={`w-full px-3 py-1 shadow-md text-lg rounded-sm font-semibold  text-white mt-3 ${(CanSubmit && userInfo?.emp_code === listproduct.emp_code_picking) ? "bg-green-400" : "bg-gray-400"}`}
           >
-            ยืนยันการจัด
+            {(!CanSubmit || userInfo?.emp_code !== listproduct.emp_code_picking) ? `คุณไม่มีสิทธิ์ในการยืนยัน` : (!CanSubmit) ? `กรุณาจัดสินค้าให้ครบ` : `ยืนยันการจัดสินค้า`}
           </button>
         </div>
       </footer>

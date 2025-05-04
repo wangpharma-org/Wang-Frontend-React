@@ -5,6 +5,7 @@ interface UserInfo {
   user_id: number;
   username: string;
   emp_code: string;
+  floor_picking?: number;
 }
 
 interface AuthContextType {
@@ -52,6 +53,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user_id: payload.user_id,
         username: payload.username,
         emp_code: payload.emp_code,
+        floor_picking: payload.floor_picking,
       };
 
       setAccessToken(access_token);
