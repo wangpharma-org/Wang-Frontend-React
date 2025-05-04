@@ -26,7 +26,7 @@ const StickerPrint = () => {
   const [isOpen, setIsOpen] = useState<number[]>([]);
   const [pendingTickets, setPendingTickets] = useState<FloorInfo[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedRoute, setSelectedRoute] = useState('');
+  const [selectedRoute, setSelectedRoute] = useState('all');
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
     console.log(token);
@@ -62,33 +62,33 @@ const StickerPrint = () => {
 
   console.log("listPrintTicket "+listPrintTicket);
   const route = [
-    { route_code: "all", route_name: "ทั้งหมด", value: "all"},
-    { route_code: "L1-1", route_name: "L1-1 หาดใหญ่", value: "หาดใหญ่"},
-    { route_code: "L1-2", route_name: "L1-2 สงขลา", value: "สงขลา"},
-    { route_code: "L1-3", route_name: "L1-3 สะเดา", value: "สะเดา"},
-    { route_code: "L1-5", route_name: "L1-5 สทิงพระ", value: "สทิงพระ"},
-    { route_code: "L10", route_name: "L10 นครศรีฯ", value: "นครศรีธรรมราช"},
-    { route_code: "L11", route_name: "L11 กระบี่", value: "กระบี่"},
-    { route_code: "L12", route_name: "L12 ภูเก็ต", value: "ภูเก็ต"},
-    { route_code: "L13", route_name: "L13 สุราษฏร์ธานี", value: "สุราษฎร์ธานี"},
-    { route_code: "L16", route_name: "L16 ยาแห้ง ส่งฟรี ทั่วไทย", value: "ยาแห้ง ส่งฟรี ทั่วไทย" },
-    { route_code: "L17", route_name: "L17 พังงา", value: "พังงา"},
-    { route_code: "L18", route_name: "L18 เกาะสมุย", value: "เกาะสมุย"},
-    { route_code: "L19", route_name: "L19 พัทลุง-นครฯ", value: "พัทลุง-นคร"},
-    { route_code: "L2", route_name: "L2 ปัตตานี", value: "ปัตตานี"},
-    { route_code: "L20", route_name: "L20 ชุมพร", value: "ชุมพร"},
-    { route_code: "L21", route_name: "L21 เกาะลันตา", value: "เกาะลันตา"},
-    { route_code: "L22", route_name: "L22 เกาะพะงัน", value: "เกาะพะงัน"},
-    { route_code: "L3", route_name: "L3 สตูล", value: "สตูล"},
-    { route_code: "L4", route_name: "L4 พัทลุง", value: "พัทลุง"},
-    { route_code: "L4-1", route_name: "L4-1 พัทลุง VIP", value: "พัทลุง VIP"},
-    { route_code: "L5-1", route_name: "L5-1 นราธิวาส", value: "นราธิวาส"},
-    { route_code: "L5-2", route_name: "L1-3 สุไหงโกลก", value: "สุไหงโกลก"},
-    { route_code: "L6", route_name: "L6 ยะลา", value: "ยะลา"},
-    { route_code: "L7", route_name: "L7 เบตง", value: "เบตง"},
-    { route_code: "L9", route_name: "L9 ตรัง", value: "ตรัง"},
-    { route_code: "L9-11", route_name: "L9-11 กระบี่-ตรัง", value: "กระบี่-ตรัง"},
-    { route_code: "Office", route_name: "Office รับเอง", value: "Office รับเอง"},
+    { route_name: "ทั้งหมด", value: "all"},
+    { route_name: "L1-1 หาดใหญ่", value: "หาดใหญ่"},
+    { route_name: "L1-2 สงขลา", value: "สงขลา"},
+    { route_name: "L1-3 สะเดา", value: "สะเดา"},
+    { route_name: "L1-5 สทิงพระ", value: "สทิงพระ"},
+    { route_name: "L10 นครศรีฯ", value: "นครศรีธรรมราช"},
+    { route_name: "L11 กระบี่", value: "กระบี่"},
+    { route_name: "L12 ภูเก็ต", value: "ภูเก็ต"},
+    { route_name: "L13 สุราษฏร์ธานี", value: "สุราษฎร์ธานี"},
+    { route_name: "L16 ยาแห้ง ส่งฟรี ทั่วไทย", value: "ยาแห้ง ส่งฟรี ทั่วไทย" },
+    { route_name: "L17 พังงา", value: "พังงา"},
+    { route_name: "L18 เกาะสมุย", value: "เกาะสมุย"},
+    { route_name: "L19 พัทลุง-นครฯ", value: "พัทลุง-นคร"},
+    { route_name: "L2 ปัตตานี", value: "ปัตตานี"},
+    { route_name: "L20 ชุมพร", value: "ชุมพร"},
+    { route_name: "L21 เกาะลันตา", value: "เกาะลันตา"},
+    { route_name: "L22 เกาะพะงัน", value: "เกาะพะงัน"},
+    { route_name: "L3 สตูล", value: "สตูล"},
+    { route_name: "L4 พัทลุง", value: "พัทลุง"},
+    { route_name: "L4-1 พัทลุง VIP", value: "พัทลุง VIP"},
+    { route_name: "L5-1 นราธิวาส", value: "นราธิวาส"},
+    { route_name: "L1-3 สุไหงโกลก", value: "สุไหงโกลก"},
+    { route_name: "L6 ยะลา", value: "ยะลา"},
+    { route_name: "L7 เบตง", value: "เบตง"},
+    { route_name: "L9 ตรัง", value: "ตรัง"},
+    { route_name: "L9-11 กระบี่-ตรัง", value: "กระบี่-ตรัง"},
+    { route_name: "Office รับเอง", value: "Office รับเอง"},
   ];
   console.log("selectedRoute" + selectedRoute);
 
@@ -173,6 +173,7 @@ const StickerPrint = () => {
   }, [pendingTickets, currentIndex, socket]);
 
   const printTicket = (ticketId: number) => {
+    if (!ticketId) return;
     window.open(`/format-sticker?ticketId=${ticketId}`, "_blank");
   };
 
@@ -207,7 +208,7 @@ const StickerPrint = () => {
           <button
             key={route.value}
             onClick={() => setSelectedRoute(route.value)}
-            className="border-2 cursor-pointer border-blue-500 px-2 py-1 rounded-lg hover:bg-blue-500 hover:text-white transition"
+            className={`border-2 cursor-pointer border-blue-500 px-2 py-1 rounded-lg hover:bg-blue-500 hover:text-white transition ${route.value === selectedRoute ? "bg-blue-500 text-white" : ""}`}
           >
             {route.route_name}
           </button>

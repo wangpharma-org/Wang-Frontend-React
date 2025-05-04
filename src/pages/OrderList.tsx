@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { Socket, io } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router";
+import axios from "axios";
 
 interface Product {
   product_floor: string;
@@ -51,6 +52,8 @@ const OrderList = () => {
   const popupRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const popupRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const sendPrintStatus = useRef(true);
+
   const togglePopup = (id: string) => {
     setOpenPopupId((prev) => (prev === id ? null : id));
   };
@@ -75,14 +78,12 @@ const OrderList = () => {
 
   // console.log(userInfo);
   useEffect(() => {
-    const token = sessionStorage.getItem("access_token");
-    console.log(token);
     console.log(`${import.meta.env.VITE_API_URL_ORDER}/socket/listorder`);
     const newSocket = io(
       `${import.meta.env.VITE_API_URL_ORDER}/socket/listorder`,
       {
         extraHeaders: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${sessionStorage.getItem("access_token")}`,
         },
       }
     );
@@ -192,6 +193,26 @@ const OrderList = () => {
     { label: "ชั้น 5", value: "5", color: "bg-emerald-500" },
     { label: "ยกลัง", value: "box", color: "bg-purple-500" }, // ถ้าคุณจะใช้ type พิเศษ
   ];
+
+  const printSticker = (mem_code: string) => {
+    console.log("printSticker", mem_code);
+    try {
+      axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/picking/createTicket`,
+        {
+          mem_code: mem_code,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("access_token")}`,
+          },
+        }
+      );
+    } catch (error) {
+      sendPrintStatus.current = false;
+      console.error("Error printing sticker:", error);
+    }
+  };
 
   const routeButtons = [
     { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
@@ -579,11 +600,17 @@ const OrderList = () => {
                             </div>
                           )}
                           <div>
-                            { userInfo?.floor_picking &&
-                              <button className="border rounded-sm px-2 py-1 bg-blue-400 text-white shadow-xl border-gray-300">
+                            {userInfo?.floor_picking && (
+                              <button
+                                className="border rounded-sm px-2 py-1 bg-blue-400 text-white shadow-xl border-gray-300"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  printSticker(order?.mem_code);
+                                }}
+                              >
                                 พิมพ์สติกเกอร์
                               </button>
-                            }
+                            )}
                           </div>
                         </div>
                       </div>
