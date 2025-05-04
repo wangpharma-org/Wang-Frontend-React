@@ -245,7 +245,9 @@ function ProductList() {
   }
   return (
     <div className="flex flex-col h-screen">
-      <header className="p-2 bg-blue-400 text-white font-medium">
+      <header 
+        className={`p-2  text-white font-medium ${selectedFloor === '1' ? "bg-gray-500" : selectedFloor === '2' ? "bg-yellow-500" : selectedFloor === '3' ? "bg-indigo-500" : selectedFloor === '4' ? "bg-red-500" : selectedFloor === '5' ? "bg-emerald-500" : selectedFloor === 'box' ? "bg-purple-500" : "bg-blue-400"} `}
+      >
         <div>
           <div className="flex justify-between">
             <div>
@@ -260,7 +262,7 @@ function ProductList() {
                 </div>
               )}
               <div className="flex justify-center text-sm">
-                <Clock></Clock>
+                <p><Clock></Clock></p>
               </div>
               <div className="flex justify-center text-xs">
                 <p>
@@ -472,7 +474,7 @@ function ProductList() {
           ))}
         </div>
       </div>
-      <footer className="p-3 bg-blue-400 text-white font-medium  ">
+      <footer className={`p-3  text-white font-medium ${selectedFloor === '1' ? "bg-gray-500" : selectedFloor === '2' ? "bg-yellow-500" : selectedFloor === '3' ? "bg-indigo-500" : selectedFloor === '4' ? "bg-red-500" : selectedFloor === '5' ? "bg-emerald-500" : selectedFloor === 'box' ? "bg-purple-500" : "bg-blue-400"}`}>
         <div className="flex justify-between">
           {floorButtons.map((btn) => (
             <button
