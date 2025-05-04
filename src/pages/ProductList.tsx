@@ -273,8 +273,8 @@ function ProductList() {
                 </p>
               </div>
               <div className="flex justify-center text-xs">
-                <p>เหลือจัด {pickingCount} รายการ</p>&nbsp;<p>|</p>&nbsp;
-                <p>กำลังจัด {pendingCount} รายการ</p>
+                <p>เหลือจัด {pendingCount} รายการ</p>&nbsp;<p>|</p>&nbsp;
+                <p>กำลังจัด {pickingCount} รายการ</p>
               </div>
             </div>
             <div>
@@ -381,7 +381,12 @@ function ProductList() {
                   >
                     <div
                       onClick={() => handleDoubleClick(orderItem)} // เพิ่ม onClick สำหรับดับเบิลคลิก
-                      className="py-2 px-1 rounded-sm bg-white m-1 cursor-pointer"
+                      className={`py-2 px-1 rounded-smm-1 cursor-pointer ${orderItem.picking_status === "pending"
+                        ? "bg-white"
+                        : orderItem.picking_status === "picking"
+                          ? "bg-green-100"
+                          : "bg-red-100"
+                        }`}
                     >
                       <div className="flex justify-stretch p-1">
                         <div className="w-1/3 border border-gray-500 flex justify-center ">
