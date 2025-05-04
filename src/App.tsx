@@ -11,6 +11,8 @@ import InvoicePart from "./pages/InvoicePart";
 import FormatPart from "./pages/FormatPart";
 import OrderList from "./pages/OrderList";
 import ProductList from "./pages/ProductList";
+import StickerPrint from "./pages/StickerPrint";
+import FormatSticker from "./pages/FormatSticker";
 function App() {
   return (
     <>
@@ -93,6 +95,21 @@ function App() {
           path="/product-list"
           element={
               <ProductList />
+          }
+        />
+        <Route
+          path="/print-sticker"
+          element={
+            <div>
+              <Navbar />
+              <StickerPrint />
+            </div>
+          }
+        />
+        <Route
+          path="/format-sticker"
+          element={
+            <FormatSticker />
           }
         />
       </Routes>

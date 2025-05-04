@@ -280,7 +280,7 @@ const OrderList = () => {
                   className={`w-full p-3 rounded-sm shadow-xl text-[10px] text-[#444444] ${order.picking_status === "picking" ? "bg-green-400" : "bg-gray-400"
                     }`}
                 >
-                  <div className="p-2 rounded-sm bg-white">
+                  <div className={`p-2 rounded-sm ${order.picking_status === "picking" ? "bg-green-100" : "bg-white"}`}>
                     <div className="flex justify-between">
                       <div className="flex justify-start">
                         <p>{order.mem_code}</p>&nbsp;<p>{order.mem_name}</p>

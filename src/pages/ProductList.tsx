@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { io, Socket } from "socket.io-client";
+import Clock from "../components/Clock";
 
 interface Product {
   product_code: string;
@@ -46,6 +47,7 @@ function ProductList() {
   const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
   const navigate = useNavigate();
   const mem_code = new URLSearchParams(window.location.search).get("mem_code");
+
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
@@ -185,10 +187,6 @@ function ProductList() {
     { label: "ยกลัง", value: "box", color: "bg-purple-500" }, // ถ้าคุณจะใช้ type พิเศษ
   ];
 
-  const submit = () => {
-    console.log("Submit button clicked");
-  };
-
   if (!listproduct) {
     return (
       <div className="flex justify-center font-bold text-2xl items-center">
@@ -212,7 +210,9 @@ function ProductList() {
   }
   return (
     <div className="flex flex-col h-screen">
-      <header className="p-2 bg-blue-400 text-white font-medium">
+      <header 
+        className={`p-2  text-white font-medium ${selectedFloor === '1' ? "bg-gray-500" : selectedFloor === '2' ? "bg-yellow-500" : selectedFloor === '3' ? "bg-indigo-500" : selectedFloor === '4' ? "bg-red-500" : selectedFloor === '5' ? "bg-emerald-500" : selectedFloor === 'box' ? "bg-purple-500" : "bg-blue-400"} `}
+      >
         <div>
           <div className="flex justify-between">
             <div>
@@ -222,8 +222,7 @@ function ProductList() {
             </div>
             <div>
               <div className="flex justify-center text-sm">
-                <p>เวลาตอนนี้&nbsp;</p>
-                <p>{listproduct?.mem_code}</p>
+                <p><Clock></Clock></p>
               </div>
               <div className="flex justify-center text-xs">
                 <p>
@@ -297,7 +296,7 @@ function ProductList() {
               .map((orderItem, Orderindex) => (
                 <div
                   key={Orderindex}
-                  className={`p-2 rounded-sm mb-1 mt-1 ${
+                  className={`p-2 rounded-md mb-1 mt-1 ${
                     orderItem.picking_status === "pending"
                       ? "bg-gray-400"
                       : orderItem.picking_status === "picking"
@@ -306,11 +305,14 @@ function ProductList() {
                   }`}
                 >
                   <div
-                    onClick={() => handleDoubleClick(orderItem)} // เพิ่ม onClick สำหรับดับเบิลคลิก
-                    className="py-2 px-1 rounded-sm bg-white m-1 cursor-pointer"
+                    onClick={() => handleDoubleClick(orderItem)}
+                    className={`py-2 px-1 rounded-sm m-1 cursor-pointer ${
+                      selectedItems.has(orderItem.so_running)
+                        ? "bg-green-100"
+                        : "bg-white"}`}
                   >
                     <div className="flex justify-stretch p-1">
-                      <div className="w-1/3 border border-gray-500 flex justify-center ">
+                      <div className="w-1/3 border border-gray-500 bg-white flex justify-center ">
                         <img
                           src={orderItem.product.product_image_url}
                           className="w-25 h-25 object-cover"
@@ -402,7 +404,7 @@ function ProductList() {
           </div>
         ))}
       </div>
-      <footer className="p-3 bg-blue-400 text-white font-medium  ">
+      <footer className={`p-3  text-white font-medium ${selectedFloor === '1' ? "bg-gray-500" : selectedFloor === '2' ? "bg-yellow-500" : selectedFloor === '3' ? "bg-indigo-500" : selectedFloor === '4' ? "bg-red-500" : selectedFloor === '5' ? "bg-emerald-500" : selectedFloor === 'box' ? "bg-purple-500" : "bg-blue-400"}`}>
         <div className="flex justify-between">
         {floorButtons.map((btn) => (
           <button
