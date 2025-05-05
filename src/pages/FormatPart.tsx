@@ -82,7 +82,7 @@ const FormatPart = () => {
     if (!invoices) return;
     const printTimeout = setTimeout(() => {
       window.print();
-    }, 500); 
+    }, 1000); 
     window.onafterprint = () => {
       localStorage.setItem('print_status', 'done')
       window.close();

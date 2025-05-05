@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
 import { QRCodeSVG } from "qrcode.react";
@@ -7,6 +7,7 @@ const FormatSticker = () => {
   const [sticker, setSticker] = useState<any>(null);
   const ticketId = new URLSearchParams(window.location.search).get("ticketId");
   const token = sessionStorage.getItem("access_token");
+  const [loading , setLoading] = useState(true);
   console.log(
     `${import.meta.env.VITE_API_URL_ORDER}/api/picking/detail/${ticketId}`
   );
@@ -15,7 +16,7 @@ const FormatSticker = () => {
     if (!sticker) return;
     const printTimeout = setTimeout(() => {
         window.print();
-    }, 500);
+    }, 1000);
     window.onafterprint = () => {
       localStorage.setItem("print_status", "done");
       window.close();
@@ -27,35 +28,42 @@ const FormatSticker = () => {
   }, [sticker]);
 
   useEffect(() => {
-    let retryCount = 0;
+    let isCancelled = false;
+  
     const fetchData = async () => {
       try {
         const response = await axios.get(
-          `${
-            import.meta.env.VITE_API_URL_ORDER
-          }/api/picking/detail/${ticketId}`,
+          `${import.meta.env.VITE_API_URL_ORDER}/api/picking/detail/${ticketId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        setSticker(response.data);
-        const sticker = response.data;
-        console.log(sticker);
+        if (!isCancelled) {
+          setSticker(response.data);
+          setLoading(false);
+          console.log(response.data);
+        }
       } catch (error) {
-        if (retryCount < 3) {
-          retryCount++;
-          setTimeout(fetchData, 1000);
+        console.warn("❗ API failed, will retry in 1 second");
+        if (!isCancelled) {
+          setTimeout(fetchData, 1000); // retry after 1 sec
         }
       }
     };
+  
     fetchData();
+  
+    return () => {
+      isCancelled = true;
+    };
   }, [ticketId]);
-  if (!sticker)
+
+  if (loading)
     return (
       <div className="flex justify-center items-center h-screen">
         Loading...
       </div>
-    );
+  );
   return (
     <div className="page h-full w-full">
       <div className="p-5 flex justify-between">

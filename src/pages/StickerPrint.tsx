@@ -51,6 +51,15 @@ const StickerPrint = () => {
       console.log("Received ticket data:", data);
     });
 
+    newSocket.on("connect_error", (error) => {
+      console.error("❌ Failed to connect to server:", error.message);
+      setLoading(true);
+      setListPrint([]);
+      setPendingTickets([]);
+      setCurrentIndex(0);
+      setIsOpen([]);
+    });
+
     return () => {
       newSocket.disconnect();
     };
@@ -166,13 +175,6 @@ const StickerPrint = () => {
     return () => window.removeEventListener("storage", handleStorage);
   }, [pendingTickets, currentIndex, socket]);
 
-  if (loading)
-    return (
-      <div className="flex justify-center items-center h-screen">
-        Loading...
-      </div>
-    );
-
   return (
     <div className="min-h-screen bg-gray-50 text-black p-4 pt-10">
       <div className="flex w-full justify-end">
@@ -283,6 +285,9 @@ const StickerPrint = () => {
                 ))}
           </tbody>
         </table>
+        { loading && <div className="w-full flex justify-center h-56 items-center">
+              <p className="text-xl font-medium text-black">Loading ...</p>
+        </div>}
       </div>
     </div>
   );

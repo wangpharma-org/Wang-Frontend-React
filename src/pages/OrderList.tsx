@@ -333,10 +333,10 @@ const OrderList = () => {
               <div ref={popupRef} className="flex absolute ">
                 <input
                   type="text"
-                  placeholder="พิมพ์ mem_code"
+                  placeholder="พิมพ์รหัสลูกค้า"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="p-1 border rounded-sm text-black bg-white flex z-10 h-8"
+                  className="p-1 rounded-sm text-black bg-white flex z-10 h-8"
                 />
               </div>
             )}
@@ -763,7 +763,7 @@ const OrderList = () => {
           </div>
         ) : (
           isFiltered && (
-            <div className="flex flex-col justify-center items-center text-center">
+            <div className="flex flex-col justify-center items-center text-center h-full">
               <div className=" font-bold mt-4 text-red-500">
                 <p className="text-2xl ">ไม่พบข้อมูลที่ค้นหา</p>
                 {search && <p className="text-xl ">{search}</p>}
@@ -776,7 +776,7 @@ const OrderList = () => {
               </div>
               <button
                 onClick={setButton}
-                className="px-5 py-1 border rounded-sm mt-2 text-2xl shadow-xl"
+                className="px-5 py-1 rounded-sm mt-2 text-xl bg-red-500 text-white shadow-xl border-gray-300"
               >
                 คืนค่าเดิม
               </button>
