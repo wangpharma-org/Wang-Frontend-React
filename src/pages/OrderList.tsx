@@ -4,7 +4,7 @@ import { Socket, io } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router";
 import axios from "axios";
-import { Bounce, Id, ToastContainer, toast } from 'react-toastify';
+import { Bounce, Id, ToastContainer, toast } from "react-toastify";
 
 interface Product {
   product_floor: string;
@@ -47,12 +47,19 @@ const OrderList = () => {
   const [loading, setLoading] = useState(true);
   const [totalProduct, setTotalShoppingOrders] = useState(0);
   const [totalPicking, setTotalPicking] = useState(0);
-  // const [isOpen, setIsOpen] = useState(false);
-  // const [selectedOption, setSelectedOption] = useState("เลือกตัวเลือก");
   const [openPopupId, setOpenPopupId] = useState<string | null>(null);
   const popupRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const popupRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
+  const [selectroute, setSelectroute] = useState("เลือกเส้นทางขนส่ง");
+  const { userInfo, logout } = useAuth();
+  const navigate = useNavigate();
+  const [latestTimes, setLatestTimes] = useState<Record<string, Date>>({});
+  const [search, setSearch] = useState("");
+  const [showInput, setShowInput] = useState(false);
+  const [openMenu, setOpenMenu] = useState(false);
+
   const togglePopup = (id: string) => {
     setOpenPopupId((prev) => (prev === id ? null : id));
   };
@@ -66,16 +73,6 @@ const OrderList = () => {
     console.log("showInput " + showInput);
   };
 
-  const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
-  const [selectroute, setSelectroute] = useState("เลือกเส้นทางขนส่ง");
-  const { userInfo, logout } = useAuth();
-  const navigate = useNavigate();
-  const [latestTimes, setLatestTimes] = useState<Record<string, Date>>({});
-  const [search, setSearch] = useState("");
-  const [showInput, setShowInput] = useState(false);
-  const [openMenu, setOpenMenu] = useState(false);
-
-  // console.log(userInfo);
   useEffect(() => {
     console.log(`${import.meta.env.VITE_API_URL_ORDER}/socket/listorder`);
     const newSocket = io(
@@ -96,6 +93,12 @@ const OrderList = () => {
     newSocket.on("listorder:get", (data) => {
       setOrderList(data);
       setLoading(false);
+    });
+
+    newSocket.on("connect_error", (error) => {
+      console.error("❌ Failed to connect to server:", error.message);
+      setOrderList([]);
+      setLoading(true);
     });
 
     return () => {
@@ -180,7 +183,7 @@ const OrderList = () => {
     }
   };
 
-  const filteredData = orderList.filter(order => {
+  const filteredData = orderList.filter((order) => {
     const matchSearch =
       !search ||
       order.mem_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -188,8 +191,10 @@ const OrderList = () => {
 
     const matchFloor =
       !selectedFloor ||
-      order.shoppingHeads.some(sh =>
-        sh.shoppingOrders.some(so => so.product.product_floor === selectedFloor)
+      order.shoppingHeads.some((sh) =>
+        sh.shoppingOrders.some(
+          (so) => so.product.product_floor === selectedFloor
+        )
       );
 
     const matchRoute =
@@ -200,11 +205,13 @@ const OrderList = () => {
     return matchSearch && matchFloor && matchRoute;
   });
 
-  const isFiltered = search || selectedFloor || (selectroute && selectroute !== "เลือกเส้นทางขนส่ง");
+  const isFiltered =
+    search ||
+    selectedFloor ||
+    (selectroute && selectroute !== "เลือกเส้นทางขนส่ง");
   console.log("search " + search);
   console.log("selectedFloor " + selectedFloor);
   console.log("selectroute " + selectroute);
-
 
   const floorButtons = [
     { label: "ชั้น 1", value: "1", color: "bg-gray-400" },
@@ -215,10 +222,10 @@ const OrderList = () => {
     { label: "ยกลัง", value: "box", color: "bg-purple-500" }, // ถ้าคุณจะใช้ type พิเศษ
   ];
 
-  const printSticker = (mem_code: string) => {
+  const printSticker = async (mem_code: string) => {
     console.log("printSticker", mem_code);
     try {
-      axios.post(
+      const response = await axios.post(
         `${import.meta.env.VITE_API_URL_ORDER}/api/picking/createTicket`,
         {
           mem_code: mem_code,
@@ -229,17 +236,43 @@ const OrderList = () => {
           },
         }
       );
+      console.log("response", response);
+      if (response.status === 201) {
+        console.log("Sticker created successfully!");
+        toast.success("สั่งพิมพ์สติกเกอร์สำเร็จ", {
+          position: "top-center",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: false,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+          transition: Bounce,
+        });
+      } else {
+        toast.error("มีข้อผิดพลาดในการสั่งพิมพ์", {
+          position: "top-center",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: false,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+          transition: Bounce,
+        });
+      }
     } catch (error) {
-      // sendPrintStatus.current = false;
       console.error("Error printing sticker:", error);
     }
   };
 
-  const setButton = () =>{
-    setSearch('');
-    setSelectroute('เลือกเส้นทางขนส่ง');
-    setSelectedFloor(null)
-  }
+  const setButton = () => {
+    setSearch("");
+    setSelectroute("เลือกเส้นทางขนส่ง");
+    setSelectedFloor(null);
+  };
 
   const routeButtons = [
     { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
@@ -273,6 +306,21 @@ const OrderList = () => {
 
   return (
     <div className="flex flex-col h-screen">
+      <div>
+        <ToastContainer
+          position="top-center"
+          autoClose={2000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick={false}
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+          transition={Bounce}
+        />
+      </div>
       <header className="p-2 bg-blue-400 text-white font-medium">
         <div className="flex justify-between">
           <div>
@@ -480,20 +528,23 @@ const OrderList = () => {
                     >
                       <div
                         onClick={() => togglePopup(order.mem_code)}
-                        className={`w-full p-3 rounded-sm shadow-xl text-[10px] text-[#444444] ${order.picking_status === "picking"
-                          ? "bg-green-400"
-                          : "bg-gray-400"
-                          }`}
+                        className={`w-full p-3 rounded-sm shadow-xl text-[10px] text-[#444444] ${
+                          order.picking_status === "picking"
+                            ? "bg-green-400"
+                            : "bg-gray-400"
+                        }`}
                       >
                         <div
-                          className={`p-2 rounded-sm ${order.picking_status === "picking"
-                            ? "bg-green-100"
-                            : "bg-white"
-                            }`}
+                          className={`p-2 rounded-sm ${
+                            order.picking_status === "picking"
+                              ? "bg-green-100"
+                              : "bg-white"
+                          }`}
                         >
                           <div className="flex justify-between">
                             <div className="flex justify-start">
-                              <p>{order.mem_code}</p>&nbsp;<p>{order.mem_name}</p>
+                              <p>{order.mem_code}</p>&nbsp;
+                              <p>{order.mem_name}</p>
                             </div>
                             <div>
                               <p>
@@ -558,12 +609,15 @@ const OrderList = () => {
                               return (
                                 <div
                                   key={floor}
-                                  className={`flex-none px-1 py-1.5 mx-0.5 rounded shadow-sm text-center w-17 ${data.remaining > 0
-                                    ? "bg-yellow-200"
-                                    : "bg-red-200"
-                                    }`}
+                                  className={`flex-none px-1 py-1.5 mx-0.5 rounded shadow-sm text-center w-17 ${
+                                    data.remaining > 0
+                                      ? "bg-yellow-200"
+                                      : "bg-red-200"
+                                  }`}
                                 >
-                                  <div className="text-xs font-bold">F{floor}</div>
+                                  <div className="text-xs font-bold">
+                                    F{floor}
+                                  </div>
                                   <div className="text-[10px] text-gray-600">
                                     เหลือ{" "}
                                     <span className="font-bold">
@@ -589,7 +643,8 @@ const OrderList = () => {
                             </div>
                             <div className="flex justify-center">
                               {order?.picking_status === "picking" &&
-                                order?.emp_code_picking === userInfo?.emp_code && (
+                                order?.emp_code_picking ===
+                                  userInfo?.emp_code && (
                                   <div className="pr-1">
                                     <button className="border rounded-sm px-2 py-1 bg-green-600 text-white shadow-xl border-gray-300">
                                       ยืนยัน
@@ -597,7 +652,8 @@ const OrderList = () => {
                                   </div>
                                 )}
                               {order?.picking_status === "picking" &&
-                                order?.emp_code_picking === userInfo?.emp_code && (
+                                order?.emp_code_picking ===
+                                  userInfo?.emp_code && (
                                   <div className="pr-1">
                                     <button
                                       className="border rounded-sm px-2 py-1 bg-amber-400 text-white shadow-xl border-gray-300 cursor-pointer z-50"
@@ -624,8 +680,8 @@ const OrderList = () => {
                                 </div>
                               )}
                               <div>
-                                {userInfo?.floor_picking &&
-                                  <button 
+                                {userInfo?.floor_picking && (
+                                  <button
                                     className="border rounded-sm px-2 py-1 bg-blue-400 text-white shadow-xl border-gray-300"
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -634,7 +690,7 @@ const OrderList = () => {
                                   >
                                     พิมพ์สติกเกอร์
                                   </button>
-                                }
+                                )}
                               </div>
                             </div>
                           </div>
@@ -646,7 +702,10 @@ const OrderList = () => {
                           >
                             <ul>
                               {order.shoppingHeads.map((sh, index) => (
-                                <li key={sh.sh_id} className="pt-2 pb-2 text-xs">
+                                <li
+                                  key={sh.sh_id}
+                                  className="pt-2 pb-2 text-xs"
+                                >
                                   <div className="flex justify-between pt-1">
                                     <div className="flex justify-start">
                                       <p className="font-bold">{index + 1}.</p>
@@ -659,7 +718,9 @@ const OrderList = () => {
                                   <div>
                                     <p>
                                       เปิดบิล:{" "}
-                                      {new Date(sh.sh_datetime).toLocaleString()}
+                                      {new Date(
+                                        sh.sh_datetime
+                                      ).toLocaleString()}
                                     </p>
                                   </div>
                                   <div className="flex justify-start">
@@ -667,7 +728,9 @@ const OrderList = () => {
                                       {order.emp.emp_nickname}
                                     </p>
                                     &nbsp;
-                                    <p className="text-red-500">กำลังทำงานอยู่</p>
+                                    <p className="text-red-500">
+                                      กำลังทำงานอยู่
+                                    </p>
                                   </div>
                                   <hr className="mt-2" />
                                 </li>
@@ -703,17 +766,20 @@ const OrderList = () => {
             <div className="flex flex-col justify-center items-center text-center">
               <div className=" font-bold mt-4 text-red-500">
                 <p className="text-2xl ">ไม่พบข้อมูลที่ค้นหา</p>
-                {search && (
-                  <p className="text-xl ">{search}</p>
-                )}
-                {selectroute !== 'all' && (
+                {search && <p className="text-xl ">{search}</p>}
+                {selectroute !== "all" && (
                   <p className="text-xl ">เส้นทาง: {selectroute}</p>
                 )}
                 {selectedFloor && (
                   <p className="text-xl ">ชั้น: {selectedFloor}</p>
                 )}
               </div>
-              <button onClick={setButton} className="px-5 py-1 border rounded-sm mt-2 text-2xl shadow-xl">คืนค่าเดิม</button>
+              <button
+                onClick={setButton}
+                className="px-5 py-1 border rounded-sm mt-2 text-2xl shadow-xl"
+              >
+                คืนค่าเดิม
+              </button>
             </div>
           )
         )}
@@ -734,10 +800,11 @@ const OrderList = () => {
                     className={` border border-gray-500 py-1 px-2 rounded-sm shadow-lg 
                             ${btn.color} 
                             hover:bg-yellow-300 hover:text-black
-                            ${selectedFloor === btn.value
-                        ? "ring-2 ring-yellow-300 text-black"
-                        : ""
-                      }
+                            ${
+                              selectedFloor === btn.value
+                                ? "ring-2 ring-yellow-300 text-black"
+                                : ""
+                            }
                             `}
                   >
                     {btn.label}
@@ -757,13 +824,16 @@ const OrderList = () => {
                     <div className="text-[8px] flex justify-center">
                       <p>
                         {latestTimes[floor]
-                          ? new Date(latestTimes[floor]).toLocaleString("th-TH", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
+                          ? new Date(latestTimes[floor]).toLocaleString(
+                              "th-TH",
+                              {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )
                           : "-"}
                       </p>
                     </div>
