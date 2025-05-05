@@ -56,11 +56,6 @@ const StickerPrint = () => {
     };
   }, []);
 
-  useEffect(() => {
-    console.log("listPrintTicket", listPrintTicket);
-  }, [listPrintTicket]);
-
-  console.log("listPrintTicket " + listPrintTicket);
   const route = [
     { route_name: "ทั้งหมด", value: "all" },
     { route_name: "L1-1 หาดใหญ่", value: "หาดใหญ่" },
@@ -90,7 +85,6 @@ const StickerPrint = () => {
     { route_name: "L9-11 กระบี่-ตรัง", value: "กระบี่-ตรัง" },
     { route_name: "Office รับเอง", value: "Office รับเอง" },
   ];
-  console.log("selectedRoute" + selectedRoute);
 
   const getCellClass = (status: string | undefined) => {
     if (status === undefined) {
