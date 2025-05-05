@@ -404,7 +404,7 @@ const OrderList = () => {
                     <div className="flex justify-center px-3 text-white">
                       <button
                         onClick={logout}
-                        className="w-full mx-auto flex py-2 hover:bg-red-600 cursor-pointer text-center items-center font-light rounded-sm"
+                        className="w-full mx-auto flex py-2 active:bg-red-600 scale-95 transition cursor-pointer text-center items-center font-light rounded-sm"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
