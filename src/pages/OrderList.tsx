@@ -67,6 +67,7 @@ const OrderList = () => {
 
   const togglePopupMenu = () => {
     setOpenMenu((prev) => !prev);
+    console.log("Click menu");
   };
 
   const toggleSearch = () => {
@@ -436,17 +437,7 @@ const OrderList = () => {
       </header>
 
       <div className="relative flex-grow overflow-y-auto">
-        {loading ? (
-          <div className="flex justify-center font-bold text-2xl mt-10">
-            <p>Loading...</p>
-          </div>
-        ) : orderList.length === 0 && (<div className="flex justify-center font-bold text-2xl mt-10">
-          <p>ไม่มีรายการสินค้า</p>
-        </div>)}
-
-        {filteredData.length > 0 ? (
-          <div>
-            <div>
+      <div>
               {openMenu && (
                 <div
                   ref={popupRef}
@@ -493,6 +484,18 @@ const OrderList = () => {
                 </div>
               )}
             </div>
+        {loading ? (
+          <div className="flex justify-center font-bold text-2xl mt-10">
+            <p>Loading...</p>
+          </div>
+        ) : orderList.length === 0 ? (
+        <div className="flex justify-center font-bold text-2xl mt-10">
+          <p>ไม่มีรายการสินค้า</p>
+          </div>
+        ) : (
+          <div>
+        {filteredData.length > 0 ? (
+          <div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full my-2">
               {orderList
                 .filter((order) => {
@@ -837,6 +840,8 @@ const OrderList = () => {
             </div>
           )
         )}
+      </div>
+      )}
       </div>
       <div>
         <footer className="p-2 bg-blue-400 text-white font-medium">
