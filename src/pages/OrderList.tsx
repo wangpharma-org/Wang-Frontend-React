@@ -29,6 +29,7 @@ interface Emp {
 }
 
 interface orderList {
+  all_sh_running: string[];
   emp: Emp;
   emp_code: string;
   emp_code_picking: string;
@@ -91,6 +92,7 @@ const OrderList = () => {
     });
 
     newSocket.on("listorder:get", (data) => {
+      console.log(data);
       setOrderList(data);
       setLoading(false);
     });
@@ -123,7 +125,7 @@ const OrderList = () => {
         order.shoppingHeads.reduce(
           (headTotal, head) =>
             headTotal +
-            head.shoppingOrders.filter((so) => so.picking_status === "picking")
+            head.shoppingOrders.filter((so) => so.picking_status !== "pending")
               .length,
           0
         ),
@@ -174,6 +176,15 @@ const OrderList = () => {
       });
     }
   };
+
+  const handleSubmit = (mem_code: string, all_sh_running: string[]) => {
+    if (socket?.connected) {
+      socket.emit("listorder:submitpicking", {
+        mem_code: mem_code,
+        all_sh_running: all_sh_running,
+      });
+    }
+  }
 
   const changeToPicking = (mem_code: string) => {
     if (socket?.connected) {
@@ -303,6 +314,10 @@ const OrderList = () => {
     { id: 26, name: "กระบี่-ตรัง", value: "กระบี่-ตรัง" },
     { id: 27, name: "Office รับเอง", value: "Office รับเอง" },
   ];
+
+  useEffect(() => {
+    console.log("totalPicking", totalPicking);
+  }, [totalPicking]);
 
   return (
     <div className="flex flex-col h-screen">
@@ -646,7 +661,44 @@ const OrderList = () => {
                                 order?.emp_code_picking ===
                                   userInfo?.emp_code && (
                                   <div className="pr-1">
-                                    <button className="border rounded-sm px-2 py-1 bg-green-600 text-white shadow-xl border-gray-300">
+                                    <button
+                                      disabled={
+                                        !(
+                                          order.shoppingHeads
+                                            .flatMap((h) => h.shoppingOrders)
+                                            .filter(
+                                              (so) =>
+                                                so.picking_status !== "pending"
+                                            ).length -
+                                            order.shoppingHeads.flatMap(
+                                              (h) => h.shoppingOrders
+                                            ).length ===
+                                          0
+                                        )
+                                      }
+                                      className={`border rounded-sm px-2 py-1  text-white shadow-xl border-gray-300 ${
+                                        order.shoppingHeads
+                                          .flatMap((h) => h.shoppingOrders)
+                                          .filter(
+                                            (so) =>
+                                              so.picking_status !== "pending"
+                                          ).length -
+                                          order.shoppingHeads.flatMap(
+                                            (h) => h.shoppingOrders
+                                          ).length ===
+                                        0
+                                          ? "bg-green-600"
+                                          : "bg-gray-500"
+                                      }`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleSubmit(
+                                          order?.mem_code,
+                                          order?.all_sh_running,
+                                        );
+                                      }
+                                      }
+                                    >
                                       ยืนยัน
                                     </button>
                                   </div>

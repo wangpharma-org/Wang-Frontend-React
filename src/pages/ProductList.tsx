@@ -3,7 +3,6 @@ import { useNavigate } from "react-router";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import Clock from "../components/Clock";
-import OrderList from "./OrderList";
 
 interface Product {
   product_code: string;
@@ -82,6 +81,12 @@ function ProductList() {
     newSocket.on("listproduct:get", (data) => {
       setListproduct(data);
       setLoading(false);
+    });
+
+    newSocket.on("connect_error", (error) => {
+      console.error("❌ Failed to connect to server:", error.message);
+      setListproduct(null);
+      setLoading(true);
     });
 
     return () => {
@@ -500,7 +505,7 @@ function ProductList() {
             ) : (
               (search || selectedFloor) && (
                 
-                <div className="flex flex-col justify-center items-center text-center">
+                <div className="flex flex-col justify-center items-center text-center h-[70vh]">
                   <div className=" font-bold mt-4 text-red-500 text-2xl">
                     
                     {search && (
@@ -517,7 +522,7 @@ function ProductList() {
                       </div>
                     )}
                   </div>
-                  <button onClick={setButton} className="px-5 py-1 border rounded-md mt-2 text-2xl shadow-xl bg-red-500 text-white">คืนค่าเดิม</button>
+                  <button onClick={setButton} className="px-5 py-1 rounded-sm mt-2 text-xl bg-red-500 text-white shadow-xl border-gray-300">คืนค่าเดิม</button>
                 </div>
               ))}
           </div>
