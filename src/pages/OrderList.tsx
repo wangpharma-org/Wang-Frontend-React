@@ -92,7 +92,7 @@ const OrderList = () => {
     });
 
     newSocket.on("listorder:get", (data) => {
-      console.log(data);
+      console.log("Data "+data);
       setOrderList(data);
       setLoading(false);
     });
@@ -149,7 +149,7 @@ const OrderList = () => {
     });
     setLatestTimes(latestByFloor);
 
-    console.log(orderList);
+    console.log("order List "+orderList);
   }, [orderList]);
 
   useEffect(() => {
@@ -436,11 +436,13 @@ const OrderList = () => {
       </header>
 
       <div className="relative flex-grow overflow-y-auto">
-        {loading && (
+        {loading ? (
           <div className="flex justify-center font-bold text-2xl mt-10">
             <p>Loading...</p>
           </div>
-        )}
+        ) : orderList.length === 0 && (<div className="flex justify-center font-bold text-2xl mt-10">
+          <p>ไม่มีรายการสินค้า</p>
+        </div>)}
 
         {filteredData.length > 0 ? (
           <div>
