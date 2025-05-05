@@ -457,6 +457,9 @@ const OrderList = () => {
                       <p className="flex justify-center text-white">
                         {userInfo?.username}
                       </p>
+                      <p className="flex justify-center text-white">
+                        {userInfo?.floor_picking || "-"}
+                      </p>
                     </div>
                     <div className="flex justify-center px-3 text-white">
                       <button
