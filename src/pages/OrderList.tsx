@@ -4,6 +4,7 @@ import { Socket, io } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router";
 import axios from "axios";
+import { Bounce, Id, ToastContainer, toast } from 'react-toastify';
 
 interface Product {
   product_floor: string;
@@ -624,7 +625,13 @@ const OrderList = () => {
                               )}
                               <div>
                                 {userInfo?.floor_picking &&
-                                  <button className="border rounded-sm px-2 py-1 bg-blue-400 text-white shadow-xl border-gray-300">
+                                  <button 
+                                    className="border rounded-sm px-2 py-1 bg-blue-400 text-white shadow-xl border-gray-300"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      printSticker(order?.mem_code);
+                                    }}
+                                  >
                                     พิมพ์สติกเกอร์
                                   </button>
                                 }

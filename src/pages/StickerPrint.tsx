@@ -87,6 +87,7 @@ const StickerPrint = () => {
   ];
 
   const getCellClass = (status: string | undefined) => {
+    console.log("Status:", status);
     if (status === undefined) {
       return "text-gray-500";
     }
@@ -250,15 +251,15 @@ const StickerPrint = () => {
                         key={floor}
                         className={`px-6 py-4 ${getCellClass(
                           list[`F${floor}`]?.some(
-                            (t: any)  => t.print_status === "pending"
-
+                            (t: any) => t.print_status === "pending"
+                          )
                             ? "pending"
                             : list[`F${floor}`]?.some(
                                 (t: any) => t.print_status === "printed"
                               )
                             ? "printed"
-                            : "none"
-                        ))}`}
+                            : undefined
+                        )}`}
                       >
                         <div className="flex justify-center items-center">
                           <svg
