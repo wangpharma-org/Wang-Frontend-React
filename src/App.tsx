@@ -17,107 +17,115 @@ function App() {
   return (
     <>
       <Router>
-      <Routes>
-        <Route 
-          path="/" 
-          element={
-            <div>
-              <Navbar />
-              <Home />
-            </div>
-          } 
-        />
-        <Route 
-          path="/login" 
-          element={
-            <div>
-              <Navbar />
-              <Login />
-            </div>
-          } 
-        />
-        <Route
-          path="/invoice-all"
-          element={
-            <>
-              <Navbar />
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <div>
+                <RequireAuth>
+                  <Navbar />
+                  <Home />
+                </RequireAuth>
+              </div>
+            }
+          />
+          <Route
+            path="/login"
+            element={
+              <div>
+                <Navbar />
+                <Login />
+              </div>
+            }
+          />
+          <Route
+            path="/invoice-all"
+            element={
+              <>
+                <Navbar />
+                <RequireAuth>
+                  <InvoiceList />
+                </RequireAuth>
+              </>
+            }
+          />
+          <Route
+            path="/invoice-vat"
+            element={
+              <>
+                <Navbar />
+                <RequireAuth>
+                  <InvoiceVat />
+                </RequireAuth>
+              </>
+            }
+          />
+          <Route
+            path="/invoice-part"
+            element={
+              <>
+                <Navbar />
+                <RequireAuth>
+                  <InvoicePart />
+                </RequireAuth>
+              </>
+            }
+          />
+          <Route
+            path="/format-vat"
+            element={
               <RequireAuth>
-                <InvoiceList />
+                <FormatVat />
               </RequireAuth>
-            </>
-          }
-        />
-        <Route
-          path="/invoice-vat"
-          element={
-            <>
-              <Navbar />
+            }
+          />
+          <Route
+            path="/format-part"
+            element={
               <RequireAuth>
-                <InvoiceVat />
+                <FormatPart />
               </RequireAuth>
-            </>
-          }
-        />
-        <Route
-          path="/invoice-part"
-          element={
-            <>
-              <Navbar />
+            }
+          />
+          <Route
+            path="/order-list"
+            element={
               <RequireAuth>
-                <InvoicePart />
+                <OrderList />
               </RequireAuth>
-            </>
-          }
-        />
-        <Route
-          path="/format-vat"
-          element={
-            <RequireAuth>
-              <FormatVat />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/format-part"
-          element={
-            <RequireAuth>
-              <FormatPart />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/order-list"
-          element={
-            <RequireAuth>
-              <OrderList />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/product-list"
-          element={
-            <RequireAuth>
-              <ProductList />
+            }
+          />
+          <Route
+            path="/product-list"
+            element={
+              <RequireAuth>
+                <ProductList />
               </RequireAuth>
-          }
-        />
-        <Route
-          path="/print-sticker"
-          element={
-            <div>
-              <Navbar />
-              <StickerPrint />
-            </div>
-          }
-        />
-        <Route
-          path="/format-sticker"
-          element={
-            <FormatSticker />
-          }
-        />
-      </Routes>
-    </Router>
+            }
+          />
+          <Route
+            path="/print-sticker"
+            element={
+              <div>
+                <RequireAuth>
+                  <Navbar />
+                  <StickerPrint />
+                </RequireAuth>
+              </div>
+            }
+          />
+          <Route
+            path="/format-sticker"
+            element={
+              <div>
+                <RequireAuth>
+                  <FormatSticker />
+                </RequireAuth>
+              </div>
+            }
+          />
+        </Routes>
+      </Router>
     </>
   );
 }
