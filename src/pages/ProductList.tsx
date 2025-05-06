@@ -49,7 +49,7 @@ function ProductList() {
   const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
   const navigate = useNavigate();
   const mem_code = new URLSearchParams(window.location.search).get("mem_code");
-  const { userInfo } = useAuth();
+  const { userInfo, logout } = useAuth();
 
   const popupRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -96,7 +96,7 @@ function ProductList() {
 
   useEffect(() => {
     if (listproduct) {
-      const hasPending = listproduct.shoppingHeads.some((head) =>
+      const hasPending = (listproduct?.shoppingHeads ?? []).some((head) =>
         head.shoppingOrders.some((order) => order.picking_status === "pending")
       );
       setCanSubmit(!hasPending);
@@ -202,14 +202,15 @@ function ProductList() {
     setSelectedFloor(null)
   }
 
-
+  
   const totalOrders =
-    listproduct?.shoppingHeads.reduce(
+    (listproduct?.shoppingHeads ?? []).reduce(
       (total, head) => total + head.shoppingOrders.length,
       0
     ) || 0;
+
   const pickingCount =
-    listproduct?.shoppingHeads.reduce(
+    (listproduct?.shoppingHeads ?? []).reduce(
       (total, head) =>
         total +
         head.shoppingOrders.filter(
@@ -218,7 +219,7 @@ function ProductList() {
       0
     ) || 0;
   const pendingCount =
-    listproduct?.shoppingHeads.reduce(
+    (listproduct?.shoppingHeads ?? []).reduce(
       (total, head) =>
         total +
         head.shoppingOrders.filter(
@@ -237,7 +238,7 @@ function ProductList() {
   ];
 
   const Btnlogout = () => {
-    console.log("logout❗❗")
+    logout()
   };
 
   return (
@@ -354,8 +355,8 @@ function ProductList() {
           </div>
         ) : !listproduct?.shoppingHeads ? (
           <div className="flex flex-col items-center mt-5">
-            <p className="font-bold text-2xl">ไม่มีรายการสินค้า</p>
-            <button onClick={() => navigate("/order-list")}>กลับ</button>
+            <p className="font-bold text-2xl">รายการคำสั่งซื้อนี้ยืนยันไปแล้ว</p>
+            <button onClick={() => navigate("/order-list")} className="bg-blue-400 px-3 py-1 mt-4 rounded-sm text-white">กลับ</button>
           </div>) : (
           <div>
             {listproduct.shoppingHeads.some(head =>
