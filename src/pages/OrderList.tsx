@@ -53,7 +53,7 @@ const OrderList = () => {
   const popupRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
-  const [selectroute, setSelectroute] = useState("เลือกเส้นทางขนส่ง");
+  const [selectroute, setSelectroute] = useState("all");
   const { userInfo, logout } = useAuth();
   const navigate = useNavigate();
   const [latestTimes, setLatestTimes] = useState<Record<string, Date>>({});
