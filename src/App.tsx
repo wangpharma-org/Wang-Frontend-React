@@ -91,7 +91,7 @@ function App() {
             path="/order-list"
             element={
               <RequireAuth>
-                <OrderList />
+              <OrderList />
               </RequireAuth>
             }
           />
@@ -99,7 +99,7 @@ function App() {
             path="/product-list"
             element={
               <RequireAuth>
-                <ProductList />
+              <ProductList />
               </RequireAuth>
             }
           />

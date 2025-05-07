@@ -20,7 +20,7 @@ interface ShoppingOrder {
   so_amount: number;
   so_unit: string;
   picking_status: string;
-  emp_code_floor_picking: string | null;
+  emp_code_floor_picking: string;
   so_picking_time: string | null;
   product: Product;
 }
@@ -57,6 +57,84 @@ function ProductList() {
   const [search, setSearch] = useState("");
   const [showInput, setShowInput] = useState(false);
   const [isFiltered, setIsFiltered] = useState(false)
+
+  // const mockData: PickingData = {
+  //   mem_code: "EMP001",
+  //   mem_name: "สมชาย ใจดี",
+  //   emp_code_picking: "EMP001",
+  //   all_sh_running: ["SH001", "SH002"],
+  //   shoppingHeads: [
+  //     {
+  //       sh_running: "SH001",
+  //       shoppingOrders: [
+  //         {
+  //           so_running: "SO001",
+  //           so_amount: 3,
+  //           so_unit: "กล่อง",
+  //           picking_status: "pending",
+  //           emp_code_floor_picking: "1",
+  //           so_picking_time: null,
+  //           product: {
+  //             product_code: "P001",
+  //             product_name: "น้ำดื่มขวดเล็ก",
+  //             product_image_url: "https://via.placeholder.com/100",
+  //             product_barcode: "1234567890123",
+  //             product_floor: "1",
+  //             product_addr: "แถว A ชั้น 1",
+  //             product_stock: "10",
+  //             product_unit: "ขวด",
+  //           }
+  //         },
+  //         {
+  //           so_running: "SO002",
+  //           so_amount: 5,
+  //           so_unit: "ชิ้น",
+  //           picking_status: "picking",
+  //           emp_code_floor_picking: "1",
+  //           so_picking_time: "2024-01-01T12:00:00Z",
+  //           product: {
+  //             product_code: "P002",
+  //             product_name: "สบู่สมุนไพร",
+  //             product_image_url: "https://via.placeholder.com/100",
+  //             product_barcode: "9876543210987",
+  //             product_floor: "1",
+  //             product_addr: "แถว B ชั้น 1",
+  //             product_stock: "7",
+  //             product_unit: "ก้อน",
+  //           }
+  //         }
+  //       ]
+  //     },
+  //     {
+  //       sh_running: "SH002",
+  //       shoppingOrders: [
+  //         {
+  //           so_running: "SO003",
+  //           so_amount: 2,
+  //           so_unit: "แพ็ค",
+  //           picking_status: "หมด",
+  //           emp_code_floor_picking: "2",
+  //           so_picking_time: null,
+  //           product: {
+  //             product_code: "P003",
+  //             product_name: "แชมพูเด็ก",
+  //             product_image_url: "https://via.placeholder.com/100",
+  //             product_barcode: "4567890123456",
+  //             product_floor: "2",
+  //             product_addr: "แถว C ชั้น 2",
+  //             product_stock: "0",
+  //             product_unit: "ขวด",
+  //           }
+  //         }
+  //       ]
+  //     }
+  //   ]
+  // };
+
+  // useEffect(() => {
+  //   setListproduct(mockData); // ใช้ mockData แทน data ที่มาจาก socket
+  //   setLoading(false);
+  // }, []);
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
@@ -362,7 +440,7 @@ function ProductList() {
             {listproduct.shoppingHeads.some(head =>
               head.shoppingOrders.some(orderItem => {
                 const matchFloor = selectedFloor
-                  ? orderItem.product.product_floor === selectedFloor
+                  ? (orderItem.product.product_floor || "1") === selectedFloor
                   : true;
 
                 const matchSearch =
@@ -384,7 +462,7 @@ function ProductList() {
                       {head.shoppingOrders
                         .filter((orderItem) => {
                           const matchFloor = selectedFloor
-                            ? orderItem.product.product_floor === selectedFloor
+                            ? (orderItem.product.product_floor || "1") === selectedFloor
                             : true
 
                           const matchSearch = !search || orderItem.product.product_name.includes(search) || orderItem.so_running.includes(search) || orderItem.product.product_code.includes(search);
