@@ -4,7 +4,7 @@ import { Socket, io } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router";
 import axios from "axios";
-import { Bounce, Id, ToastContainer, toast } from "react-toastify";
+import { Bounce, ToastContainer, toast } from "react-toastify";
 
 interface Product {
   product_floor: string;
@@ -53,7 +53,7 @@ const OrderList = () => {
   const popupRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
-  const [selectroute, setSelectroute] = useState("all");
+  const [selectroute, setSelectroute] = useState("เลือกเส้นทางขนส่ง");
   const { userInfo, logout } = useAuth();
   const navigate = useNavigate();
   const [latestTimes, setLatestTimes] = useState<Record<string, Date>>({});
@@ -226,7 +226,6 @@ const OrderList = () => {
   console.log("selectroute " + selectroute);
 
   const floorButtons = [
-    { label: "ชั้น 1", value: "1", color: "bg-gray-400" },
     { label: "ชั้น 2", value: "2", color: "bg-yellow-500" },
     { label: "ชั้น 3", value: "3", color: "bg-indigo-500" },
     { label: "ชั้น 4", value: "4", color: "bg-red-500" },
