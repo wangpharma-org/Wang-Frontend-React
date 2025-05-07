@@ -9,7 +9,7 @@ interface Product {
   product_name: string;
   product_image_url: string;
   product_barcode: string;
-  product_floor: string;
+  product_floor: string | null;
   product_addr: string;
   product_stock: string;
   product_unit: string;
@@ -362,7 +362,7 @@ function ProductList() {
             {listproduct.shoppingHeads.some(head =>
               head.shoppingOrders.some(orderItem => {
                 const matchFloor = selectedFloor
-                  ? orderItem.product.product_floor === selectedFloor
+                  ? (orderItem.product.product_floor || '1') === selectedFloor
                   : true;
 
                 const matchSearch =
@@ -384,7 +384,7 @@ function ProductList() {
                       {head.shoppingOrders
                         .filter((orderItem) => {
                           const matchFloor = selectedFloor
-                            ? orderItem.product.product_floor === selectedFloor
+                            ? (orderItem.product.product_floor || '1') === selectedFloor
                             : true
 
                           const matchSearch = !search || orderItem.product.product_name.includes(search) || orderItem.so_running.includes(search) || orderItem.product.product_code.includes(search);
@@ -413,7 +413,7 @@ function ProductList() {
                               <div className="flex justify-stretch p-1">
                                 <div className="w-1/3 border border-gray-500 flex justify-center ">
                                   <img
-                                    src={orderItem.product.product_image_url}
+                                    src={orderItem.product.product_image_url || 'https://icons.veryicon.com/png/o/application/applet-1/product-17.png'}
                                     className="w-25 h-25 object-cover"
                                   />
                                 </div>
@@ -441,7 +441,7 @@ function ProductList() {
                                   </div>
                                   <div className="flex justify-between pt-1 px-1">
                                     <div className="flex font-semibold text-violet-600">
-                                      <p>F{orderItem.product.product_floor}</p>&nbsp;
+                                      <p>F{orderItem.product.product_floor || '1'}</p>&nbsp;
                                       <p>{orderItem.product.product_addr}</p>
                                     </div>
                                   </div>
