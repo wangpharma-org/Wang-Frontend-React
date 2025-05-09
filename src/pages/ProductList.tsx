@@ -413,6 +413,7 @@ function ProductList() {
                   <p className="flex justify-center text-white">{userInfo?.floor_picking || "-"}</p>
                 </div>
                 <div className="flex justify-center px-3 text-white">
+                  <button onClick={() => navigate("/order-list")}>สถิติพนักงาน</button>
                   <button onClick={Btnlogout} className="w-full mx-auto flex py-2 hover:bg-red-600 cursor-pointer text-center items-center font-light rounded-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none"
                       viewBox="0 0 24 24" strokeWidth={1.2} stroke="currentColor"
