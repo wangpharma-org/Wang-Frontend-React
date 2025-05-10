@@ -1,0 +1,86 @@
+import { useState } from "react";
+import { EmployeeStatistic } from "../types";
+
+interface DropdownProps {
+  title: string;
+  data: EmployeeStatistic[];
+}
+
+const DropdownEmployeeStatistics = ({ title, data }: DropdownProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const toggleDropdown = () => {
+    setIsOpen(!isOpen);
+  };
+
+  return (
+    <div className="border border-gray-300 rounded-lg mb-4">
+      <div
+        className="p-2 bg-gray-100 cursor-pointer flex justify-between items-center"
+        onClick={toggleDropdown}
+      >
+        <span>{title}</span>
+        <span>{isOpen ? "▲" : "▼"}</span>
+      </div>
+      {isOpen && data.length > 0 && (
+        <div className="p-4 bg-white">
+          <div className="flex justify-between text-sm mb-2">
+            <p>เริ่มงาน: {new Date(data[0]?.shift_start).toLocaleString()}</p>
+            <p>สิ้นสุด: {new Date(data[0]?.shift_end).toLocaleString()}</p>
+            <p>ชั้น: {data[0]?.employee?.floor || "N/A"}</p>
+          </div>
+          <div className="flex justify-between text-sm mb-2">
+            <p>เวลา: {data[0]?.total_working_time} นาที</p>
+            <p>ชั้นแรก: {data[0]?.first_floor || "N/A"}</p>
+            <p>ชั้นล่าสุด: {data[0]?.last_floor || "N/A"}</p>
+          </div>
+
+          <div className="grid grid-cols-5 text-center font-bold mb-2 bg-blue-200 p-2 rounded">
+            <p>ชั้น</p>
+            <p>ทั้งหมด</p>
+            <p>เหลือจัด</p>
+            <p>กำลังจัด</p>
+            <p>จัดแล้ว</p>
+          </div>
+
+          {data.map((stat, index) => {
+            const remainingOrders = stat.total_orders - (stat.packed_orders + stat.completed_orders);
+            return (
+              <div
+                key={index}
+                className={`grid grid-cols-5 text-center ${
+                  index % 2 === 0 ? "bg-gray-100" : "bg-white"
+                }`}
+              >
+                <p>{stat.employee?.floor || "N/A"}</p>
+                <p>{stat.total_orders}</p>
+                <p>{remainingOrders}</p>
+                <p>{stat.packed_orders}</p>
+                <p>{stat.picked_orders}</p>
+              </div>
+            );
+          })}
+
+          <div className="mt-4 text-sm">
+            <div className="flex justify-between mb-1">
+              <p>ความเร็ว:</p>
+              <p>{data[0]?.average_speed} ชิ้น/นาที</p>
+            </div>
+            <div className="flex justify-between mb-1">
+              <p>เหลือ + กำลังจัด:</p>
+              <p>
+                {data[0]?.total_orders - data[0]?.picked_orders} รายการ
+              </p>
+            </div>
+            <div className="flex justify-between mb-1 text-red-500">
+              <p>เวลาแล้วเสร็จ:</p>
+              <p>{new Date(data[0]?.shift_end).toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DropdownEmployeeStatistics;

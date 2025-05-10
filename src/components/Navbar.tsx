@@ -13,6 +13,7 @@ import { useNavigate } from "react-router";
 const navigation = [
   { name: "หน้าหลัก", href: "/", exact: true },
   { name: "รายการใบกำกับสินค้า", href: "/invoice-all" },
+  { name: "สถิติพนักงาน", href: "/staff-statistics" },
 ];
 
 function classNames(...classes) {

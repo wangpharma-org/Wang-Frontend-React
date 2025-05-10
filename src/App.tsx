@@ -13,6 +13,7 @@ import OrderList from "./pages/OrderList";
 import ProductList from "./pages/ProductList";
 import StickerPrint from "./pages/StickerPrint";
 import FormatSticker from "./pages/FormatSticker";
+import EmployeeStatisticsPage from "./pages/EmployeeStatistics";
 function App() {
   return (
     <>
@@ -122,6 +123,15 @@ function App() {
                   <FormatSticker />
                 </RequireAuth>
               </div>
+            }
+          />
+          <Route
+            path="/employee-statistics"
+            element={
+              <RequireAuth>
+                {/* <Navbar /> */}
+                <EmployeeStatisticsPage />
+              </RequireAuth>
             }
           />
         </Routes>
