@@ -1,6 +1,7 @@
 import reciept from "../assets/receipt.png";
 import order from "../assets/sent.png";
-import { useNavigate } from "react-router";
+import statistics from "../assets/employees statistics.png";
+import { href, useNavigate } from "react-router";
 const listMenu = [
   {
     id: 1,
@@ -14,6 +15,12 @@ const listMenu = [
     href: "/order-list",
     imageSrc: order,
   },
+  {
+    id: 3,
+    name: "สถิติการจัดออเดอร์",
+    href: "/employee-statistics",
+    imageSrc: statistics,
+  }
 ];
 const Home = () => {
   const navigate = useNavigate()
