@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { Socket, io } from "socket.io-client";
 import dayjs from "dayjs";
 
@@ -16,23 +15,26 @@ interface Invoice {
   qc_invoice: string;
   qc_print: number;
   qc_timePrice: string;
-  members: string[];
+  members: Member;
 }
 
-interface InvoiceTableProps {
-  data: Invoice[];
+interface Member {
+  mem_name: string;
+  emp_code: string;
 }
 
-const InvoiceVat: React.FC<InvoiceTableProps> = () => {
+const InvoiceVat: React.FC = () => {
   const [invoice, setInvoice] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isOpen, setIsOpen] = useState<string[]>([])
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
-    const newSocket = io(`${import.meta.env.VITE_API_URL_INVOICE}/socket/vat`, {
+    console.log(`${import.meta.env.VITE_API_URL_INVOICE}/socket/invoice/vat`)
+    const newSocket = io(`${import.meta.env.VITE_API_URL_INVOICE}/socket/invoice/vat`, {
+      path: '/socket/invoice',
       extraHeaders: {
         Authorization: `Bearer ${token}`,
       },

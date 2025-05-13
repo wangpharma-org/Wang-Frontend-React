@@ -45,7 +45,7 @@ function ProductList() {
   const [CanSubmit, setCanSubmit] = useState(false);
   const clickCountRef = useRef(0);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [, setSelectedItems] = useState<Set<string>>(new Set());
   const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
   const navigate = useNavigate();
   const mem_code = new URLSearchParams(window.location.search).get("mem_code");
@@ -56,15 +56,16 @@ function ProductList() {
   const [openMenu, setOpenMenu] = useState(false);
   const [search, setSearch] = useState("");
   const [showInput, setShowInput] = useState(false);
-  const [isFiltered, setIsFiltered] = useState(false)
+  const [, setIsFiltered] = useState(false)
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
     console.log(token);
-    console.log(`${import.meta.env.VITE_API_URL_ORDER}/socket/listproducts`);
+    console.log(`${import.meta.env.VITE_API_URL_ORDER}/socket/picking/listproducts`);
     const newSocket = io(
-      `${import.meta.env.VITE_API_URL_ORDER}/socket/listproducts`,
+      `${import.meta.env.VITE_API_URL_ORDER}/socket/picking/listproducts`,
       {
+        path: '/socket/picking',
         extraHeaders: {
           Authorization: `Bearer ${token}`,
         },

@@ -1,4 +1,4 @@
-import { React, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 const Clock = () => {
   const [time, setTime] = useState(new Date());
   useEffect(() => {
@@ -8,7 +8,7 @@ const Clock = () => {
 
     return () => clearInterval(timer);
   }, []);
-  const formatTime = (date) => {
+  const formatTime = (date: Date) => {
     return date.toLocaleTimeString("th-TH", {
       hour: "2-digit",
       minute: "2-digit",

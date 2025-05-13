@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Disclosure,
   DisclosureButton,
@@ -11,11 +10,11 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router";
 
 const navigation = [
-  { name: "หน้าหลัก", href: "/", exact: true },
-  { name: "รายการใบกำกับสินค้า", href: "/invoice-all" },
+  { name: "หน้าหลัก", href: "/", exact: true, current: false },
+  { name: "รายการใบกำกับสินค้า", href: "/invoice-all", current: false  },
 ];
 
-function classNames(...classes) {
+function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
 }
 
@@ -65,7 +64,6 @@ export default function Navbar() {
                     aria-current={
                       location.pathname === item.href ? "page" : undefined
                     }
-                    exact={item.exact}
                   >
                     {item.name}
                   </NavLink>

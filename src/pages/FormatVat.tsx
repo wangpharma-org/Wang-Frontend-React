@@ -27,7 +27,6 @@ const bahtText = (amount: number): string => {
 
     let result = "";
     let position = 0;
-    let isMillion = false;
 
     while (num > 0) {
       const n = num % 10;
@@ -53,7 +52,6 @@ const bahtText = (amount: number): string => {
       if (position === 6 && num > 0) {
         result = "ล้าน" + result;
         position = 0;
-        isMillion = true;
       }
     }
 

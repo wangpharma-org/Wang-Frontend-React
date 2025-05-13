@@ -22,8 +22,8 @@ function App() {
             path="/"
             element={
               <div>
+                <Navbar />
                 <RequireAuth>
-                  <Navbar />
                   <Home />
                 </RequireAuth>
               </div>
@@ -107,8 +107,8 @@ function App() {
             path="/print-sticker"
             element={
               <div>
+                <Navbar />
                 <RequireAuth>
-                  <Navbar />
                   <StickerPrint />
                 </RequireAuth>
               </div>

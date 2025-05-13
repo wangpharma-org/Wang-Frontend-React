@@ -76,10 +76,11 @@ const OrderList = () => {
   };
 
   useEffect(() => {
-    console.log(`${import.meta.env.VITE_API_URL_ORDER}/socket/listorder`);
+    console.log(`${import.meta.env.VITE_API_URL_ORDER}/socket/picking/listorder`);
     const newSocket = io(
-      `${import.meta.env.VITE_API_URL_ORDER}/socket/listorder`,
+      `${import.meta.env.VITE_API_URL_ORDER}/socket/picking/listorder`,
       {
+        path: '/socket/picking',
         extraHeaders: {
           Authorization: `Bearer ${sessionStorage.getItem("access_token")}`,
         },
@@ -99,6 +100,7 @@ const OrderList = () => {
     });
 
     newSocket.on("connect_error", (error) => {
+      console.log(error)
       console.error("❌ Failed to connect to server:", error.message);
       setOrderList([]);
       setLoading(true);
