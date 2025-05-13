@@ -200,7 +200,7 @@ const OrderList = () => {
     });
 
     newSocket.on("listorder:get", (data) => {
-      console.log("Data "+data);
+      console.log("Data " + data);
       setOrderList(data);
       setLoading(false);
     });
@@ -322,12 +322,12 @@ const OrderList = () => {
           (so) => so.product.product_floor === selectedFloor
         )
       );
-      console.log("matchFloor " + matchFloor);
+    console.log("matchFloor " + matchFloor);
     const matchRoute =
       selectroute === "all" ||
       selectroute === "เลือกเส้นทางขนส่ง" ||
       order.province === selectroute;
-      console.log("matchRoute " + matchRoute);
+    console.log("matchRoute " + matchRoute);
     return matchSearch && matchFloor && matchRoute;
   });
 
@@ -575,7 +575,25 @@ const OrderList = () => {
                   </p>
                 </div>
                 <div className="flex justify-center px-3 text-white">
-                <button onClick={() => navigate("/report")}>สถิติพนักงาน</button>
+                  <button onClick={() => navigate("/order-list")} className="w-full mx-auto flex py-2 active:bg-red-600 scale-95 transition cursor-pointer text-center items-center font-light rounded-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-9 rounded-full mr-1 ml-1 p-1 text-white">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                    </svg>
+                    รายการคำสั่งซื้อ
+                  </button>
+                </div>
+                <div className="flex justify-center px-3 text-white">
+                  <button onClick={() => navigate("/report")} className="w-full mx-auto flex py-2 active:bg-red-600 scale-95 transition cursor-pointer text-center items-center font-light rounded-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-9 rounded-full mr-1 ml-1 p-1 text-white">
+                      <path strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.524 48.524 0 0 1-.005-10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 4.5M3 15V4.5"
+                      />
+                    </svg>
+                    สถิติพนักงาน
+                  </button>
+                </div>
+                <div className="flex justify-center px-3 text-white">
                   <button
                     onClick={logout}
                     className="w-full mx-auto flex py-2 active:bg-red-600 scale-95 transition cursor-pointer text-center items-center font-light rounded-sm"
@@ -613,10 +631,10 @@ const OrderList = () => {
           <div>
             {/* {JSON.stringify(filteredData)} */}
             {filteredData.length > 0 ? (
-    
+
               <div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full my-2">
-                  { filteredData
+                  {filteredData
                     .map((order) => {
                       const allFloors = ["2", "3", "4", "5"];
                       const popupRef = (el: HTMLDivElement | null) => {
@@ -648,14 +666,14 @@ const OrderList = () => {
                           <div
                             onClick={() => togglePopup(order.mem_code)}
                             className={`w-full p-3 rounded-sm shadow-xl text-[10px] text-[#444444] ${order.picking_status === "picking"
-                                ? "bg-green-400"
-                                : "bg-gray-400"
+                              ? "bg-green-400"
+                              : "bg-gray-400"
                               }`}
                           >
                             <div
                               className={`p-2 rounded-sm ${order.picking_status === "picking"
-                                  ? "bg-green-100"
-                                  : "bg-white"
+                                ? "bg-green-100"
+                                : "bg-white"
                                 }`}
                             >
                               <div className="flex justify-between">
@@ -727,8 +745,8 @@ const OrderList = () => {
                                     <div
                                       key={floor}
                                       className={`flex-none px-1 py-1.5 mx-0.5 rounded shadow-sm text-center w-17 ${data.remaining > 0
-                                          ? "bg-yellow-200"
-                                          : "bg-red-200"
+                                        ? "bg-yellow-200"
+                                        : "bg-red-200"
                                         }`}
                                     >
                                       <div className="text-xs font-bold">
@@ -778,17 +796,17 @@ const OrderList = () => {
                                             )
                                           }
                                           className={`border rounded-sm px-2 py-1  text-white shadow-xl border-gray-300 ${order.shoppingHeads
-                                              .flatMap((h) => h.shoppingOrders)
-                                              .filter(
-                                                (so) =>
-                                                  so.picking_status !== "pending"
-                                              ).length -
-                                              order.shoppingHeads.flatMap(
-                                                (h) => h.shoppingOrders
-                                              ).length ===
-                                              0
-                                              ? "bg-green-600"
-                                              : "bg-gray-500"
+                                            .flatMap((h) => h.shoppingOrders)
+                                            .filter(
+                                              (so) =>
+                                                so.picking_status !== "pending"
+                                            ).length -
+                                            order.shoppingHeads.flatMap(
+                                              (h) => h.shoppingOrders
+                                            ).length ===
+                                            0
+                                            ? "bg-green-600"
+                                            : "bg-gray-500"
                                             }`}
                                           onClick={(e) => {
                                             e.stopPropagation();

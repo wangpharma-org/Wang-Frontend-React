@@ -272,15 +272,15 @@ function ProductList() {
     setIsFiltered(!!search || !!selectedFloor);
   }, [search, selectedFloor]);
 
-  console.log("search " + search);
-  console.log("selectedFloor " + selectedFloor);
+  // console.log("search " + search);
+  // console.log("selectedFloor " + selectedFloor);
 
   const setButton = () => {
     setSearch('');
     setSelectedFloor(null)
   }
 
-  
+
   const totalOrders =
     (listproduct?.shoppingHeads ?? []).reduce(
       (total, head) => total + head.shoppingOrders.length,
@@ -413,7 +413,25 @@ function ProductList() {
                   <p className="flex justify-center text-white">{userInfo?.floor_picking || "-"}</p>
                 </div>
                 <div className="flex justify-center px-3 text-white">
-                  <button onClick={() => navigate("/order-list")}>สถิติพนักงาน</button>
+                  <button onClick={() => navigate("/order-list")} className="w-full mx-auto flex py-2 active:bg-red-600 scale-95 transition cursor-pointer text-center items-center font-light rounded-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-9 rounded-full mr-1 ml-1 p-1 text-white">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                    </svg>
+                    รายการคำสั่งซื้อ
+                  </button>
+                </div>
+                <div className="flex justify-center px-3 text-white">
+                  <button onClick={() => navigate("/report")} className="w-full mx-auto flex py-2 active:bg-red-600 scale-95 transition cursor-pointer text-center items-center font-light rounded-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-9 rounded-full mr-1 ml-1 p-1 text-white">
+                      <path strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.524 48.524 0 0 1-.005-10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 4.5M3 15V4.5"
+                      />
+                    </svg>
+                    สถิติพนักงาน
+                  </button>
+                </div>
+                <div className=" px-3 text-white">
                   <button onClick={Btnlogout} className="w-full mx-auto flex py-2 hover:bg-red-600 cursor-pointer text-center items-center font-light rounded-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none"
                       viewBox="0 0 24 24" strokeWidth={1.2} stroke="currentColor"
