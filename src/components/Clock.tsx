@@ -17,7 +17,7 @@ const Clock = () => {
   };
   return (
     <div className="text-white">
-      เวลาปัจจุบัน: {formatTime(time)}
+      {formatTime(time)}
     </div>
   );
 }
