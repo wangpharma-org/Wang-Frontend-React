@@ -15,6 +15,7 @@ interface ShoppingOrder {
   product: Product;
   so_procode: string;
   so_running: string;
+  so_picking_time: string;
 }
 
 interface ShoppingHead {
@@ -143,11 +144,14 @@ const OrderList = () => {
 
     orderList.forEach((order) => {
       order.shoppingHeads.forEach((sh) => {
-        const shTime = new Date(sh.sh_datetime);
         sh.shoppingOrders.forEach((so) => {
-          const floor = so.product.product_floor;
-          if (!latestByFloor[floor] || shTime > latestByFloor[floor]) {
-            latestByFloor[floor] = shTime;
+          const rawTime = so.so_picking_time;
+          if (rawTime && !isNaN(Date.parse(rawTime))) {
+            const soTime = new Date(rawTime);
+            const floor = so.product.product_floor;
+            if (!latestByFloor[floor] || soTime > latestByFloor[floor]) {
+              latestByFloor[floor] = soTime;
+            }
           }
         });
       });
@@ -156,19 +160,19 @@ const OrderList = () => {
 
     const newFloorCounts: Record<number, number> = {};
     orderList.forEach((member) => {
-      member.shoppingHeads.forEach(head => {
-        head.shoppingOrders.forEach(order=>{
-          if (order.picking_status === 'pending') {
-            const floorRaw = order.product.product_floor
-            const floor = floorRaw && floorRaw !== '' ? Number(floorRaw) : 1
-            if(!newFloorCounts[floor]) {
+      member.shoppingHeads.forEach((head) => {
+        head.shoppingOrders.forEach((order) => {
+          if (order.picking_status === "pending") {
+            const floorRaw = order.product.product_floor;
+            const floor = floorRaw && floorRaw !== "" ? Number(floorRaw) : 1;
+            if (!newFloorCounts[floor]) {
               newFloorCounts[floor] = 0;
             }
-            newFloorCounts[floor]++
+            newFloorCounts[floor]++;
           }
-        })
-      })
-    })
+        });
+      });
+    });
     console.log("newfloorCounts", newFloorCounts);
     setFloorCounts(newFloorCounts);
     // console.log("order List " + JSON.stringify(orderList));
@@ -342,7 +346,7 @@ const OrderList = () => {
   }, [totalPicking]);
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col min-h-screen">
       <div>
         <ToastContainer
           position="top-center"
@@ -358,7 +362,7 @@ const OrderList = () => {
           transition={Bounce}
         />
       </div>
-      <header className="p-2 bg-blue-400 text-white font-medium">
+      <header className="p-2 bg-blue-400 text-white font-medium sticky top-0 bg-blue-400 z-40">
         <div className="flex justify-between">
           <div>
             <button className="bg-white rounded-sm px-3 py-1 text-black drop-shadow-xs">
@@ -520,7 +524,7 @@ const OrderList = () => {
           <div>
             {filteredData.length > 0 ? (
               <div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full my-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full mb-36 mt-3">
                   {orderList
                     .filter((order) => {
                       const matchFloor =
@@ -873,7 +877,7 @@ const OrderList = () => {
         )}
       </div>
       <div>
-        <footer className="p-2 bg-blue-400 text-white font-medium">
+        <footer className="fixed bottom-0 left-0 right-0 z-40 bg-blue-400 text-white p-2">
           <div className="footer flex items-end justify-around ">
             <div className="w-full ">
               <div className="flex justify-around">
@@ -885,7 +889,7 @@ const OrderList = () => {
                         prev === btn.value ? null : btn.value
                       )
                     }
-                    className={` border border-gray-500 py-1 px-2 rounded-sm shadow-lg 
+                    className={` border border-gray-500 py-1 px-1 rounded-sm shadow-lg 
                             ${btn.color} 
                             hover:bg-yellow-300 hover:text-black
                             ${

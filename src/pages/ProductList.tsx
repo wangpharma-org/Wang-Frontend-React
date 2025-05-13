@@ -174,10 +174,9 @@ function ProductList() {
         status: status,
       });
     } else if (socket?.connected && orderItem.picking_status === status) {
-      socket.emit("listproduct:picked", {
+      socket.emit("listproduct:unpicked", {
         so_running: orderItem.so_running,
         mem_code: mem_code,
-        status: "pending",
       });
     }
   };
@@ -245,7 +244,7 @@ function ProductList() {
   return (
     <div className="flex flex-col h-screen">
       <header
-        className={`p-2  text-white font-medium ${selectedFloor === '1' ? "bg-gray-500" : selectedFloor === '2' ? "bg-yellow-500" : selectedFloor === '3' ? "bg-indigo-500" : selectedFloor === '4' ? "bg-red-500" : selectedFloor === '5' ? "bg-emerald-500" : selectedFloor === 'box' ? "bg-purple-500" : "bg-blue-400"} `}
+        className={`p-2 sticky top-0 bg-blue-400 z-40 text-white font-medium ${selectedFloor === '1' ? "bg-gray-500" : selectedFloor === '2' ? "bg-yellow-500" : selectedFloor === '3' ? "bg-indigo-500" : selectedFloor === '4' ? "bg-red-500" : selectedFloor === '5' ? "bg-emerald-500" : selectedFloor === 'box' ? "bg-purple-500" : "bg-blue-400"} `}
       >
         <div>
           <div className="flex justify-between">
@@ -376,7 +375,7 @@ function ProductList() {
               })
             ) ? (
               <div>
-                <div className=" p-3">
+                <div className=" p-3 mb-56 mt-3">
                   {listproduct.shoppingHeads.map((head, headIdx) => (
                     <div
                       key={headIdx}
@@ -531,7 +530,7 @@ function ProductList() {
         )}
       </div>
       <div>
-        <footer className={`p-3  text-white font-medium ${selectedFloor === '1' ? "bg-gray-500" : selectedFloor === '2' ? "bg-yellow-500" : selectedFloor === '3' ? "bg-indigo-500" : selectedFloor === '4' ? "bg-red-500" : selectedFloor === '5' ? "bg-emerald-500" : selectedFloor === 'box' ? "bg-purple-500" : "bg-blue-400"}`}>
+        <footer className={`p-3 fixed bottom-0 left-0 right-0 z-40  text-white font-medium ${selectedFloor === '1' ? "bg-gray-500" : selectedFloor === '2' ? "bg-yellow-500" : selectedFloor === '3' ? "bg-indigo-500" : selectedFloor === '4' ? "bg-red-500" : selectedFloor === '5' ? "bg-emerald-500" : selectedFloor === 'box' ? "bg-purple-500" : "bg-blue-400"}`}>
           <div className="flex justify-around">
             {floorButtons.map((btn) => (
               <button
