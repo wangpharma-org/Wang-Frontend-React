@@ -15,6 +15,7 @@
     "@tailwindcss/vite": "^4.1.4",
     "axios": "^1.9.0",
     "dayjs": "^1.11.13",
+    "lucide-react": "^0.510.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
     "react-barcode": "^1.6.1",

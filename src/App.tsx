@@ -13,7 +13,7 @@ import OrderList from "./pages/OrderList";
 import ProductList from "./pages/ProductList";
 import StickerPrint from "./pages/StickerPrint";
 import FormatSticker from "./pages/FormatSticker";
-import EmployeeStatisticsPage from "./pages/EmployeeStatistics";
+import EmployeeStatisticsPage from "./pages/EmployeeStatisticsPage";
 function App() {
   return (
     <>
@@ -127,12 +127,7 @@ function App() {
           />
           <Route
             path="/employee-statistics"
-            element={
-              <RequireAuth>
-                {/* <Navbar /> */}
-                <EmployeeStatisticsPage />
-              </RequireAuth>
-            }
+            element={<EmployeeStatisticsPage />}
           />
         </Routes>
       </Router>
