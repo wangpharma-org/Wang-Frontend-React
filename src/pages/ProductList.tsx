@@ -208,11 +208,11 @@ function ProductList() {
     ) || 0;
 
   const floorButtons = [
-    { label: "ชั้น 1", value: "1", color: "bg-gray-400" },
-    { label: "ชั้น 2", value: "2", color: "bg-yellow-500" },
-    { label: "ชั้น 3", value: "3", color: "bg-indigo-500" },
-    { label: "ชั้น 4", value: "4", color: "bg-red-500" },
-    { label: "ชั้น 5", value: "5", color: "bg-emerald-500" },
+    { label: "1", value: "1", color: "bg-gray-400" },
+    { label: "2", value: "2", color: "bg-yellow-500" },
+    { label: "3", value: "3", color: "bg-blue-500" },
+    { label: "4", value: "4", color: "bg-red-500" },
+    { label: "5", value: "5", color: "bg-emerald-500" },
     { label: "ยกลัง", value: "box", color: "bg-purple-500" }, // ถ้าคุณจะใช้ type พิเศษ
   ];
 
@@ -223,7 +223,7 @@ function ProductList() {
   return (
     <div className="flex flex-col h-screen">
       <header
-        className={`p-2 sticky top-0 bg-blue-400 z-40 text-white font-medium ${selectedFloor === '1' ? "bg-gray-500" : selectedFloor === '2' ? "bg-yellow-500" : selectedFloor === '3' ? "bg-indigo-500" : selectedFloor === '4' ? "bg-red-500" : selectedFloor === '5' ? "bg-emerald-500" : selectedFloor === 'box' ? "bg-purple-500" : "bg-blue-400"} `}
+        className={`p-2 sticky top-0 bg-blue-400 z-40 text-white font-medium ${selectedFloor === '1' ? "bg-gray-500" : selectedFloor === '2' ? "bg-yellow-500" : selectedFloor === '3' ? "bg-blue-500" : selectedFloor === '4' ? "bg-red-500" : selectedFloor === '5' ? "bg-emerald-500" : selectedFloor === 'box' ? "bg-purple-500" : "bg-blue-400"} `}
       >
         <div>
           <div className="flex justify-between">
@@ -407,8 +407,8 @@ function ProductList() {
         )}
       </div>
       <div>
-        <footer className={`p-3 fixed bottom-0 left-0 right-0 z-40  text-white font-medium ${selectedFloor === '1' ? "bg-gray-500" : selectedFloor === '2' ? "bg-yellow-500" : selectedFloor === '3' ? "bg-indigo-500" : selectedFloor === '4' ? "bg-red-500" : selectedFloor === '5' ? "bg-emerald-500" : selectedFloor === 'box' ? "bg-purple-500" : "bg-blue-400"}`}>
-          <div className="flex justify-around">
+        <footer className={`p-3 fixed bottom-0 left-0 right-0 z-40  text-white font-medium ${selectedFloor === '1' ? "bg-gray-500" : selectedFloor === '2' ? "bg-yellow-500" : selectedFloor === '3' ? "bg-blue-500" : selectedFloor === '4' ? "bg-red-500" : selectedFloor === '5' ? "bg-emerald-500" : selectedFloor === 'box' ? "bg-purple-500" : "bg-blue-400"}`}>
+          <div className="flex">
             {floorButtons.map((btn) => (
               <button
                 key={btn.value}
@@ -417,11 +417,10 @@ function ProductList() {
                     prev === btn.value ? null : btn.value
                   )
                 }
-                className={`border border-gray-500 py-1 px-2 rounded-sm shadow-lg 
+                className={`border border-gray-500 py-1 px-1 rounded-sm shadow-lg w-full mx-1
                             ${btn.color} 
-                            hover:bg-yellow-300 hover:text-black
                             ${selectedFloor === btn.value
-                    ? "ring-2 ring-yellow-300 text-black"
+                    ? "ring-2 ring-yellow-300"
                     : ""
                   }`}>
                 {btn.label}

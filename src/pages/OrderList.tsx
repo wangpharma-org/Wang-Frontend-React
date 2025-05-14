@@ -264,7 +264,7 @@ const OrderList = () => {
   const floorButtons = [
     { label: "1", value: "1", color: "bg-gray-500" },
     { label: "2", value: "2", color: "bg-yellow-500" },
-    { label: "3", value: "3", color: "bg-indigo-500" },
+    { label: "3", value: "3", color: "bg-blue-500" },
     { label: "4", value: "4", color: "bg-red-500" },
     { label: "5", value: "5", color: "bg-emerald-500" },
     { label: "ยกลัง", value: "box", color: "bg-purple-500" }, // ถ้าคุณจะใช้ type พิเศษ
@@ -913,11 +913,10 @@ const OrderList = () => {
                         prev === btn.value ? null : btn.value
                       )
                     }
-                    className={` border border-gray-500 py-1 px-1 rounded-sm shadow-lg w-full flex justify-center mx-1  relative
+                    className={` border border-gray-500 py-1 px-1 rounded-sm shadow-lg w-full flex justify-center mx-1 relative
                             ${btn.color} 
-                            "hover:bg-yellow-300 hover:text-black" : ""
                             ${selectedFloor === btn.value
-                        ? "ring-2 ring-yellow-300 text-black"
+                        ? "ring-2 ring-yellow-300"
                         : ""
                       }
                             `}
