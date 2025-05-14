@@ -46,7 +46,6 @@ function ProductList() {
   const [CanSubmit, setCanSubmit] = useState(false);
   const clickCountRef = useRef(0);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [, setSelectedItems] = useState<Set<string>>(new Set());
   const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
   const navigate = useNavigate();
   const mem_code = new URLSearchParams(window.location.search).get("mem_code");

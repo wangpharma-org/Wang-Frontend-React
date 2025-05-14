@@ -258,7 +258,7 @@ const OrderList = () => {
     { label: "3", value: "3", color: "bg-indigo-500" },
     { label: "4", value: "4", color: "bg-red-500" },
     { label: "5", value: "5", color: "bg-emerald-500" },
-    { label: "ยกลัง", value: "box", color: "bg-purple-500" }, // ถ้าคุณจะใช้ type พิเศษ
+    { label: "ยกลัง", value: "box", color: "bg-purple-500" },
   ];
 
   const printSticker = async (mem_code: string) => {
