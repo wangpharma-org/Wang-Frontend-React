@@ -43,6 +43,11 @@ interface orderList {
   shoppingHeads: ShoppingHead[];
 }
 
+type PickingTime = {
+  floor: string;
+  latest_picking_time: Date;
+}
+
 const OrderList = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [orderList, setOrderList] = useState<orderList[]>([]);
@@ -57,12 +62,14 @@ const OrderList = () => {
   const [selectroute, setSelectroute] = useState("เลือกเส้นทางขนส่ง");
   const { userInfo, logout } = useAuth();
   const navigate = useNavigate();
-  const [latestTimes, setLatestTimes] = useState<Record<string, Date>>({});
+  const [latestTimes, setLatestTimes] = useState<PickingTime[]>([]);
   const [search, setSearch] = useState("");
   const [showInput, setShowInput] = useState(false);
   const [openMenu, setOpenMenu] = useState(false);
   const [floorCounts, setFloorCounts] = useState<Record<string, number>>({});
   const handleDoubleClick = useDoubleClick();
+
+  console.log("selectedFloor", selectedFloor);
 
   const togglePopup = (id: string) => {
     setOpenPopupId((prev) => (prev === id ? null : id));
@@ -100,8 +107,10 @@ const OrderList = () => {
     });
 
     newSocket.on("listorder:get", (data) => {
-      console.log("Data " + data);
-      setOrderList(data);
+      // console.log("Data " + JSON.stringify(data));
+      setOrderList(data.memberOrderWithAllShRunning);
+      setLatestTimes(data.lastestDate);
+      console.log('time', data.lastestDate);
       setLoading(false);
     });
 
@@ -142,23 +151,23 @@ const OrderList = () => {
     );
     setTotalPicking(totalStatusPicking);
 
-    const latestByFloor: Record<string, Date> = {};
+    // const latestByFloor: Record<string, Date> = {};
 
-    orderList.forEach((order) => {
-      order.shoppingHeads.forEach((sh) => {
-        sh.shoppingOrders.forEach((so) => {
-          const rawTime = so.so_picking_time;
-          if (rawTime && !isNaN(Date.parse(rawTime))) {
-            const soTime = new Date(rawTime);
-            const floor = so.product.product_floor;
-            if (!latestByFloor[floor] || soTime > latestByFloor[floor]) {
-              latestByFloor[floor] = soTime;
-            }
-          }
-        });
-      });
-    });
-    setLatestTimes(latestByFloor);
+    // orderList.forEach((order) => {
+    //   order.shoppingHeads.forEach((sh) => {
+    //     sh.shoppingOrders.forEach((so) => {
+    //       const rawTime = so.so_picking_time;
+    //       if (rawTime && !isNaN(Date.parse(rawTime))) {
+    //         const soTime = new Date(rawTime);
+    //         const floor = so.product.product_floor;
+    //         if (!latestByFloor[floor] || soTime > latestByFloor[floor]) {
+    //           latestByFloor[floor] = soTime;
+    //         }
+    //       }
+    //     });
+    //   });
+    // });
+    // setLatestTimes(latestByFloor);
 
     const newFloorCounts: Record<number, number> = {};
     orderList.forEach((member) => {
@@ -166,7 +175,7 @@ const OrderList = () => {
         head.shoppingOrders.forEach((order) => {
           if (order.picking_status === "pending") {
             const floorRaw = order.product.product_floor;
-            const floor = floorRaw && floorRaw !== "" ? Number(floorRaw) : 1;
+            const floor = floorRaw && floorRaw !== "" ? Number(floorRaw) : "1";
             if (!newFloorCounts[floor]) {
               newFloorCounts[floor] = 0;
             }
@@ -177,7 +186,7 @@ const OrderList = () => {
     });
     console.log("newfloorCounts", newFloorCounts);
     setFloorCounts(newFloorCounts);
-    // console.log("order List " + JSON.stringify(orderList));
+    console.log("order List " + JSON.stringify(orderList));
   }, [orderList]);
 
   useEffect(() => {
@@ -232,7 +241,7 @@ const OrderList = () => {
       !selectedFloor ||
       order.shoppingHeads.some((sh) =>
         sh.shoppingOrders.some(
-          (so) => so.product.product_floor === selectedFloor
+          (so) => (so.product.product_floor || "1") === selectedFloor
         )
       );
 
@@ -247,7 +256,7 @@ const OrderList = () => {
   const isFiltered =
     search ||
     selectedFloor ||
-    (selectroute && selectroute !== "เลือกเส้นทางขนส่ง");
+    (selectroute && selectroute !== "");
   console.log("search " + search);
   console.log("selectedFloor " + selectedFloor);
   console.log("selectroute " + selectroute);
@@ -411,12 +420,12 @@ const OrderList = () => {
             <div className="flex justify-center text-sm">
               <Clock></Clock>
             </div>
-            <div className="flex justify-center text-xs">
+            <div className="flex justify-center text-sm">
               <p>
                 ทั้งหมด {orderList.length} ร้าน {totalProduct} รายการ
               </p>
             </div>
-            <div className="flex justify-center text-xs">
+            <div className="flex justify-center text-sm">
               <p>เหลือจัด {totalProduct - totalPicking} รายการ</p>
               &nbsp;<p>|</p>&nbsp;
               <p>กำลังจัด {totalPicking} รายการ</p>
@@ -474,7 +483,7 @@ const OrderList = () => {
           >
             <select
               value={selectroute}
-              onChange={(e) => {setSelectroute(e.target.value); setSearch("")}}
+              onChange={(e) => { setSelectroute(e.target.value); setSearch("") }}
               className="border border-gray-200 px-2 py-1 rounded text-black bg-white text-center flex justify-center w-full"
             >
               {routeButtons.map((route) => (
@@ -559,14 +568,13 @@ const OrderList = () => {
                       const popupRef = (el: HTMLDivElement | null) => {
                         popupRefs.current[order.mem_code] = el;
                       };
-
                       const isOpen = openPopupId === order.mem_code;
 
                       // สรุปจำนวนต่อ floor
                       const floorSummary = order.shoppingHeads
                         .flatMap((head) => head.shoppingOrders)
                         .reduce((acc, order) => {
-                          const floor = order.product.product_floor;
+                          const floor = order.product.product_floor || "1";
                           if (!acc[floor]) {
                             acc[floor] = { total: 0, remaining: 0 };
                           }
@@ -574,9 +582,11 @@ const OrderList = () => {
                           if (order.picking_status === "pending") {
                             acc[floor].remaining += 1;
                           }
+                          // console.log("floor", floor);
+                          // console.log("order.product.product_floor", order.product.product_floor);
                           return acc;
                         }, {} as Record<string, { total: number; remaining: number }>);
-
+                      console.log("floorSummary", floorSummary);
                       return (
                         <div
                           key={order.mem_id}
@@ -915,10 +925,9 @@ const OrderList = () => {
                     <div className="flex text-center gap-2">
                       <span className="text-white font-medium ">
                         {btn.label}
-
                       </span>
                     </div>
-                    <span className="absolute -top-2 right-0 text-[8px] bg-white text-black font-bold rounded-full px-2 py-0.5 shadow-sm">
+                    <span className="absolute -top-3 -right-1 text-[12px] bg-white text-black font-bold rounded-full px-2 py-0.5 shadow-sm">
                       {floorCounts[Number(btn.value)] || 0}
                     </span>
                   </button>
@@ -926,33 +935,29 @@ const OrderList = () => {
               </div>
 
               <div className="p-1 mt-1 flex justify-center">
-                {["2", "3", "4", "5"].map((floor) => (
-                  <div
-                    key={floor}
-                    className="border px-1 py-1 rounded-sm w-full"
-                  >
-                    <div className="flex justify-center">
-                      <p className="font-bold text-sm">F{floor}</p>
-                    </div>
-                    <div className="text-[10px] flex justify-center">
-                      <p className="flex">
-                        {latestTimes[floor]
-                          ? new Date(latestTimes[floor]).toLocaleString(
-                            "th-TH",
-                            {
+                {['1', '2', '3', '4', '5'].map((floor) => {
+                  const match = latestTimes.find((latestTime) => latestTime.floor === floor);
+                  return (
+                    <div key={floor} className="border px-1 py-1 rounded-sm w-full">
+                      <div className="flex justify-center">
+                        <p className="font-bold text-sm">F{floor}</p>
+                      </div>
+                      <div className="text-[12px] flex justify-center">
+                        <p className="flex text-center">
+                          {match
+                            ? new Date(match.latest_picking_time).toLocaleString("th-TH", {
                               day: "2-digit",
                               month: "2-digit",
                               year: "2-digit",
                               hour: "2-digit",
                               minute: "2-digit",
-                            }
-                          )
-                          : "-"}&nbsp;
-                        <p>น.</p>
-                      </p>
+                            })
+                            : '-'}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
