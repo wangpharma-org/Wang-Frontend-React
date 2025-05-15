@@ -943,7 +943,7 @@ const OrderList = () => {
                       </div>
                       <div className="text-[12px] flex justify-center">
                         <p className="flex text-center">
-                          {match
+                          {match?.latest_picking_time
                             ? new Date(match.latest_picking_time).toLocaleString("th-TH", {
                               day: "2-digit",
                               month: "2-digit",
