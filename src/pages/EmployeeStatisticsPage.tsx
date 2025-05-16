@@ -349,31 +349,29 @@ const EmployeeStatisticsPage = () => {
                                     employeeData.totalPicked /
                                     employeeData.header.durationMin;
 
-                                  // คำนวณงานที่เหลือทั้งหมด
+                                  // นำผลรวมของคอลัมน์ "ทั้งหมด" มาคำนวณ
                                   const totals = calculateTotals(employeeData);
-                                  const remainingWork = totals
-                                    ? totals.remaining + totals.inProgress
+                                  const totalAmount = totals
+                                    ? totals.totalAmount
                                     : 0;
 
-                                  // คำนวณเวลาที่ต้องใช้เพิ่ม (นาที)
-                                  const remainingMinutes =
+                                  // คำนวณเวลาที่ต้องใช้ทั้งหมด (นาที)
+                                  const totalMinutes =
                                     speedPerMinute > 0
-                                      ? Math.ceil(
-                                          remainingWork / speedPerMinute
-                                        )
+                                      ? Math.ceil(totalAmount / speedPerMinute)
                                       : 0;
 
                                   // คำนวณเวลาแล้วเสร็จ
-                                  const remainingHours = Math.floor(
-                                    remainingMinutes / 60
+                                  const totalHours = Math.floor(
+                                    totalMinutes / 60
                                   );
-                                  const finalMinutes = remainingMinutes % 60;
+                                  const finalMinutes = totalMinutes % 60;
 
                                   // แสดงผลเป็น ชั่วโมง:นาที
-                                  return remainingMinutes > 0
+                                  return totalMinutes > 0
                                     ? `${
-                                        remainingHours > 0
-                                          ? `${remainingHours} ชั่วโมง `
+                                        totalHours > 0
+                                          ? `${totalHours} ชั่วโมง `
                                           : ""
                                       }${finalMinutes} นาที`
                                     : "เสร็จสิ้นแล้ว";
