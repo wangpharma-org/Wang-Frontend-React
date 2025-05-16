@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Socket, io } from "socket.io-client";
 import dayjs from "dayjs";
 
@@ -15,25 +15,28 @@ interface Invoice {
   qc_invoice: string;
   qc_print: number;
   qc_timePrice: string;
-  members: string[];
+  members: Member;
 }
 
-interface InvoiceTableProps {
-  data: Invoice[];
+interface Member {
+  mem_name: string;
+  emp_code: string;
 }
 
-const InvoicePart: React.FC<InvoiceTableProps> = () => {
+const InvoicePart: React.FC = () => {
   const [invoice, setInvoice] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isOpen, setIsOpen] = useState<string[]>([])
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
+    console.log(`${import.meta.env.VITE_API_URL_INVOICE}/socket/invoice/part`)
     const newSocket = io(
-      `${import.meta.env.VITE_API_URL_INVOICE}/socket/part`,
+      `${import.meta.env.VITE_API_URL_INVOICE}/socket/invoice/part`,
       {
+        path: '/socket/invoice',
         extraHeaders: {
           Authorization: `Bearer ${token}`,
         },

@@ -17,27 +17,30 @@ interface Invoice {
   qc_invoice: string;
   qc_print: number;
   qc_timePrice: string;
-  members: string[];
+  members: Member;
 }
 
-interface InvoiceTableProps {
-  data: Invoice[];
+interface Member {
+  mem_name: string;
+  emp_code: string;
 }
 
-const InvoiceList: React.FC<InvoiceTableProps> = () => {
+const InvoiceList: React.FC = () => {
   const [invoice, setInvoice] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(false)
   const [socket, setSocket] = useState<Socket | null>(null)
   const [offset, setOffset] = useState(0)
   const [none , setNone ] = useState(false) 
-  const [billCount, setBillCount] = useState(0);
+  const [, setBillCount] = useState(0);
   const timeoutRef = useRef<number | undefined>(undefined);
   const toastId = useRef<Id | undefined>(undefined);
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token")
     console.log(token)
-    const newSocket = io(`${import.meta.env.VITE_API_URL_INVOICE}/socket/all`, {
+    console.log(`${import.meta.env.VITE_API_URL_INVOICE}/socket/invoice/all`)
+    const newSocket = io(`${import.meta.env.VITE_API_URL_INVOICE}/socket/invoice/all`, {
+      path: '/socket/invoice',
       extraHeaders: {
         Authorization: `Bearer ${token}`,
       },

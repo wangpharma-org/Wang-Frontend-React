@@ -15,6 +15,7 @@ interface ShoppingOrder {
   product: Product;
   so_procode: string;
   so_running: string;
+  so_picking_time: string;
 }
 
 interface ShoppingHead {
@@ -42,6 +43,11 @@ interface orderList {
   shoppingHeads: ShoppingHead[];
 }
 
+type PickingTime = {
+  floor: string;
+  latest_picking_time: Date;
+}
+
 const OrderList = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [orderList, setOrderList] = useState<orderList[]>([]);
@@ -53,14 +59,18 @@ const OrderList = () => {
   const popupRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
-  const [selectroute, setSelectroute] = useState("all");
+  const [selectroute, setSelectroute] = useState("เลือกเส้นทางขนส่ง");
   const { userInfo, logout } = useAuth();
   const navigate = useNavigate();
-  const [latestTimes, setLatestTimes] = useState<Record<string, Date>>({});
+  const [latestTimes, setLatestTimes] = useState<PickingTime[]>([]);
   const [search, setSearch] = useState("");
   const [showInput, setShowInput] = useState(false);
   const [openMenu, setOpenMenu] = useState(false);
 
+  const [floorCounts, setFloorCounts] = useState<Record<string, number>>({});
+  const handleDoubleClick = useDoubleClick();
+
+  console.log("selectedFloor", selectedFloor);
 
   const togglePopup = (id: string) => {
     setOpenPopupId((prev) => (prev === id ? null : id));
@@ -73,120 +83,18 @@ const OrderList = () => {
 
   const toggleSearch = () => {
     setShowInput((prev) => !prev);
+    setSelectroute("all")
     console.log("showInput " + showInput);
   };
 
-  // const mockData: orderList[] = [
-  //   {
-  //     "all_sh_running": ["SH202505070001", "SH202505070002"],
-  //     "emp": {
-  //       "emp_nickname": "สมชาย"
-  //     },
-  //     "emp_code": "EMP001",
-  //     "emp_code_picking": "EMP002",
-  //     "emp_picking": {
-  //       "emp_nickname": "สมหญิง"
-  //     },
-  //     "mem_code": "MEM001",
-  //     "mem_id": 12345,
-  //     "mem_name": "ลูกค้า ทดสอบ",
-  //     "picking_status": "pending",
-  //     "province": "สงขลา",
-  //     "shoppingHeads": [
-  //       {
-  //         "sh_id": 1,
-  //         "sh_running": "SH202505070001",
-  //         "sh_datetime": "2025-05-07T10:00:00Z",
-  //         "shoppingOrders": [
-  //           {
-  //             "picking_status": "pending",
-  //             "product": {
-  //               "product_floor": "3"
-  //             },
-  //             "so_procode": "PROD001",
-  //             "so_running": "SO001"
-  //           },
-  //           {
-  //             "picking_status": "pending",
-  //             "product": {
-  //               "product_floor": "2"
-  //             },
-  //             "so_procode": "PROD002",
-  //             "so_running": "SO002"
-  //           }
-  //         ]
-  //       },
-  //       {
-  //         "sh_id": 2,
-  //         "sh_running": "SH202505070002",
-  //         "sh_datetime": "2025-05-07T11:30:00Z",
-  //         "shoppingOrders": [
-  //           {
-  //             "picking_status": "pending",
-  //             "product": {
-  //               "product_floor": "3"
-  //             },
-  //             "so_procode": "PROD003",
-  //             "so_running": "SO003"
-  //           }
-  //         ]
-  //       }
-  //     ]
-  //   },
-  //   {
-  //     "all_sh_running": ["SH202505070003"],
-  //     "emp": {
-  //       "emp_nickname": "ธานี"
-  //     },
-  //     "emp_code": "EMP003",
-  //     "emp_code_picking": "EMP003",
-  //     "emp_picking": {
-  //       "emp_nickname": "ธานี"
-  //     },
-  //     "mem_code": "MEM002",
-  //     "mem_id": 67890,
-  //     "mem_name": "อลิษา ใจดี",
-  //     "picking_status": "pending",
-  //     "province": "กรุงเทพฯ",
-  //     "shoppingHeads": [
-  //       {
-  //         "sh_id": 3,
-  //         "sh_running": "SH202505070003",
-  //         "sh_datetime": "2025-05-07T13:45:00Z",
-  //         "shoppingOrders": [
-  //           {
-  //             "picking_status": "pending",
-  //             "product": {
-  //               "product_floor": "5"
-  //             },
-  //             "so_procode": "PROD004",
-  //             "so_running": "SO004"
-  //           },
-  //           {
-  //             "picking_status": "pending",
-  //             "product": {
-  //               "product_floor": "4"
-  //             },
-  //             "so_procode": "PROD005",
-  //             "so_running": "SO005"
-  //           }
-  //         ]
-  //       }
-  //     ]
-  //   }
-  // ]
-
-
-  // useEffect(() => {
-  //   setOrderList(mockData); // ใช้ mockData แทน data ที่มาจาก socket
-  //   setLoading(false);
-  // }, []);
-
   useEffect(() => {
-    console.log(`${import.meta.env.VITE_API_URL_ORDER}/socket/listorder`);
+    console.log(
+      `${import.meta.env.VITE_API_URL_ORDER}/socket/picking/listorder`
+    );
     const newSocket = io(
-      `${import.meta.env.VITE_API_URL_ORDER}/socket/listorder`,
+      `${import.meta.env.VITE_API_URL_ORDER}/socket/picking/listorder`,
       {
+        path: "/socket/picking",
         extraHeaders: {
           Authorization: `Bearer ${sessionStorage.getItem("access_token")}`,
         },
@@ -200,12 +108,15 @@ const OrderList = () => {
     });
 
     newSocket.on("listorder:get", (data) => {
-      console.log("Data " + data);
-      setOrderList(data);
+      // console.log("Data " + JSON.stringify(data));
+      setOrderList(data.memberOrderWithAllShRunning);
+      setLatestTimes(data.lastestDate);
+      console.log('time', data.lastestDate);
       setLoading(false);
     });
 
     newSocket.on("connect_error", (error) => {
+      console.log(error);
       console.error("❌ Failed to connect to server:", error.message);
       setOrderList([]);
       setLoading(true);
@@ -242,23 +153,42 @@ const OrderList = () => {
     );
     setTotalPicking(totalStatusPicking);
 
-    const latestByFloor: Record<string, Date> = {};
+    // const latestByFloor: Record<string, Date> = {};
 
-    orderList.forEach((order) => {
-      order.shoppingHeads.forEach((sh) => {
-        const shTime = new Date(sh.sh_datetime);
+    // orderList.forEach((order) => {
+    //   order.shoppingHeads.forEach((sh) => {
+    //     sh.shoppingOrders.forEach((so) => {
+    //       const rawTime = so.so_picking_time;
+    //       if (rawTime && !isNaN(Date.parse(rawTime))) {
+    //         const soTime = new Date(rawTime);
+    //         const floor = so.product.product_floor;
+    //         if (!latestByFloor[floor] || soTime > latestByFloor[floor]) {
+    //           latestByFloor[floor] = soTime;
+    //         }
+    //       }
+    //     });
+    //   });
+    // });
+    // setLatestTimes(latestByFloor);
 
-        sh.shoppingOrders.forEach((so) => {
-          const floor = so.product.product_floor;
-          if (!latestByFloor[floor] || shTime > latestByFloor[floor]) {
-            latestByFloor[floor] = shTime;
+    const newFloorCounts: Record<number, number> = {};
+    orderList.forEach((member) => {
+      member.shoppingHeads.forEach((head) => {
+        head.shoppingOrders.forEach((order) => {
+          if (order.picking_status === "pending") {
+            const floorRaw = order.product.product_floor;
+            const floor = floorRaw && floorRaw !== "" ? Number(floorRaw) : "1";
+            if (!newFloorCounts[floor]) {
+              newFloorCounts[floor] = 0;
+            }
+            newFloorCounts[floor]++;
           }
         });
       });
     });
-    setLatestTimes(latestByFloor);
-
-    console.log("order List " + orderList);
+    console.log("newfloorCounts", newFloorCounts);
+    setFloorCounts(newFloorCounts);
+    console.log("order List " + JSON.stringify(orderList));
   }, [orderList]);
 
   useEffect(() => {
@@ -293,7 +223,7 @@ const OrderList = () => {
         all_sh_running: all_sh_running,
       });
     }
-  }
+  };
 
   const changeToPicking = (mem_code: string) => {
     if (socket?.connected) {
@@ -319,7 +249,7 @@ const OrderList = () => {
       !selectedFloor ||
       order.shoppingHeads.some((sh) =>
         sh.shoppingOrders.some(
-          (so) => so.product.product_floor === selectedFloor
+          (so) => (so.product.product_floor || "1") === selectedFloor
         )
       );
     console.log("matchFloor " + matchFloor);
@@ -334,17 +264,18 @@ const OrderList = () => {
   const isFiltered =
     search ||
     selectedFloor ||
-    (selectroute && selectroute !== "เลือกเส้นทางขนส่ง");
+    (selectroute && selectroute !== "");
   console.log("search " + search);
   console.log("selectedFloor " + selectedFloor);
   console.log("selectroute " + selectroute);
 
   const floorButtons = [
-    { label: "ชั้น 2", value: "2", color: "bg-yellow-500" },
-    { label: "ชั้น 3", value: "3", color: "bg-indigo-500" },
-    { label: "ชั้น 4", value: "4", color: "bg-red-500" },
-    { label: "ชั้น 5", value: "5", color: "bg-emerald-500" },
-    { label: "ยกลัง", value: "box", color: "bg-purple-500" }, // ถ้าคุณจะใช้ type พิเศษ
+    { label: "1", value: "1", color: "bg-gray-500" },
+    { label: "2", value: "2", color: "bg-yellow-500" },
+    { label: "3", value: "3", color: "bg-blue-500" },
+    { label: "4", value: "4", color: "bg-red-500" },
+    { label: "5", value: "5", color: "bg-emerald-500" },
+    { label: "ยกลัง", value: "box", color: "bg-purple-500" },
   ];
 
   const printSticker = async (mem_code: string) => {
@@ -433,8 +364,33 @@ const OrderList = () => {
     console.log("totalPicking", totalPicking);
   }, [totalPicking]);
 
+  function useDoubleClick(delay = 500) {
+    const clickCountRef = useRef(0);
+    const clickTimerRef = useRef<number | null>(null);
+
+    const handleClick = (callback: Function) => {
+      clickCountRef.current++;
+      if (clickCountRef.current === 1) {
+        return setOpenPopupId(null);
+      }
+
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+
+      clickTimerRef.current = setTimeout(() => {
+        clickCountRef.current = 0;
+      }, delay);
+
+      if (clickCountRef.current === 2) {
+        clickCountRef.current = 0;
+        callback();
+      }
+    };
+
+    return handleClick;
+  }
+
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col min-h-screen">
       <div>
         <ToastContainer
           position="top-center"
@@ -450,7 +406,7 @@ const OrderList = () => {
           transition={Bounce}
         />
       </div>
-      <header className="p-2 bg-blue-400 text-white font-medium">
+      <header className="p-2 bg-blue-400 text-white font-medium sticky top-0 z-40">
         <div className="flex justify-between">
           <div>
             <button className="bg-white rounded-sm px-3 py-1 text-black drop-shadow-xs">
@@ -472,12 +428,12 @@ const OrderList = () => {
             <div className="flex justify-center text-sm">
               <Clock></Clock>
             </div>
-            <div className="flex justify-center text-xs">
+            <div className="flex justify-center text-sm">
               <p>
                 ทั้งหมด {orderList.length} ร้าน {totalProduct} รายการ
               </p>
             </div>
-            <div className="flex justify-center text-xs">
+            <div className="flex justify-center text-sm">
               <p>เหลือจัด {totalProduct - totalPicking} รายการ</p>
               &nbsp;<p>|</p>&nbsp;
               <p>กำลังจัด {totalPicking} รายการ</p>
@@ -535,7 +491,7 @@ const OrderList = () => {
           >
             <select
               value={selectroute}
-              onChange={(e) => setSelectroute(e.target.value)}
+              onChange={(e) => { setSelectroute(e.target.value); setSearch("") }}
               className="border border-gray-200 px-2 py-1 rounded text-black bg-white text-center flex justify-center w-full"
             >
               {routeButtons.map((route) => (
@@ -629,25 +585,23 @@ const OrderList = () => {
           </div>
         ) : (
           <div>
-            {/* {JSON.stringify(filteredData)} */}
             {filteredData.length > 0 ? (
-
               <div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full my-2">
-                  {filteredData
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full mb-36 mt-3">
+                  {orderList
+                    .filter((order) => filteredData.includes(order))
                     .map((order) => {
-                      const allFloors = ["2", "3", "4", "5"];
+                      const allFloors = ["1", "2", "3", "4", "5"];
                       const popupRef = (el: HTMLDivElement | null) => {
                         popupRefs.current[order.mem_code] = el;
                       };
-
                       const isOpen = openPopupId === order.mem_code;
 
                       // สรุปจำนวนต่อ floor
                       const floorSummary = order.shoppingHeads
                         .flatMap((head) => head.shoppingOrders)
                         .reduce((acc, order) => {
-                          const floor = order.product.product_floor;
+                          const floor = order.product.product_floor || "1";
                           if (!acc[floor]) {
                             acc[floor] = { total: 0, remaining: 0 };
                           }
@@ -655,9 +609,11 @@ const OrderList = () => {
                           if (order.picking_status === "pending") {
                             acc[floor].remaining += 1;
                           }
+                          // console.log("floor", floor);
+                          // console.log("order.product.product_floor", order.product.product_floor);
                           return acc;
                         }, {} as Record<string, { total: number; remaining: number }>);
-
+                      console.log("floorSummary", floorSummary);
                       return (
                         <div
                           key={order.mem_id}
@@ -665,13 +621,13 @@ const OrderList = () => {
                         >
                           <div
                             onClick={() => togglePopup(order.mem_code)}
-                            className={`w-full p-3 rounded-sm shadow-xl text-[10px] text-[#444444] ${order.picking_status === "picking"
+                            className={`w-full p-2 rounded-sm shadow-xl text-[12px] text-[#444444] ${order.picking_status === "picking"
                               ? "bg-green-400"
                               : "bg-gray-400"
                               }`}
                           >
                             <div
-                              className={`p-2 rounded-sm ${order.picking_status === "picking"
+                              className={`p-1 rounded-sm ${order.picking_status === "picking"
                                 ? "bg-green-100"
                                 : "bg-white"
                                 }`}
@@ -705,8 +661,8 @@ const OrderList = () => {
                                 <div className="flex justify-end pb-1">
                                   <p className="font-bold">
                                     {order.shoppingHeads.length}
-                                  </p>
-                                  <p>บิล</p>
+                                  </p>&nbsp;
+                                  <p>บิล</p>&nbsp;
                                   <p className="text-red-500 font-bold">
                                     {
                                       order.shoppingHeads
@@ -721,15 +677,15 @@ const OrderList = () => {
                                             so.picking_status === "ด้านล่าง"
                                         ).length
                                     }
-                                  </p>
-                                  <p>/</p>
+                                  </p>&nbsp;
+                                  <p>/</p>&nbsp;
                                   <p className="text-violet-500 font-bold">
                                     {
                                       order.shoppingHeads.flatMap(
                                         (h) => h.shoppingOrders
                                       ).length
                                     }
-                                  </p>
+                                  </p>&nbsp;
                                   <p>(เหลือ/All)</p>
                                   {/* <p>FLOOR</p> */}
                                 </div>
@@ -744,7 +700,7 @@ const OrderList = () => {
                                   return (
                                     <div
                                       key={floor}
-                                      className={`flex-none px-1 py-1.5 mx-0.5 rounded shadow-sm text-center w-17 ${data.remaining > 0
+                                      className={`flex-none px-1 py-1.5 mx-0.5 rounded shadow-sm text-center w-14 ${data.remaining > 0
                                         ? "bg-yellow-200"
                                         : "bg-red-200"
                                         }`}
@@ -784,10 +740,13 @@ const OrderList = () => {
                                           disabled={
                                             !(
                                               order.shoppingHeads
-                                                .flatMap((h) => h.shoppingOrders)
+                                                .flatMap(
+                                                  (h) => h.shoppingOrders
+                                                )
                                                 .filter(
                                                   (so) =>
-                                                    so.picking_status !== "pending"
+                                                    so.picking_status !==
+                                                    "pending"
                                                 ).length -
                                               order.shoppingHeads.flatMap(
                                                 (h) => h.shoppingOrders
@@ -799,7 +758,8 @@ const OrderList = () => {
                                             .flatMap((h) => h.shoppingOrders)
                                             .filter(
                                               (so) =>
-                                                so.picking_status !== "pending"
+                                                so.picking_status !==
+                                                "pending"
                                             ).length -
                                             order.shoppingHeads.flatMap(
                                               (h) => h.shoppingOrders
@@ -810,12 +770,15 @@ const OrderList = () => {
                                             }`}
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            handleSubmit(
-                                              order?.mem_code,
-                                              order?.all_sh_running,
+
+                                            handleDoubleClick(() => {
+                                              handleSubmit(
+                                                order?.mem_code,
+                                                order?.all_sh_running
+                                              )
+                                            }
                                             );
-                                          }
-                                          }
+                                          }}
                                         >
                                           ยืนยัน
                                         </button>
@@ -829,7 +792,9 @@ const OrderList = () => {
                                           className="border rounded-sm px-2 py-1 bg-amber-400 text-white shadow-xl border-gray-300 cursor-pointer z-50"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            changeToPending(order?.mem_code);
+                                            handleDoubleClick(() => {
+                                              changeToPending(order?.mem_code);
+                                            })
                                           }}
                                         >
                                           เปลี่ยน
@@ -842,7 +807,9 @@ const OrderList = () => {
                                         className="border rounded-sm px-2 py-1 bg-green-500 text-white shadow-xl border-gray-300"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          changeToPicking(order?.mem_code);
+                                          handleDoubleClick(() => {
+                                            changeToPicking(order?.mem_code);
+                                          })
                                         }}
                                       >
                                         เริ่มจัด
@@ -878,7 +845,9 @@ const OrderList = () => {
                                     >
                                       <div className="flex justify-between pt-1">
                                         <div className="flex justify-start">
-                                          <p className="font-bold">{index + 1}.</p>
+                                          <p className="font-bold">
+                                            {index + 1}.
+                                          </p>
                                           <p>{sh.sh_running}</p>
                                         </div>
                                         <p className="bg-yellow-500 p-1 rounded-sm text-xs text-white">
@@ -908,16 +877,18 @@ const OrderList = () => {
                                   <button
                                     className="border rounded-sm px-3 py-2 text-xs w-full mb-2 bg-green-600 text-white hover:bg-lime-700"
                                     onClick={() => {
-                                      if (order?.picking_status === "picking") {
-                                        navigate(
-                                          `/product-list?mem_code=${order?.mem_code}`
-                                        );
-                                      } else {
-                                        changeToPicking(order?.mem_code);
-                                        navigate(
-                                          `/product-list?mem_code=${order?.mem_code}`
-                                        );
-                                      }
+                                      handleDoubleClick(() => {
+                                        if (order?.picking_status === "picking") {
+                                          navigate(
+                                            `/product-list?mem_code=${order?.mem_code}`
+                                          );
+                                        } else {
+                                          changeToPicking(order?.mem_code);
+                                          navigate(
+                                            `/product-list?mem_code=${order?.mem_code}`
+                                          );
+                                        }
+                                      })
                                     }}
                                   >
                                     จัดแบบรวมบิล
@@ -957,7 +928,7 @@ const OrderList = () => {
         )}
       </div>
       <div>
-        <footer className="p-2 bg-blue-400 text-white font-medium">
+        <footer className="fixed bottom-0 left-0 right-0 z-40 bg-blue-400 text-white p-2">
           <div className="footer flex items-end justify-around ">
             <div className="w-full ">
               <div className="flex justify-around">
@@ -969,47 +940,50 @@ const OrderList = () => {
                         prev === btn.value ? null : btn.value
                       )
                     }
-                    className={` border border-gray-500 py-1 px-2 rounded-sm shadow-lg 
+                    className={` border border-gray-500 py-1 px-1 rounded-sm shadow-lg w-full flex justify-center mx-1 relative
                             ${btn.color} 
-                            hover:bg-yellow-300 hover:text-black
                             ${selectedFloor === btn.value
-                        ? "ring-2 ring-yellow-300 text-black"
+                        ? "ring-2 ring-yellow-300"
                         : ""
                       }
                             `}
                   >
-                    {btn.label}
+                    <div className="flex text-center gap-2">
+                      <span className="text-white font-medium ">
+                        {btn.label}
+                      </span>
+                    </div>
+                    <span className="absolute -top-3 -right-1 text-[12px] bg-white text-black font-bold rounded-full px-2 py-0.5 shadow-sm">
+                      {floorCounts[Number(btn.value)] || 0}
+                    </span>
                   </button>
                 ))}
               </div>
 
               <div className="p-1 mt-1 flex justify-center">
-                {["2", "3", "4", "5"].map((floor) => (
-                  <div
-                    key={floor}
-                    className="border px-2 py-1 w-18 rounded-sm w-full"
-                  >
-                    <div className="flex justify-center">
-                      <p className="font-bold text-sm">F{floor}</p>
-                    </div>
-                    <div className="text-[8px] flex justify-center">
-                      <p>
-                        {latestTimes[floor]
-                          ? new Date(latestTimes[floor]).toLocaleString(
-                            "th-TH",
-                            {
+                {['1', '2', '3', '4', '5'].map((floor) => {
+                  const match = latestTimes.find((latestTime) => latestTime.floor === floor);
+                  return (
+                    <div key={floor} className="border px-1 py-1 rounded-sm w-full">
+                      <div className="flex justify-center">
+                        <p className="font-bold text-sm">F{floor}</p>
+                      </div>
+                      <div className="text-[12px] flex justify-center">
+                        <p className="flex text-center">
+                          {match
+                            ? new Date(match.latest_picking_time).toLocaleString("th-TH", {
                               day: "2-digit",
                               month: "2-digit",
                               year: "2-digit",
                               hour: "2-digit",
                               minute: "2-digit",
-                            }
-                          )
-                          : "-"}
-                      </p>
+                            })
+                            : '-'}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

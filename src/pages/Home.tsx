@@ -17,7 +17,7 @@ const listMenu = [
 ];
 const Home = () => {
   const navigate = useNavigate()
-  const handleNavigate = (link) => {
+  const handleNavigate = (link: string) => {
     navigate(link)
   }
   return (

@@ -3,19 +3,20 @@ import { useNavigate } from "react-router";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import Clock from "../components/Clock";
+import ProductBox from "../components/ProductBox";
 
 interface Product {
   product_code: string;
   product_name: string;
   product_image_url: string;
   product_barcode: string;
-  product_floor: string;
+  product_floor: string | null;
   product_addr: string;
   product_stock: string;
   product_unit: string;
 }
 
-interface ShoppingOrder {
+export interface ShoppingOrder {
   so_running: string;
   so_amount: number;
   so_unit: string;
@@ -45,7 +46,6 @@ function ProductList() {
   const [CanSubmit, setCanSubmit] = useState(false);
   const clickCountRef = useRef(0);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
   const navigate = useNavigate();
   const mem_code = new URLSearchParams(window.location.search).get("mem_code");
@@ -56,93 +56,17 @@ function ProductList() {
   const [openMenu, setOpenMenu] = useState(false);
   const [search, setSearch] = useState("");
   const [showInput, setShowInput] = useState(false);
-  const [isFiltered, setIsFiltered] = useState(false)
-
-  // const mockData: PickingData = {
-  //   mem_code: "EMP001",
-  //   mem_name: "สมชาย ใจดี",
-  //   emp_code_picking: "EMP001",
-  //   all_sh_running: ["SH001", "SH002"],
-  //   shoppingHeads: [
-  //     {
-  //       sh_running: "SH001",
-  //       shoppingOrders: [
-  //         {
-  //           so_running: "SO001",
-  //           so_amount: 3,
-  //           so_unit: "กล่อง",
-  //           picking_status: "pending",
-  //           emp_code_floor_picking: "1",
-  //           so_picking_time: null,
-  //           product: {
-  //             product_code: "P001",
-  //             product_name: "น้ำดื่มขวดเล็ก",
-  //             product_image_url: "https://via.placeholder.com/100",
-  //             product_barcode: "1234567890123",
-  //             product_floor: "1",
-  //             product_addr: "แถว A ชั้น 1",
-  //             product_stock: "10",
-  //             product_unit: "ขวด",
-  //           }
-  //         },
-  //         {
-  //           so_running: "SO002",
-  //           so_amount: 5,
-  //           so_unit: "ชิ้น",
-  //           picking_status: "picking",
-  //           emp_code_floor_picking: "1",
-  //           so_picking_time: "2024-01-01T12:00:00Z",
-  //           product: {
-  //             product_code: "P002",
-  //             product_name: "สบู่สมุนไพร",
-  //             product_image_url: "https://via.placeholder.com/100",
-  //             product_barcode: "9876543210987",
-  //             product_floor: "1",
-  //             product_addr: "แถว B ชั้น 1",
-  //             product_stock: "7",
-  //             product_unit: "ก้อน",
-  //           }
-  //         }
-  //       ]
-  //     },
-  //     {
-  //       sh_running: "SH002",
-  //       shoppingOrders: [
-  //         {
-  //           so_running: "SO003",
-  //           so_amount: 2,
-  //           so_unit: "แพ็ค",
-  //           picking_status: "หมด",
-  //           emp_code_floor_picking: "2",
-  //           so_picking_time: null,
-  //           product: {
-  //             product_code: "P003",
-  //             product_name: "แชมพูเด็ก",
-  //             product_image_url: "https://via.placeholder.com/100",
-  //             product_barcode: "4567890123456",
-  //             product_floor: "2",
-  //             product_addr: "แถว C ชั้น 2",
-  //             product_stock: "0",
-  //             product_unit: "ขวด",
-  //           }
-  //         }
-  //       ]
-  //     }
-  //   ]
-  // };
-
-  // useEffect(() => {
-  //   setListproduct(mockData); // ใช้ mockData แทน data ที่มาจาก socket
-  //   setLoading(false);
-  // }, []);
+  const [, setIsFiltered] = useState(false)
+  // const handleDoubleClick = useDoubleClick();
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
     console.log(token);
-    console.log(`${import.meta.env.VITE_API_URL_ORDER}/socket/listproducts`);
+    console.log(`${import.meta.env.VITE_API_URL_ORDER}/socket/picking/listproducts`);
     const newSocket = io(
-      `${import.meta.env.VITE_API_URL_ORDER}/socket/listproducts`,
+      `${import.meta.env.VITE_API_URL_ORDER}/socket/picking/listproducts`,
       {
+        path: '/socket/picking',
         extraHeaders: {
           Authorization: `Bearer ${token}`,
         },
@@ -152,7 +76,7 @@ function ProductList() {
 
     newSocket.on("connect", () => {
       console.log("✅ Connected to WebSocket");
-      newSocket.emit("listproduct:get", mem_code);
+      newSocket.emit("join_room", mem_code);
     });
 
 
@@ -199,8 +123,11 @@ function ProductList() {
     };
   }, [showInput]);
 
+  // const doubleClick = (event:React.MouseEvent<HTMLDivElement, MouseEvent>) =>{
+  //   console.log(event.detail)
+  // }
 
-  const handleDoubleClick = (orderItem: ShoppingOrder) => {
+  const handleDoubleClick = (orderItem: ShoppingOrder, status: string) => {
     clickCountRef.current++;
 
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
@@ -210,17 +137,9 @@ function ProductList() {
 
     if (clickCountRef.current === 2) {
       clickCountRef.current = 0;
+      console.log("Double clicked on Picking Function");
 
-      setSelectedItems((prev) => {
-        const newSet = new Set(prev);
-        if (newSet.has(orderItem.so_running)) {
-          newSet.delete(orderItem.so_running);
-        } else {
-          newSet.add(orderItem.so_running);
-        }
-        return newSet;
-      });
-      if (orderItem.picking_status === "picking") {
+      if (orderItem.picking_status !== "pending") {
         if (socket?.connected) {
           socket.emit("listproduct:unpicked", {
             so_running: orderItem.so_running,
@@ -232,30 +151,11 @@ function ProductList() {
           socket?.emit("listproduct:picked", {
             so_running: orderItem.so_running,
             mem_code: mem_code,
-            status: "picking",
+            status: status,
           });
         }
       }
       console.log("Double clicked:", orderItem);
-    }
-  };
-
-
-
-  const handleOutofStock = (orderItem: ShoppingOrder, status: string) => {
-    console.log(orderItem, status);
-    if (socket?.connected && orderItem.picking_status !== status) {
-      socket.emit("listproduct:picked", {
-        so_running: orderItem.so_running,
-        mem_code: mem_code,
-        status: status,
-      });
-    } else if (socket?.connected && orderItem.picking_status === status) {
-      socket.emit("listproduct:picked", {
-        so_running: orderItem.so_running,
-        mem_code: mem_code,
-        status: "pending",
-      });
     }
   };
 
@@ -307,11 +207,11 @@ function ProductList() {
     ) || 0;
 
   const floorButtons = [
-    { label: "ชั้น 1", value: "1", color: "bg-gray-400" },
-    { label: "ชั้น 2", value: "2", color: "bg-yellow-500" },
-    { label: "ชั้น 3", value: "3", color: "bg-indigo-500" },
-    { label: "ชั้น 4", value: "4", color: "bg-red-500" },
-    { label: "ชั้น 5", value: "5", color: "bg-emerald-500" },
+    { label: "1", value: "1", color: "bg-gray-400" },
+    { label: "2", value: "2", color: "bg-yellow-500" },
+    { label: "3", value: "3", color: "bg-blue-500" },
+    { label: "4", value: "4", color: "bg-red-500" },
+    { label: "5", value: "5", color: "bg-emerald-500" },
     { label: "ยกลัง", value: "box", color: "bg-purple-500" }, // ถ้าคุณจะใช้ type พิเศษ
   ];
 
@@ -322,12 +222,12 @@ function ProductList() {
   return (
     <div className="flex flex-col h-screen">
       <header
-        className={`p-2  text-white font-medium ${selectedFloor === '1' ? "bg-gray-500" : selectedFloor === '2' ? "bg-yellow-500" : selectedFloor === '3' ? "bg-indigo-500" : selectedFloor === '4' ? "bg-red-500" : selectedFloor === '5' ? "bg-emerald-500" : selectedFloor === 'box' ? "bg-purple-500" : "bg-blue-400"} `}
+        className={`p-2 sticky top-0 bg-blue-400 z-40 text-white font-medium ${selectedFloor === '1' ? "bg-gray-500" : selectedFloor === '2' ? "bg-yellow-500" : selectedFloor === '3' ? "bg-blue-500" : selectedFloor === '4' ? "bg-red-500" : selectedFloor === '5' ? "bg-emerald-500" : selectedFloor === 'box' ? "bg-purple-500" : "bg-blue-400"} `}
       >
         <div>
           <div className="flex justify-between">
             <div>
-              <button className="bg-white rounded-sm px-3 py-1 text-black drop-shadow-xs">
+              <button className="bg-white rounded-sm px-3 py-1 text-black drop-shadow-xs ">
                 ลัง
               </button>
             </div>
@@ -459,7 +359,7 @@ function ProductList() {
             {listproduct.shoppingHeads.some(head =>
               head.shoppingOrders.some(orderItem => {
                 const matchFloor = selectedFloor
-                  ? (orderItem.product.product_floor || "1") === selectedFloor
+                  ? (orderItem.product.product_floor || '1') === selectedFloor
                   : true;
 
                 const matchSearch =
@@ -472,7 +372,7 @@ function ProductList() {
               })
             ) ? (
               <div>
-                <div className=" p-3">
+                <div className=" p-3 mb-56 mt-3">
                   {listproduct.shoppingHeads.map((head, headIdx) => (
                     <div
                       key={headIdx}
@@ -481,121 +381,19 @@ function ProductList() {
                       {head.shoppingOrders
                         .filter((orderItem) => {
                           const matchFloor = selectedFloor
-                            ? (orderItem.product.product_floor || "1") === selectedFloor
+                            ? (orderItem.product.product_floor || '1') === selectedFloor
                             : true
 
                           const matchSearch = !search || orderItem.product.product_name.includes(search) || orderItem.so_running.includes(search) || orderItem.product.product_code.includes(search);
                           return matchFloor && matchSearch;
                         }
                         )
-                        .map((orderItem, Orderindex) => (
-                          <div
-                            key={Orderindex}
-                            className={`p-2 rounded-sm mb-1 mt-1 ${orderItem.picking_status === "pending"
-                              ? "bg-gray-400"
-                              : orderItem.picking_status === "picking"
-                                ? "bg-green-400"
-                                : "bg-red-400"
-                              }`}
-                          >
-                            <div
-                              onClick={() => handleDoubleClick(orderItem)} // เพิ่ม onClick สำหรับดับเบิลคลิก
-                              className={`py-2 px-1 rounded-smm-1 cursor-pointer ${orderItem.picking_status === "pending"
-                                ? "bg-white"
-                                : orderItem.picking_status === "picking"
-                                  ? "bg-green-100"
-                                  : "bg-red-100"
-                                }`}
-                            >
-                              <div className="flex justify-stretch p-1">
-                                <div className="w-1/3 border border-gray-500 flex justify-center ">
-                                  <img
-                                    src={orderItem.product.product_image_url}
-                                    className="w-25 h-25 object-cover"
-                                  />
-                                </div>
-                                <div className="text-xs w-2/3 ml-1">
-                                  <div className="flex justify-between pt-1 px-1">
-                                    <p className="font-bold">
-                                      {orderItem.product.product_name}
-                                    </p>
-                                    <p>{head.sh_running}</p>
-                                  </div>
-                                  <div className="flex justify-between pt-1 px-1">
-                                    <p>{orderItem.so_running}</p>
-                                    <p className="px-2 py-2 rounded-sm bg-yellow-500 text-white">
-                                      {orderItem.so_amount} {orderItem.so_unit}
-                                    </p>
-                                  </div>
-                                  <div className="flex justify-between pt-1 px-1">
-                                    <p className="text-amber-500 font-bold">
-                                      {orderItem.product.product_code}
-                                    </p>
-                                    <p>
-                                      เหลือ {orderItem.product.product_stock}{" "}
-                                      {orderItem.product.product_unit}
-                                    </p>
-                                  </div>
-                                  <div className="flex justify-between pt-1 px-1">
-                                    <div className="flex font-semibold text-violet-600">
-                                      <p>F{orderItem.product.product_floor}</p>&nbsp;
-                                      <p>{orderItem.product.product_addr}</p>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex justify-around py-2 text-[11px]">
-                                {["หมด", "ไม่พอ", "ไม่เจอ", "เสีย", "ด้านล่าง"].map(
-                                  (label, idx) => (
-                                    <button
-                                      key={idx}
-                                      onClick={() => handleOutofStock(orderItem, label)}
-                                      className={`text-white rounded-sm shadow-md bg-amber-500 py-2 px-3 ${orderItem.picking_status === label
-                                        ? "bg-red-500"
-                                        : ""
-                                        }`}
-                                    >
-                                      {label}
-                                    </button>
-                                  )
-                                )}
-                              </div>
-                              <div className="flex justify-between py-1 px-1 text-xs text-gray-500">
-                                <div className="flex justify-start">
-                                  <p>
-                                    {orderItem.emp_code_floor_picking
-                                      ? "จัดแล้ว"
-                                      : "ยังไม่จัด"}
-                                  </p>
-                                  &nbsp;{
-                                    orderItem.emp_code_floor_picking &&
-                                    <p> [{orderItem.emp_code_floor_picking || ""}] &nbsp;
-                                      {new Date(
-                                        orderItem.so_picking_time || ""
-                                      ).toLocaleDateString("th-TH", {
-                                        year: "numeric",
-                                        month: "2-digit",
-                                        day: "2-digit",
-                                      })}{" "}
-                                      {new Date(
-                                        orderItem.so_picking_time || ""
-                                      ).toLocaleTimeString("th-TH", {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                        second: "2-digit",
-                                      })}
-                                    </p>
-                                  }
-                                </div>
-                                {/* <div className="flex justify-end pr-1">
-                        <button className="border-gray-300 border rounded-sm px-5 py-2 shadow-md bg-blue-400 text-white">
-                          พิมพ์
-                        </button>
-                      </div> */}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                        .map((orderItem, Orderindex) => {
+                          if (socket) {
+                            console.log("orderItem2", orderItem)
+                            return <ProductBox orderItem={orderItem} key={Orderindex} headShRunning={head.sh_running} socket={socket} handleDoubleClick={handleDoubleClick} />
+                          }
+                        })}
                     </div>
                   ))}
                 </div>
@@ -627,8 +425,8 @@ function ProductList() {
         )}
       </div>
       <div>
-        <footer className={`p-3  text-white font-medium ${selectedFloor === '1' ? "bg-gray-500" : selectedFloor === '2' ? "bg-yellow-500" : selectedFloor === '3' ? "bg-indigo-500" : selectedFloor === '4' ? "bg-red-500" : selectedFloor === '5' ? "bg-emerald-500" : selectedFloor === 'box' ? "bg-purple-500" : "bg-blue-400"}`}>
-          <div className="flex justify-around">
+        <footer className={`p-3 fixed bottom-0 left-0 right-0 z-40  text-white font-medium ${selectedFloor === '1' ? "bg-gray-500" : selectedFloor === '2' ? "bg-yellow-500" : selectedFloor === '3' ? "bg-blue-500" : selectedFloor === '4' ? "bg-red-500" : selectedFloor === '5' ? "bg-emerald-500" : selectedFloor === 'box' ? "bg-purple-500" : "bg-blue-400"}`}>
+          <div className="flex">
             {floorButtons.map((btn) => (
               <button
                 key={btn.value}
@@ -637,11 +435,10 @@ function ProductList() {
                     prev === btn.value ? null : btn.value
                   )
                 }
-                className={`border border-gray-500 py-1 px-2 rounded-sm shadow-lg 
+                className={`border border-gray-500 py-1 px-1 rounded-sm shadow-lg w-full mx-1
                             ${btn.color} 
-                            hover:bg-yellow-300 hover:text-black
                             ${selectedFloor === btn.value
-                    ? "ring-2 ring-yellow-300 text-black"
+                    ? "ring-2 ring-yellow-300"
                     : ""
                   }`}>
                 {btn.label}
