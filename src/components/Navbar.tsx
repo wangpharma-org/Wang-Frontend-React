@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Disclosure,
   DisclosureButton,
@@ -16,7 +15,7 @@ const navigation = [
   { name: "สถิติพนักงาน", href: "/employee-statistics" },
 ];
 
-function classNames(...classes) {
+function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
 }
 
@@ -66,7 +65,6 @@ export default function Navbar() {
                     aria-current={
                       location.pathname === item.href ? "page" : undefined
                     }
-                    exact={item.exact}
                   >
                     {item.name}
                   </NavLink>

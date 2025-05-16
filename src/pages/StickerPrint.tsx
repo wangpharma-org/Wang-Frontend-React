@@ -31,8 +31,9 @@ const StickerPrint = () => {
     const token = sessionStorage.getItem("access_token");
     console.log(token);
     const newSocket = io(
-      `${import.meta.env.VITE_API_URL_ORDER}/socket/ticket`,
+      `${import.meta.env.VITE_API_URL_ORDER}/socket/picking/ticket`,
       {
+        path: '/socket/picking',
         extraHeaders: {
           Authorization: `Bearer ${token}`,
         },
