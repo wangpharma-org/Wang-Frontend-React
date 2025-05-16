@@ -71,6 +71,11 @@ const OrderList = () => {
 
   console.log("selectedFloor", selectedFloor);
 
+  useEffect(() => {
+    const totalOrders = orderList.length;
+    localStorage.setItem("totalOrdersCount", JSON.stringify(totalOrders));
+  }, [orderList]);
+
   const togglePopup = (id: string) => {
     setOpenPopupId((prev) => (prev === id ? null : id));
   };
@@ -125,6 +130,7 @@ const OrderList = () => {
       newSocket.disconnect();
     };
   }, []);
+
   useEffect(() => {
     const totalShoppingOrders = orderList.reduce(
       (total, order) =>
@@ -136,6 +142,7 @@ const OrderList = () => {
       0
     );
     setTotalShoppingOrders(totalShoppingOrders);
+    localStorage.setItem("totalShoppingOrders", JSON.stringify(totalShoppingOrders));
 
     const totalStatusPicking = orderList.reduce(
       (total, order) =>
@@ -149,6 +156,7 @@ const OrderList = () => {
         ),
       0
     );
+    localStorage.setItem("totalStatusPicking", JSON.stringify(totalStatusPicking));
     setTotalPicking(totalStatusPicking);
 
     // const latestByFloor: Record<string, Date> = {};
