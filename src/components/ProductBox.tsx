@@ -53,7 +53,7 @@ export default function ProductBox({ orderItem, headShRunning, handleDoubleClick
                         </div>
                         <div className="flex justify-between pt-1 px-1">
                             <p className="text-amber-500 font-bold">
-                                {orderItem.product.product_code}
+                                barcode {orderItem.product.product_code}
                             </p>
                             <p>
                                 เหลือ {orderItem.product.product_stock}{" "}

@@ -322,6 +322,18 @@ const OrderList = () => {
     setSelectedFloor(null);
   };
 
+  const setData = ()=> {
+    try{
+      const response = axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/report`);
+      console.log("response", response);
+      // setOrderList(response.data)
+    }
+    catch{
+      console.error("error");
+    }
+
+  }
+
   const routeButtons = [
     { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
     { id: 2, name: "หาดใหญ่", value: "หาดใหญ่" },
@@ -555,6 +567,7 @@ const OrderList = () => {
         ) : orderList.length === 0 ? (
           <div className="flex justify-center font-bold text-2xl mt-10">
             <p>ไม่มีรายการสินค้า</p>
+            <button onClick={setData}>คืนค่าข้อมูล</button>
           </div>
         ) : (
           <div>
@@ -673,7 +686,7 @@ const OrderList = () => {
                                   return (
                                     <div
                                       key={floor}
-                                      className={`flex-none px-1 py-1.5 mx-0.5 rounded shadow-sm text-center w-14 ${data.remaining > 0
+                                      className={`flex-none px-0.5 py-1.5 mx-0.5 rounded shadow-sm text-center w-14 ${data.remaining > 0
                                         ? "bg-yellow-200"
                                         : "bg-red-200"
                                         }`}
@@ -683,7 +696,7 @@ const OrderList = () => {
                                       </div>
                                       <div className="text-[10px] text-gray-600">
                                         เหลือ{" "}
-                                        <span className="font-bold">
+                                        <span className="font-bold text-sm">
                                           {data.remaining}
                                         </span>{" "}
                                         รก.
