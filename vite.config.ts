@@ -8,6 +8,7 @@ export default defineConfig({
     allowedHosts: [
       'businesses-province-high-bathrooms.trycloudflare.com',
     ],
+    host: true
   },
   plugins: [react(), tailwindcss(),],
 })

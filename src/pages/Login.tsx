@@ -5,7 +5,7 @@ import { useNavigate } from "react-router";
 import { Bounce, ToastContainer, toast } from "react-toastify";
 
 const Login = () => {
-    const { login, isAuthenticated, userInfo, logout } = useAuth()
+    const { login, isAuthenticated } = useAuth()
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
     const navigate = useNavigate()
