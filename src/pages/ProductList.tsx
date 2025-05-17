@@ -4,6 +4,8 @@ import { io, Socket } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import Clock from "../components/Clock";
 import ProductBox from "../components/ProductBox";
+import ButtonMenu from "../components/buttonMenu";
+
 
 interface Product {
   product_code: string;
@@ -173,8 +175,8 @@ function ProductList() {
     setIsFiltered(!!search || !!selectedFloor);
   }, [search, selectedFloor]);
 
-  console.log("search " + search);
-  console.log("selectedFloor " + selectedFloor);
+  // console.log("search " + search);
+  // console.log("selectedFloor " + selectedFloor);
 
   const setButton = () => {
     setSearch("");
@@ -228,21 +230,20 @@ function ProductList() {
   return (
     <div className="flex flex-col h-screen">
       <header
-        className={`p-2 sticky top-0 bg-blue-400 z-40 text-white font-medium ${
-          selectedFloor === "1"
-            ? "bg-gray-500"
-            : selectedFloor === "2"
+        className={`p-2 sticky top-0 bg-blue-400 z-40 text-white font-medium ${selectedFloor === "1"
+          ? "bg-gray-500"
+          : selectedFloor === "2"
             ? "bg-yellow-500"
             : selectedFloor === "3"
-            ? "bg-blue-500"
-            : selectedFloor === "4"
-            ? "bg-red-500"
-            : selectedFloor === "5"
-            ? "bg-emerald-500"
-            : selectedFloor === "box"
-            ? "bg-purple-500"
-            : "bg-blue-400"
-        } `}
+              ? "bg-blue-500"
+              : selectedFloor === "4"
+                ? "bg-red-500"
+                : selectedFloor === "5"
+                  ? "bg-emerald-500"
+                  : selectedFloor === "box"
+                    ? "bg-purple-500"
+                    : "bg-blue-400"
+          } `}
       >
         <div>
           <div className="flex justify-between">
@@ -326,7 +327,6 @@ function ProductList() {
               onClick={() => navigate("/order-list")}
               className="flex pt-2 cursor-pointer text-center justify-center items-center mx-auto"
             >
-
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -453,7 +453,7 @@ function ProductList() {
                         .filter((orderItem) => {
                           const matchFloor = selectedFloor
                             ? (orderItem.product.product_floor || "1") ===
-                              selectedFloor
+                            selectedFloor
                             : true;
 
                           const matchSearch =
@@ -513,21 +513,20 @@ function ProductList() {
       </div>
       <div>
         <footer
-          className={`p-3 fixed bottom-0 left-0 right-0 z-40  text-white font-medium ${
-            selectedFloor === "1"
-              ? "bg-gray-500"
-              : selectedFloor === "2"
+          className={`p-3 fixed bottom-0 left-0 right-0 z-40  text-white font-medium ${selectedFloor === "1"
+            ? "bg-gray-500"
+            : selectedFloor === "2"
               ? "bg-yellow-500"
               : selectedFloor === "3"
-              ? "bg-blue-500"
-              : selectedFloor === "4"
-              ? "bg-red-500"
-              : selectedFloor === "5"
-              ? "bg-emerald-500"
-              : selectedFloor === "box"
-              ? "bg-purple-500"
-              : "bg-blue-400"
-          }`}
+                ? "bg-blue-500"
+                : selectedFloor === "4"
+                  ? "bg-red-500"
+                  : selectedFloor === "5"
+                    ? "bg-emerald-500"
+                    : selectedFloor === "box"
+                      ? "bg-purple-500"
+                      : "bg-blue-400"
+            }`}
         >
           <div className="flex">
             {floorButtons.map((btn) => (
@@ -540,11 +539,10 @@ function ProductList() {
                 }
                 className={`border border-gray-500 py-1 px-1 rounded-sm shadow-lg w-full mx-1
                             ${btn.color} 
-                            ${
-                              selectedFloor === btn.value
-                                ? "ring-2 ring-yellow-300"
-                                : ""
-                            }`}
+                            ${selectedFloor === btn.value
+                    ? "ring-2 ring-yellow-300"
+                    : ""
+                  }`}
               >
                 {btn.label}
               </button>
@@ -561,21 +559,20 @@ function ProductList() {
                 !listproduct ||
                 userInfo?.emp_code !== listproduct.emp_code_picking
               }
-              className={`w-full px-3 py-1 shadow-md text-lg rounded-sm font-semibold  text-white mt-3 ${
-                CanSubmit &&
+              className={`w-full px-3 py-1 shadow-md text-lg rounded-sm font-semibold  text-white mt-3 ${CanSubmit &&
                 listproduct &&
                 userInfo?.emp_code === listproduct.emp_code_picking
-                  ? "bg-green-400"
-                  : "bg-gray-400"
-              }`}
+                ? "bg-green-400"
+                : "bg-gray-400"
+                }`}
             >
               {!CanSubmit ||
-              !listproduct ||
-              userInfo?.emp_code !== listproduct.emp_code_picking
+                !listproduct ||
+                userInfo?.emp_code !== listproduct.emp_code_picking
                 ? `คุณไม่มีสิทธิ์ในการยืนยัน`
                 : !CanSubmit
-                ? `กรุณาจัดสินค้าให้ครบ`
-                : `ยืนยันการจัดสินค้า`}
+                  ? `กรุณาจัดสินค้าให้ครบ`
+                  : `ยืนยันการจัดสินค้า`}
             </button>
           </div>
         </footer>
