@@ -381,6 +381,10 @@ const OrderList = () => {
     return handleClick;
   }
 
+  async function reloadData() {
+    await axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/picking/reload`)
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       <div>
@@ -553,8 +557,9 @@ const OrderList = () => {
             <p>Loading...</p>
           </div>
         ) : orderList.length === 0 ? (
-          <div className="flex justify-center font-bold text-2xl mt-10">
+          <div className="flex-col justify-center font-bold text-2xl mt-10 w-full text-center">
             <p>ไม่มีรายการสินค้า</p>
+            <button className="bg-blue-500 text-white mt-5 p-3 rounded-xl" onClick={()=>reloadData()}>จำลองออเดอร์ใหม่</button>
           </div>
         ) : (
           <div>
@@ -673,7 +678,7 @@ const OrderList = () => {
                                   return (
                                     <div
                                       key={floor}
-                                      className={`flex-none px-1 py-1.5 mx-0.5 rounded shadow-sm text-center w-14 ${data.remaining > 0
+                                      className={`flex-none px-0.5 py-1.5 mx-0.5 rounded shadow-sm text-center w-14 ${data.remaining > 0
                                         ? "bg-yellow-200"
                                         : "bg-red-200"
                                         }`}
@@ -683,7 +688,7 @@ const OrderList = () => {
                                       </div>
                                       <div className="text-[10px] text-gray-600">
                                         เหลือ{" "}
-                                        <span className="font-bold">
+                                        <span className="font-bold text-sm">
                                           {data.remaining}
                                         </span>{" "}
                                         รก.
@@ -835,15 +840,15 @@ const OrderList = () => {
                                           ).toLocaleString()}
                                         </p>
                                       </div>
-                                      <div className="flex justify-start">
+                                      { order.emp_picking && <div className="flex justify-start">
                                         <p className="text-green-500 font-bold">
-                                          {order.emp.emp_nickname}
+                                          {order.emp_picking.emp_nickname}
                                         </p>
                                         &nbsp;
                                         <p className="text-red-500">
                                           กำลังทำงานอยู่
                                         </p>
-                                      </div>
+                                      </div>}
                                       <hr className="mt-2" />
                                     </li>
                                   ))}
