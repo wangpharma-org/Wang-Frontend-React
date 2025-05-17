@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import Clock from "../components/Clock";
-import { useAuth } from "../context/AuthContext";
-import { DataStrategyMatch, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { Socket, io } from "socket.io-client";
 import axios from "axios";
-import ProductList from "./ProductList";
+// import ProductList from "./ProductList";
+import ButtonMenu from "../components/buttonMenu";
 
 interface Product {
   product_floor: string;
@@ -78,19 +78,29 @@ const Report = () => {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [openMenu, setOpenMenu] = useState(false);
   const [orderList, setOrderList] = useState<orderList[]>([]);
-  const { userInfo, logout } = useAuth();
   const [totalProduct, setTotalShoppingOrders] = useState(0);
-  const [latestTimes, setLatestTimes] = useState<Record<string, Date>>({});
+  // const [latestTimes, setLatestTimes] = useState<Record<string, Date>>({});
   const [totalPicking, setTotalPicking] = useState(0);
   const token = sessionStorage.getItem("access_token");
   const [report, setReport] = useState<EmployeeReport[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterData, setFilterData] = useState<EmployeeReport[]>([]);
+
+
+  const togglePopupMenu = () => {
+    setOpenMenu((prev) => !prev);
+    console.log("Click menu");
+  };
 
   useEffect(() => {
-    console.log(`${import.meta.env.VITE_API_URL_ORDER}/socket/listorder`);
+    fetchData();
+    console.log(
+      `${import.meta.env.VITE_API_URL_ORDER}/socket/picking/listorder`
+    );
     const newSocket = io(
-      `${import.meta.env.VITE_API_URL_ORDER}/socket/listorder`,
+      `${import.meta.env.VITE_API_URL_ORDER}/socket/picking/listorder`,
       {
+        path: "/socket/picking",
         extraHeaders: {
           Authorization: `Bearer ${sessionStorage.getItem("access_token")}`,
         },
@@ -104,12 +114,15 @@ const Report = () => {
     });
 
     newSocket.on("listorder:get", (data) => {
-      console.log("Data " + data);
-      setOrderList(data);
+      // console.log("Data " + JSON.stringify(data));
+      setOrderList(data.memberOrderWithAllShRunning);
+      // setLatestTimes(data.lastestDate);
+      // console.log('time', data.lastestDate);
       setLoading(false);
     });
 
     newSocket.on("connect_error", (error) => {
+      console.log(error);
       console.error("❌ Failed to connect to server:", error.message);
       setOrderList([]);
       setLoading(true);
@@ -120,28 +133,26 @@ const Report = () => {
     };
   }, []);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL_ORDER
-          }/api/report`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        setReport(response.data);
-        const reportData = response.data;
-        console.log(reportData);
-      } catch (error) {
 
-      }
-    };
-    fetchData();
+  const fetchData = async () => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL_ORDER
+        }/api/report`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setReport(response.data);
+      const reportData = response.data;
+      console.log(reportData);
+    } catch (error) {
 
-  }, [])
-  // JSON.stringify(report)
-  // console.log("ReportData", JSON.stringify(report))
+    }
+  };
+
+  console.log("ReportData", report)
+
 
   useEffect(() => {
     const totalShoppingOrders = orderList.reduce(
@@ -169,44 +180,34 @@ const Report = () => {
     );
     setTotalPicking(totalStatusPicking);
 
-    const latestByFloor: Record<string, Date> = {};
-
-    orderList.forEach((order) => {
-      order.shoppingHeads.forEach((sh) => {
-        const shTime = new Date(sh.sh_datetime);
-
-        sh.shoppingOrders.forEach((so) => {
-          const floor = so.product.product_floor;
-          if (!latestByFloor[floor] || shTime > latestByFloor[floor]) {
-            latestByFloor[floor] = shTime;
-          }
-        });
-      });
-    });
-    setLatestTimes(latestByFloor);
-
     // console.log("order List " + orderList);
   }, [orderList]);
 
   useEffect(() => {
+    const filterDate = report.filter(report => report.dateEnd);
+    const sortDate = filterDate.sort((a, b) =>
+      new Date(a.dateEnd).getTime() -
+      new Date(b.dateStart).getTime()
+    )
+    const PrefilterData = sortDate.sort((a, b) => b.countPicking - a.countPicking);
+    setFilterData(PrefilterData)
+  }, [report])
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
+        console.log("ClickOutside1",),
         popupRef.current &&
         !popupRef.current.contains(event.target as Node)
       ) {
         setOpenMenu(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [openMenu]);
-
-  const Btnlogout = () => {
-    logout()
-  };
+  }, []);
 
   const formatDate = (dateString: string) => {
     const Day = new Date(dateString).toLocaleDateString("th-TH", {
@@ -225,14 +226,10 @@ const Report = () => {
     return Time;
   };
 
-  const filterDate = report.filter(report => report.dateEnd);
-  const sortDate = filterDate.sort((a, b) =>
-    new Date(a.dateEnd).getTime() -
-    new Date(b.dateStart).getTime()
-  )
-  const filterData = sortDate.sort((a, b) => b.countPicking - a.countPicking);
+
 
   const floor = [
+    { label: "ชั้น 1", value: "1" },
     { label: "ชั้น 2", value: "2" },
     { label: "ชั้น 3", value: "3" },
     { label: "ชั้น 4", value: "4" },
@@ -251,15 +248,15 @@ const Report = () => {
               </button>
             </div>
             <div>
-              <div className="flex justify-center text-sm font-bold">
+              <div className="flex justify-center font-bold">
                 <Clock ></Clock>
               </div>
-              <div className="flex justify-center text-xs">
+              <div className="flex justify-center">
                 <p>
                   ทั้งหมด {orderList.length} ร้าน {totalProduct} รายการ
                 </p>
               </div>
-              <div className="flex justify-center text-xs">
+              <div className="flex justify-center">
                 <p>เหลือจัด {totalProduct - totalPicking} รายการ</p>
                 &nbsp;<p>|</p>&nbsp;
                 <p>กำลังจัด {totalPicking} รายการ</p>
@@ -271,18 +268,10 @@ const Report = () => {
                   onClick={() => navigate("/order-list")}
                   className="bg-white rounded-sm px-3 py-1 text-black drop-shadow-xs"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    className="size-6"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10.5 3.75a6.75 6.75 0 1 0 0 13.5 6.75 6.75 0 0 0 0-13.5ZM2.25 10.5a8.25 8.25 0 1 1 14.59 5.28l4.69 4.69a.75.75 0 1 1-1.06 1.06l-4.69-4.69A8.25 8.25 0 0 1 2.25 10.5Z"
-                      clipRule="evenodd"
-                    />
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6 text-black">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
                   </svg>
+
                 </button>
               </div>
             </div>
@@ -292,7 +281,7 @@ const Report = () => {
               <div className="flex justify-start">
                 <button
                   ref={buttonRef}
-                  onClick={() => setOpenMenu((prev) => !prev)}
+                  onClick={togglePopupMenu}
                   className="px-3 py-1"
                 >
                   <svg
@@ -319,63 +308,28 @@ const Report = () => {
           </div>
         </header>
       </div>
-      <div className="overflow-y-auto h-full p- bg-gray-300">
+      <div className="overflow-y-auto h-full p-1">
         {openMenu && (
-          <div ref={popupRef} className="fixed top-0 left-0 h-full z-50 w-3/5 sm:w-1/2 md:w-1/4 bg-blue-900 transition-transform duration-2000 ease-in-out transform translate-x-0">
-            <div id="infomation" className="p-4">
-              <div className="py-5">
-                <div className="bg-gray-100 p-1 rounded-full w-18 h-18 mx-auto">
-                  <img className="rounded-full w-16 h-16 bg-white mx-auto"
-                    src="https://as2.ftcdn.net/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg" />
-                </div>
-                <p className="flex justify-center mt-2 text-white">{userInfo?.emp_code}</p>
-                <p className="flex justify-center text-white">{userInfo?.username}</p>
-                <p className="flex justify-center text-white">คุณเป็นพนักงานประจำชั้น</p>
-                <p className="flex justify-center text-white">{userInfo?.floor_picking || "-"}</p>
-              </div>
-              <div className="flex justify-center px-3 text-white">
-                <button onClick={() => navigate("/order-list")} className="w-full mx-auto flex py-2 active:bg-red-600 scale-95 transition cursor-pointer text-center items-center font-light rounded-sm">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-9 rounded-full mr-1 ml-1 p-1 text-white">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                  </svg>
-                  รายการคำสั่งซื้อ
-                </button>
-              </div>
-              <div className="flex justify-center px-3 text-white">
-                <button onClick={() => navigate("/report")} className="w-full mx-auto flex py-2 active:bg-red-600 scale-95 transition cursor-pointer text-center items-center font-light rounded-sm">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-9 rounded-full mr-1 ml-1 p-1 text-white">
-                    <path strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.524 48.524 0 0 1-.005-10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 4.5M3 15V4.5"
-                    />
-                  </svg>
-                  สถิติพนักงาน
-                </button>
-              </div>
-              <div className="flex justify-center px-3 text-white">
-                <button onClick={Btnlogout} className="w-full mx-auto flex py-2 hover:bg-red-600 cursor-pointer text-center items-center font-light rounded-sm">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none"
-                    viewBox="0 0 24 24" strokeWidth={1.2} stroke="currentColor"
-                    className="size-9 rounded-full mr-1 ml-1 p-1 text-white">
-                    <path strokeLinecap="round" strokeLinejoin="round"
-                      d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
-                  </svg>
-                  ออกจากระบบ
-                </button>
-              </div>
-            </div>
+          <div ref={popupRef}>
+            <ButtonMenu />
           </div>
         )}
         {/* {report[0]?.productPerMinutes}
         {report[1]?.productPerMinutes}
         {report[2]?.productPerMinutes} */}
         {loading ? (
-          <p>Loading...</p>
-        ) : (
-          <div>
+          <div className="flex justify-center font-bold text-2xl mt-10">
+            <p>Loading...</p>
+          </div>
+        ) : report.length === 0 ? (
+          <div className="flex justify-center font-bold text-2xl mt-10">
+            ไม่มีข้อมูล
+          </div>
+        ) :
+          (<div>
             {filterData
               .map((emp, index) => (
-                <div key={index} className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+                <div key={index} className="p-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
                   <div>
                     <div className="bg-blue-900 text-white p-2 flex rounded-t-3xl">
                       <div className="bg-white p-1 rounded-full flex justify-center">
@@ -384,10 +338,10 @@ const Report = () => {
                       </div>
                       <div className="w-6/8 ml-5">
                         <div>
-                          <p className="flex justify-start font-bold">{emp?.emp_name}</p>
+                          <p className="flex justify-start font-bold text-lg">{emp?.emp_name}</p>
                         </div>
-                        <div>
-                          <div className="flex justify-between text-xs  pt-2">
+                        <div className=" text-sm">
+                          <div className="flex justify-between  pt-2">
                             <div className="flex justify-start">
                               <p>{emp?.emp_code}</p>&nbsp;
                               <p>{emp?.emp_nickname}</p>
@@ -396,7 +350,7 @@ const Report = () => {
                               <p className="">{emp.emp_workingPeriod_startTime} - {emp.emp_workingPeriod_endTime}</p>&nbsp;
                             </div>
                           </div>
-                          <div className="flex justify-between text-xs pt-2">
+                          <div className="flex justify-between pt-2">
                             <div>
                               <p className="py-1">{emp?.emp_tel}</p>&nbsp;
                             </div>
@@ -407,7 +361,7 @@ const Report = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="px-3 bg-white text-xs">
+                    <div className="px-3 bg-white text-sm">
                       <div className="flex justify-between w-full pt-1">
                         <div className="flex justify-start">
                           <p>รายการจัดทั้งหมด</p>
@@ -455,15 +409,15 @@ const Report = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="flex text-white justify-around w-full shadow-2xl pb-2 rounded-b-3xl bg-white px-2">
+                    <div className="flex text-white justify-center shadow-2xl pb-2 rounded-b-3xl bg-white px-2">
                       {floor.map((floor, floorIdx) => (
-                        <div key={floorIdx} className={`px-5 py-1 rounded-xl mb-1 mt-1 text-sm font-bold ${floor.value === "2" ? "bg-yellow-500" : floor.value === "3" ? "bg-indigo-500" : floor.value === "4" ? "bg-red-500" : floor.value === "5" ? "bg-emerald-500" : "bg-white"}`}>
+                        <div key={floorIdx} className={`px-2.5 py-1 mb-1 mt-1 text-sm font-bold w-full ${floor.value === "1" ? "bg-gray-500 rounded-l-2xl" : floor.value === "2" ? "bg-yellow-500" : floor.value === "3" ? "bg-indigo-500" : floor.value === "4" ? "bg-red-500" : floor.value === "5" ? "bg-emerald-500 rounded-r-2xl" : "bg-white"}`}>
                           <div className="flex justify-center pb-3">
                             {floor.label}
                           </div>
-                          <div className="flex justify-between w-full">
-                            <p>เหลือ</p>&nbsp;
-                            <p>{floor.value === "2" ? emp?.floor2 : floor.value === "3" ? emp?.floor3 : floor.value === "4" ? emp?.floor4 : floor.value === "5" ? emp?.floor5 : "0"}</p>&nbsp;
+                          <div className="flex justify-center">
+                            <p>รก.</p>&nbsp;
+                            <p>{floor.value === "1" ? emp?.floor1 : floor.value === "2" ? emp?.floor2 : floor.value === "3" ? emp?.floor3 : floor.value === "4" ? emp?.floor4 : floor.value === "5" ? emp?.floor5 : "0"}</p>&nbsp;                 
                           </div>
                         </div>
                       ))}
@@ -472,7 +426,7 @@ const Report = () => {
                 </div>
               ))}
           </div>
-        )}
+          )}
       </div>
     </div>
   )
