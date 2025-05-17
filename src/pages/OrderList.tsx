@@ -71,6 +71,11 @@ const OrderList = () => {
 
   console.log("selectedFloor", selectedFloor);
 
+  useEffect(() => {
+    const totalOrders = orderList.length;
+    localStorage.setItem("totalOrdersCount", JSON.stringify(totalOrders));
+  }, [orderList]);
+
   const togglePopup = (id: string) => {
     setOpenPopupId((prev) => (prev === id ? null : id));
   };
@@ -125,6 +130,7 @@ const OrderList = () => {
       newSocket.disconnect();
     };
   }, []);
+
   useEffect(() => {
     const totalShoppingOrders = orderList.reduce(
       (total, order) =>
@@ -136,6 +142,7 @@ const OrderList = () => {
       0
     );
     setTotalShoppingOrders(totalShoppingOrders);
+    localStorage.setItem("totalShoppingOrders", JSON.stringify(totalShoppingOrders));
 
     const totalStatusPicking = orderList.reduce(
       (total, order) =>
@@ -149,6 +156,7 @@ const OrderList = () => {
         ),
       0
     );
+    localStorage.setItem("totalStatusPicking", JSON.stringify(totalStatusPicking));
     setTotalPicking(totalStatusPicking);
 
     // const latestByFloor: Record<string, Date> = {};
@@ -321,6 +329,18 @@ const OrderList = () => {
     setSelectroute("เลือกเส้นทางขนส่ง");
     setSelectedFloor(null);
   };
+
+  const setData = ()=> {
+    try{
+      const response = axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/report`);
+      console.log("response", response);
+      // setOrderList(response.data)
+    }
+    catch{
+      console.error("error");
+    }
+
+  }
 
   const routeButtons = [
     { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
