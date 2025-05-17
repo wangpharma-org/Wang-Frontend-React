@@ -13,7 +13,12 @@ import OrderList from "./pages/OrderList";
 import ProductList from "./pages/ProductList";
 import StickerPrint from "./pages/StickerPrint";
 import FormatSticker from "./pages/FormatSticker";
+<<<<<<< Updated upstream
 import EmployeeStatisticsPage from "./pages/EmployeeStatisticsPage";
+=======
+import VerifyOrder from "./pages/VerifyOrder";
+
+>>>>>>> Stashed changes
 function App() {
   return (
     <>
@@ -126,8 +131,20 @@ function App() {
             }
           />
           <Route
+<<<<<<< Updated upstream
             path="/employee-statistics"
             element={<EmployeeStatisticsPage />}
+=======
+            path="/verify-order"
+            element={
+              <div>
+                <Navbar />
+                <RequireAuth>
+                  <VerifyOrder />
+                </RequireAuth>
+              </div>
+            }
+>>>>>>> Stashed changes
           />
         </Routes>
       </Router>
