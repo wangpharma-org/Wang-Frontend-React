@@ -117,11 +117,6 @@ export default function ProductBox({ orderItem, headShRunning, handleDoubleClick
                             </p>
                         }
                     </div>
-                    {/* <div className="flex justify-end pr-1">
-                        <button className="border-gray-300 border rounded-sm px-5 py-2 shadow-md bg-blue-400 text-white">
-                          พิมพ์
-                        </button>
-                      </div> */}
                 </div>
             </div>
         </div>
