@@ -835,15 +835,15 @@ const OrderList = () => {
                                           ).toLocaleString()}
                                         </p>
                                       </div>
-                                      <div className="flex justify-start">
+                                      {order.emp_code_picking && <div className="flex justify-start">
                                         <p className="text-green-500 font-bold">
-                                          {order.emp.emp_nickname}
+                                          {order.emp_code_picking} {order.emp_picking.emp_nickname}
                                         </p>
                                         &nbsp;
                                         <p className="text-red-500">
                                           กำลังทำงานอยู่
                                         </p>
-                                      </div>
+                                      </div>}
                                       <hr className="mt-2" />
                                     </li>
                                   ))}

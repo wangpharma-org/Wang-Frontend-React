@@ -43,7 +43,6 @@ export default function ProductBox({ orderItem, headShRunning, handleDoubleClick
                             <p className="font-bold">
                                 {orderItem.product.product_name}
                             </p>
-                            <p>{headShRunning}</p>
                         </div>
                         <div className="flex justify-between pt-1 px-1">
                             <p>{orderItem.so_running}</p>
