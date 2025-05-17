@@ -16,6 +16,7 @@ const Clock = () => {
     });
   };
   return (
+
     <div className="text-white">
       {formatTime(time)}
     </div>

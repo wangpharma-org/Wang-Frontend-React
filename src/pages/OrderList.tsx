@@ -74,6 +74,11 @@ const OrderList = () => {
 
   console.log("selectedFloor", selectedFloor);
 
+  useEffect(() => {
+    const totalOrders = orderList.length;
+    localStorage.setItem("totalOrdersCount", JSON.stringify(totalOrders));
+  }, [orderList]);
+
   const togglePopup = (id: string) => {
     setOpenPopupId((prev) => (prev === id ? null : id));
   };
@@ -140,6 +145,7 @@ const OrderList = () => {
       0
     );
     setTotalShoppingOrders(totalShoppingOrders);
+    localStorage.setItem("totalShoppingOrders", JSON.stringify(totalShoppingOrders));
 
     const totalStatusPicking = orderList.reduce(
       (total, order) =>
@@ -153,6 +159,7 @@ const OrderList = () => {
         ),
       0
     );
+    localStorage.setItem("totalStatusPicking", JSON.stringify(totalStatusPicking));
     setTotalPicking(totalStatusPicking);
 
     const newFloorCounts: Record<number, number> = {};
@@ -314,6 +321,18 @@ const OrderList = () => {
     setSelectedFloor(null);
   };
 
+  const setData = ()=> {
+    try{
+      const response = axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/report`);
+      console.log("response", response);
+      // setOrderList(response.data)
+    }
+    catch{
+      console.error("error");
+    }
+
+  }
+
   const routeButtons = [
     { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
     { id: 2, name: "หาดใหญ่", value: "หาดใหญ่" },
@@ -371,6 +390,10 @@ const OrderList = () => {
     };
 
     return handleClick;
+  }
+
+  async function reloadData() {
+    await axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/picking/reload`)
   }
 
   return (
@@ -502,8 +525,9 @@ const OrderList = () => {
             <p>Loading...</p>
           </div>
         ) : orderList.length === 0 ? (
-          <div className="flex justify-center font-bold text-2xl mt-10">
+          <div className="flex-col justify-center font-bold text-2xl mt-10 w-full text-center">
             <p>ไม่มีรายการสินค้า</p>
+            <button className="bg-blue-500 text-white mt-5 p-3 rounded-xl" onClick={()=>reloadData()}>จำลองออเดอร์ใหม่</button>
           </div>
         ) : (
           <div>
@@ -622,7 +646,7 @@ const OrderList = () => {
                                   return (
                                     <div
                                       key={floor}
-                                      className={`flex-none px-1 py-1.5 mx-0.5 rounded shadow-sm text-center w-14 ${data.remaining > 0
+                                      className={`flex-none px-0.5 py-1.5 mx-0.5 rounded shadow-sm text-center w-14 ${data.remaining > 0
                                         ? "bg-yellow-200"
                                         : "bg-red-200"
                                         }`}
@@ -632,7 +656,7 @@ const OrderList = () => {
                                       </div>
                                       <div className="text-[10px] text-gray-600">
                                         เหลือ{" "}
-                                        <span className="font-bold">
+                                        <span className="font-bold text-sm">
                                           {data.remaining}
                                         </span>{" "}
                                         รก.
@@ -784,15 +808,15 @@ const OrderList = () => {
                                           ).toLocaleString()}
                                         </p>
                                       </div>
-                                      <div className="flex justify-start">
+                                      { order.emp_picking && <div className="flex justify-start">
                                         <p className="text-green-500 font-bold">
-                                          {order.emp.emp_nickname}
+                                          {order.emp_picking.emp_nickname}
                                         </p>
                                         &nbsp;
                                         <p className="text-red-500">
                                           กำลังทำงานอยู่
                                         </p>
-                                      </div>
+                                      </div>}
                                       <hr className="mt-2" />
                                     </li>
                                   ))}
@@ -892,7 +916,7 @@ const OrderList = () => {
                       </div>
                       <div className="text-[12px] flex justify-center">
                         <p className="flex text-center">
-                          {match
+                          {match?.latest_picking_time
                             ? new Date(match.latest_picking_time).toLocaleString("th-TH", {
                               day: "2-digit",
                               month: "2-digit",
