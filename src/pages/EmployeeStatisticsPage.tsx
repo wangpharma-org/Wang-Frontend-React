@@ -221,6 +221,102 @@ const EmployeeStatisticsPage = () => {
     );
   };
 
+  // เพิ่มฟังก์ชันนี้ในคอมโพเนนต์
+  const combineEmployeeDataByDate = (
+    employees: EmployeeGroup[]
+  ): EmployeeStatistics => {
+    // สร้างข้อมูลพื้นฐาน
+    const combinedData: EmployeeStatistics = {
+      empCode: "ALL", // รวมทุกคน
+      header: {
+        startTime: "",
+        endTime: "",
+        durationMin: 0,
+        durationHr: 0,
+      },
+      floors: [],
+      totalPicked: 0,
+    };
+
+    // รวมข้อมูลจากทุกพนักงาน
+    if (employees.length === 0) return combinedData;
+
+    // Map เก็บข้อมูลแต่ละชั้น
+    const floorsMap: Record<string, FloorData> = {};
+
+    // ค่า startTime เริ่มต้น (จะหาค่าที่เร็วที่สุด)
+    let earliestStartTime: Date | null = null;
+    // ค่า endTime สุดท้าย (จะหาค่าที่ช้าที่สุด)
+    let latestEndTime: Date | null = null;
+
+    // วนลูปผ่านทุกพนักงาน
+    employees.forEach((employee) => {
+      const stats = employee.statistics;
+
+      // รวม totalPicked
+      combinedData.totalPicked += stats.totalPicked;
+
+      // ตรวจสอบและปรับปรุง startTime และ endTime
+      if (stats.header.startTime) {
+        const startTime = new Date(stats.header.startTime);
+        if (!earliestStartTime || startTime < earliestStartTime) {
+          earliestStartTime = startTime;
+          combinedData.header.startTime = stats.header.startTime;
+        }
+      }
+
+      if (stats.header.endTime) {
+        const endTime = new Date(stats.header.endTime);
+        if (!latestEndTime || endTime > latestEndTime) {
+          latestEndTime = endTime;
+          combinedData.header.endTime = stats.header.endTime;
+        }
+      }
+
+      // รวมข้อมูลแต่ละชั้น
+      stats.floors.forEach((floor) => {
+        if (!floorsMap[floor.floor]) {
+          // สร้างข้อมูลใหม่ถ้ายังไม่มี
+          floorsMap[floor.floor] = {
+            floor: floor.floor,
+            totalOrders: 0,
+            totalAmount: 0,
+            remaining: 0,
+            inProgress: 0,
+            completed: 0,
+          };
+        }
+
+        // รวมข้อมูลชั้น
+        floorsMap[floor.floor].totalOrders += floor.totalOrders;
+        floorsMap[floor.floor].totalAmount += floor.totalAmount;
+        floorsMap[floor.floor].remaining += floor.remaining;
+        floorsMap[floor.floor].inProgress += floor.inProgress;
+        floorsMap[floor.floor].completed += floor.completed;
+      });
+    });
+
+    // คำนวณระยะเวลาทำงาน
+    if (earliestStartTime && latestEndTime) {
+      const durationMs =
+        (latestEndTime as Date).getTime() -
+        (earliestStartTime as Date).getTime();
+      combinedData.header.durationMin = Math.round(durationMs / (1000 * 60));
+      combinedData.header.durationHr = parseFloat(
+        (durationMs / (1000 * 60 * 60)).toFixed(2)
+      );
+    }
+    // แปลง floorsMap เป็น array
+    combinedData.floors = Object.values(floorsMap);
+
+    // เรียงลำดับตามเลขชั้น
+    combinedData.floors.sort((a, b) => {
+      return parseInt(a.floor) - parseInt(b.floor);
+    });
+
+    return combinedData;
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -317,10 +413,7 @@ const EmployeeStatisticsPage = () => {
             const isExpanded = expandedDates.has(dateGroup.formattedDate);
             // ในอนาคตเราจะกรองข้อมูลตามวันที่ที่เลือก
             // ใช้ข้อมูลพนักงานจากวันที่เลือก
-            const employeeData =
-              dateGroup.employees.length > 0
-                ? dateGroup.employees[0].statistics
-                : null;
+            const employeeData = combineEmployeeDataByDate(dateGroup.employees);
 
             return (
               <div
@@ -335,6 +428,9 @@ const EmployeeStatisticsPage = () => {
                   <div className="font-medium">
                     <span className="text-blue-700">
                       {dateGroup.formattedDate}
+                    </span>
+                    <span className="ml-2 text-gray-500 text-sm">
+                      ({dateGroup.employees.length} คน)
                     </span>
                   </div>
                   <span className="text-lg">
@@ -456,30 +552,43 @@ const EmployeeStatisticsPage = () => {
                             </thead>
                             <tbody>
                               {/* Floor Data */}
-                              {employeeData.floors.map((floor, index) => (
-                                <tr
-                                  key={floor.floor}
-                                  className={
-                                    index % 2 === 0 ? "" : "bg-gray-50"
-                                  }
-                                >
-                                  <td className="text-center px-4 py-2 border border-gray-300">
-                                    {floor.floor}
-                                  </td>
-                                  <td className="text-center px-4 py-2 border border-gray-300">
-                                    {floor.totalAmount}
-                                  </td>
-                                  <td className="text-center px-4 py-2 border border-gray-300 text-red-600">
-                                    {floor.remaining}
-                                  </td>
-                                  <td className="text-center px-4 py-2 border border-gray-300 text-yellow-600">
-                                    {floor.inProgress}
-                                  </td>
-                                  <td className="text-center px-4 py-2 border border-gray-300 text-green-600">
-                                    {floor.completed}
-                                  </td>
-                                </tr>
-                              ))}
+                              {employeeData.floors.map((floor, index) => {
+                                let bgColorClass = "";
+                                if (floor.floor === "2")
+                                  bgColorClass = "bg-yellow-50";
+                                else if (floor.floor === "3")
+                                  bgColorClass = "bg-blue-50";
+                                else if (floor.floor === "4")
+                                  bgColorClass = "bg-red-50";
+                                else if (floor.floor === "5")
+                                  bgColorClass = "bg-green-50";
+
+                                return (
+                                  <tr
+                                    key={floor.floor}
+                                    className={
+                                      bgColorClass ||
+                                      (index % 2 === 0 ? "" : "bg-gray-50")
+                                    }
+                                  >
+                                    <td className="text-center px-4 py-2 border border-gray-300">
+                                      {floor.floor}
+                                    </td>
+                                    <td className="text-center px-4 py-2 border border-gray-300">
+                                      {floor.totalAmount}
+                                    </td>
+                                    <td className="text-center px-4 py-2 border border-gray-300 text-red-600">
+                                      {floor.remaining}
+                                    </td>
+                                    <td className="text-center px-4 py-2 border border-gray-300 text-yellow-600">
+                                      {floor.inProgress}
+                                    </td>
+                                    <td className="text-center px-4 py-2 border border-gray-300 text-green-600">
+                                      {floor.completed}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
 
                               {/* Sum Row */}
                               {(() => {
