@@ -23,7 +23,7 @@ export interface ShoppingOrder {
   so_amount: number;
   so_unit: string;
   picking_status: string;
-  emp_code_floor_picking: string;
+  emp_code_floor_picking: string | null;
   so_picking_time: string | null;
   product: Product;
 }
