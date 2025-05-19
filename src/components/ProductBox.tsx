@@ -1,5 +1,6 @@
 import { Socket } from "socket.io-client";
 import { ShoppingOrder } from "../pages/ProductList";
+import box from "../assets/product-17.png"
 
 interface ProductBoxProps {
     orderItem: ShoppingOrder;
@@ -9,7 +10,7 @@ interface ProductBoxProps {
     handleDoubleClick: (orderItem: ShoppingOrder, status: string) => void;
 }
 
-export default function ProductBox({ orderItem, headShRunning, handleDoubleClick }: ProductBoxProps) {
+export default function ProductBox({ orderItem, handleDoubleClick }: ProductBoxProps) {
     return (
 
         <div
@@ -23,7 +24,7 @@ export default function ProductBox({ orderItem, headShRunning, handleDoubleClick
         >
             <div
                 //   onDoubleClick={(event) => doubleClick(event)}
-                onClick={() => handleDoubleClick(orderItem, 'picking')} // เพิ่ม onClick สำหรับดับเบิลคลิก
+                onClick={() => handleDoubleClick(orderItem, 'picking')}
                 className={`py-2 px-1 rounded-smm-1 cursor-pointer ${orderItem.picking_status === "pending"
                     ? "bg-white"
                     : orderItem.picking_status === "picking"
@@ -34,7 +35,7 @@ export default function ProductBox({ orderItem, headShRunning, handleDoubleClick
                 <div className="flex justify-stretch p-1">
                     <div className="w-1/3 border border-gray-500 flex justify-center ">
                         <img
-                            src={orderItem.product.product_image_url || 'https://icons.veryicon.com/png/o/application/applet-1/product-17.png'}
+                            src={`${orderItem.product.product_image_url}` || box}
                             className="w-25 h-25 object-cover"
                         />
                     </div>

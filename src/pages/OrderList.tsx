@@ -682,11 +682,10 @@ const OrderList = () => {
                                         F{floor}
                                       </div>
                                       <div className="text-[10px] text-gray-600">
-                                        เหลือ{" "}
-                                        <span className="font-bold ">
+                                        เหลือ {" "}
+                                        <span className="font-bold text-sm">
                                           {data.remaining}
                                         </span>{" "}
-                                        รก.
                                       </div>
                                     </div>
                                   );
