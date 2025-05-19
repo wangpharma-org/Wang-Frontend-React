@@ -14,6 +14,7 @@ import ProductList from "./pages/ProductList";
 import StickerPrint from "./pages/StickerPrint";
 import FormatSticker from "./pages/FormatSticker";
 import EmployeeStatisticsPage from "./pages/EmployeeStatisticsPage";
+import DashboardQcPage from "./pages/DashboardQcPage";
 function App() {
   return (
     <>
@@ -128,6 +129,10 @@ function App() {
           <Route
             path="/employee-statistics"
             element={<EmployeeStatisticsPage />}
+          />
+          <Route
+            path="/dashboard-qc"
+            element={<DashboardQcPage />}
           />
         </Routes>
       </Router>
