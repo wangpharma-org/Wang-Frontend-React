@@ -25,111 +25,40 @@ interface Member {
   emp_code: string;
 }
 
-const InvoiceList: React.FC = () => {
-  const [invoice, setInvoice] = useState<Invoice[]>([])
-  const [loading, setLoading] = useState(false)
-  const [socket, setSocket] = useState<Socket | null>(null)
-  const [offset, setOffset] = useState(0)
-  const [none , setNone ] = useState(false) 
-  const [, setBillCount] = useState(0);
-  const timeoutRef = useRef<number | undefined>(undefined);
-  const toastId = useRef<Id | undefined>(undefined);
+function VerifyOrder() {
+  // const [white, setWhite] = useState("");
+  // const [yellow, setYellow] = useState("");
+  // const [search, setSearch] = useState("");
+  // const [socket, setSocket] = useState<Socket | null]
 
-  useEffect(() => {
-    const token = sessionStorage.getItem("access_token")
-    console.log(token)
-    console.log(`${import.meta.env.VITE_API_URL_INVOICE}/socket/invoice/all`)
-    const newSocket = io(`${import.meta.env.VITE_API_URL_INVOICE}/socket/invoice/all`, {
-      path: '/socket/invoice',
-      extraHeaders: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-    setSocket(newSocket)
 
-    newSocket.on("connect", () => {
-      console.log("✅ Connected to WebSocket")
-      newSocket.emit("invoice:get", { offset: 0, limit: 10 })
-    });
-
-    newSocket.on("invoice:list", (data) => {
-      console.log("📥 Received invoice:list", data)
-      if(data.length === 0) {
-        setNone(true)
-      } else {
-        setNone(false)
-      }
-      setInvoice(data)
-      setLoading(false)
-    });
-
-    newSocket.on("invoice:notify", () => {
-      setBillCount((prev) => {
-        const newCount = prev + 1;
-        if (!toastId.current) {
-          toastId.current = toast.info(`มีรายการเข้ามาใหม่ ${newCount} รายการ`, {
-            position: "bottom-right",
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: false,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-            theme: "light",
-            transition: Bounce,
-          });
-        } else {
-          toast.update(toastId.current, {
-            render: `มีรายการเข้ามาใหม่ ${newCount} รายการ`,
-            autoClose: 3000,
-          });
-        }
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        timeoutRef.current = setTimeout(() => {
-          setBillCount(0);
-          if (toastId.current !== undefined) {
-            toast.dismiss(toastId.current);
-            toastId.current = undefined;
-          }
-        }, 3000);
-
-        return newCount;
-      });
-    });
-
-    newSocket.on("unauthorized", (error) => {
-      console.error("❌ Unauthorized:", error.message)
-    })
-
-    return () => {
-      newSocket.disconnect()
-      newSocket.off("invoice:notify");
-      clearTimeout(timeoutRef.current);
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault(); // ป้องกัน refresh หน้า
+    const white = e.currentTarget.elements.namedItem("whitePaper") as HTMLInputElement | null;
+    const yellow = e.currentTarget.elements.namedItem("yellowPaper") as HTMLInputElement | null;
+    const search = e.currentTarget.elements.namedItem("search") as HTMLInputElement | null;
+    if (white) {
+      const value = white.value;
+      // setWhite(value);
+      console.log('ส่งข้อมูลใบขาว:', value);
+      white.value = ''
+    } else if (yellow) {
+      const value = yellow.value;
+      // setYellow(value);
+      console.log('ส่งข้อมูลใบเหลือง:', value);
+      yellow.value = ''
+    } else if (search) {
+      const value = search.value;
+      // setSearch(value);
+      console.log('ส่งข้อมูลค้นหา:', value);
+      search.value = ''
     }
-  }, [])
+  };
 
-  const handleNext = () => {
-    if (loading) return
-    if (none || invoice.length<10) return
-    setLoading(true)
-    const newOfset = offset + 10
-    console.log(offset, newOfset)
-    setOffset(newOfset)
-    socket?.emit("invoice:get", { offset: newOfset, limit: 10 })
-  }
-
-  const handleBack = () => {
-    if ((loading) || (offset < 10)) return
-    setLoading(true)
-    const newOfset = offset - 10
-    console.log(newOfset)
-    setOffset(newOfset)
-    socket?.emit("invoice:get", { offset: newOfset, limit: 10 })
-  }
 
   return (
     <div className="overflow-x-auto p-6">
-      <ToastContainer
+      {/* <ToastContainer
         position="bottom-right"
         autoClose={5000}
         hideProgressBar={false}
@@ -141,63 +70,132 @@ const InvoiceList: React.FC = () => {
         pauseOnHover
         theme="light"
         transition={Bounce}
-        />
-      <div className="inline-block min-w-full overflow-hidden rounded-lg shadow-md bg-white">
+      /> */}
+      <div className="flex justify-around mb-8">
+        <div className=" w-full flex flex-col">
+          <div className="flex justify-center mb-4">
+            <p>เพิ่มข้อมูล</p>
+          </div>
+          <div className="flex mx-5">
+            <div className="relative w-full mr-3">
+              <form onSubmit={handleSubmit} className="relative flex items-center gap-2">
+                <input
+                  type="text"
+                  name="whitePaper"
+                  className="border border-gray-500 text-black w-full mr-1 p-2 rounded-xs bg-blue-50 text-3xl"
+                  placeholder="ใบขาว"
+                />
+
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="size-6 absolute transform -translate-y-1/2 right-3 top-1/2 text-gray-400"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+              </form>
+            </div>
+            <div className="relative w-full ml-3">
+              <form onSubmit={handleSubmit} className="flex items-center gap-2">
+                <input type="text" name="yellowPaper" className="border border-gray-500 text-black w-full p-2 rounded-xs bg-yellow-50 text-3xl" placeholder="ใบเหลือง" />
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6 absolute transform -translate-y-1/2 right-3 top-1/2 text-gray-400">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+              </form>
+            </div>
+          </div>
+        </div>
+        <div className=" w-full flex flex-col mx-5">
+          <div className="flex justify-center mb-4">
+            <p>ค้นหา</p>
+          </div>
+          <div className="flex w-full">
+            <div className="relative w-full mr-3">
+              <form onSubmit={handleSubmit} className="">
+                <div className="relative w-full">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+                    />
+                  </svg>
+                  <input type="text" name="search" className="border border-gray-500 text-black w-full mr-1 p-2 rounded-xs text-right text-3xl" placeholder="ค้นหาข้อมูล" />
+                </div>
+              </form>
+            </div>
+            <div>
+              <button className=" text-black ">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-13 text-gray-500">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="inline-block min-w-full overflow-hidden shadow-md bg-white">
         <table className="min-w-full text-sm text-gray-800">
           <thead className="bg-gray-100 uppercase text-gray-700 text-sm font-semibold">
             <tr>
-              <th className="px-6 py-3 text-center ">ลำดับที่</th>
-              <th className="px-6 py-3 text-center ">เลขที่ใบจอง</th>
-              <th className="px-6 py-3 text-center ">รหัสสมาชิก</th>
-              <th className="px-6 py-3 text-center ">นามร้าน</th>
-              <th className="px-6 py-3 text-center ">จำนวนที่ขาย</th>
-              <th className="px-6 py-3 text-center ">มูลค่ารวม</th>
-              <th className="px-6 py-3 text-center ">วันที่ใบจอง</th>
-              <th className="px-6 py-3 text-center ">จำนวนครั้งที่สแกน</th>
-              <th className="px-6 py-3 text-center ">เวลาที่สแกนล่าสุด</th>
-              <th className="px-6 py-3 text-center ">จำนวนพิมพ์</th>
-              <th className="px-6 py-3 text-center ">เลขบิล QC</th>
-              <th className="px-6 py-3 text-center ">จำนวนพิมพ์ QC</th>
-              <th className="px-6 py-3 text-center ">วันที่พิมพ์ QC</th>
+              <th className="px-5 py-3 text-center border">ลำดับที่</th>
+              <th className="px-5 py-3 text-center border">เลขที่ใบจอง</th>
+              <th className="px-5 py-3 text-center border">รหัสสมาชิก</th>
+              <th className="px-5 py-3 text-center border">นามร้าน</th>
+              <th className="px-5 py-3 text-center border">จำนวนที่ขาย</th>
+              <th className="px-5 py-3 text-center border">มูลค่ารวม</th>
+              <th className="px-5 py-3 text-center border">วันที่ใบจอง</th>
+              <th className="px-5 py-3 text-center border">จำนวนครั้งที่สแกน</th>
+              <th className="px-5 py-3 text-center border">เวลาที่สแกนล่าสุด</th>
+              <th className="px-5 py-3 text-center border">จำนวนพิมพ์</th>
+              <th className="px-5 py-3 text-center bg-yellow-200 border">เลขบิล</th>
+              <th className="px-5 py-3 text-center bg-yellow-200 border">จำนวน</th>
+              <th className="px-5 py-3 text-center bg-yellow-200 border">มูลค่ารวม</th>
+              <th className="px-5 py-3 text-center bg-yellow-200 border">จำนวนครั้งที่สแกน</th>
+              <th className="px-5 py-3 text-center bg-yellow-200 border">เวลาที่สแกนล่าสุด</th>
+              <th className="px-5 py-3 text-center border">สถานะ</th>
+
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {invoice.map((invoice, index) => (
-              <tr key={index} className="hover:bg-gray-50">
-                <td className="px-6 py-4 text-center">{index + 1}</td>
-                <td className="px-6 py-4">{invoice.sh_running}</td>
-                <td className="px-6 py-4">{invoice.mem_code}</td>
-                <td className="px-6 py-4">
-                  {invoice.members.mem_name || invoice.mem_name}
-                </td>
-                <td className="px-6 py-4">
-                  {invoice.members.emp_code || invoice.emp_code}
-                </td>
-                <td className="px-6 py-4 text-right">{invoice.sh_listsale}</td>
-                <td className="px-6 py-4 text-right">{invoice.sh_listfree}</td>
-                <td className="px-6 py-4 text-right">
-                  {invoice.sh_sumprice.toLocaleString()}
-                </td>
-                <td className="px-6 py-4 text-center">
-                  {dayjs(invoice.sh_datetime).format("DD/MM/YYYY HH:mm")}
-                </td>
-                <td className="px-6 py-4 text-right">{invoice.sh_print}</td>
-                <td className="px-6 py-4">{invoice.qc_invoice}</td>
-                <td className="px-6 py-4 text-right">{invoice.qc_print}</td>
-                <td className="px-6 py-4 text-center">
-                  {invoice.qc_timePrice}
-                </td>
-              </tr>
-            ))}
+
+            <tr className="hover:bg-gray-50">
+              <td className="px-6 py-4 text-center border-x-1 border-b-1">1</td>
+              <td className="px-6 py-4 text-center border-x-1 border-b-1">1</td>
+              <td className="px-6 py-4 text-center border-x-1 border-b-1">1</td>
+              <td className="px-6 py-4 text-center border-x-1 border-b-1">1</td>
+              <td className="px-6 py-4 text-center border-x-1 border-b-1">1</td>
+              <td className="px-6 py-4 text-center border-x-1 border-b-1">1</td>
+              <td className="px-6 py-4 text-center border-x-1 border-b-1">1</td>
+              <td className="px-6 py-4 text-center border-x-1 border-b-1">1</td>
+              <td className="px-6 py-4 text-center border-x-1 border-b-1">1</td>
+              <td className="px-6 py-4 text-center border-x-1 border-b-1 ">1</td>
+              <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">1</td>
+              <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">1</td>
+              <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">1</td>
+              <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">1</td>
+              <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">1</td>
+              <td className="px-6 py-4 text-center border-x-1 border-b-1">1</td>
+
+            </tr>
+
           </tbody>
         </table>
-        { none && <div className="w-full flex justify-center h-56 items-center">
-              <p className="text-xl font-medium text-amber-400">ไม่พบข้อมูล</p>
-            </div>}
       </div>
-      
     </div>
+
   );
 };
 
-export default InvoiceList;
+export default VerifyOrder;
