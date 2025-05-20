@@ -321,13 +321,13 @@ const OrderList = () => {
     setSelectedFloor(null);
   };
 
-  const setData = ()=> {
-    try{
+  const setData = () => {
+    try {
       const response = axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/report`);
       console.log("response", response);
       // setOrderList(response.data)
     }
-    catch{
+    catch {
       console.error("error");
     }
 
@@ -515,7 +515,7 @@ const OrderList = () => {
       <div className="relative flex-grow overflow-y-auto">
         <div>
           {openMenu && (
-            <div  ref={popupRef}>
+            <div ref={popupRef}>
               <ButtonMenu></ButtonMenu>
             </div>
           )}
@@ -527,7 +527,7 @@ const OrderList = () => {
         ) : orderList.length === 0 ? (
           <div className="flex-col justify-center font-bold text-2xl mt-10 w-full text-center">
             <p>ไม่มีรายการสินค้า</p>
-            <button className="bg-blue-500 text-white mt-5 p-3 rounded-xl" onClick={()=>reloadData()}>จำลองออเดอร์ใหม่</button>
+            <button className="bg-blue-500 text-white mt-5 p-3 rounded-xl" onClick={() => reloadData()}>จำลองออเดอร์ใหม่</button>
           </div>
         ) : (
           <div>
@@ -563,11 +563,11 @@ const OrderList = () => {
                       return (
                         <div
                           key={order.mem_id}
-                          className="mt-2 px-3 w-full grid grid-cols-1 md:grid-cols-1 gap-3"
+                          className=" mt-2 px-3 w-full grid grid-cols-1 md:grid-cols-1 gap-3"
                         >
                           <div
                             onClick={() => togglePopup(order.mem_code)}
-                            className={`w-full p-2 rounded-sm shadow-xl text-[12px] text-[#444444] ${order.picking_status === "picking"
+                            className={`relative w-full p-2 rounded-sm shadow-xl text-[12px] text-[#444444] ${order.picking_status === "picking"
                               ? "bg-green-400"
                               : "bg-gray-400"
                               }`}
@@ -781,65 +781,69 @@ const OrderList = () => {
                             {isOpen && (
                               <div
                                 ref={popupRef}
-                                className="w-full bg-white border border-gray-300 rounded-b shadow-lg z-40 mt-2 rounded-sm px-3"
+                                className={`absolute w-full  z-50 -translate-x-[8px] ${
+                                  order.picking_status === "picking" ? " bg-green-400": "bg-gray-400"
+                                }`}
                               >
-                                <ul>
-                                  {order.shoppingHeads.map((sh, index) => (
-                                    <li
-                                      key={sh.sh_id}
-                                      className="pt-2 pb-2 text-xs"
-                                    >
-                                      <div className="flex justify-between pt-1">
-                                        <div className="flex justify-start">
-                                          <p className="font-bold">
-                                            {index + 1}.
+                                <div className=" bg-white border border-gray-300 rounded-b shadow-lg m-2 rounded-sm px-3">
+                                  <ul>
+                                    {order.shoppingHeads.map((sh, index) => (
+                                      <li
+                                        key={sh.sh_id}
+                                        className="pt-2 pb-2 text-xs"
+                                      >
+                                        <div className="flex justify-between pt-1">
+                                          <div className="flex justify-start">
+                                            <p className="font-bold">
+                                              {index + 1}.
+                                            </p>
+                                            <p>{sh.sh_running}</p>
+                                          </div>
+                                          <p className="bg-yellow-500 p-1 rounded-sm text-xs text-white">
+                                            {sh.shoppingOrders.length} รายการ
                                           </p>
-                                          <p>{sh.sh_running}</p>
                                         </div>
-                                        <p className="bg-yellow-500 p-1 rounded-sm text-xs text-white">
-                                          {sh.shoppingOrders.length} รายการ
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <p>
-                                          เปิดบิล:{" "}
-                                          {new Date(
-                                            sh.sh_datetime
-                                          ).toLocaleString()}
-                                        </p>
-                                      </div>
-                                      { order.emp_picking && <div className="flex justify-start">
-                                        <p className="text-green-500 font-bold">
-                                          {order.emp_picking.emp_nickname}
-                                        </p>
-                                        &nbsp;
-                                        <p className="text-red-500">
-                                          กำลังทำงานอยู่
-                                        </p>
-                                      </div>}
-                                      <hr className="mt-2" />
-                                    </li>
-                                  ))}
-                                  <button
-                                    className="border rounded-sm px-3 py-2 text-xs w-full mb-2 bg-green-600 text-white hover:bg-lime-700"
-                                    onClick={() => {
-                                      handleDoubleClick(() => {
-                                        if (order?.picking_status === "picking") {
-                                          navigate(
-                                            `/product-list?mem_code=${order?.mem_code}`
-                                          );
-                                        } else {
-                                          changeToPicking(order?.mem_code);
-                                          navigate(
-                                            `/product-list?mem_code=${order?.mem_code}`
-                                          );
-                                        }
-                                      })
-                                    }}
-                                  >
-                                    จัดแบบรวมบิล
-                                  </button>
-                                </ul>
+                                        <div>
+                                          <p>
+                                            เปิดบิล:{" "}
+                                            {new Date(
+                                              sh.sh_datetime
+                                            ).toLocaleString()}
+                                          </p>
+                                        </div>
+                                        {order.emp_picking && <div className="flex justify-start">
+                                          <p className="text-green-500 font-bold">
+                                            {order.emp_picking.emp_nickname}
+                                          </p>
+                                          &nbsp;
+                                          <p className="text-red-500">
+                                            กำลังทำงานอยู่
+                                          </p>
+                                        </div>}
+                                        <hr className="mt-2" />
+                                      </li>
+                                    ))}
+                                    <button
+                                      className="border rounded-sm px-3 py-2 text-xs w-full mb-2 bg-green-600 text-white hover:bg-lime-700"
+                                      onClick={() => {
+                                        handleDoubleClick(() => {
+                                          if (order?.picking_status === "picking") {
+                                            navigate(
+                                              `/product-list?mem_code=${order?.mem_code}`
+                                            );
+                                          } else {
+                                            changeToPicking(order?.mem_code);
+                                            navigate(
+                                              `/product-list?mem_code=${order?.mem_code}`
+                                            );
+                                          }
+                                        })
+                                      }}
+                                    >
+                                      จัดแบบรวมบิล
+                                    </button>
+                                  </ul>
+                                </div>
                               </div>
                             )}
                           </div>
