@@ -35,7 +35,11 @@ export default function ProductBox({ orderItem, handleDoubleClick }: ProductBoxP
                 <div className="flex justify-stretch p-1">
                     <div className="w-1/3 border border-gray-500 flex justify-center ">
                         <img
-                            src={`${orderItem.product.product_image_url}` || box}
+                            src={
+                                orderItem.product.product_image_url.startsWith('..')
+                                  ? `https://www.wangpharma.com${orderItem.product.product_image_url.slice(2)}`
+                                  : orderItem.product.product_image_url || box
+                            }
                             className="w-25 h-25 object-cover"
                         />
                     </div>

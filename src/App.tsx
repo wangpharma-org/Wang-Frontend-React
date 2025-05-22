@@ -108,9 +108,9 @@ function App() {
             element={
               <div>
                 <Navbar />
-                <RequireAuth>
+                {/* <RequireAuth> */}
                   <StickerPrint />
-                </RequireAuth>
+                {/* </RequireAuth> */}
               </div>
             }
           />
@@ -118,9 +118,9 @@ function App() {
             path="/format-sticker"
             element={
               <div>
-                <RequireAuth>
+                {/* <RequireAuth> */}
                   <FormatSticker />
-                </RequireAuth>
+                {/* </RequireAuth> */}
               </div>
             }
           />
