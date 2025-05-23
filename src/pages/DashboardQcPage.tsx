@@ -19,16 +19,28 @@ import FragilePrint from "../components/FragilePrint";
 const DashboardPage = () => {
   const [openModal, setOpenModal] = useState(false);
   const [reqNewProduct, setReqNewProduct] = useState(false);
-  const [showPrintModal, setShowPrintModal] = useState(false);
-  const [printSpecialExpressModal, setPrintSpecialExpressModel] =
-    useState(false);
+  const [quantity, setQuantity] = useState(1);
+  
+  const [pinCart, setPinCart] = useState(0);
 
-  const openSpecialExpressModal = () => {
-    setPrintSpecialExpressModel(true);
+  const inputPinCart = () => {
+    // alert('กรอก จำนวน ตะกร้า (เฉพาะตัวเลข)');
+    const input = prompt('กรอก จำนวน ตะกร้า (เฉพาะตัวเลข)');
+    if (input !== null) {
+      const newQuantity = parseInt(input);
+      if (!isNaN(newQuantity) && newQuantity > 0) {
+        setPinCart(newQuantity);
+      }
+    }
+    // setPinCart(pinCart);
   };
 
-  const isOpenPrintModal = () => {
-    setShowPrintModal(true);
+  const increaseQuantity = () => {
+    setQuantity(prev => prev + 1);
+  };
+
+  const decreaseQuantity = () => {
+    setQuantity(prev => prev > 1 ? prev - 1 : 1); // ไม่ให้น้อยกว่า 1
   };
 
   const isReqNewPro = () => {
@@ -458,13 +470,13 @@ const DashboardPage = () => {
           <div className="text-sm text-center mb-1">จำนวนสินค้า</div>
           <div className="flex mb-4">
             <div className="border rounded-l-md p-2 text-center flex-1 text-3xl">
-              <span className="font-medium">1</span>
+              <span className="font-medium">{quantity}</span>
             </div>
             <div className="flex flex-col">
-              <button className="bg-green-500 p-1 rounded-tr-md">
+              <button onClick={increaseQuantity} className="bg-green-500 p-1 rounded-tr-md">
                 <ArrowUp size={16} className="text-white" />
               </button>
-              <button className="bg-red-500 p-1 rounded-br-md">
+              <button onClick={decreaseQuantity} className="bg-red-500 p-1 rounded-br-md">
                 <ArrowDown size={16} className="text-white" />
               </button>
             </div>
@@ -497,7 +509,7 @@ const DashboardPage = () => {
               <FragilePrint />
             </div>
             <div className="flex flex-col items-center justify-center mt-4 gap-y-4">
-              <button className="flex-1 h-14 w-full bg-amber-300 border border-amber-400 rounded-sm text-lg font-medium px-4">
+              <button onClick={inputPinCart} className="flex-1 h-14 w-full bg-amber-300 border border-amber-400 rounded-sm text-lg font-medium px-4">
                 ติดตะกร้า รอลงลัง ส่งฟรี
               </button>
               <button className="flex-1 h-14 w-full bg-green-500 border border-green-600 rounded-sm text-lg font-medium px-4">
