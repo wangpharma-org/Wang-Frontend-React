@@ -14,6 +14,7 @@ import ProductList from "./pages/ProductList";
 import StickerPrint from "./pages/StickerPrint";
 import FormatSticker from "./pages/FormatSticker";
 import EmployeeStatisticsPage from "./pages/EmployeeStatisticsPage";
+import VerifyOrder from "./pages/VerifyOrder";
 import ReportEmployee from "./pages/ReportEmployee";
 
 function App() {
@@ -140,6 +141,17 @@ function App() {
           <Route
             path="/employee-statistics"
             element={<EmployeeStatisticsPage />}
+            />
+          <Route
+            path="/verify-order"
+            element={
+              <div>
+                <Navbar />
+                <RequireAuth>
+                  <VerifyOrder />
+                </RequireAuth>
+              </div>
+            }
           />
         </Routes>
       </Router>
