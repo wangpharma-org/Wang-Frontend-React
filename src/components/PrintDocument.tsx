@@ -2,7 +2,7 @@
 import React, { useRef, useState } from 'react';
 import { Printer } from 'lucide-react';
 
-const BarcodeQcPrint: React.FC = () => {
+const SendOtherMoal: React.FC = () => {
   const printRef = useRef<HTMLDivElement>(null);
   const [isPrinting, setIsPrinting] = useState(false);
   
@@ -16,8 +16,8 @@ const BarcodeQcPrint: React.FC = () => {
     },
     receiver: {
       title: "ชื่อผู้รับ",
-      company: "ร้านจริญเฮลท์ 2008",
-      address: "502 ถ.ธีมทรศรี",
+      company: "ร้านจริญเภสัช 2008",
+      address: "502 ถ.อินทรศีรี",
       district: "ต.แม่สอด อ.แม่สอด จ.ตาก 63110",
       phone: "เบอร์ 092-9298299",
     },
@@ -148,4 +148,4 @@ const BarcodeQcPrint: React.FC = () => {
   );
 };
 
-export default BarcodeQcPrint;
+export default SendOtherMoal;

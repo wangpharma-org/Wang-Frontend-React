@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import QcModals from "../components/QcModal";
 import RequestNewProductModel from "../components/RequestNewProductModel";
-import BarcodeQcPrintModal from "../components/PrintDocument";
+import SendOtherMoal from "../components/PrintDocument";
 import SpecialExpressModal from "../components/SpecialExpressModal";
 import FragilePrint from "../components/FragilePrint";
 
@@ -470,7 +470,7 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          <BarcodeQcPrintModal />
+          <SendOtherMoal />
           {/* <button onClick={isOpenPrintModal} className="w-full bg-purple-600 text-white p-2 rounded-md mb-2 flex items-center justify-center">
             <File size={16} className="mr-1" />
             <span>ฝากขนส่งอื่น</span>
