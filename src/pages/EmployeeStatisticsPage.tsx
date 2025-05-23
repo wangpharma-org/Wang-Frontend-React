@@ -455,15 +455,21 @@ const EmployeeStatisticsPage = () => {
                         <div className="flex flex-row flex-wrap justify-center text-center gap-2 p-4 text-xs sm:text-sm">
                           <div>
                             <div className="text-xs sm:text-sm">ตั้งแต่</div>
-                            <div className="font-medium whitespace-nowrap">00:00:00</div>
+                            <div className="font-medium whitespace-nowrap">
+                              00:00:00
+                            </div>
                           </div>
                           <div>
                             <div className="text-xs sm:text-sm">จนถึง</div>
-                            <div className="font-medium whitespace-nowrap">23:59:59</div>
+                            <div className="font-medium whitespace-nowrap">
+                              23:59:59
+                            </div>
                           </div>
                           <div>
                             <div className="text-xs sm:text-sm">เวลา</div>
-                            <div className="font-medium whitespace-nowrap">&nbsp;</div>
+                            <div className="font-medium whitespace-nowrap">
+                              &nbsp;
+                            </div>
                           </div>
                           <div>
                             <div className="text-xs sm:text-sm">ชิ้นแรก</div>
@@ -694,7 +700,7 @@ const EmployeeStatisticsPage = () => {
                                 // คำนวณเวลาที่ต้องใช้ทั้งหมด (นาที)
                                 const totalMinutes =
                                   speedPerMinute > 0
-                                    ? Math.ceil(totalAmount / speedPerMinute)
+                                    ? Math.ceil(totalAmount * speedPerMinute)
                                     : 0;
 
                                 const totalSeconds = totalMinutes * 60;
@@ -708,13 +714,35 @@ const EmployeeStatisticsPage = () => {
 
                                 // แสดงผลเป็น ชั่วโมง:นาที
                                 return totalMinutes > 0
-                                  ? `${
-                                      totalHours > 0
-                                        ? `${totalHours} : `
-                                        : ""
-                                    }${finalMinutes} :${finalSeconds}`
+                                  ? `${String(totalHours).padStart(2, '0')}:${String(finalMinutes).padStart(2, '0')}:00`
                                   : "เสร็จสิ้นแล้ว";
                               })()}
+                              {/* {(() => {
+                                // คำนวณเวลาแล้วเสร็จจากความเร็วและงานทั้งหมด
+                                // ทดสอบด้วยค่าคงที่
+                                const totalAmount = 100;
+                                const speedPerMinute = 5.15;
+
+                                // คำนวณเวลาที่ต้องใช้ทั้งหมด (นาที)
+                                const totalMinutes = Math.ceil(
+                                  totalAmount * speedPerMinute
+                                );
+                                const totalHours = Math.floor(
+                                  totalMinutes / 60
+                                );
+                                const finalMinutes = totalMinutes % 60;
+
+                                // แสดงผลเป็น ชั่วโมง:นาที
+                                return totalMinutes > 0
+                                  ? `${String(totalHours).padStart(
+                                      2,
+                                      "0"
+                                    )}:${String(finalMinutes).padStart(
+                                      2,
+                                      "0"
+                                    )}:00`
+                                  : "เสร็จสิ้นแล้ว";
+                              })()} */}
                             </div>
                           </div>
                         </div>
