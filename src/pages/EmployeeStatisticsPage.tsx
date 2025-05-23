@@ -452,22 +452,22 @@ const EmployeeStatisticsPage = () => {
                     ) : (
                       <>
                         {/* ส่วนแสดงช่วงเวลา */}
-                        <div className="flex flex-row flex-wrap justify-center text-center gap-2 p-4">
+                        <div className="flex flex-row flex-wrap justify-center text-center gap-2 p-4 text-xs sm:text-sm">
                           <div>
-                            <div className="text-sm">ตั้งแต่</div>
-                            <div className="font-medium">00:00:00</div>
+                            <div className="text-xs sm:text-sm">ตั้งแต่</div>
+                            <div className="font-medium whitespace-nowrap">00:00:00</div>
                           </div>
                           <div>
-                            <div className="text-sm">จนถึง</div>
-                            <div className="font-medium">23:59:59</div>
+                            <div className="text-xs sm:text-sm">จนถึง</div>
+                            <div className="font-medium whitespace-nowrap">23:59:59</div>
                           </div>
                           <div>
-                            <div className="text-sm">เวลา</div>
-                            <div className="font-medium">&nbsp;</div>
+                            <div className="text-xs sm:text-sm">เวลา</div>
+                            <div className="font-medium whitespace-nowrap">&nbsp;</div>
                           </div>
                           <div>
-                            <div className="text-sm">ชิ้นแรก</div>
-                            <div className="font-medium">
+                            <div className="text-xs sm:text-sm">ชิ้นแรก</div>
+                            <div className="font-medium whitespace-nowrap">
                               {employeeData.header.startTime
                                 ? new Date(
                                     employeeData.header.startTime
@@ -476,8 +476,8 @@ const EmployeeStatisticsPage = () => {
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm">ชิ้นล่าสุด</div>
-                            <div className="font-medium">
+                            <div className="text-xs sm:text-sm">ชิ้นล่าสุด</div>
+                            <div className="font-medium whitespace-nowrap">
                               {employeeData.header.endTime
                                 ? new Date(
                                     employeeData.header.endTime
@@ -489,7 +489,7 @@ const EmployeeStatisticsPage = () => {
                         </div>
 
                         {/* ส่วนแสดงเวลาทำงาน */}
-                        <div className="p-2 mb-4 text-center">
+                        <div className="p-2 mb-4 text-center text-xs sm:text-sm">
                           <span>ชิ้นล่าสุด - ชิ้นแรก = เวลาทำงาน</span>
                           <span className="font-bold ml-2">
                             {employeeData.header.startTime &&
@@ -508,7 +508,7 @@ const EmployeeStatisticsPage = () => {
                               : "-"}{" "}
                             นาที
                           </span>
-                          <span className="ml-2 text-sm">หรือ</span>
+                          <span className="ml-2 text-xs sm:text-sm">หรือ</span>
                           <span className="font-bold ml-2">
                             {employeeData.header.startTime &&
                             employeeData.header.endTime
@@ -697,19 +697,22 @@ const EmployeeStatisticsPage = () => {
                                     ? Math.ceil(totalAmount / speedPerMinute)
                                     : 0;
 
+                                const totalSeconds = totalMinutes * 60;
+
                                 // คำนวณเวลาแล้วเสร็จ
                                 const totalHours = Math.floor(
                                   totalMinutes / 60
                                 );
                                 const finalMinutes = totalMinutes % 60;
+                                const finalSeconds = totalSeconds % 60;
 
                                 // แสดงผลเป็น ชั่วโมง:นาที
                                 return totalMinutes > 0
                                   ? `${
                                       totalHours > 0
-                                        ? `${totalHours} ชั่วโมง `
+                                        ? `${totalHours} : `
                                         : ""
-                                    }${finalMinutes} นาที`
+                                    }${finalMinutes} :${finalSeconds}`
                                   : "เสร็จสิ้นแล้ว";
                               })()}
                             </div>
