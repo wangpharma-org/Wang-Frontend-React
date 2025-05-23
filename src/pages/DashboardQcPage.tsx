@@ -20,11 +20,12 @@ const DashboardPage = () => {
   const [openModal, setOpenModal] = useState(false);
   const [reqNewProduct, setReqNewProduct] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
-  const [printSpecialExpressModal, setPrintSpecialExpressModel] = useState(false);
+  const [printSpecialExpressModal, setPrintSpecialExpressModel] =
+    useState(false);
 
   const openSpecialExpressModal = () => {
     setPrintSpecialExpressModel(true);
-  }
+  };
 
   const isOpenPrintModal = () => {
     setShowPrintModal(true);
@@ -400,10 +401,18 @@ const DashboardPage = () => {
                   </div>
                   <div className="w-24 p-2 border-l border-gray-200">
                     <div className="flex flex-col gap-y-2">
-                      <button className="flex items-center justify-center border border-blue-500 bg-blue-500 rounded-sm">
+                      <button
+                        onClick={isReqNewPro}
+                        className="flex items-center justify-center border border-blue-500 bg-blue-500 rounded-sm"
+                      >
                         <File size={16} className="mr-1" />
                         ขอใหม่
                       </button>
+                      {reqNewProduct && (
+                        <RequestNewProductModel
+                          onClose={() => setReqNewProduct(false)}
+                        />
+                      )}
                       <button className="flex items-center justify-center border border-blue-500 bg-blue-500 rounded-sm">
                         <File size={16} className="mr-1" />
                         ไปเอาของ
@@ -461,7 +470,7 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          <BarcodeQcPrintModal/>
+          <BarcodeQcPrintModal />
           {/* <button onClick={isOpenPrintModal} className="w-full bg-purple-600 text-white p-2 rounded-md mb-2 flex items-center justify-center">
             <File size={16} className="mr-1" />
             <span>ฝากขนส่งอื่น</span>
@@ -485,7 +494,7 @@ const DashboardPage = () => {
               {/* <button className="flex-1 bg-red-400 h-8 border border-red-500 rounded-sm">
                 ระวังแตก
               </button> */}
-              <FragilePrint/>
+              <FragilePrint />
             </div>
             <div className="flex flex-col items-center justify-center mt-4 gap-y-4">
               <button className="flex-1 h-14 w-full bg-amber-300 border border-amber-400 rounded-sm text-lg font-medium px-4">
@@ -494,17 +503,6 @@ const DashboardPage = () => {
               <button className="flex-1 h-14 w-full bg-green-500 border border-green-600 rounded-sm text-lg font-medium px-4">
                 เสร็จสิ้น
               </button>
-              <button
-                onClick={isReqNewPro}
-                className="flex-1 h-14 w-full bg-green-500 border border-green-600 rounded-sm text-lg font-medium px-4"
-              >
-                เพิ่มสินค้าเล่นๆ
-              </button>
-              {reqNewProduct && (
-                <RequestNewProductModel
-                  onClose={() => setReqNewProduct(false)}
-                />
-              )}
             </div>
           </div>
         </div>
