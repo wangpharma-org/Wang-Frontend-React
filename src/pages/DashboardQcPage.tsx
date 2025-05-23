@@ -10,8 +10,33 @@ import {
   Package,
   File,
 } from "lucide-react";
+import QcModals from "../components/QcModal";
+import RequestNewProductModel from "../components/RequestNewProductModel";
+import BarcodeQcPrintModal from "../components/PrintDocument";
+import SpecialExpressModal from "../components/SpecialExpressModal";
+import FragilePrint from "../components/FragilePrint";
 
 const DashboardPage = () => {
+  const [openModal, setOpenModal] = useState(false);
+  const [reqNewProduct, setReqNewProduct] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printSpecialExpressModal, setPrintSpecialExpressModel] = useState(false);
+
+  const openSpecialExpressModal = () => {
+    setPrintSpecialExpressModel(true);
+  }
+
+  const isOpenPrintModal = () => {
+    setShowPrintModal(true);
+  };
+
+  const isReqNewPro = () => {
+    setReqNewProduct(true);
+  };
+
+  const isOpenModal = () => {
+    setOpenModal(true);
+  };
   return (
     <div className="flex flex-col bg-white w-full font-sans text-sm">
       {/* Header */}
@@ -20,7 +45,10 @@ const DashboardPage = () => {
           เส้นทางที่สามารถทำงานได้
         </h1>
         <div className="text-sm text-center px-4 pb-2 text-gray-600 overflow-hidden whitespace-nowrap">
-          หาดใหญ่, สงขลา, สะเดา, ปัตตานี, สตูล, พัทลุง, นราธิวาส, สุไหงโกลก, ยะลา, เบตง, นครศรีฯ, รับเอง, อื่นๆ, สทิงพระ, ภูเก็ต, สุราษธานี, พังงา, ยาแห้ง ส่งฟรี ทั่วไทย, พัทลุง VIP, เกาะสมุย, พัทลุง-นคร, ชุมพร, กระบี่-ตรัง
+          หาดใหญ่, สงขลา, สะเดา, ปัตตานี, สตูล, พัทลุง, นราธิวาส, สุไหงโกลก,
+          ยะลา, เบตง, นครศรีฯ, รับเอง, อื่นๆ, สทิงพระ, ภูเก็ต, สุราษธานี, พังงา,
+          ยาแห้ง ส่งฟรี ทั่วไทย, พัทลุง VIP, เกาะสมุย, พัทลุง-นคร, ชุมพร,
+          กระบี่-ตรัง
         </div>
       </div>
 
@@ -185,10 +213,21 @@ const DashboardPage = () => {
                 2
               </div>
 
-              <button className="mt-3 w-full bg-blue-400 hover:bg-blue-500 text-white rounded-md p-2 flex items-center justify-center">
+              <button
+                // onClick={isOpenPrintModal}
+                className="mt-3 w-full bg-blue-400 hover:bg-blue-500 text-white rounded-md p-2 flex items-center justify-center"
+              >
                 <Printer size={16} className="mr-1" />
                 <span>พิมพ์บาร์โค้ด QC</span>
               </button>
+              {/* แค่เปิด Modal ไม่ต้องส่งข้อมูล documentData */}
+              {/* {showPrintModal && (
+                <BarcodeQcPrintModal
+                  onClose={() => setShowPrintModal(false)}
+                  orderId="63005" // อาจส่งเฉพาะ ID หรือข้อมูลที่จำเป็นเพื่อให้ Modal ดึงข้อมูลเอง
+                  shopName="ร้านจริญเฮลท์ 2008 L16"
+                />
+              )} */}
             </div>
 
             {/* Column 3: รหัสสินค้า*/}
@@ -199,7 +238,11 @@ const DashboardPage = () => {
                   placeholder="รหัสสินค้า / Barcode Number"
                   className="bg-orange-300 text-white p-3 rounded-md text-4xl text-center w-full h-20 border border-amber-600"
                 />
-                <button className="bg-red-500 hover:bg-red-600 text-white rounded-md px-4 py-2 text-sm whitespace-nowrap">
+                {openModal && <QcModals onClose={() => setOpenModal(false)} />}
+                <button
+                  onClick={isOpenModal}
+                  className="bg-red-500 hover:bg-red-600 text-white rounded-md px-4 py-2 text-sm whitespace-nowrap"
+                >
                   เช็คบิล
                 </button>
               </div>
@@ -287,7 +330,9 @@ const DashboardPage = () => {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-blue-400">จำนวน : </span>
-                        <span></span>
+                      </div>
+                      <div>
+                        <span className="text-blue-400">เลขใบคีย์ซื้อ</span>
                       </div>
                     </div>
                     <div className="flex justify-between items-center bg-green-50 rounded-md p-2 border border-gray-200">
@@ -416,20 +461,31 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          <button className="w-full bg-purple-600 text-white p-2 rounded-md mb-2 flex items-center justify-center">
+          <BarcodeQcPrintModal/>
+          {/* <button onClick={isOpenPrintModal} className="w-full bg-purple-600 text-white p-2 rounded-md mb-2 flex items-center justify-center">
             <File size={16} className="mr-1" />
             <span>ฝากขนส่งอื่น</span>
           </button>
+          {showPrintModal && (
+                <BarcodeQcPrintModal
+                  onClose={() => setShowPrintModal(false)}
+                  orderId="63005" // อาจส่งเฉพาะ ID หรือข้อมูลที่จำเป็นเพื่อให้ Modal ดึงข้อมูลเอง
+                  shopName="ร้านจริญเฮลท์ 2008 L16"
+                />
+              )} */}
 
           {/* Action buttons for the items */}
           <div className="mt-4">
             <div className="flex items-center justify-around gap-2">
-              <button className="flex-1 bg-amber-300 h-8 border border-amber-400 rounded-sm">
+              {/* <button onClick={openSpecialExpressModal} className="flex-1 bg-amber-300 h-8 border border-amber-400 rounded-sm">
                 กรณีด่วนพิเศษ
               </button>
-              <button className="flex-1 bg-red-400 h-8 border border-red-500 rounded-sm">
+              {printSpecialExpressModal && (<SpecialExpressModal onClose={() => setPrintSpecialExpressModel(false)}/>)} */}
+              <SpecialExpressModal />
+              {/* <button className="flex-1 bg-red-400 h-8 border border-red-500 rounded-sm">
                 ระวังแตก
-              </button>
+              </button> */}
+              <FragilePrint/>
             </div>
             <div className="flex flex-col items-center justify-center mt-4 gap-y-4">
               <button className="flex-1 h-14 w-full bg-amber-300 border border-amber-400 rounded-sm text-lg font-medium px-4">
@@ -438,6 +494,17 @@ const DashboardPage = () => {
               <button className="flex-1 h-14 w-full bg-green-500 border border-green-600 rounded-sm text-lg font-medium px-4">
                 เสร็จสิ้น
               </button>
+              <button
+                onClick={isReqNewPro}
+                className="flex-1 h-14 w-full bg-green-500 border border-green-600 rounded-sm text-lg font-medium px-4"
+              >
+                เพิ่มสินค้าเล่นๆ
+              </button>
+              {reqNewProduct && (
+                <RequestNewProductModel
+                  onClose={() => setReqNewProduct(false)}
+                />
+              )}
             </div>
           </div>
         </div>
