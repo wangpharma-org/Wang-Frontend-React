@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Check,
   X,
@@ -15,32 +15,30 @@ import RequestNewProductModel from "../components/RequestNewProductModel";
 import SendOtherMoal from "../components/PrintDocument";
 import SpecialExpressModal from "../components/SpecialExpressModal";
 import FragilePrint from "../components/FragilePrint";
+import FreeShippingModal from "../components/FreeShippingModal";
 
 const DashboardPage = () => {
   const [openModal, setOpenModal] = useState(false);
   const [reqNewProduct, setReqNewProduct] = useState(false);
   const [quantity, setQuantity] = useState(1);
-  
   const [pinCart, setPinCart] = useState(0);
 
   const inputPinCart = () => {
-    // alert('กรอก จำนวน ตะกร้า (เฉพาะตัวเลข)');
-    const input = prompt('กรอก จำนวน ตะกร้า (เฉพาะตัวเลข)');
+    const input = prompt("กรอก จำนวน ตะกร้า (เฉพาะตัวเลข)");
     if (input !== null) {
       const newQuantity = parseInt(input);
       if (!isNaN(newQuantity) && newQuantity > 0) {
         setPinCart(newQuantity);
       }
     }
-    // setPinCart(pinCart);
   };
 
   const increaseQuantity = () => {
-    setQuantity(prev => prev + 1);
+    setQuantity((prev) => prev + 1);
   };
 
   const decreaseQuantity = () => {
-    setQuantity(prev => prev > 1 ? prev - 1 : 1); // ไม่ให้น้อยกว่า 1
+    setQuantity((prev) => (prev > 1 ? prev - 1 : 1)); // ไม่ให้น้อยกว่า 1
   };
 
   const isReqNewPro = () => {
@@ -473,10 +471,16 @@ const DashboardPage = () => {
               <span className="font-medium">{quantity}</span>
             </div>
             <div className="flex flex-col">
-              <button onClick={increaseQuantity} className="bg-green-500 p-1 rounded-tr-md">
+              <button
+                onClick={increaseQuantity}
+                className="bg-green-500 p-1 rounded-tr-md"
+              >
                 <ArrowUp size={16} className="text-white" />
               </button>
-              <button onClick={decreaseQuantity} className="bg-red-500 p-1 rounded-br-md">
+              <button
+                onClick={decreaseQuantity}
+                className="bg-red-500 p-1 rounded-br-md"
+              >
                 <ArrowDown size={16} className="text-white" />
               </button>
             </div>
@@ -509,9 +513,27 @@ const DashboardPage = () => {
               <FragilePrint />
             </div>
             <div className="flex flex-col items-center justify-center mt-4 gap-y-4">
-              <button onClick={inputPinCart} className="flex-1 h-14 w-full bg-amber-300 border border-amber-400 rounded-sm text-lg font-medium px-4">
+              <button
+                onClick={inputPinCart}
+                className="flex-1 h-14 w-full bg-amber-300 border border-amber-400 rounded-sm text-lg font-medium px-4"
+              >
                 ติดตะกร้า รอลงลัง ส่งฟรี
               </button>
+              <FreeShippingModal
+                pinCart={pinCart}
+                orderData={{
+                  orderNumber: "63005",
+                  shopName: "ร้านเจริญเภสัช 2008",
+                  date: "13 / 05 / 68",
+                  time: "17:01",
+                  sheetNumber: 1,
+                  totalSheets: 1,
+                  basketStatus: "ติดตะกร้า รอลงลัง สีพรีทั่วไทย",
+                  basketNumber: 1,
+                  totalBaskets: 1,
+                }}
+                autoPrint={pinCart > 0}
+              />
               <button className="flex-1 h-14 w-full bg-green-500 border border-green-600 rounded-sm text-lg font-medium px-4">
                 เสร็จสิ้น
               </button>
