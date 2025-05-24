@@ -528,7 +528,7 @@ const DashboardPage = () => {
                   time: "17:01",
                   sheetNumber: 1,
                   totalSheets: 1,
-                  basketStatus: "ติดตะกร้า รอลงลัง สีพรีทั่วไทย",
+                  basketStatus: "ติดตะกร้า รอลงลัง สีฟรีทั่วไทย",
                   basketNumber: 1,
                   totalBaskets: 1,
                 }}
