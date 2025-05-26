@@ -16,6 +16,7 @@ import FormatSticker from "./pages/FormatSticker";
 import EmployeeStatisticsPage from "./pages/EmployeeStatisticsPage";
 import VerifyOrder from "./pages/VerifyOrder";
 import ReportEmployee from "./pages/ReportEmployee";
+import FormatLogReport from "./pages/FormatLogReport";
 
 function App() {
   return (
@@ -149,6 +150,16 @@ function App() {
                 <Navbar />
                 <RequireAuth>
                   <VerifyOrder />
+                </RequireAuth>
+              </div>
+            }
+          />
+          <Route
+            path="/log-report"
+            element={
+              <div>
+                <RequireAuth>
+                  <FormatLogReport />
                 </RequireAuth>
               </div>
             }

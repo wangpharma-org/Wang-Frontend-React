@@ -5,11 +5,9 @@ import dayjs from "dayjs";
 import { Bounce, Id, ToastContainer, toast } from 'react-toastify';
 // import { Fieldset } from "@headlessui/react";
 import { useAuth } from "../context/AuthContext";
-import utc from 'dayjs/plugin/utc';
-import timezone from 'dayjs/plugin/timezone';
+import { useNavigate } from "react-router-dom";
 
-dayjs.extend(utc);
-dayjs.extend(timezone);
+
 
 export interface YellowPaper {
   id: number;
@@ -62,6 +60,9 @@ function VerifyOrder() {
   const [errorWhitePaper, setErrorWhitePaper] = useState<boolean>(false);
   const [errorYellowPaper, setErrorYellowPaper] = useState<boolean>(false);
   const [status, setStatus] = useState("");
+  const [enabled, setEnabled] = useState(false);// false = white, true = yellow
+  const inputRef = useRef<HTMLInputElement>(null);
+    const navigate = useNavigate();
 
 
 
@@ -150,6 +151,12 @@ function VerifyOrder() {
       document.removeEventListener("mousedown", handleOutsideClick);
     };
   }, [handleOutsideClick]);
+
+  useEffect(() => {
+    if (enabled && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [enabled]);
 
   const parseWhitePaper = (value: string) => {
     const [sh_running, mem_code, count_list, price] = value.split('/');
@@ -284,6 +291,11 @@ function VerifyOrder() {
     }
   };
 
+  const handlePrint = () => {
+    navigate("/log-report")
+  }
+
+
   return (
     <div className="overflow-x-auto p-6">
       {/* <ToastContainer
@@ -299,153 +311,195 @@ function VerifyOrder() {
         theme="light"
         transition={Bounce}
       /> */}
-      <div className="flex justify-around mb-8">
-        <div className=" w-full flex flex-col">
-          <div className="flex justify-center mb-4">
-            <p>เพิ่มข้อมูล</p>
-          </div>
-          <div className="flex mx-5">
-            <div className="w-full mr-3">
-              <form onSubmit={handleSubmit} className="relative flex items-center gap-2">
-                <input
-                  type="text"
-                  name="whitePaper"
-                  className={`border text-black w-full mr-1 p-2 rounded-xs text-3xl ${errorWhitePaper == true ? "border-red-500 bg-red-200" : " border-gray-500  bg-blue-50"}`}
-                  onChange={() => { setErrorWhitePaper(false), setInvoice(originalData), clearSearch() }}
-                  placeholder="ใบขาว"
-                />
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="size-6 absolute transform -translate-y-1/2 right-3 top-1/2 text-gray-400"
+      <div>
+        <div className="flex items-center">
+          <div className="flex w-full justify-center">
+            <div className="flex items-center justify-center mr-4">
+              <p className="mr-2 text-gray-600 text-xs">Focus Mode</p>
+              <div className="p-4">
+                {/* Toggle switch */}
+                <div
+                  onClick={() => setEnabled(!enabled)}
+                  className={`w-14 h-8 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${enabled ? "bg-yellow-200" : "bg-blue-100"
+                    }`}
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-              </form>
-              <p className="text-xs text-gray-400 text-center">SH_running / mem_code / count_list / price</p>
+                  <div
+                    className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${enabled ? "translate-x-6" : "translate-x-0"
+                      }`}
+                  />
+                </div>
+
+
+              </div>
             </div>
-            <div className=" w-full ml-3">
-              <form onSubmit={handleSubmit} className="relative flex items-center gap-2">
-                <input
-                  type="text"
-                  name="yellowPaper"
-                  className={`border text-black w-full p-2 rounded-xs text-3xl ${errorYellowPaper == true ? "border-red-500 bg-red-200" : "bg-yellow-50 border-gray-500"}`}
-                  onChange={() => { setErrorYellowPaper(false), setInvoice(originalData), clearSearch() }}
-                  placeholder="ใบเหลือง" />
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="size-6 absolute transform -translate-y-1/2 right-3 top-1/2 text-gray-400">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </div>
+          <div className="flex w-full justify-end">
+            <div className="">
+              <button onClick={handlePrint} className="flex items-center justify-center border px-2 py-1 rounded-lg text-white bg-indigo-500 hover:bg-indigo-600">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5 mr-2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z" />
                 </svg>
-              </form>
-              <p className="text-xs text-gray-400 text-center">SH_running / mem_code / invoice_code / count_list / price</p>
+                พิมพ์สรุปรายวัน</button>
             </div>
           </div>
         </div>
-        <div className=" w-full flex flex-col mx-5">
-          <div className="flex justify-center mb-4">
-            <p>ค้นหา</p>
-          </div>
-          <div className="flex w-full">
-            <div className="relative w-full mr-3">
-              <form onSubmit={handleSubmit} className="">
-                <div className="relative w-full">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-                    />
-                  </svg>
-                  <input
-                    type="text"
-                    name="search"
-                    className="border border-gray-500 text-black w-full mr-1 p-2 rounded-xs text-right text-3xl"
-                    onChange={() => { setInvoice(originalData) }}
-                    placeholder="ค้นหาข้อมูล" />
-                </div>
-              </form>
-              <p className="text-xs text-gray-400 text-center">SH_running หรือ mem_code </p>
+        <div className="flex justify-around mb-8">
+          <div className=" w-full flex flex-col">
+            <div className="flex justify-center mb-4">
+              <p>เพิ่มข้อมูล</p>
             </div>
-            <div>
-              <div ref={dropdownRef}>
-                {status === "Match" ? (<button onClick={toggleDropdown} className=" text-black ">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-13 text-green-500">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                  </svg>
-                </button>
-                ) : status === "Not Match" ? (
-                  <button onClick={toggleDropdown} className=" text-black ">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-13 text-red-500">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            <div className="flex mx-5">
+              {/* Conditional input */}
+              {!enabled && (
+                <div className="w-full">
+                  <form onSubmit={handleSubmit} className="relative flex items-center gap-2">
+                    <input
+                      type="text"
+                      name="whitePaper"
+                      autoComplete="off"
+                      className={`border text-black w-full p-2 rounded-xs text-3xl ${errorWhitePaper == true ? "border-red-500 bg-red-200" : " border-gray-500  bg-blue-50"}`}
+                      onChange={() => { setErrorWhitePaper(false), setInvoice(originalData), clearSearch() }}
+                      placeholder="ใบขาว"
+                    />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="size-6 absolute transform -translate-y-1/2 right-3 top-1/2 text-gray-400"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                     </svg>
-                  </button>
-                ) : status === "Incomplete" ? (
-                  <button onClick={toggleDropdown} className=" text-black ">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-13 text-amber-500">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                  </form>
+                  <p className="text-xs text-gray-400 text-center">SH_running / mem_code / count_list / price</p>
+                </div>
+              )}
+              {enabled && (
+                <div className=" w-full">
+                  {/* Conditional input */}
+                  <form onSubmit={handleSubmit} className="relative flex items-center gap-2">
+                    <input
+                      type="text"
+                      name="yellowPaper"
+                      autoComplete="off"
+                      className={`border text-black w-full p-2 rounded-xs text-3xl ${errorYellowPaper == true ? "border-red-500 bg-red-200" : "bg-yellow-50 border-gray-500"}`}
+                      onChange={() => { setErrorYellowPaper(false), setInvoice(originalData), clearSearch() }}
+                      placeholder="ใบเหลือง" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="size-6 absolute transform -translate-y-1/2 right-3 top-1/2 text-gray-400">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                     </svg>
-                  </button>
-                ) : status === "Miss" ? (
-                  <button onClick={toggleDropdown} className=" text-black ">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-13 text-gray-500">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  </form>
+                  <p className="text-xs text-gray-400 text-center">SH_running / mem_code / invoice_code / count_list / price</p>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className=" w-full flex flex-col mx-5">
+            <div className="flex justify-center mb-4">
+              <p>ค้นหา</p>
+            </div>
+            <div className="flex w-full">
+              <div className="relative w-full mr-3">
+                <form onSubmit={handleSubmit} className="">
+                  <div className="relative w-full">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+                      />
                     </svg>
-                  </button>
-                ) : (
-                  <button onClick={toggleDropdown} className=" text-black ">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-13 text-gray-500 hover:text-gray-700">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
-                    </svg>
-                  </button>
-
-                )}
-                {isOpen && (
-                  <div>
-                    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 rounded-md shadow-lg z-10">
-                      <ul className="py-1">
-                        <li className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer flex justify-between items-center" onClick={() => filterPaperStatus("Match")}>
-                          <p className=" my-auto">Match</p>
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-green-500">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                          </svg>
-                        </li>
-                        <li className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer flex justify-between items-center" onClick={() => filterPaperStatus("Not Match")}>
-                          <p className=" my-auto">Not Match</p>
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-red-500">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                          </svg>
-                        </li>
-                        <li className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer flex justify-between items-center" onClick={() => filterPaperStatus("Incomplete")}>
-                          <p className=" my-auto">Incomplete</p>
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-amber-500">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-                          </svg>
-                        </li>
-                        <li className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer flex justify-between items-center" onClick={() => filterPaperStatus("Incomplete")}>
-                          <p className=" my-auto">Miss</p>
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-gray-500">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                          </svg>
-                        </li>
-                      </ul>
-                    </div>
+                    <input
+                      type="text"
+                      name="search"
+                      autoComplete="off"
+                      className="border border-gray-500 text-black w-full mr-1 p-2 rounded-xs text-right text-3xl"
+                      onChange={() => { setInvoice(originalData) }}
+                      placeholder="ค้นหาข้อมูล" />
                   </div>
-                )}
+                </form>
+                <p className="text-xs text-gray-400 text-center">SH_running หรือ mem_code </p>
+              </div>
+              <div>
+                <div ref={dropdownRef}>
+                  {status === "Match" ? (<button onClick={toggleDropdown} className=" text-black ">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-13 text-green-500">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                  </button>
+                  ) : status === "Not Match" ? (
+                    <button onClick={toggleDropdown} className=" text-black ">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-13 text-red-500">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                      </svg>
+                    </button>
+                  ) : status === "Incomplete" ? (
+                    <button onClick={toggleDropdown} className=" text-black ">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-13 text-amber-500">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                      </svg>
+                    </button>
+                  ) : status === "Miss" ? (
+                    <button onClick={toggleDropdown} className=" text-black ">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-13 text-gray-500">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                      </svg>
+                    </button>
+                  ) : (
+                    <button onClick={toggleDropdown} className=" text-black ">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-13 text-gray-500 hover:text-gray-700">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
+                      </svg>
+                    </button>
+
+                  )}
+                  {isOpen && (
+                    <div>
+                      <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 rounded-md shadow-lg z-10">
+                        <ul className="py-1">
+                          <li className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer flex justify-between items-center" onClick={() => filterPaperStatus("Match")}>
+                            <p className=" my-auto">Match</p>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-green-500">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                          </li>
+                          <li className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer flex justify-between items-center" onClick={() => filterPaperStatus("Not Match")}>
+                            <p className=" my-auto">Not Match</p>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-red-500">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                          </li>
+                          <li className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer flex justify-between items-center" onClick={() => filterPaperStatus("Incomplete")}>
+                            <p className=" my-auto">Incomplete</p>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-amber-500">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                            </svg>
+                          </li>
+                          <li className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer flex justify-between items-center" onClick={() => filterPaperStatus("Miss")}>
+                            <p className=" my-auto">Miss</p>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-gray-500">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -494,12 +548,12 @@ function VerifyOrder() {
                     <td className="px-6 py-4 text-center border-x-1 border-b-1">{item?.whitePaper?.price || "-"}</td>
                     <td className="px-6 py-4 text-center border-x-1 border-b-1">{item?.dateInvoice ? dayjs(item?.dateInvoice).format("DD/MM/YYYY HH:mm:ss") : "-"}</td>
                     <td className="px-6 py-4 text-center border-x-1 border-b-1">{item?.whitePaper?.whiteToEmployeeCount}</td>
-                    <td className="px-6 py-4 text-center border-x-1 border-b-1">{item?.whitePaper?.latestScan_timeW ? dayjs(item?.whitePaper?.latestScan_timeW).local().format("DD/MM/YYYY HH:mm:ss") : "-"}</td>
+                    <td className="px-6 py-4 text-center border-x-1 border-b-1">{item?.whitePaper?.latestScan_timeW ? dayjs(item?.whitePaper?.latestScan_timeW).format("DD/MM/YYYY HH:mm:ss") : "-"}</td>
                     <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.invoice_code || "-"}</td>
                     <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.count_list || "-"}</td>
                     <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.price || "-"}</td>
                     <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.yellowToEmployeeCount || 0}</td>
-                    <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.latestScan_timeY ? dayjs(item?.yellowPaper?.latestScan_timeY).tz("Asia/Bangkok").format("DD/MM/YYYY HH:mm:ss") : "-"}</td>
+                    <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.latestScan_timeY ? dayjs(item?.yellowPaper?.latestScan_timeY).format("DD/MM/YYYY HH:mm:ss") : "-"}</td>
                     <td className={`px-6 py-4 text-center border-x-1 border-b-1  border-black `}>{item.paperStatus === "Match" ? (
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-green-500">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
