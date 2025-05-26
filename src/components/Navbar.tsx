@@ -10,9 +10,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router";
 
 const navigation = [
-  { name: "หน้าหลัก", href: "/", exact: true },
-  { name: "รายการใบกำกับสินค้า", href: "/invoice-all" },
-  { name: "สถิติพนักงาน", href: "/employee-statistics" },
+  { name: "หน้าหลัก", href: "/", exact: true, current: false },
 ];
 
 function classNames(...classes: string[]) {
