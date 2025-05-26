@@ -454,7 +454,19 @@ const DashboardPage = () => {
           </div>
 
           <div className="text-xs mb-1 text-gray-500">
-            พนักงานเช็คสินค้าคงคลัง :
+            พนักงานเช็คสินค้าคงคลัง 1 :
+          </div>
+          <div className="flex items-center mb-2">
+            <div className="w-10 h-6 bg-red-200 rounded-sm mr-2 flex items-center justify-center">
+              <Package />
+            </div>
+            <div className="text-xs border rounded-sm px-2 py-1 w-full text-center">
+              [ 0313 ] ตร
+            </div>
+          </div>
+
+          <div className="text-xs mb-1 text-gray-500">
+            พนักงานเช็คสินค้าคงคลัง 2 :
           </div>
           <div className="flex items-center mb-2">
             <div className="w-10 h-6 bg-red-200 rounded-sm mr-2 flex items-center justify-center">
