@@ -46,8 +46,7 @@ interface orderList {
 type PickingTime = {
   floor: string;
   latest_picking_time: Date;
-}
-
+};
 
 const OrderList = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -70,7 +69,6 @@ const OrderList = () => {
   const [floorCounts, setFloorCounts] = useState<Record<string, number>>({});
   const handleDoubleClick = useDoubleClick();
 
-  console.log("selectedFloor", selectedFloor);
 
   const togglePopup = (id: string) => {
     setOpenPopupId((prev) => (prev === id ? null : id));
@@ -83,7 +81,7 @@ const OrderList = () => {
 
   const toggleSearch = () => {
     setShowInput((prev) => !prev);
-    setSelectroute("all")
+    setSelectroute("all");
     console.log("showInput " + showInput);
   };
 
@@ -111,7 +109,7 @@ const OrderList = () => {
       // console.log("Data " + JSON.stringify(data));
       setOrderList(data.memberOrderWithAllShRunning);
       setLatestTimes(data.lastestDate);
-      console.log('time', data.lastestDate);
+      console.log("time", data.lastestDate);
       setLoading(false);
     });
 
@@ -187,7 +185,7 @@ const OrderList = () => {
     });
     console.log("newfloorCounts", newFloorCounts);
     setFloorCounts(newFloorCounts);
-    console.log("order List " + JSON.stringify(orderList));
+    // console.log("order List " + JSON.stringify(orderList));
   }, [orderList]);
 
   useEffect(() => {
@@ -225,10 +223,14 @@ const OrderList = () => {
   };
 
   const changeToPicking = (mem_code: string) => {
+    console.log('socket status', socket?.connected)
     if (socket?.connected) {
+      console.log('can emit')
       socket.emit("listorder:picking", {
         mem_code: mem_code,
       });
+    } else {
+      throw new Error('can not emit change to picking')
     }
   };
 
@@ -255,12 +257,7 @@ const OrderList = () => {
   });
 
   const isFiltered =
-    search ||
-    selectedFloor ||
-    (selectroute && selectroute !== "");
-  console.log("search " + search);
-  console.log("selectedFloor " + selectedFloor);
-  console.log("selectroute " + selectroute);
+    search || selectedFloor || (selectroute && selectroute !== "");
 
   const floorButtons = [
     { label: "1", value: "1", color: "bg-gray-500" },
@@ -484,7 +481,10 @@ const OrderList = () => {
           >
             <select
               value={selectroute}
-              onChange={(e) => { setSelectroute(e.target.value); setSearch("") }}
+              onChange={(e) => {
+                setSelectroute(e.target.value);
+                setSearch("");
+              }}
               className="border border-gray-200 px-2 py-1 rounded text-black bg-white text-center flex justify-center w-full"
             >
               {routeButtons.map((route) => (
@@ -513,14 +513,17 @@ const OrderList = () => {
                       src="https://as2.ftcdn.net/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg"
                     />
                   </div>
-                  <p className="flex justify-center mt-2 text-white">
-                    {userInfo?.emp_code}
+                  <p className="flex justify-center mt-3 text-white">
+                    รหัสพนักงาน : {userInfo?.emp_code}
                   </p>
-                  <p className="flex justify-center text-white">
-                    {userInfo?.username}
+                  <p className="flex justify-center mt-1 text-white">
+                    ชื่อ : {userInfo?.firstname} {userInfo?.lastname}
                   </p>
-                  <p className="flex justify-center text-white">
-                    {userInfo?.floor_picking || "-"}
+                  <p className="flex justify-center mt-1 text-white">
+                    ชื่อเล่น : {userInfo?.nickname}
+                  </p>
+                  <p className="flex justify-center mt-1 text-white">
+                    {`ประจำชั้น ${userInfo?.floor_picking || ""}`}
                   </p>
                 </div>
                 <div className="flex justify-center px-3 text-white">
@@ -563,9 +566,14 @@ const OrderList = () => {
               <div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full mb-36 mt-3">
                   {orderList
+                    .sort((a, b) => {
+                      if (a.picking_status === "picking" && b.picking_status !== "picking") return -1;
+                      if (a.picking_status !== "picking" && b.picking_status === "picking") return 1;
+                      return 0;
+                    })
                     .filter((order) => filteredData.includes(order))
                     .map((order) => {
-                      const id = order.mem_code
+                      const id = order.mem_code;
                       const allFloors = ["1", "2", "3", "4", "5"];
                       const popupRef = (el: HTMLDivElement | null) => {
                         popupRefs.current[order.mem_code] = el;
@@ -588,7 +596,7 @@ const OrderList = () => {
                           // console.log("order.product.product_floor", order.product.product_floor);
                           return acc;
                         }, {} as Record<string, { total: number; remaining: number }>);
-                      console.log("floorSummary", floorSummary);
+                      // console.log("floorSummary", floorSummary);
                       return (
                         <div
                           key={id}
@@ -596,21 +604,23 @@ const OrderList = () => {
                         >
                           <div
                             onClick={() => togglePopup(order.mem_code)}
-                            className={`w-full p-2 rounded-sm shadow-xl text-[12px] text-[#444444] ${order.picking_status === "picking"
-                              ? "bg-green-400"
-                              : "bg-gray-400"
-                              }`}
+                            className={`w-full p-2 rounded-sm shadow-xl text-[12px] text-[#444444] ${
+                              order.picking_status === "picking"
+                                ? "bg-green-400"
+                                : "bg-gray-400"
+                            }`}
                           >
                             <div
-                              className={`p-1 rounded-sm ${order.picking_status === "picking"
-                                ? "bg-green-100"
-                                : "bg-white"
-                                }`}
+                              className={`p-1 rounded-sm ${
+                                order.picking_status === "picking"
+                                  ? "bg-green-100"
+                                  : "bg-white"
+                              }`}
                             >
                               <div className="flex justify-between">
                                 <div className="flex justify-start">
                                   <p>{order.mem_code}</p>&nbsp;
-                                  <p>{order.mem_name}</p>
+                                  <p className="truncate max-w-[170px]">{order.mem_name}</p>
                                 </div>
                                 <div>
                                   <p>
@@ -620,27 +630,44 @@ const OrderList = () => {
                                           new Date(sh.sh_datetime).getTime()
                                         )
                                       )
-                                    ).toLocaleString()}
+                                    ).toLocaleString("th-TH", {
+                                      year: "2-digit",
+                                      month: "2-digit",
+                                      day: "2-digit",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      hour12: false,
+                                    })}
                                   </p>
                                 </div>
                               </div>
 
                               <div className="flex justify-between">
                                 <div className="flex justify-start">
-                                  { order.emp?.emp_nickname && 
-                                  <div className="flex">
-                                    <p className="text-gray-600">ผู้ดูแล</p>&nbsp;
-                                    <p>{order.emp.emp_nickname}</p>
-                                  </div>
-                                  }
+                                  {order.emp?.emp_nickname && (
+                                    <div className="flex">
+                                      <p className="text-gray-600">ผู้ดูแล</p>
+                                      &nbsp;
+                                      <p>{order.emp.emp_nickname}</p>
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="flex justify-center">
-                                  {order?.province ? <p>{routeButtons.find(r => r.value === order.province)?.name || order.province}</p>: <p>ไม่ระบุเส้นทาง</p>}
+                                  {order?.province ? (
+                                    <p>
+                                      {routeButtons.find(
+                                        (r) => r.value === order.province
+                                      )?.name || order.province}
+                                    </p>
+                                  ) : (
+                                    <p>ไม่ระบุเส้นทาง</p>
+                                  )}
                                 </div>
                                 <div className="flex justify-end pb-1">
                                   <p className="font-bold">
                                     {order.shoppingHeads.length}
-                                  </p>&nbsp;
+                                  </p>
+                                  &nbsp;
                                   <p>บิล</p>&nbsp;
                                   <p className="text-red-500 font-bold">
                                     {
@@ -656,7 +683,8 @@ const OrderList = () => {
                                             so.picking_status === "ด้านล่าง"
                                         ).length
                                     }
-                                  </p>&nbsp;
+                                  </p>
+                                  &nbsp;
                                   <p>/</p>&nbsp;
                                   <p className="text-violet-500 font-bold">
                                     {
@@ -664,7 +692,8 @@ const OrderList = () => {
                                         (h) => h.shoppingOrders
                                       ).length
                                     }
-                                  </p>&nbsp;
+                                  </p>
+                                  &nbsp;
                                   <p>(เหลือ/All)</p>
                                   {/* <p>FLOOR</p> */}
                                 </div>
@@ -679,16 +708,17 @@ const OrderList = () => {
                                   return (
                                     <div
                                       key={floor}
-                                      className={`flex-none px-1 py-1.5 mx-0.5 rounded shadow-sm text-center w-14 ${data.remaining > 0
-                                        ? "bg-yellow-200"
-                                        : "bg-red-200"
-                                        }`}
+                                      className={`flex-none px-1 py-1.5 mx-0.5 rounded shadow-sm text-center w-14 ${
+                                        data.remaining > 0
+                                          ? "bg-yellow-200"
+                                          : "bg-red-200"
+                                      }`}
                                     >
                                       <div className="text-xs font-bold">
                                         F{floor}
                                       </div>
                                       <div className="text-[10px] text-gray-600">
-                                        เหลือ {" "}
+                                        เหลือ{" "}
                                         <span className="font-bold text-sm">
                                           {data.remaining}
                                         </span>{" "}
@@ -712,7 +742,7 @@ const OrderList = () => {
                                 <div className="flex justify-center">
                                   {order?.picking_status === "picking" &&
                                     order?.emp_code_picking ===
-                                    userInfo?.emp_code && (
+                                      userInfo?.emp_code && (
                                       <div className="pr-1">
                                         <button
                                           disabled={
@@ -726,26 +756,27 @@ const OrderList = () => {
                                                     so.picking_status !==
                                                     "pending"
                                                 ).length -
-                                              order.shoppingHeads.flatMap(
-                                                (h) => h.shoppingOrders
-                                              ).length ===
+                                                order.shoppingHeads.flatMap(
+                                                  (h) => h.shoppingOrders
+                                                ).length ===
                                               0
                                             )
                                           }
-                                          className={`border rounded-sm px-2 py-1  text-white shadow-xl border-gray-300 ${order.shoppingHeads
-                                            .flatMap((h) => h.shoppingOrders)
-                                            .filter(
-                                              (so) =>
-                                                so.picking_status !==
-                                                "pending"
-                                            ).length -
-                                            order.shoppingHeads.flatMap(
-                                              (h) => h.shoppingOrders
-                                            ).length ===
+                                          className={`border rounded-sm px-2 py-1  text-white shadow-xl border-gray-300 ${
+                                            order.shoppingHeads
+                                              .flatMap((h) => h.shoppingOrders)
+                                              .filter(
+                                                (so) =>
+                                                  so.picking_status !==
+                                                  "pending"
+                                              ).length -
+                                              order.shoppingHeads.flatMap(
+                                                (h) => h.shoppingOrders
+                                              ).length ===
                                             0
-                                            ? "bg-green-600"
-                                            : "bg-gray-500"
-                                            }`}
+                                              ? "bg-green-600"
+                                              : "bg-gray-500"
+                                          }`}
                                           onClick={(e) => {
                                             e.stopPropagation();
 
@@ -753,9 +784,8 @@ const OrderList = () => {
                                               handleSubmit(
                                                 order?.mem_code,
                                                 order?.all_sh_running
-                                              )
-                                            }
-                                            );
+                                              );
+                                            });
                                           }}
                                         >
                                           ยืนยัน
@@ -764,7 +794,7 @@ const OrderList = () => {
                                     )}
                                   {order?.picking_status === "picking" &&
                                     order?.emp_code_picking ===
-                                    userInfo?.emp_code && (
+                                      userInfo?.emp_code && (
                                       <div className="pr-1">
                                         <button
                                           className="border rounded-sm px-2 py-1 bg-amber-400 text-white shadow-xl border-gray-300 cursor-pointer z-50"
@@ -772,7 +802,7 @@ const OrderList = () => {
                                             e.stopPropagation();
                                             handleDoubleClick(() => {
                                               changeToPending(order?.mem_code);
-                                            })
+                                            });
                                           }}
                                         >
                                           เปลี่ยน
@@ -787,7 +817,7 @@ const OrderList = () => {
                                           e.stopPropagation();
                                           handleDoubleClick(() => {
                                             changeToPicking(order?.mem_code);
-                                          })
+                                          });
                                         }}
                                       >
                                         เริ่มจัด
@@ -840,33 +870,45 @@ const OrderList = () => {
                                           ).toLocaleString()}
                                         </p>
                                       </div>
-                                      {order.emp_code_picking && <div className="flex justify-start">
-                                        <p className="text-green-500 font-bold">
-                                          {order.emp_code_picking} {order.emp_picking.emp_nickname}
-                                        </p>
-                                        &nbsp;
-                                        <p className="text-red-500">
-                                          กำลังทำงานอยู่
-                                        </p>
-                                      </div>}
+                                      {order.emp_code_picking && (
+                                        <div className="flex justify-start">
+                                          <p className="text-green-500 font-bold">
+                                            {order.emp_code_picking}{" "}
+                                            {order.emp_picking.emp_nickname}
+                                          </p>
+                                          &nbsp;
+                                          <p className="text-red-500">
+                                            กำลังทำงานอยู่
+                                          </p>
+                                        </div>
+                                      )}
                                       <hr className="mt-2" />
                                     </li>
                                   ))}
                                   <button
-                                    className="border rounded-sm px-3 py-2 text-xs w-full mb-2 bg-green-600 text-white hover:bg-lime-700"
+                                    disabled={order?.picking_status !== "picking"}
+                                    className={`border rounded-sm px-3 py-2 text-xs w-full mb-2 text-white ${order?.picking_status === "picking" ? "hover:bg-lime-700 bg-green-600" : "hover:bg-gray-600 bg-gray-500"}`}
+                                    // className={`border rounded-sm px-3 py-2 text-xs w-full mb-2 text-white hover:bg-lime-700 bg-green-600`}
                                     onClick={() => {
-                                      handleDoubleClick(() => {
-                                        if (order?.picking_status === "picking") {
+                                      handleDoubleClick(async () => {
+                                        if (
+                                          order?.picking_status === "picking"
+                                        ) {
+                                          console.log('if order?.picking_status === "picking"')
                                           navigate(
                                             `/product-list?mem_code=${order?.mem_code}`
                                           );
+
                                         } else {
-                                          changeToPicking(order?.mem_code);
+                                          console.log('else')
+                                          await changeToPicking(
+                                            order?.mem_code
+                                          );
                                           navigate(
                                             `/product-list?mem_code=${order?.mem_code}`
                                           );
                                         }
-                                      })
+                                      });
                                     }}
                                   >
                                     จัดแบบรวมบิล
@@ -920,10 +962,11 @@ const OrderList = () => {
                     }
                     className={` border border-gray-500 py-1 px-1 rounded-sm shadow-lg w-full flex justify-center mx-1 relative
                             ${btn.color} 
-                            ${selectedFloor === btn.value
-                        ? "ring-2 ring-yellow-300"
-                        : ""
-                      }
+                            ${
+                              selectedFloor === btn.value
+                                ? "ring-2 ring-yellow-300"
+                                : ""
+                            }
                             `}
                   >
                     <div className="flex text-center gap-2">
@@ -939,24 +982,31 @@ const OrderList = () => {
               </div>
 
               <div className="p-1 mt-1 flex justify-center">
-                {['1', '2', '3', '4', '5'].map((floor) => {
-                  const match = latestTimes.find((latestTime) => latestTime.floor === floor);
+                {["1", "2", "3", "4", "5"].map((floor) => {
+                  const match = latestTimes.find(
+                    (latestTime) => latestTime.floor === floor
+                  );
                   return (
-                    <div key={floor} className="border px-1 py-1 rounded-sm w-full">
+                    <div
+                      key={floor}
+                      className="border px-1 py-1 rounded-sm w-full"
+                    >
                       <div className="flex justify-center">
                         <p className="font-bold text-sm">F{floor}</p>
                       </div>
                       <div className="text-[12px] flex justify-center">
                         <p className="flex text-center">
                           {match?.latest_picking_time
-                            ? new Date(match.latest_picking_time).toLocaleString("th-TH", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "2-digit",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                            : '-'}
+                            ? new Date(
+                                match.latest_picking_time
+                              ).toLocaleString("th-TH", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "-"}
                         </p>
                       </div>
                     </div>

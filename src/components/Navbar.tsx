@@ -11,7 +11,6 @@ import { useNavigate } from "react-router";
 
 const navigation = [
   { name: "หน้าหลัก", href: "/", exact: true, current: false },
-  { name: "รายการใบกำกับสินค้า", href: "/invoice-all", current: false  },
 ];
 
 function classNames(...classes: string[]) {

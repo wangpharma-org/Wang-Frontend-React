@@ -50,14 +50,16 @@ export default function ProductBox({ orderItem, handleDoubleClick }: ProductBoxP
                             </p>
                         </div>
                         <div className="flex justify-between pt-1 px-1">
-                            <p>{orderItem.so_running}</p>
+                            <p className="text-amber-500 font-bold">
+                                {orderItem.product.product_code}
+                            </p>
                             <p className="px-2 py-2 rounded-sm bg-yellow-500 text-white">
                                 {orderItem.so_amount} {orderItem.so_unit}
                             </p>
                         </div>
                         <div className="flex justify-between pt-1 px-1">
-                            <p className="text-amber-500 font-bold">
-                                {orderItem.product.product_code}
+                            <p className="text-black">
+                                Bar : {orderItem.product.product_barcode}
                             </p>
                             <p>
                                 เหลือ {orderItem.product.product_stock}{" "}
