@@ -14,9 +14,9 @@ import ProductList from "./pages/ProductList";
 import StickerPrint from "./pages/StickerPrint";
 import FormatSticker from "./pages/FormatSticker";
 import EmployeeStatisticsPage from "./pages/EmployeeStatisticsPage";
+import DashboardQcPage from "./pages/DashboardQcPage";
 import VerifyOrder from "./pages/VerifyOrder";
 import ReportEmployee from "./pages/ReportEmployee";
-
 function App() {
   return (
     <>
@@ -152,6 +152,10 @@ function App() {
                 </RequireAuth>
               </div>
             }
+          />
+          <Route
+            path="/dashboard-qc"
+            element={<DashboardQcPage />}
           />
         </Routes>
       </Router>
