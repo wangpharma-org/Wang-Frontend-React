@@ -5,6 +5,8 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router";
 import axios from "axios";
 import { Bounce, ToastContainer, toast } from "react-toastify";
+import ButtonMenu from "../components/buttonMenu";
+
 
 interface Product {
   product_floor: string;
@@ -60,15 +62,21 @@ const OrderList = () => {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
   const [selectroute, setSelectroute] = useState("เลือกเส้นทางขนส่ง");
-  const { userInfo, logout } = useAuth();
+  const { userInfo } = useAuth();
   const navigate = useNavigate();
   const [latestTimes, setLatestTimes] = useState<PickingTime[]>([]);
   const [search, setSearch] = useState("");
   const [showInput, setShowInput] = useState(false);
   const [openMenu, setOpenMenu] = useState(false);
+
   const [floorCounts, setFloorCounts] = useState<Record<string, number>>({});
   const handleDoubleClick = useDoubleClick();
 
+
+  useEffect(() => {
+    const totalOrders = orderList.length;
+    localStorage.setItem("totalOrdersCount", JSON.stringify(totalOrders));
+  }, [orderList]);
 
   const togglePopup = (id: string) => {
     setOpenPopupId((prev) => (prev === id ? null : id));
@@ -124,6 +132,7 @@ const OrderList = () => {
       newSocket.disconnect();
     };
   }, []);
+
   useEffect(() => {
     const totalShoppingOrders = orderList.reduce(
       (total, order) =>
@@ -135,6 +144,7 @@ const OrderList = () => {
       0
     );
     setTotalShoppingOrders(totalShoppingOrders);
+    localStorage.setItem("totalShoppingOrders", JSON.stringify(totalShoppingOrders));
 
     const totalStatusPicking = orderList.reduce(
       (total, order) =>
@@ -148,25 +158,8 @@ const OrderList = () => {
         ),
       0
     );
+    localStorage.setItem("totalStatusPicking", JSON.stringify(totalStatusPicking));
     setTotalPicking(totalStatusPicking);
-
-    // const latestByFloor: Record<string, Date> = {};
-
-    // orderList.forEach((order) => {
-    //   order.shoppingHeads.forEach((sh) => {
-    //     sh.shoppingOrders.forEach((so) => {
-    //       const rawTime = so.so_picking_time;
-    //       if (rawTime && !isNaN(Date.parse(rawTime))) {
-    //         const soTime = new Date(rawTime);
-    //         const floor = so.product.product_floor;
-    //         if (!latestByFloor[floor] || soTime > latestByFloor[floor]) {
-    //           latestByFloor[floor] = soTime;
-    //         }
-    //       }
-    //     });
-    //   });
-    // });
-    // setLatestTimes(latestByFloor);
 
     const newFloorCounts: Record<number, number> = {};
     orderList.forEach((member) => {
@@ -203,7 +196,7 @@ const OrderList = () => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showInput]);
+  }, []);
 
   const changeToPending = (mem_code: string) => {
     if (socket?.connected) {
@@ -235,10 +228,16 @@ const OrderList = () => {
   };
 
   const filteredData = orderList.filter((order) => {
-    const matchSearch =
+    const matchSearch: boolean =
       !search ||
       order.mem_name.toLowerCase().includes(search.toLowerCase()) ||
       order.mem_code.toLowerCase().includes(search.toLowerCase());
+    console.log("matchSearch " + matchSearch);
+    console.log("!search " + !search);
+    console.log("order.mem_name.toLowerCase().includes(search.toLowerCase()) " + order.mem_name.toLowerCase().includes(search.toLowerCase()));
+    console.log("order.mem_name.toLowerCase() " + order.mem_name.toLowerCase());
+    console.log("search.toLowerCase() " + search.toLowerCase());
+
 
     const matchFloor =
       !selectedFloor ||
@@ -247,12 +246,12 @@ const OrderList = () => {
           (so) => (so.product.product_floor || "1") === selectedFloor
         )
       );
-
+    console.log("matchFloor " + matchFloor);
     const matchRoute =
       selectroute === "all" ||
       selectroute === "เลือกเส้นทางขนส่ง" ||
       order.province === selectroute;
-
+    console.log("matchRoute " + matchRoute);
     return matchSearch && matchFloor && matchRoute;
   });
 
@@ -320,6 +319,18 @@ const OrderList = () => {
     setSelectedFloor(null);
   };
 
+  const setData = () => {
+    try {
+      const response = axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/report`);
+      console.log("response", response);
+      // setOrderList(response.data)
+    }
+    catch {
+      console.error("error");
+    }
+
+  }
+
   const routeButtons = [
     { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
     { id: 2, name: "หาดใหญ่", value: "L1-1" },
@@ -377,6 +388,10 @@ const OrderList = () => {
     };
 
     return handleClick;
+  }
+
+  async function reloadData() {
+    await axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/picking/reload`)
   }
 
   return (
@@ -557,8 +572,9 @@ const OrderList = () => {
             <p>Loading...</p>
           </div>
         ) : orderList.length === 0 ? (
-          <div className="flex justify-center font-bold text-2xl mt-10">
+          <div className="flex-col justify-center font-bold text-2xl mt-10 w-full text-center">
             <p>ไม่มีรายการสินค้า</p>
+            <button className="bg-blue-500 text-white mt-5 p-3 rounded-xl" onClick={() => reloadData()}>จำลองออเดอร์ใหม่</button>
           </div>
         ) : (
           <div>
@@ -843,20 +859,27 @@ const OrderList = () => {
                             {isOpen && (
                               <div
                                 ref={popupRef}
-                                className="w-full bg-white border border-gray-300 rounded-b shadow-lg z-40 mt-2 rounded-sm px-3"
+                                className={`absolute w-full  z-50 -translate-x-[8px] ${
+                                  order.picking_status === "picking" ? " bg-green-400": "bg-gray-400"
+                                }`}
                               >
-                                <ul>
-                                  {order.shoppingHeads.map((sh, index) => (
-                                    <li
-                                      key={sh.sh_id}
-                                      className="pt-2 pb-2 text-xs"
-                                    >
-                                      <div className="flex justify-between pt-1">
-                                        <div className="flex justify-start">
-                                          <p className="font-bold">
-                                            {index + 1}.
+                                <div className=" bg-white border border-gray-300 rounded-b shadow-lg m-2 rounded-sm px-3">
+                                  <ul>
+                                    {order.shoppingHeads.map((sh, index) => (
+                                      <li
+                                        key={sh.sh_id}
+                                        className="pt-2 pb-2 text-xs"
+                                      >
+                                        <div className="flex justify-between pt-1">
+                                          <div className="flex justify-start">
+                                            <p className="font-bold">
+                                              {index + 1}.
+                                            </p>
+                                            <p>{sh.sh_running}</p>
+                                          </div>
+                                          <p className="bg-yellow-500 p-1 rounded-sm text-xs text-white">
+                                            {sh.shoppingOrders.length} รายการ
                                           </p>
-                                          <p>{sh.sh_running}</p>
                                         </div>
                                         <p className="bg-yellow-500 p-1 rounded-sm text-xs text-white">
                                           {sh.shoppingOrders.length} รายการ

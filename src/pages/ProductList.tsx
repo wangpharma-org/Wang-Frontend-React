@@ -4,6 +4,8 @@ import { io, Socket } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import Clock from "../components/Clock";
 import ProductBox from "../components/ProductBox";
+import ButtonMenu from "../components/buttonMenu";
+
 
 interface Product {
   product_code: string;
@@ -173,8 +175,8 @@ function ProductList() {
     setIsFiltered(!!search || !!selectedFloor);
   }, [search, selectedFloor]);
 
-  console.log("search " + search);
-  console.log("selectedFloor " + selectedFloor);
+  // console.log("search " + search);
+  // console.log("selectedFloor " + selectedFloor);
 
   const setButton = () => {
     setSearch("");

@@ -13,6 +13,10 @@ import OrderList from "./pages/OrderList";
 import ProductList from "./pages/ProductList";
 import StickerPrint from "./pages/StickerPrint";
 import FormatSticker from "./pages/FormatSticker";
+import EmployeeStatisticsPage from "./pages/EmployeeStatisticsPage";
+import VerifyOrder from "./pages/VerifyOrder";
+import ReportEmployee from "./pages/ReportEmployee";
+
 function App() {
   return (
     <>
@@ -91,7 +95,7 @@ function App() {
             path="/order-list"
             element={
               <RequireAuth>
-                <OrderList />
+              <OrderList />
               </RequireAuth>
             }
           />
@@ -99,7 +103,7 @@ function App() {
             path="/product-list"
             element={
               <RequireAuth>
-                <ProductList />
+              <ProductList />
               </RequireAuth>
             }
           />
@@ -121,6 +125,31 @@ function App() {
                 {/* <RequireAuth> */}
                   <FormatSticker />
                 {/* </RequireAuth> */}
+              </div>
+            }
+          />
+          <Route
+            path="/report"
+            element={
+              <div>
+                <RequireAuth>
+                  <ReportEmployee />
+                  </RequireAuth>
+              </div>
+            }
+          />
+          <Route
+            path="/employee-statistics"
+            element={<EmployeeStatisticsPage />}
+            />
+          <Route
+            path="/verify-order"
+            element={
+              <div>
+                <Navbar />
+                <RequireAuth>
+                  <VerifyOrder />
+                </RequireAuth>
               </div>
             }
           />
