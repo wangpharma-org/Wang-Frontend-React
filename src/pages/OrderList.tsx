@@ -858,7 +858,7 @@ const OrderList = () => {
                                       </div>
                                       <div className="flex justify-start">
                                         <p className="text-green-500 font-bold">
-                                          {order.emp.emp_nickname}
+                                          {order.emp_code_picking} {order.emp.emp_nickname}
                                         </p>
                                         &nbsp;
                                         <p className="text-red-500">
