@@ -16,6 +16,7 @@ import FormatSticker from "./pages/FormatSticker";
 import EmployeeStatisticsPage from "./pages/EmployeeStatisticsPage";
 import VerifyOrder from "./pages/VerifyOrder";
 import ReportEmployee from "./pages/ReportEmployee";
+import QCDashboard from "./pages/QC-Dashboard";
 
 function App() {
   return (
@@ -150,6 +151,16 @@ function App() {
                 <RequireAuth>
                   <VerifyOrder />
                 </RequireAuth>
+              </div>
+            }
+          />
+          <Route
+            path="/qc-dashboard"
+            element={
+              <div>
+                <RequireAuth>
+                  <QCDashboard />
+                  </RequireAuth>
               </div>
             }
           />

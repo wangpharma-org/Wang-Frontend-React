@@ -575,7 +575,6 @@ const OrderList = () => {
         ) : orderList.length === 0 ? (
           <div className="flex justify-center font-bold text-2xl mt-10">
             <p>ไม่มีรายการสินค้า</p>
-            <button onClick={setData}>คืนค่าข้อมูล</button>
           </div>
         ) : (
           <div>
