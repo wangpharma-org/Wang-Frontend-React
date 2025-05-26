@@ -15,6 +15,8 @@ import StickerPrint from "./pages/StickerPrint";
 import FormatSticker from "./pages/FormatSticker";
 import EmployeeStatisticsPage from "./pages/EmployeeStatisticsPage";
 import DashboardQcPage from "./pages/DashboardQcPage";
+import VerifyOrder from "./pages/VerifyOrder";
+import ReportEmployee from "./pages/ReportEmployee";
 function App() {
   return (
     <>
@@ -93,7 +95,7 @@ function App() {
             path="/order-list"
             element={
               <RequireAuth>
-                <OrderList />
+              <OrderList />
               </RequireAuth>
             }
           />
@@ -101,7 +103,7 @@ function App() {
             path="/product-list"
             element={
               <RequireAuth>
-                <ProductList />
+              <ProductList />
               </RequireAuth>
             }
           />
@@ -127,8 +129,29 @@ function App() {
             }
           />
           <Route
+            path="/report"
+            element={
+              <div>
+                <RequireAuth>
+                  <ReportEmployee />
+                  </RequireAuth>
+              </div>
+            }
+          />
+          <Route
             path="/employee-statistics"
             element={<EmployeeStatisticsPage />}
+            />
+          <Route
+            path="/verify-order"
+            element={
+              <div>
+                <Navbar />
+                <RequireAuth>
+                  <VerifyOrder />
+                </RequireAuth>
+              </div>
+            }
           />
           <Route
             path="/dashboard-qc"
