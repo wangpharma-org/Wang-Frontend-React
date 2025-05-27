@@ -8,6 +8,7 @@ import { Bounce, ToastContainer, toast } from "react-toastify";
 
 interface Product {
   product_floor: string;
+  product_unit: string;
 }
 
 interface ShoppingOrder {
@@ -245,12 +246,19 @@ const OrderList = () => {
       order.mem_name.toLowerCase().includes(search.toLowerCase()) ||
       order.mem_code.toLowerCase().includes(search.toLowerCase());
 
-    const matchFloor =
+      const matchFloor =
       !selectedFloor ||
       order.shoppingHeads.some((sh) =>
-        sh.shoppingOrders.some(
-          (so) => (so.product.product_floor || "1") === selectedFloor
-        )
+        sh.shoppingOrders.some((so) => {
+          const unit = so.product.product_unit || "";
+          const floor = so.product.product_floor || "1";
+    
+          if (selectedFloor === "ยกลัง") {
+            return unit.includes("ลัง");
+          }
+    
+          return floor === selectedFloor;
+        })
       );
 
     const matchRoute =
