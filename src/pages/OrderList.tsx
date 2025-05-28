@@ -655,6 +655,7 @@ const OrderList = () => {
                                       hour: "2-digit",
                                       minute: "2-digit",
                                       hour12: false,
+                                      timeZone: "UTC",
                                     })}
                                   </p>
                                 </div>
@@ -885,7 +886,16 @@ const OrderList = () => {
                                           เปิดบิล:{" "}
                                           {new Date(
                                             sh.sh_datetime
-                                          ).toLocaleString()}
+                                          ).toLocaleString("th-TH", {
+                                            year: "numeric",
+                                            month: "2-digit",
+                                            day: "2-digit",
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                            second: "2-digit",
+                                            hour12: false,
+                                            timeZone: "UTC",
+                                          })}
                                         </p>
                                       </div>
                                       {order.emp_code_picking && (
