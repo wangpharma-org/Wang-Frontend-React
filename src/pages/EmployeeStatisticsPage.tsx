@@ -30,6 +30,7 @@ interface EmployeeStatistics {
   header: StatisticsHeader;
   floors: FloorData[];
   totalPicked: number;
+  date: string; //เพิ่มฟิลด์นี้
 }
 
 interface APIResponse {
@@ -69,9 +70,9 @@ const EmployeeStatisticsPage = () => {
     const dateMap = new Map<string, DateGroup>();
 
     employees.forEach((employee) => {
-      if (employee.statistics?.header?.startTime) {
-        // ดึงเฉพาะวันที่จาก startTime: "2025-05-08T08:08:57.000Z"
-        const dateStr = employee.statistics.header.startTime.split("T")[0]; // ได้ "2025-05-08"
+      if (employee.statistics?.date) {
+        // ใช้ date ที่ backend ส่งมาโดยตรง
+        const dateStr = employee.statistics.date;
 
         if (!dateMap.has(dateStr)) {
           dateMap.set(dateStr, {
@@ -86,10 +87,10 @@ const EmployeeStatisticsPage = () => {
       }
     });
 
-    // แปลง Map เป็น Array และเรียงลำดับวันที่ล่าสุดขึ้นก่อน
+    // แปลง Map เป็น Array และเรียงลำดับวันที่ล่าสุดอยู่ด้านล่าง
     const dates = Array.from(dateMap.values());
     dates.sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
     setDateList(dates);
@@ -223,7 +224,8 @@ const EmployeeStatisticsPage = () => {
 
   // เพิ่มฟังก์ชันนี้ในคอมโพเนนต์
   const combineEmployeeDataByDate = (
-    employees: EmployeeGroup[]
+    employees: EmployeeGroup[],
+    date?: string
   ): EmployeeStatistics => {
     // สร้างข้อมูลพื้นฐาน
     const combinedData: EmployeeStatistics = {
@@ -236,6 +238,7 @@ const EmployeeStatisticsPage = () => {
       },
       floors: [],
       totalPicked: 0,
+      date: date || "", // ผูก date ไว้กับ group
     };
 
     // รวมข้อมูลจากทุกพนักงาน
@@ -248,6 +251,11 @@ const EmployeeStatisticsPage = () => {
     let earliestStartTime: Date | null = null;
     // ค่า endTime สุดท้าย (จะหาค่าที่ช้าที่สุด)
     let latestEndTime: Date | null = null;
+
+    // รวม durationMin/ durationHr จาก header
+    let totalDurationMin = 0;
+    let totalDurationHr = 0;
+    let countWithDuration = 0;
 
     // วนลูปผ่านทุกพนักงาน
     employees.forEach((employee) => {
@@ -273,6 +281,21 @@ const EmployeeStatisticsPage = () => {
         }
       }
 
+      // รวม durationMin/Hr (ใช้ค่าที่ backend ส่งมา)
+      if (
+        typeof stats.header.durationMin === "number" &&
+        !isNaN(stats.header.durationMin)
+      ) {
+        totalDurationMin += stats.header.durationMin;
+        countWithDuration++;
+      }
+      if (
+        typeof stats.header.durationHr === "number" &&
+        !isNaN(stats.header.durationHr)
+      ) {
+        totalDurationHr += stats.header.durationHr;
+      }
+
       // รวมข้อมูลแต่ละชั้น
       stats.floors.forEach((floor) => {
         if (!floorsMap[floor.floor]) {
@@ -296,21 +319,32 @@ const EmployeeStatisticsPage = () => {
       });
     });
 
-    // คำนวณระยะเวลาทำงาน
-    if (earliestStartTime && latestEndTime) {
-      const durationMs =
-        (latestEndTime as Date).getTime() -
-        (earliestStartTime as Date).getTime();
-      combinedData.header.durationMin = Math.round(durationMs / (1000 * 60));
-      combinedData.header.durationHr = parseFloat(
-        (durationMs / (1000 * 60 * 60)).toFixed(2)
-      );
-    }
+    // ใช้ durationMin/Hr รวม (หรือเฉลี่ย)
+    combinedData.header.durationMin = totalDurationMin;
+    combinedData.header.durationHr = totalDurationHr;
+
     // แปลง floorsMap เป็น array
     combinedData.floors = Object.values(floorsMap);
 
-    // เรียงลำดับตามเลขชั้น
+    // เติมชั้นที่ไม่มีข้อมูล เพื่อให้แสดงครบทุกชั้น
+    const allFloors = ['?', '1', '2', '3', '4', '5'];
+    allFloors.forEach((floorId) => {
+      if (!floorsMap[floorId]) {
+        combinedData.floors.push({
+          floor: floorId,
+          totalOrders: 0,
+          totalAmount: 0,
+          remaining: 0,
+          inProgress: 0,
+          completed: 0,
+        });
+      }
+    });
+
+    // เรียงลำดับใหม่อีกครั้งหลังเติมครบ
     combinedData.floors.sort((a, b) => {
+      if (a.floor === '?') return -1;
+      if (b.floor === '?') return 1;
       return parseInt(a.floor) - parseInt(b.floor);
     });
 
@@ -413,7 +447,7 @@ const EmployeeStatisticsPage = () => {
             const isExpanded = expandedDates.has(dateGroup.formattedDate);
             // ในอนาคตเราจะกรองข้อมูลตามวันที่ที่เลือก
             // ใช้ข้อมูลพนักงานจากวันที่เลือก
-            const employeeData = combineEmployeeDataByDate(dateGroup.employees);
+            const employeeData = combineEmployeeDataByDate(dateGroup.employees, dateGroup.date);
 
             return (
               <div
@@ -498,39 +532,23 @@ const EmployeeStatisticsPage = () => {
                         <div className="p-2 mb-4 text-center text-xs sm:text-sm">
                           <span>ชิ้นล่าสุด - ชิ้นแรก = เวลาทำงาน</span>
                           <span className="font-bold ml-2">
-                            {employeeData.header.startTime &&
-                            employeeData.header.endTime
-                              ? Math.abs(
-                                  Math.round(
-                                    (new Date(
-                                      employeeData.header.endTime
-                                    ).getTime() -
-                                      new Date(
-                                        employeeData.header.startTime
-                                      ).getTime()) /
-                                      (1000 * 60)
-                                  )
+                            {employeeData.header.startTime && employeeData.header.endTime
+                              ? Math.round(
+                                  (new Date(employeeData.header.endTime).getTime() -
+                                    new Date(employeeData.header.startTime).getTime()) /
+                                    (1000 * 60)
                                 )
-                              : "-"}{" "}
-                            นาที
+                              : "-"} นาที
                           </span>
                           <span className="ml-2 text-xs sm:text-sm">หรือ</span>
                           <span className="font-bold ml-2">
-                            {employeeData.header.startTime &&
-                            employeeData.header.endTime
-                              ? Math.abs(
-                                  Math.round(
-                                    (new Date(
-                                      employeeData.header.endTime
-                                    ).getTime() -
-                                      new Date(
-                                        employeeData.header.startTime
-                                      ).getTime()) /
-                                      (1000 * 60 * 60)
-                                  )
+                            {employeeData.header.startTime && employeeData.header.endTime
+                              ? Math.round(
+                                  (new Date(employeeData.header.endTime).getTime() -
+                                    new Date(employeeData.header.startTime).getTime()) /
+                                    (1000 * 60 * 60)
                                 )
-                              : "-"}{" "}
-                            ชั่วโมง
+                              : "-"} ชั่วโมง
                           </span>
                         </div>
 
@@ -634,8 +652,9 @@ const EmployeeStatisticsPage = () => {
                             <div className="font-medium">
                               {employeeData.header.durationMin > 0
                                 ? (
-                                    employeeData.totalPicked /
-                                    employeeData.header.durationMin
+                                    (new Date(employeeData.header.endTime).getTime() -
+                                    new Date(employeeData.header.startTime).getTime()) /
+                                    (1000 * 60) / employeeData.floors.reduce((acc, floor) => acc + floor.completed, 0)
                                   ).toFixed(2)
                                 : "0.00"}{" "}
                               ชิ้น/นาที
@@ -643,9 +662,10 @@ const EmployeeStatisticsPage = () => {
                             <div className="font-medium">
                               {employeeData.header.durationHr > 0
                                 ? (
-                                    employeeData.totalPicked /
-                                    employeeData.header.durationHr
-                                  ).toFixed(2)
+                                  (new Date(employeeData.header.endTime).getTime() -
+                                  new Date(employeeData.header.startTime).getTime()) /
+                                  (1000 * 60 * 60) / employeeData.floors.reduce((acc, floor) => acc + floor.completed, 0)
+                                ).toFixed(2)
                                 : "0.00"}{" "}
                               ชิ้น/ชั่วโมง
                             </div>
@@ -673,75 +693,69 @@ const EmployeeStatisticsPage = () => {
                         {/* Completion Time */}
                         <div className="grid grid-cols-2 p-4 border-t border-gray-200">
                           <div className="text-center pr-8">
-                            <div className="text-lg">เวลาแล้วเสร็จ</div>
+                            <div className="text-lg">ประมาณการแล้วเสร็จ</div>
                           </div>
                           <div className="text-center">
                             <div className="font-medium text-red-500">
                               {(() => {
-                                // คำนวณเวลาแล้วเสร็จจากความเร็วและงานทั้งหมด
+                                // คำนวณเวลาแล้วเสร็จจากสูตรใหม่: startTime + (totalAmount ÷ speedPerMinute)
+                                // ตรวจสอบว่า startTime มีค่าและ speedPerMinute > 0
+                                const totals = calculateTotals(employeeData);
+                                const totalAmount = totals ? totals.totalAmount : 0;
                                 if (
-                                  employeeData.header.durationMin <= 0 ||
-                                  employeeData.totalPicked <= 0
+                                  !employeeData.header.startTime ||
+                                  employeeData.floors.reduce((acc, floor) => acc + floor.completed, 0) <= 0
                                 ) {
+                                  return "-";
+                                }
+                                // ความเร็วเฉลี่ยต่อนาที
+                                const speedPerMinute =
+                                  (new Date(employeeData.header.endTime).getTime() -
+                                  new Date(employeeData.header.startTime).getTime()) /
+                                  (1000 * 60) / employeeData.floors.reduce((acc, floor) => acc + floor.completed, 0);
+                                if (speedPerMinute <= 0) {
+                                  return "-";
+                                }
+                                // เวลาสิ้นสุดโดยประมาณ = startTime + (totalAmount / speedPerMinute) * 60 * 1000
+                                const estimatedFinishTimestamp =
+                                  new Date(employeeData.header.startTime).getTime() +
+                                  (totalAmount / speedPerMinute) * 60 * 1000;
+                                const estimatedFinish = new Date(estimatedFinishTimestamp);
+                                const finishHours = estimatedFinish.getHours().toString().padStart(2, '0');
+                                const finishMinutes = estimatedFinish.getMinutes().toString().padStart(2, '0');
+                                const finishSeconds = estimatedFinish.getSeconds().toString().padStart(2, '0');
+                                return `${finishHours}:${finishMinutes}:${finishSeconds}`;
+                              })()}
+                              {/* {(() => {
+                                // 🔧 กำหนดค่าแบบ hardcoded เพื่อทดสอบการคำนวณ
+                                const startTime = new Date("2025-05-28T08:00:00"); // Local time
+                                const endTime = new Date("2025-05-28T08:30:00");   // Local time
+                                const totalAmount = 10; // จำนวนทั้งหมดที่ต้องจัด
+                                const completed = 5; // จำนวนที่จัดไปแล้ว
+
+                                // ตรวจสอบค่าพื้นฐาน
+                                if (!startTime || completed <= 0) {
                                   return "-";
                                 }
 
                                 // คำนวณความเร็วเฉลี่ยต่อนาที
                                 const speedPerMinute =
-                                  employeeData.totalPicked /
-                                  employeeData.header.durationMin;
+                                  (endTime.getTime() - startTime.getTime()) / (1000 * 60) / completed;
 
-                                // นำผลรวมของคอลัมน์ "ทั้งหมด" มาคำนวณ
-                                const totals = calculateTotals(employeeData);
-                                const totalAmount = totals
-                                  ? totals.totalAmount
-                                  : 0;
+                                if (speedPerMinute <= 0) {
+                                  return "-";
+                                }
 
-                                // คำนวณเวลาที่ต้องใช้ทั้งหมด (นาที)
-                                const totalMinutes =
-                                  speedPerMinute > 0
-                                    ? Math.ceil(totalAmount * speedPerMinute)
-                                    : 0;
+                                // คำนวณเวลาที่จะเสร็จโดยประมาณ
+                                const estimatedFinishTimestamp =
+                                  startTime.getTime() + (totalAmount / speedPerMinute) * 60 * 1000;
 
-                                const totalSeconds = totalMinutes * 60;
+                                const estimatedFinish = new Date(estimatedFinishTimestamp);
+                                const finishHours = estimatedFinish.getHours().toString().padStart(2, "0");
+                                const finishMinutes = estimatedFinish.getMinutes().toString().padStart(2, "0");
+                                const finishSeconds = estimatedFinish.getSeconds().toString().padStart(2, "0");
 
-                                // คำนวณเวลาแล้วเสร็จ
-                                const totalHours = Math.floor(
-                                  totalMinutes / 60
-                                );
-                                const finalMinutes = totalMinutes % 60;
-                                const finalSeconds = totalSeconds % 60;
-
-                                // แสดงผลเป็น ชั่วโมง:นาที
-                                return totalMinutes > 0
-                                  ? `${String(totalHours).padStart(2, '0')}:${String(finalMinutes).padStart(2, '0')}:00`
-                                  : "เสร็จสิ้นแล้ว";
-                              })()}
-                              {/* {(() => {
-                                // คำนวณเวลาแล้วเสร็จจากความเร็วและงานทั้งหมด
-                                // ทดสอบด้วยค่าคงที่
-                                const totalAmount = 100;
-                                const speedPerMinute = 5.15;
-
-                                // คำนวณเวลาที่ต้องใช้ทั้งหมด (นาที)
-                                const totalMinutes = Math.ceil(
-                                  totalAmount * speedPerMinute
-                                );
-                                const totalHours = Math.floor(
-                                  totalMinutes / 60
-                                );
-                                const finalMinutes = totalMinutes % 60;
-
-                                // แสดงผลเป็น ชั่วโมง:นาที
-                                return totalMinutes > 0
-                                  ? `${String(totalHours).padStart(
-                                      2,
-                                      "0"
-                                    )}:${String(finalMinutes).padStart(
-                                      2,
-                                      "0"
-                                    )}:00`
-                                  : "เสร็จสิ้นแล้ว";
+                                return `${finishHours}:${finishMinutes}:${finishSeconds}`;
                               })()} */}
                             </div>
                           </div>
