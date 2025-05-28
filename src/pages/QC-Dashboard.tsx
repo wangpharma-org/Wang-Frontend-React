@@ -2,9 +2,8 @@ import accept from "../assets/accept.png";
 import incorect from "../assets/incorrect.png";
 import warning from "../assets/warning.png";
 import box from "../assets/return-box.png";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { io, Socket } from "socket.io-client";
-import { data } from "react-router";
 
 export interface Root {
   sh_running: string;
@@ -51,6 +50,16 @@ const QCDashboard = () => {
   const [wantConnect, setWantConnect] = useState<boolean>(false);
   const [mem_code, setMem_code] = useState<string | null>(null);
   const [sh_running, setSh_running] = useState<string | null>(null);
+  const [isInputLocked, setIsInputLocked] = useState(false);
+  const [InputValues, setInputValues] = useState<string[]>(Array(6).fill(""));
+  const [hasNotQC, setHasnotQC] = useState<number>(0);
+  const [hasQC, setHasQC] = useState<number>(0);
+  const [hasPicked, setHasPicked] = useState<number>(0);
+  const [hasNotPicked, setHasNotPicked] = useState<number>(0);
+  const [inComplete, setInComplete] = useState<number>(0);
+  const [RT, setRT] = useState<number>(0);
+  const [order, setOrder] = useState<ShoppingOrder[]>([]);
+  const inputBill = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
@@ -69,14 +78,6 @@ const QCDashboard = () => {
 
     newSocket.on("connect", () => {
       console.log("✅ Connected to WebSocket");
-      //   if (wantConnect === true && mem_code) {
-      //     newSocket.emit("join_room", {mem_code: mem_code, sh_running: null});
-      //     setLoading(true);
-      //   }
-      //   if (wantConnect === true && sh_running) {
-      //     newSocket.emit("join_room", {mem_code: null, sh_running: sh_running});
-      //     setLoading(true);
-      //   }
     });
 
     newSocket.on("qcdata", (data) => {
@@ -96,33 +97,74 @@ const QCDashboard = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (socket && wantConnect) {
+      if (mem_code) {
+        socket.emit("join_room", { mem_code, sh_running: null });
+        setLoading(true);
+      } else if (sh_running) {
+        socket.emit("join_room", { mem_code: null, sh_running });
+        setLoading(true);
+      }
+    }
+  }, [mem_code, sh_running, socket, wantConnect]);
+
+  useEffect(() => {
+    if (dataQC) {
+      const values = Array(6).fill("");
+      if (Array.isArray(dataQC)) {
+        dataQC.forEach((bill, index) => {
+          if (index < 6) {
+            values[index] = bill.sh_running;
+          }
+        });
+      } else {
+        values[0] = dataQC.sh_running;
+      }
+      setInputValues(values);
+    }
+    if (dataQC) {
+      const shoppingOrder = Array.isArray(dataQC)
+        ? dataQC.flatMap((bill) => bill.shoppingOrders)
+        : dataQC.shoppingOrders;
+      const notQC = shoppingOrder.filter(
+        (so) => so.so_already_qc === "No"
+      ).length;
+      const isQC = shoppingOrder.filter(
+        (so) => so.so_already_qc === "Yes"
+      ).length;
+      const inComplete = shoppingOrder.filter(
+        (so) => so.so_already_qc === "InComplete"
+      ).length;
+      const rt = shoppingOrder.filter((so) => so.so_already_qc === "RT").length;
+      const picked = shoppingOrder.filter(
+        (so) => so.picking_status === "picking"
+      ).length;
+      const notPicked = shoppingOrder.filter(
+        (so) => so.picking_status === "pending"
+      ).length;
+      setOrder(shoppingOrder);
+      console.log(shoppingOrder);
+      setHasnotQC(notQC);
+      setHasQC(isQC);
+      setHasPicked(picked);
+      setHasNotPicked(notPicked);
+      setInComplete(inComplete);
+      setRT(rt);
+    }
+  }, [dataQC]);
+
   const handleConnect = (some_value: string) => {
     console.log(socket?.connected);
     if (socket?.connected) {
       if (some_value.length === 10) {
         setSh_running(some_value);
         setMem_code(null);
-        setWantConnect(true);
-        EmitJoinRoom();
       } else {
         setMem_code(some_value);
         setSh_running(null);
-        setWantConnect(true);
-        EmitJoinRoom();
       }
-      //   socket.emit("join_room", { mem_code, sh_running });
-    } else {
-      console.error("❌ Socket is not initialized");
-    }
-  };
-
-  const EmitJoinRoom = () => {
-    if (socket && wantConnect) {
-      if (mem_code) {
-        socket.emit("join_room", { mem_code, sh_running: null });
-      } else if (sh_running) {
-        socket.emit("join_room", { mem_code: null, sh_running });
-      }
+      setIsInputLocked(true);
       setWantConnect(true);
     } else {
       console.error("❌ Socket is not initialized");
@@ -130,16 +172,25 @@ const QCDashboard = () => {
   };
 
   const handleClear = () => {
-    setDataQC([]);
+    inputBill.current?.focus()
+    setOrder([])
+    setRT(0)
+    setInComplete(0)
+    setDataQC(null);
     setLoading(false);
     setWantConnect(false);
+    setHasPicked(0)
+    setHasNotPicked(0)
     setMem_code(null);
     setSh_running(null);
+    setIsInputLocked(false);
+    setHasnotQC(0);
+    setInputValues(Array(6).fill(""));
     if (socket) {
       socket.emit("leave_room", { mem_code, sh_running });
       console.log("✅ Left room");
     }
-  }
+  };
 
   return (
     <div>
@@ -154,34 +205,46 @@ const QCDashboard = () => {
         </p>
         <div className="w-full mt-5 h-8 px-6">
           <div className="grid grid-cols-6 gap-3">
-            <div className="col-span-1 bg-blue-50 p-4 rounded-xl">
-                <button className="bg-green-500 text-white p-2 px-6 rounded-lg hover:bg-green-600 cursor-pointer" onClick={() => handleClear()}>ล้างข้อมูล</button>
+            <div className="col-span-1 bg-blue-50 p-4 rounded-xl self-start">
+              <button
+                className="bg-green-500 text-white p-2 px-6 rounded-lg hover:bg-green-600 cursor-pointer"
+                onClick={() => handleClear()}
+              >
+                ล้างข้อมูล
+              </button>
               {Array.from({ length: 6 }).map((_, index) => {
                 const bill = Array.isArray(dataQC)
                   ? dataQC[index]
                   : index === 0
                   ? dataQC
                   : null;
-                const shRunning = bill ? bill.sh_running : null;
+                
                 return (
                   <div key={index} className="bg-blue-400 p-2 rounded-lg mt-3">
                     <p className="text-lg text-white font-bold">
-                        หมายเลขบิลที่ {index + 1}
+                      หมายเลขบิลที่ {index + 1}
                     </p>
                     <div className="flex items-center gap-1.5 justify-center mt-1">
                       <input
                         className="bg-white w-5/6 h-12 text-center placeholder-gray-500 rounded-sm text-xl"
                         placeholder="หมายเลขบิล"
+                        ref = {index === 0 ? inputBill : null}
+                        readOnly={isInputLocked}
+                        onChange={(e) => {
+                          const update = [...InputValues];
+                          update[index] = e.target.value;
+                          setInputValues(update);
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             handleConnect(e.currentTarget.value);
                           }
                         }}
-                        value={shRunning ?? ''}
+                        value={InputValues[index]}
                       ></input>
                       <div className="px-4 py-2 bg-white rounded-sm">
                         <p className="text-green-600 font-bold text-2xl">
-                            {bill ? bill.shoppingOrders.length : '-'}
+                          {bill ? bill.shoppingOrders.length : "-"}
                         </p>
                       </div>
                     </div>
@@ -189,7 +252,7 @@ const QCDashboard = () => {
                 );
               })}
             </div>
-            <div className="col-span-4 bg-blue-50 rounded-xl">
+            <div className="col-span-4 bg-blue-50 rounded-xl self-start pb-5 mb-10">
               <div>
                 <div className="grid grid-cols-2 p-4 gap-2">
                   <div className="col-span-1">
@@ -199,24 +262,30 @@ const QCDashboard = () => {
                     <div className="bg-white  rounded-lg mt-2 grid grid-cols-2 items-center border-4 border-blue-400">
                       <p className="text-4xl font-bold border-r-3 py-5 mr-10 border-blue-400">
                         {Array.isArray(dataQC)
-                          ? dataQC[0].members.mem_code
+                          ? dataQC.length > 0
+                            ? dataQC[0]?.members?.mem_code
+                            : "-"
                           : dataQC
-                          ? dataQC?.members.mem_code
+                          ? dataQC?.members?.mem_code
                           : "-"}
                       </p>
                       <div className="p-2 pr-10">
                         <p className="text-2xl font-bold border-b-3 pb-2 mb-2 border-blue-400">
                           {Array.isArray(dataQC)
-                            ? dataQC[0].members.mem_name
+                            ? dataQC.length > 0
+                              ? dataQC[0]?.members?.mem_name
+                              : "ไม่มีเลขบิล"
                             : dataQC
-                            ? dataQC?.members.mem_name
+                            ? dataQC?.members?.mem_name
                             : "-"}
                         </p>
                         <p className="text-lg">
                           {Array.isArray(dataQC)
-                            ? dataQC[0].members.province
+                            ? dataQC.length > 0
+                              ? dataQC[0]?.members?.province
+                              : "-"
                             : dataQC
-                            ? dataQC?.members.province
+                            ? dataQC?.members?.province
                             : "-"}
                         </p>
                       </div>
@@ -226,14 +295,11 @@ const QCDashboard = () => {
                     <p className="text-black font-black text-lg">
                       เงื่อนไขการบรรจุสินค้า และการตรวจสอบ ของลูกค้านี้
                     </p>
-                    <div className="bg-white  rounded-lg mt-2 items-start border-4 border-red-400 py-4.5 px-2">
-                      <p className="text-lg font-semibold text-center p-1">
-                        *** เงื่อนไข ***
-                      </p>
+                    <div className="bg-white  rounded-lg mt-2 items-start border-4 border-red-400 py-4.5 px-2 h-26">
                       <p className="">
                         {Array.isArray(dataQC)
-                          ? dataQC[0]?.members?.mem_note ?? "-"
-                          : dataQC?.members?.mem_note ?? "-"}
+                          ? dataQC[0]?.members?.mem_note ?? "ไม่ระบุเงื่อนไข"
+                          : dataQC?.members?.mem_note ?? "ไม่ระบุเงื่อนไข"}
                       </p>
                     </div>
                   </div>
@@ -249,7 +315,9 @@ const QCDashboard = () => {
                       </div>
                       <div className="w-1 bg-green-500"></div>
                       <div className="w-1/2 flex justify-center items-center p-3">
-                        <p className="text-center text-3xl font-bold">{2}</p>
+                        <p className="text-center text-3xl font-bold">
+                          {hasQC}
+                        </p>
                       </div>
                     </div>
                     <div className="bg-white w-full text-3xl border-4 border-red-500 rounded-lg flex">
@@ -261,7 +329,9 @@ const QCDashboard = () => {
                       </div>
                       <div className="w-1 bg-red-500"></div>
                       <div className="w-1/2 flex justify-center items-center p-3">
-                        <p className="text-center text-3xl font-bold">{2}</p>
+                        <p className="text-center text-3xl font-bold">
+                          {hasNotQC}
+                        </p>
                       </div>
                     </div>
                     <div className="bg-white w-full text-3xl border-4 border-yellow-500 rounded-lg flex">
@@ -273,7 +343,9 @@ const QCDashboard = () => {
                       </div>
                       <div className="w-1 bg-yellow-500"></div>
                       <div className="w-1/2 flex justify-center items-center p-3">
-                        <p className="text-center text-3xl font-bold">{2}</p>
+                        <p className="text-center text-3xl font-bold">
+                          {inComplete}
+                        </p>
                       </div>
                     </div>
                     <div className="bg-white w-full text-3xl border-4 border-red-500 rounded-lg flex">
@@ -282,7 +354,7 @@ const QCDashboard = () => {
                       </div>
                       <div className="w-1 bg-red-500"></div>
                       <div className="w-1/2 flex justify-center items-center p-3">
-                        <p className="text-center text-3xl font-bold">{2}</p>
+                        <p className="text-center text-3xl font-bold">{RT}</p>
                       </div>
                     </div>
                   </div>
@@ -291,11 +363,15 @@ const QCDashboard = () => {
               <div className="grid grid-cols-8 gap-3 mt-3 px-4">
                 <div className="col-span-1 border-green-500 border-4 bg-white p-2 px-5 rounded-lg">
                   <p>หยิบแล้ว</p>
-                  <p className="text-2xl font-bold text-green-600">{2}</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {hasPicked}
+                  </p>
                 </div>
                 <div className="col-span-1 border-red-500 border-4 bg-white p-2 px-5  rounded-lg">
                   <p>ยังไม่หยิบ</p>
-                  <p className="text-2xl font-bold text-red-600">{2}</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {hasNotPicked}
+                  </p>
                 </div>
                 <input
                   className="col-span-6 border-orange-500 border-4 p-2 px-5 rounded-lg text-4xl text-center bg-orange-100"
@@ -320,151 +396,157 @@ const QCDashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white py-5">
-                    <tr className="hover:bg-gray-50">
-                      <td className="py-4 text-lg border-r-2 border-blue-400">
-                        1
-                      </td>
-                      <td className="py-4 text-lg border-r-2 border-blue-400">
-                        <div className="flex flex-col items-center justify-center text-center">
-                          <p className="text-lg">ชั้น {4}</p>
-                          <div className="w-4 h-4 sm:w-6 sm:h-6 bg-red-500 rounded-full mt-1"></div>
-                        </div>
-                      </td>
-                      <td className="py-4 text-lg border-r-2 border-blue-400">
-                        <div className="flex flex-col items-center justify-center text-center">
-                          <p className="text-lg">{4545345}</p>
-                          <p className="text-base text-red-600 font-bold">
-                            ยังไม่จัด
-                          </p>
-                        </div>
-                      </td>
-                      <td className="py-4 text-lg border-r-2 border-blue-400">
-                        <div className="flex flex-col items-center justify-center text-center">
-                          <p className="text-lg">{23454545345}</p>
-                        </div>
-                      </td>
-                      <td className="py-4 text-lg border-r-2 border-blue-400">
-                        <div className="flex flex-col items-center justify-center text-center">
-                          <p className="text-lg border-b-2 pb-1.5 mb-1.5 border-blue-400">
-                            -อุทัยทิพย์/ขวด50มล42บ24*1ลัง/ใหม่190466
-                          </p>
-                          <div className="flex justify-between w-full px-10">
-                            <p className="text-base text-blue-500 font-bold">
-                              รับเข้า
-                            </p>
-                            <p className="text-base">{15}</p>
+                    { order.length > 0 ? 
+                      order.map((so, index) => {
+                        return(
+                        <tr className="hover:bg-gray-50">
+                        <td className="py-4 text-lg border-r-2 border-blue-400">
+                          {index+1}
+                        </td>
+                        <td className="py-4 text-lg border-r-2 border-blue-400">
+                          <div className="flex flex-col items-center justify-center text-center">
+                            <p className="text-lg">ชั้น {so?.product?.product_floor}</p>
+                            <div className="w-4 h-4 sm:w-6 sm:h-6 bg-red-500 rounded-full mt-1"></div>
                           </div>
-                          <div className="flex justify-between w-full px-10">
-                            <p className="text-base text-blue-500 font-bold">
-                              จำนวน
+                        </td>
+                        <td className="py-4 text-lg border-r-2 border-blue-400">
+                          <div className="flex flex-col items-center justify-center text-center">
+                            <p className="text-lg">{so?.product?.product_barcode}</p>
+                            <p className={`text-base font-bold ${so?.picking_status === 'pending' ? 'text-red-600' : 'text-green-600'}`}>
+                              {so?.picking_status === 'pending' ? 'ยังไม่จัด' : 'จัดแล้ว'}
                             </p>
-                            <p className="text-base">{15}</p>
                           </div>
-                          <div className="flex justify-between w-full px-10">
-                            <p className="text-base text-blue-500 font-bold">
-                              เลขคีย์ใบซื้อ
+                        </td>
+                        <td className="py-4 text-lg border-r-2 border-blue-400">
+                          <div className="flex flex-col items-center justify-center text-center">
+                            <p className="text-lg">{so?.product?.product_code}</p>
+                          </div>
+                        </td>
+                        <td className="py-4 text-lg border-r-2 border-blue-400">
+                          <div className="flex flex-col items-center justify-center text-center">
+                            <p className="text-lg border-b-2 pb-1.5 mb-1.5 border-blue-400">
+                              {so?.product?.product_name}
                             </p>
-                            <p className="text-base">{15}</p>
+                            <div className="flex justify-between w-full px-10">
+                              <p className="text-base text-blue-500 font-bold">
+                                รับเข้า
+                              </p>
+                              <p className="text-base">{15}</p>
+                            </div>
+                            <div className="flex justify-between w-full px-10">
+                              <p className="text-base text-blue-500 font-bold">
+                                จำนวน
+                              </p>
+                              <p className="text-base">{15}</p>
+                            </div>
+                            <div className="flex justify-between w-full px-10">
+                              <p className="text-base text-blue-500 font-bold">
+                                เลขคีย์ใบซื้อ
+                              </p>
+                              <p className="text-base">{15}</p>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="py-4 text-lg border-r-2 border-blue-400">
-                        <div>
-                          <p className="text-xl font-bold">15</p>
+                        </td>
+                        <td className="py-4 text-lg border-r-2 border-blue-400">
+                          <div>
+                            <p className="text-xl font-bold">{so.so_amount}</p>
+                            <p className="text-base text-blue-500">ใบขาว</p>
+                          </div>
+                        </td>
+                        <td className="py-4 text-lg border-r-2 border-blue-400">
+                          <p className="text-2xl font-bold text-red-600">2</p>
+                        </td>
+                        <td className="py-4 text-lg border-r-2 border-blue-400">
+                          <p className="text-xl font-bold">{so.so_unit}</p>
                           <p className="text-base text-blue-500">ใบขาว</p>
-                        </div>
-                      </td>
-                      <td className="py-4 text-lg border-r-2 border-blue-400">
-                        <p className="text-2xl font-bold text-red-600">2</p>
-                      </td>
-                      <td className="py-4 text-lg border-r-2 border-blue-400">
-                        <p className="text-xl font-bold">ขวด</p>
-                        <p className="text-base text-blue-500">ใบขาว</p>
-                      </td>
-                      <td className="py-4 text-lg border-r-2 border-blue-400">
-                        <div className="flex items-center justify-center">
-                          <img src={incorect} className="w-12"></img>
-                        </div>
-                      </td>
-                      <td className="py-4 text-sm border-r-2 border-blue-400 ">
-                        <div className="flex flex-col space-y-1 px-2">
-                          <label className="inline-flex items-center space-x-2">
-                            <input
-                              type="radio"
-                              name={`qc_status_`}
-                              value="ขาด"
-                              className="text-blue-600"
-                            />
-                            <span className="text-base font-bold text-blue-800">
-                              ขาด
-                            </span>
-                          </label>
+                        </td>
+                        <td className="py-4 text-lg border-r-2 border-blue-400">
+                          <div className="flex items-center justify-center">
+                            <img src={incorect} className="w-12"></img>
+                          </div>
+                        </td>
+                        <td className="py-4 text-sm border-r-2 border-blue-400 ">
+                          <div className="flex flex-col space-y-1 px-2">
+                            <label className="inline-flex items-center space-x-2">
+                              <input
+                                type="radio"
+                                name={`qc_status_`}
+                                value="ขาด"
+                                className="text-blue-600"
+                              />
+                              <span className="text-base font-bold text-blue-800">
+                                ขาด
+                              </span>
+                            </label>
 
-                          <label className="inline-flex items-center space-x-2">
-                            <input
-                              type="radio"
-                              name={`qc_status_`}
-                              value="ไม่ครบ"
-                              className="text-blue-600"
-                            />
-                            <span className="text-base font-bold text-green-700">
-                              ไม่ครบ
-                            </span>
-                          </label>
+                            <label className="inline-flex items-center space-x-2">
+                              <input
+                                type="radio"
+                                name={`qc_status_`}
+                                value="ไม่ครบ"
+                                className="text-blue-600"
+                              />
+                              <span className="text-base font-bold text-green-700">
+                                ไม่ครบ
+                              </span>
+                            </label>
 
-                          <label className="inline-flex items-center space-x-2">
-                            <input
-                              type="radio"
-                              name={`qc_status_`}
-                              value="หยิบผิด"
-                              className="text-blue-600"
-                            />
-                            <span className="text-base font-bold text-blue-500">
-                              หยิบผิด
-                            </span>
-                          </label>
+                            <label className="inline-flex items-center space-x-2">
+                              <input
+                                type="radio"
+                                name={`qc_status_`}
+                                value="หยิบผิด"
+                                className="text-blue-600"
+                              />
+                              <span className="text-base font-bold text-blue-500">
+                                หยิบผิด
+                              </span>
+                            </label>
 
-                          <label className="inline-flex items-center space-x-2">
-                            <input
-                              type="radio"
-                              name={`qc_status_`}
-                              value="หยิบเกิน"
-                              className="text-blue-600"
-                            />
-                            <span className="text-base font-bold text-orange-500">
-                              หยิบเกิน
-                            </span>
-                          </label>
+                            <label className="inline-flex items-center space-x-2">
+                              <input
+                                type="radio"
+                                name={`qc_status_`}
+                                value="หยิบเกิน"
+                                className="text-blue-600"
+                              />
+                              <span className="text-base font-bold text-orange-500">
+                                หยิบเกิน
+                              </span>
+                            </label>
 
-                          <label className="inline-flex items-center space-x-2">
-                            <input
-                              type="radio"
-                              name={`qc_status_`}
-                              value="ไม่มีของ"
-                              className="text-blue-600"
-                            />
-                            <span className="text-base font-bold text-red-600">
-                              ไม่มีของ
-                            </span>
-                          </label>
-                        </div>
-                      </td>
-                      <td className="py-4 text-lg">
-                        <div className="flex flex-col space-y-2 px-3">
-                          <button className="bg-blue-500 p-1 rounded-lg text-base text-white hover:bg-blue-600 cursor-pointer">
-                            ขอใหม่
-                          </button>
-                          <button className="bg-red-500 p-1 rounded-lg text-base text-white hover:bg-red-600 cursor-pointer">
-                            ส่ง RT
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                            <label className="inline-flex items-center space-x-2">
+                              <input
+                                type="radio"
+                                name={`qc_status_`}
+                                value="ไม่มีของ"
+                                className="text-blue-600"
+                              />
+                              <span className="text-base font-bold text-red-600">
+                                ไม่มีของ
+                              </span>
+                            </label>
+                          </div>
+                        </td>
+                        <td className="py-4 text-lg">
+                          <div className="flex flex-col space-y-2 px-3">
+                            <button className="bg-blue-500 p-1 rounded-lg text-base text-white hover:bg-blue-600 cursor-pointer">
+                              ขอใหม่
+                            </button>
+                            <button className="bg-red-500 p-1 rounded-lg text-base text-white hover:bg-red-600 cursor-pointer">
+                              ส่ง RT
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      )}) 
+                   : <tr></tr>
+                    }
                   </tbody>
                 </table>
               </div>
             </div>
-            <div className="col-span-1 bg-blue-50 rounded-xl">Test</div>
+            <div className="col-span-1 bg-blue-50 rounded-xl self-start">Test</div>
           </div>
         </div>
       </div>
