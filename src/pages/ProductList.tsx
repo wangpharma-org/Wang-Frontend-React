@@ -50,7 +50,7 @@ function ProductList() {
   const navigate = useNavigate();
   const mem_code = new URLSearchParams(window.location.search).get("mem_code");
   const { userInfo, logout } = useAuth();
-
+  const [floorCounts, setFloorCounts] = useState<Record<string, number>>({});
   const popupRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [openMenu, setOpenMenu] = useState(false);
@@ -105,6 +105,27 @@ function ProductList() {
       setCanSubmit(!hasPending);
     }
     console.log(listproduct);
+
+    if (listproduct) {
+      const floorCountMap: Record<string, number> = {};
+      listproduct.shoppingHeads.forEach((head) => {
+        head.shoppingOrders.forEach((order) => {
+          const status = order.picking_status;
+          const unit = order.so_unit || "";
+          const isBox = unit.includes("ลัง");
+    
+          if (status !== "picking") {
+            const floorKey = isBox
+              ? "box"
+              : order.product.product_floor || "1";
+            floorCountMap[floorKey] = (floorCountMap[floorKey] || 0) + 1;
+          }
+        });
+      });
+      setFloorCounts(floorCountMap);
+      console.log("จำนวนสินค้าที่ยังไม่ถูก pick ตามแต่ละชั้น (รวม box):", floorCountMap);
+    }
+    
   }, [listproduct]);
 
   useEffect(() => {
@@ -218,7 +239,7 @@ function ProductList() {
     { label: "3", value: "3", color: "bg-blue-500" },
     { label: "4", value: "4", color: "bg-red-500" },
     { label: "5", value: "5", color: "bg-emerald-500" },
-    { label: "ยกลัง", value: "box", color: "bg-purple-500" }, // ถ้าคุณจะใช้ type พิเศษ
+    { label: "ยกลัง", value: "box", color: "bg-purple-500" },
   ];
 
   const Btnlogout = () => {
@@ -424,9 +445,15 @@ function ProductList() {
           <div>
             {listproduct.shoppingHeads.some((head) =>
               head.shoppingOrders.some((orderItem) => {
-                const matchFloor = selectedFloor
-                  ? (orderItem.product.product_floor || "1") === selectedFloor
-                  : true;
+                const matchFloor = !selectedFloor || (() => {
+                  const unit = orderItem.so_unit || "";
+                  const floor = orderItem.product.product_floor || "1";
+                
+                  if (selectedFloor === "box") {
+                    return unit.includes("ลัง");
+                  }
+                  return floor === selectedFloor;
+                })();
 
                 const matchSearch =
                   !search ||
@@ -452,10 +479,15 @@ function ProductList() {
                     >
                       {head.shoppingOrders
                         .filter((orderItem) => {
-                          const matchFloor = selectedFloor
-                            ? (orderItem.product.product_floor || "1") ===
-                              selectedFloor
-                            : true;
+                          const matchFloor = !selectedFloor || (() => {
+                            const unit = orderItem.so_unit || "";
+                            const floor = orderItem.product.product_floor || "1";
+                          
+                            if (selectedFloor === "box") {
+                              return unit.includes("ลัง");
+                            }
+                            return floor === selectedFloor;
+                          })();
 
                           const matchSearch =
                             !search ||
@@ -539,7 +571,7 @@ function ProductList() {
                     prev === btn.value ? null : btn.value
                   )
                 }
-                className={`border border-gray-500 py-1 px-1 rounded-sm shadow-lg w-full mx-1
+                className={`border border-gray-500 py-1 px-1 rounded-sm shadow-lg w-full flex justify-center mx-1 relative
                             ${btn.color} 
                             ${
                               selectedFloor === btn.value
@@ -547,7 +579,14 @@ function ProductList() {
                                 : ""
                             }`}
               >
-                {btn.label}
+                <div className="flex text-center gap-2">
+                  <span className="text-white font-medium ">
+                    {btn.label}
+                  </span>
+                </div>
+                <span className="absolute -top-3 -right-1 text-[12px] bg-white text-black font-bold rounded-full px-2 py-0.5 shadow-sm">
+                      {floorCounts[String(btn.value)] || 0}
+                </span>
               </button>
             ))}
           </div>
