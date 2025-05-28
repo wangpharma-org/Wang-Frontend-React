@@ -106,7 +106,7 @@ function ProductList() {
     }
     console.log(listproduct);
 
-    if (listproduct) {
+    if (listproduct && Array.isArray(listproduct.shoppingHeads)) {
       const floorCountMap: Record<string, number> = {};
       listproduct.shoppingHeads.forEach((head) => {
         head.shoppingOrders.forEach((order) => {
