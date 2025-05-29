@@ -7,7 +7,9 @@ import { io, Socket } from "socket.io-client";
 import Modal from "../components/ModalQC";
 import Barcode from "react-barcode";
 import axios from "axios";
-import { data } from "react-router";
+import prepareIcon from "../assets/received.png";
+import QCIcon from "../assets/quality-control.png";
+import PackingIcon from "../assets/package-delivered.png";
 
 export interface Root {
   sh_running: string;
@@ -39,6 +41,14 @@ export interface Product {
   product_stock: string;
   product_image_url: string;
   so_picking_time: string;
+  attribute: ProductAttr[];
+}
+
+export interface ProductAttr {
+  product_att_id: number;
+  product_code: string;
+  product_img_url: string;
+  created_at: string;
 }
 
 export interface Members {
@@ -46,6 +56,17 @@ export interface Members {
   mem_name: string;
   mem_note: string;
   province: string;
+}
+
+export interface Employees {
+  emp_id: number;
+  emp_code: string;
+  created_at: string;
+  updated_at: string;
+  emp_name: string;
+  emp_nickname: string;
+  emp_tel: string | null;
+  emp_floor: string | null;
 }
 
 export type ShoppingHead = Root[];
@@ -70,8 +91,38 @@ const QCDashboard = () => {
   const [RT, setRT] = useState<number>(0);
   const [order, setOrder] = useState<ShoppingOrder[]>([]);
   const inputBill = useRef<HTMLInputElement>(null);
+  const inputBarcode = useRef<HTMLInputElement>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [orderForQC, setOrderForQC] = useState<ShoppingOrder>();
+  const [countBox, setCountBox] = useState<number>(0);
+
+  // State ของ Input พนักงาน
+  const [prepareEmp, setPrepareEmp] = useState<Employees>();
+  const [QCEmp, setQCEmp] = useState<Employees>();
+  const [packedEMP, setPackedEmp] = useState<Employees>();
+  const [inputPrepare, setInputPrepare] = useState<string>("");
+  const [inputQC, setInputQC] = useState<string>("");
+  const [inputPacked, setInputPacked] = useState<string>("");
+
+  useEffect(() => {
+    if (prepareEmp?.emp_code) {
+      setInputPrepare(
+        `${prepareEmp.emp_code} ${prepareEmp.emp_nickname || ""}`
+      );
+    }
+  }, [prepareEmp]);
+
+  useEffect(() => {
+    if (QCEmp?.emp_code) {
+      setInputQC(`${QCEmp.emp_code} ${QCEmp.emp_nickname || ""}`);
+    }
+  }, [QCEmp]);
+
+  useEffect(() => {
+    if (packedEMP?.emp_code) {
+      setInputPacked(`${packedEMP.emp_code} ${packedEMP.emp_nickname || ""}`);
+    }
+  }, [packedEMP]);
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
@@ -103,6 +154,20 @@ const QCDashboard = () => {
       setDataQC(null);
       setLoading(true);
     });
+
+    const prepareEmpData = sessionStorage.getItem("prepare-emp");
+    const QCEmpData = sessionStorage.getItem("qc-emp");
+    const packedEmpData = sessionStorage.getItem("packed-emp");
+
+    if (prepareEmpData) {
+      setPrepareEmp(JSON.parse(prepareEmpData));
+    }
+    if (QCEmpData) {
+      setQCEmp(JSON.parse(QCEmpData));
+    }
+    if (packedEmpData) {
+      setPackedEmp(JSON.parse(packedEmpData));
+    }
 
     return () => {
       newSocket.disconnect();
@@ -214,12 +279,57 @@ const QCDashboard = () => {
       const data = await axios.get(
         `${import.meta.env.VITE_API_URL_ORDER}/api/qc/get-order/${so_running}`
       );
+
       setOrderForQC(data.data);
     } else {
       console.log("ไม่พบ barcode นี้ใน order");
     }
+    if (inputBarcode.current) {
+      inputBarcode.current.value = "";
+    }
     // const so_running = order.find()
     // const data = await axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/qc/${}`)
+  };
+
+  const handleModalClose = () => {
+    setModalOpen(false);
+    inputBarcode.current?.focus();
+  };
+
+  const handleGetDataEmp = async (emp_code: string, type_emp: string) => {
+    const data = await axios.get(
+      `${import.meta.env.VITE_API_URL_ORDER}/api/qc/get-emp/${emp_code}`
+    );
+    if (type_emp === "prepare-emp" && data) {
+      sessionStorage.setItem("prepare-emp", JSON.stringify(data.data));
+      setPrepareEmp(data.data);
+    } else if (type_emp === "qc-emp" && data) {
+      sessionStorage.setItem("qc-emp", JSON.stringify(data.data));
+      setQCEmp(data.data);
+    } else if (type_emp === "packed-emp" && data) {
+      sessionStorage.setItem("packed-emp", JSON.stringify(data.data));
+      setPackedEmp(data.data);
+    } else {
+      return;
+    }
+  };
+
+  const handleClearEmpData = (type_emp: string) => {
+    if (type_emp === "prepare-emp") {
+      sessionStorage.removeItem("prepare-emp");
+      setPrepareEmp(undefined);
+      setInputPrepare("");
+    } else if (type_emp === "qc-emp") {
+      sessionStorage.removeItem("qc-emp");
+      setQCEmp(undefined);
+      setInputQC("");
+    } else if (type_emp === "packed-emp") {
+      sessionStorage.removeItem("packed-emp");
+      setPackedEmp(undefined);
+      setInputPacked("");
+    } else {
+      return;
+    }
   };
 
   useEffect(() => {
@@ -231,9 +341,6 @@ const QCDashboard = () => {
 
   return (
     <div>
-      <button className="bg-amber-500 px-3" onClick={() => setModalOpen(true)}>
-        เปิด Modal
-      </button>
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)}>
         <div className="flex justify-between border-b-2 pb-3 border-gray-200">
           <div className="text-red-600">
@@ -282,7 +389,9 @@ const QCDashboard = () => {
                   />
                 </div>
               </div>
-              <p className="text-2xl font-bold">{43345434}</p>
+              <p className="text-2xl font-bold">
+                {orderForQC?.product?.product_code}
+              </p>
               <p className="text-xl mt-2 font-bold">
                 {orderForQC?.product?.product_name}
               </p>
@@ -337,14 +446,17 @@ const QCDashboard = () => {
               <div className="flex w-full justify-center mt-5">
                 <div className="flex gap-2 items-center">
                   <p className="text-xl">จำนวนสั่งซื้อ</p>
-                  <input className="border-3 text-4xl w-56 border-green-600 rounded-sm text-center text-green-800 font-bold" value={orderForQC?.so_qc_amount}></input>
+                  <input
+                    className="border-3 text-4xl w-56 border-green-600 rounded-sm text-center text-green-800 font-bold"
+                    value={orderForQC?.so_qc_amount}
+                  ></input>
                   <p className="text-xl">{orderForQC?.so_unit}</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-12 mt-15 border-b-2 pb-4 border-gray-200">
+        <div className="grid grid-cols-2 gap-12 mt-5 border-b-2 pb-4 border-gray-200">
           <div className="p-2 bg-blue-500 text-white font-bold text-base rounded-sm">
             เช็ค Lot สินค้าให้เป็น Lot เดียวกันทุกตัว ลูกคืนคืนถ้า Lot
             ไม่ต้องการ
@@ -353,8 +465,9 @@ const QCDashboard = () => {
             <label className="inline-flex items-center space-x-2">
               <input
                 type="radio"
-                name={`qc_status_`}
+                name={`qc_status_${orderForQC?.so_running}`}
                 value="ขาด"
+                defaultChecked={orderForQC?.so_qc_note === "ขาด"}
                 className="text-blue-600"
               />
               <span className="text-base font-bold text-blue-800">ขาด</span>
@@ -363,7 +476,8 @@ const QCDashboard = () => {
             <label className="inline-flex items-center space-x-2">
               <input
                 type="radio"
-                name={`qc_status_`}
+                name={`qc_status_${orderForQC?.so_running}`}
+                defaultChecked={orderForQC?.so_qc_note === "ไม่ครบ"}
                 value="ไม่ครบ"
                 className="text-blue-600"
               />
@@ -373,7 +487,8 @@ const QCDashboard = () => {
             <label className="inline-flex items-center space-x-2">
               <input
                 type="radio"
-                name={`qc_status_`}
+                name={`qc_status_${orderForQC?.so_running}`}
+                defaultChecked={orderForQC?.so_qc_note === "หยิบผิด"}
                 value="หยิบผิด"
                 className="text-blue-600"
               />
@@ -383,7 +498,8 @@ const QCDashboard = () => {
             <label className="inline-flex items-center space-x-2">
               <input
                 type="radio"
-                name={`qc_status_`}
+                name={`qc_status_${orderForQC?.so_running}`}
+                defaultChecked={orderForQC?.so_qc_note === "หยิบเกิน"}
                 value="หยิบเกิน"
                 className="text-blue-600"
               />
@@ -395,23 +511,43 @@ const QCDashboard = () => {
             <label className="inline-flex items-center space-x-2">
               <input
                 type="radio"
-                name={`qc_status_`}
+                name={`qc_status_${orderForQC?.so_running}`}
+                defaultChecked={orderForQC?.so_qc_note === "ไม่มีของ"}
                 value="ไม่มีของ"
                 className="text-blue-600"
               />
               <span className="text-base font-bold text-red-600">ไม่มีของ</span>
             </label>
-            <button className="px-2 bg-green-500 py-1 rounded-lg text-white font-bold hover:bg-green-600 cursor-pointer">
+            <button className="px-2 bg-blue-500 py-1 rounded-lg text-white font-bold hover:bg-blue-600 cursor-pointer">
               เคลียร์ค่า
             </button>
           </div>
         </div>
-        {/* <button
-          onClick={() => setModalOpen(false)}
-          className="mt-4 bg-green-600 text-white px-4 py-2 rounded-md"
-        >
-          ปิด
-        </button> */}
+        <div className="mt-4 flex justify-center gap-5">
+          {orderForQC?.product?.attribute?.slice(0, 4).map((url) => {
+            return (
+              <img
+                src={url.product_img_url}
+                alt=""
+                className="h-50 drop-shadow-xl rounded-sm"
+              />
+            );
+          })}
+        </div>
+        <div className="flex gap-10 w-full justify-center">
+          <button
+            onClick={() => setModalOpen(false)}
+            className="mt-4 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 cursor-pointer"
+          >
+            ตกลง
+          </button>
+          <button
+            onClick={handleModalClose}
+            className="mt-4 bg-red-700 text-white px-4 py-2 rounded-md hover:bg-red-800 cursor-pointer"
+          >
+            ยกเลิก
+          </button>
+        </div>
       </Modal>
       <div className="text-center">
         <h1 className="text-2xl font-bold text-center mt-7">
@@ -593,6 +729,7 @@ const QCDashboard = () => {
                   </p>
                 </div>
                 <input
+                  ref={inputBarcode}
                   className="col-span-6 border-orange-500 border-4 p-2 px-5 rounded-lg text-4xl text-center bg-orange-100"
                   placeholder="รหัสสินค้า / Barcode"
                   onKeyDown={(e) => {
@@ -727,7 +864,8 @@ const QCDashboard = () => {
                                 <label className="inline-flex items-center space-x-2">
                                   <input
                                     type="radio"
-                                    name={`qc_status_`}
+                                    name={`qc_status_${so.so_running}`}
+                                    defaultChecked={so.so_qc_note === "ขาด"}
                                     value="ขาด"
                                     className="text-blue-600"
                                   />
@@ -739,7 +877,8 @@ const QCDashboard = () => {
                                 <label className="inline-flex items-center space-x-2">
                                   <input
                                     type="radio"
-                                    name={`qc_status_`}
+                                    name={`qc_status_${so.so_running}`}
+                                    defaultChecked={so.so_qc_note === "ไม่ครบ"}
                                     value="ไม่ครบ"
                                     className="text-blue-600"
                                   />
@@ -751,7 +890,8 @@ const QCDashboard = () => {
                                 <label className="inline-flex items-center space-x-2">
                                   <input
                                     type="radio"
-                                    name={`qc_status_`}
+                                    name={`qc_status_${so.so_running}`}
+                                    defaultChecked={so.so_qc_note === "หยิบผิด"}
                                     value="หยิบผิด"
                                     className="text-blue-600"
                                   />
@@ -763,7 +903,8 @@ const QCDashboard = () => {
                                 <label className="inline-flex items-center space-x-2">
                                   <input
                                     type="radio"
-                                    name={`qc_status_`}
+                                    name={`qc_status_${so.so_running}`}
+                                    defaultChecked={so.so_qc_note === "หยิบเกิน"}
                                     value="หยิบเกิน"
                                     className="text-blue-600"
                                   />
@@ -775,7 +916,8 @@ const QCDashboard = () => {
                                 <label className="inline-flex items-center space-x-2">
                                   <input
                                     type="radio"
-                                    name={`qc_status_`}
+                                    name={`qc_status_${so.so_running}`}
+                                    defaultChecked={so.so_qc_note === "ไม่มีของ"}
                                     value="ไม่มีของ"
                                     className="text-blue-600"
                                   />
@@ -808,8 +950,126 @@ const QCDashboard = () => {
                 </table>
               </div>
             </div>
-            <div className="col-span-1 bg-blue-50 rounded-xl self-start">
-              Test
+            <div className="col-span-1 bg-blue-50 rounded-xl self-start flex-col justify-center py-3">
+              <div className="w-full mt-3">
+                <p>พนักงานเตรียมสินค้า</p>
+                <div className="grid grid-cols-4 px-3 gap-2 mt-2">
+                  <div
+                    className="col-span-1 bg-amber-600 rounded-sm flex justify-center p-2 hover:bg-amber-700 cursor-pointer"
+                    onClick={() => handleClearEmpData("prepare-emp")}
+                  >
+                    <img src={prepareIcon} className="w-6"></img>
+                  </div>
+                  <input
+                    className="col-span-3 bg-white text-lg justify-center text-center rounded-sm p-1 drop-shadow-sm"
+                    placeholder="พนักงานเตรียมสินค้า"
+                    value={inputPrepare}
+                    onChange={(e) => setInputPrepare(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleGetDataEmp(e.currentTarget.value, "prepare-emp");
+                      }
+                    }}
+                    readOnly={!!prepareEmp?.emp_code}
+                  ></input>
+                </div>
+              </div>
+
+              <div className="w-full mt-2">
+                <p>พนักงานตรวจสอบสินค้า</p>
+                <div className="grid grid-cols-4 px-3 gap-2 mt-2">
+                  <div
+                    className="col-span-1 bg-red-700 rounded-sm flex justify-center p-2 hover:bg-red-800 cursor-pointer"
+                    onClick={() => handleClearEmpData("qc-emp")}
+                  >
+                    <img src={QCIcon} className="w-6"></img>
+                  </div>
+                  <input
+                    className="col-span-3 bg-white text-lg justify-center text-center rounded-sm p-1 drop-shadow-sm"
+                    placeholder="พนักงานเตรียมสินค้า"
+                    onChange={(e) => setInputQC(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleGetDataEmp(e.currentTarget.value, "qc-emp");
+                      }
+                    }}
+                    value={inputQC}
+                    readOnly={!!QCEmp?.emp_code}
+                  ></input>
+                </div>
+              </div>
+
+              <div className="w-full mt-2">
+                <p>พนักงานแพ็คสินค้าลงลัง</p>
+                <div className="grid grid-cols-4 px-3 gap-2 mt-2">
+                  <div
+                    className="col-span-1 bg-green-600 rounded-sm flex justify-center p-2 hover:bg-green-700 cursor-pointer"
+                    onClick={() => handleClearEmpData("packed-emp")}
+                  >
+                    <img src={PackingIcon} className="w-6"></img>
+                  </div>
+                  <input
+                    className="col-span-3 bg-white text-lg justify-center text-center rounded-sm p-1 drop-shadow-sm"
+                    placeholder="พนักงานเตรียมสินค้า"
+                    value={inputPacked}
+                    readOnly={!!packedEMP?.emp_code}
+                    onChange={(e) => setInputPacked(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleGetDataEmp(e.currentTarget.value, "packed-emp");
+                      }
+                    }}
+                  ></input>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 mt-5 px-13 gap-5">
+                <div className="col-span-1">
+                  <input
+                    className="text-5xl drop-shadow-sm text-center font-semibold bg-white w-23 p-3.5 rounded-sm"
+                    value={countBox}
+                    onChange={(e) => {
+                      const rawValue = e.target.value;
+                      const numericValue = rawValue.replace(/\D/g, "");
+                      setCountBox(Number(numericValue));
+                    }}
+                  ></input>
+                </div>
+                <div className="col-span-1">
+                  <div
+                    className="bg-green-600 text-2xl font-bold text-white py-1 rounded-sm hover:bg-green-700 cursor-pointer select-none"
+                    onClick={() => setCountBox((prev) => prev + 1)}
+                  >
+                    +
+                  </div>
+                  <div
+                    className="bg-red-700 text-2xl font-bold text-white py-1 rounded-sm mt-1 hover:bg-red-800 cursor-pointer select-none"
+                    onClick={() =>
+                      countBox > 0 && setCountBox((prev) => prev - 1)
+                    }
+                  >
+                    -
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 px-13">
+                <div className="w-full bg-blue-500 text-base text-white p-1 font-bold rounded-sm hover:bg-blue-600 select-none cursor-pointer">
+                  ฝากขนส่งอื่น
+                </div>
+                <div className="w-full bg-amber-500 text-base text-white p-1 font-bold rounded-sm hover:bg-amber-600 select-none cursor-pointer mt-2">
+                  ฝากขนส่งอื่น
+                </div>
+                <div className="w-full bg-red-700 text-base text-white p-1 font-bold rounded-sm hover:bg-red-800 select-none cursor-pointer mt-2">
+                  ระวังแตก
+                </div>
+                <div className="w-full bg-yellow-500 text-base text-white p-1 font-bold rounded-sm hover:bg-yellow-600 select-none cursor-pointer mt-2">
+                  ติดตะกร้า รอลงลัง ส่งฟรี
+                </div>
+                <div className="w-full bg-green-500 text-base text-white p-3 font-bold rounded-sm hover:bg-green-600 select-none cursor-pointer mt-4">
+                  เสร็จสิ้น
+                </div>
+              </div>
             </div>
           </div>
         </div>
