@@ -26,7 +26,7 @@ export interface ShoppingOrder {
   emp_code_floor_picking: string;
   so_picking_time: string;
   so_qc_deficit: number;
-  so_qc_note: string;
+  so_qc_note: string | null;
   so_already_qc: string;
   so_qc_amount: number;
   product: Product;
@@ -103,6 +103,11 @@ const QCDashboard = () => {
   const [inputPrepare, setInputPrepare] = useState<string>("");
   const [inputQC, setInputQC] = useState<string>("");
   const [inputPacked, setInputPacked] = useState<string>("");
+
+  // State ของ Modal QC
+  const [qcNote, setQCNote] = useState<string | null>(null);
+  const [qcAmount, setQCAmount] = useState<number>(0);
+  const [oldQCAmount, setOldQCAmount] = useState<number>(0);
 
   useEffect(() => {
     if (prepareEmp?.emp_code) {
@@ -272,7 +277,7 @@ const QCDashboard = () => {
   };
 
   const handleScan = async (barcode: string) => {
-    const foundOrder = order.find((o) => o.product.product_barcode === barcode);
+    const foundOrder = order.find((o) => o.product.product_barcode === barcode && o.so_already_qc === "No");
     if (foundOrder) {
       const so_running = foundOrder.so_running;
       console.log("so_running ที่เจอ:", so_running);
@@ -332,10 +337,43 @@ const QCDashboard = () => {
     }
   };
 
+  const handleSubmitQC = async(
+    data: ShoppingOrder & {
+      emp_prepare_by: string;
+      emp_qc_by: string;
+      emp_packed_by: string;
+      mem_code: string | null;
+      sh_running: string | null;
+    }
+  ) => {
+    console.log(data);
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_URL_ORDER}/api/qc/update-qc`,
+      {
+        so_running: data.so_running,
+        so_qc_note: data.so_qc_note,
+        so_qc_amount: data.so_qc_amount + oldQCAmount,
+        so_amount: data.so_amount,
+        emp_prepare_by: data.emp_prepare_by,
+        emp_qc_by: data.emp_qc_by,
+        emp_packed_by: data.emp_packed_by,
+        mem_code: data.mem_code,
+        sh_running: data.sh_running,
+      }
+    );
+    console.log(response.status);
+    if(response.status === 201){
+      setModalOpen(false)
+    }
+  };
+
   useEffect(() => {
     console.log(orderForQC);
     if (orderForQC) {
       setModalOpen(true);
+      setQCNote(orderForQC.so_qc_note);
+      setQCAmount(orderForQC.so_amount - orderForQC.so_qc_amount);
+      setOldQCAmount(orderForQC.so_qc_amount);
     }
   }, [orderForQC]);
 
@@ -448,7 +486,12 @@ const QCDashboard = () => {
                   <p className="text-xl">จำนวนสั่งซื้อ</p>
                   <input
                     className="border-3 text-4xl w-56 border-green-600 rounded-sm text-center text-green-800 font-bold"
-                    value={orderForQC?.so_qc_amount}
+                    value={qcAmount}
+                    onChange={(e) => {
+                      const rawValue = e.target.value;
+                      const numericValue = rawValue.replace(/\D/g, "");
+                      setQCAmount(Number(numericValue));
+                    }}
                   ></input>
                   <p className="text-xl">{orderForQC?.so_unit}</p>
                 </div>
@@ -462,65 +505,32 @@ const QCDashboard = () => {
             ไม่ต้องการ
           </div>
           <div className="flex space-y-1 gap-4 items-center">
-            <label className="inline-flex items-center space-x-2">
-              <input
-                type="radio"
-                name={`qc_status_${orderForQC?.so_running}`}
-                value="ขาด"
-                defaultChecked={orderForQC?.so_qc_note === "ขาด"}
-                className="text-blue-600"
-              />
-              <span className="text-base font-bold text-blue-800">ขาด</span>
-            </label>
-
-            <label className="inline-flex items-center space-x-2">
-              <input
-                type="radio"
-                name={`qc_status_${orderForQC?.so_running}`}
-                defaultChecked={orderForQC?.so_qc_note === "ไม่ครบ"}
-                value="ไม่ครบ"
-                className="text-blue-600"
-              />
-              <span className="text-base font-bold text-green-700">ไม่ครบ</span>
-            </label>
-
-            <label className="inline-flex items-center space-x-2">
-              <input
-                type="radio"
-                name={`qc_status_${orderForQC?.so_running}`}
-                defaultChecked={orderForQC?.so_qc_note === "หยิบผิด"}
-                value="หยิบผิด"
-                className="text-blue-600"
-              />
-              <span className="text-base font-bold text-blue-500">หยิบผิด</span>
-            </label>
-
-            <label className="inline-flex items-center space-x-2">
-              <input
-                type="radio"
-                name={`qc_status_${orderForQC?.so_running}`}
-                defaultChecked={orderForQC?.so_qc_note === "หยิบเกิน"}
-                value="หยิบเกิน"
-                className="text-blue-600"
-              />
-              <span className="text-base font-bold text-orange-500">
-                หยิบเกิน
-              </span>
-            </label>
-
-            <label className="inline-flex items-center space-x-2">
-              <input
-                type="radio"
-                name={`qc_status_${orderForQC?.so_running}`}
-                defaultChecked={orderForQC?.so_qc_note === "ไม่มีของ"}
-                value="ไม่มีของ"
-                className="text-blue-600"
-              />
-              <span className="text-base font-bold text-red-600">ไม่มีของ</span>
-            </label>
-            <button className="px-2 bg-blue-500 py-1 rounded-lg text-white font-bold hover:bg-blue-600 cursor-pointer">
-              เคลียร์ค่า
-            </button>
+            <div className="flex space-y-1 gap-4 items-center">
+              {["ขาด", "ไม่ครบ", "หยิบผิด", "หยิบเกิน", "ไม่มีของ"].map(
+                (label) => (
+                  <label
+                    key={label}
+                    className="inline-flex items-center space-x-2"
+                  >
+                    <input
+                      type="radio"
+                      name={`qc_status_${orderForQC?.so_running}`}
+                      value={label}
+                      className="text-blue-600"
+                      checked={qcNote === label}
+                      onChange={(e) => setQCNote(e.target.value)}
+                    />
+                    <span className="text-base font-bold">{label}</span>
+                  </label>
+                )
+              )}
+              <button
+                className="px-2 bg-blue-500 py-1 rounded-lg text-white font-bold hover:bg-blue-600 cursor-pointer"
+                onClick={() => setQCNote(null)}
+              >
+                เคลียร์ค่า
+              </button>
+            </div>
           </div>
         </div>
         <div className="mt-4 flex justify-center gap-5">
@@ -536,7 +546,20 @@ const QCDashboard = () => {
         </div>
         <div className="flex gap-10 w-full justify-center">
           <button
-            onClick={() => setModalOpen(false)}
+            onClick={() => {
+              if (orderForQC && prepareEmp && packedEMP && QCEmp) {
+                handleSubmitQC({
+                  ...orderForQC,
+                  so_qc_note: qcNote,
+                  so_qc_amount: qcAmount,
+                  emp_prepare_by: prepareEmp.emp_code,
+                  emp_packed_by: packedEMP.emp_code,
+                  emp_qc_by: QCEmp.emp_code,
+                  sh_running: Array.isArray(dataQC) ? null : dataQC?.sh_running,
+                  mem_code: Array.isArray(dataQC) ? dataQC.length > 0 ? dataQC[0]?.members?.mem_code : null : null
+                });
+              }
+            }}
             className="mt-4 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 cursor-pointer"
           >
             ตกลง
@@ -756,11 +779,11 @@ const QCDashboard = () => {
                       <th className="p-2">พิมพ์จองสินค้า</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white py-5">
+                  <tbody className="py-5">
                     {order?.length > 0 ? (
                       order.map((so, index) => {
                         return (
-                          <tr className="hover:bg-gray-50 border-b-2 border-blue-200">
+                          <tr className={`  border-b-2 border-blue-200 ${so.so_already_qc === "Yes" ? "bg-green-100 hover:bg-green-100" : "bg-white hover:bg-gray-50"}`}>
                             <td className="py-4 text-lg border-r-2 border-blue-200 font-semibold px-2">
                               {index + 1}
                             </td>
@@ -840,14 +863,14 @@ const QCDashboard = () => {
                             <td className="py-4 text-lg border-r-2 border-blue-200">
                               <div>
                                 <p className="text-xl font-bold">
-                                  {so.so_amount - so.so_qc_amount}
+                                  {so.so_amount}
                                 </p>
                                 <p className="text-base text-blue-500">ใบขาว</p>
                               </div>
                             </td>
                             <td className="py-4 text-lg border-r-2 border-blue-200">
                               <p className="text-2xl font-bold text-red-600">
-                                2
+                                {so.so_amount - so.so_qc_amount}
                               </p>
                             </td>
                             <td className="py-4 text-lg border-r-2 border-blue-200">
@@ -856,7 +879,14 @@ const QCDashboard = () => {
                             </td>
                             <td className="py-4 text-lg border-r-2 border-blue-200">
                               <div className="flex items-center justify-center">
-                                <img src={incorect} className="w-10"></img>
+                                <img
+                                  src={
+                                    so.so_already_qc === "Yes"
+                                      ? accept
+                                      : incorect
+                                  }
+                                  className="w-10"
+                                ></img>
                               </div>
                             </td>
                             <td className="py-4 text-sm border-r-2 border-blue-200">
@@ -865,7 +895,7 @@ const QCDashboard = () => {
                                   <input
                                     type="radio"
                                     name={`qc_status_${so.so_running}`}
-                                    defaultChecked={so.so_qc_note === "ขาด"}
+                                    checked={so.so_qc_note === "ขาด"}
                                     value="ขาด"
                                     className="text-blue-600"
                                   />
@@ -878,7 +908,7 @@ const QCDashboard = () => {
                                   <input
                                     type="radio"
                                     name={`qc_status_${so.so_running}`}
-                                    defaultChecked={so.so_qc_note === "ไม่ครบ"}
+                                    checked={so.so_qc_note === "ไม่ครบ"}
                                     value="ไม่ครบ"
                                     className="text-blue-600"
                                   />
@@ -891,7 +921,7 @@ const QCDashboard = () => {
                                   <input
                                     type="radio"
                                     name={`qc_status_${so.so_running}`}
-                                    defaultChecked={so.so_qc_note === "หยิบผิด"}
+                                    checked={so.so_qc_note === "หยิบผิด"}
                                     value="หยิบผิด"
                                     className="text-blue-600"
                                   />
@@ -904,7 +934,9 @@ const QCDashboard = () => {
                                   <input
                                     type="radio"
                                     name={`qc_status_${so.so_running}`}
-                                    defaultChecked={so.so_qc_note === "หยิบเกิน"}
+                                    checked={
+                                      so.so_qc_note === "หยิบเกิน"
+                                    }
                                     value="หยิบเกิน"
                                     className="text-blue-600"
                                   />
@@ -917,7 +949,9 @@ const QCDashboard = () => {
                                   <input
                                     type="radio"
                                     name={`qc_status_${so.so_running}`}
-                                    defaultChecked={so.so_qc_note === "ไม่มีของ"}
+                                    checked={
+                                      so.so_qc_note === "ไม่มีของ"
+                                    }
                                     value="ไม่มีของ"
                                     className="text-blue-600"
                                   />
@@ -925,9 +959,6 @@ const QCDashboard = () => {
                                     ไม่มีของ
                                   </span>
                                 </label>
-                                <button className="px-2 bg-green-500 py-1 rounded-lg mt-1 text-white font-bold hover:bg-green-600 cursor-pointer">
-                                  เคลียร์ค่า
-                                </button>
                               </div>
                             </td>
                             <td className="py-4 text-lg">
