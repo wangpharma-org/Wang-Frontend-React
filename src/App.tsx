@@ -17,6 +17,8 @@ import EmployeeStatisticsPage from "./pages/EmployeeStatisticsPage";
 import VerifyOrder from "./pages/VerifyOrder";
 import ReportEmployee from "./pages/ReportEmployee";
 import QCDashboard from "./pages/QC-Dashboard";
+import FragilePrint from "./components/FragilePrint";
+import SpecialExpressPrint from "./pages/SpecialExpress";
 
 function App() {
   return (
@@ -41,6 +43,18 @@ function App() {
                 <Navbar />
                 <Login />
               </div>
+            }
+          />
+          <Route
+            path="/fragileprint"
+            element={
+              <FragilePrint />
+            }
+          />
+          <Route
+            path="/special"
+            element={
+              <SpecialExpressPrint />
             }
           />
           <Route

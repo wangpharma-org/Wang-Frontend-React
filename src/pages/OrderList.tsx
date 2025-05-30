@@ -42,6 +42,12 @@ interface orderList {
   picking_status: string;
   province: string;
   shoppingHeads: ShoppingHead[];
+  mem_route: MemRoute;
+}
+
+interface MemRoute {
+  route_code: string;
+  route_name: string;
 }
 
 type PickingTime = {
@@ -264,7 +270,7 @@ const OrderList = () => {
     const matchRoute =
       selectroute === "all" ||
       selectroute === "เลือกเส้นทางขนส่ง" ||
-      order.province === selectroute;
+      order.mem_route.route_code === selectroute;
 
     return matchSearch && matchFloor && matchRoute;
   });
@@ -347,37 +353,36 @@ const OrderList = () => {
     catch{
       console.error("error");
     }
-
   }
 
   const routeButtons = [
     { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
-    { id: 2, name: "หาดใหญ่", value: "หาดใหญ่" },
-    { id: 3, name: "สงขลา", value: "สงขลา" },
-    { id: 4, name: "สะเดา", value: "สะเดา" },
-    { id: 5, name: "สทิงพระ", value: "สทิงพระ" },
-    { id: 6, name: "นครศรีธรรมราช", value: "นครศรีธรรมราช" },
-    { id: 7, name: "กระบี่", value: "กระบี่" },
-    { id: 8, name: "ภูเก็ต", value: "ภูเก็ต" },
-    { id: 9, name: "สุราษฎร์ธานี", value: "สุราษฎร์ธานี" },
-    { id: 10, name: "ยาแห้ง ส่งฟรี ทั่วไทย", value: "ยาแห้ง ส่งฟรี ทั่วไทย" },
-    { id: 11, name: "พังงา", value: "พังงา" },
-    { id: 12, name: "เกาะสมุย", value: "เกาะสมุย" },
-    { id: 13, name: "พัทลุง-นคร", value: "พัทลุง-นคร" },
-    { id: 14, name: "ปัตตานี", value: "ปัตตานี" },
-    { id: 15, name: "ชุมพร", value: "ชุมพร" },
-    { id: 16, name: "เกาะลันตา", value: "เกาะลันตา" },
-    { id: 17, name: "เกาะพะงัน", value: "เกาะพะงัน" },
-    { id: 18, name: "สตูล", value: "สตูล" },
-    { id: 19, name: "พัทลุง", value: "พัทลุง" },
-    { id: 20, name: "พัทลุง VIP", value: "พัทลุง VIP" },
-    { id: 21, name: "นราธิวาส", value: "นราธิวาส" },
-    { id: 22, name: "สุไหงโกลก", value: "สุไหงโกลก" },
-    { id: 23, name: "ยะลา", value: "ยะลา" },
-    { id: 24, name: "เบตง", value: "เบตง" },
-    { id: 25, name: "ตรัง", value: "ตรัง" },
-    { id: 26, name: "กระบี่-ตรัง", value: "กระบี่-ตรัง" },
-    { id: 27, name: "Office รับเอง", value: "Office รับเอง" },
+    { id: 2, name: "หาดใหญ่", value: "L1-1" },
+    { id: 3, name: "สงขลา", value: "L1-2" },
+    { id: 4, name: "สะเดา", value: "L1-3" },
+    { id: 5, name: "สทิงพระ", value: "L1-5" },
+    { id: 6, name: "นครศรีธรรมราช", value: "L10" },
+    { id: 7, name: "กระบี่", value: "L11" },
+    { id: 8, name: "ภูเก็ต", value: "L12" },
+    { id: 9, name: "สุราษฎร์ธานี", value: "L13" },
+    { id: 10, name: "ยาแห้ง ส่งฟรี ทั่วไทย", value: "L16" },
+    { id: 11, name: "พังงา", value: "L17" },
+    { id: 12, name: "เกาะสมุย", value: "L18" },
+    { id: 13, name: "พัทลุง-นคร", value: "L19" },
+    { id: 14, name: "ปัตตานี", value: "L2" },
+    { id: 15, name: "ชุมพร", value: "L20" },
+    { id: 16, name: "เกาะลันตา", value: "L21" },
+    { id: 17, name: "เกาะพะงัน", value: "L22" },
+    { id: 18, name: "สตูล", value: "L3" },
+    { id: 19, name: "พัทลุง", value: "L4" },
+    { id: 20, name: "พัทลุง VIP", value: "L4-1" },
+    { id: 21, name: "นราธิวาส", value: "L5-1" },
+    { id: 22, name: "สุไหงโกลก", value: "L5-2" },
+    { id: 23, name: "ยะลา", value: "L6" },
+    { id: 24, name: "เบตง", value: "L7" },
+    { id: 25, name: "ตรัง", value: "L9" },
+    { id: 26, name: "กระบี่-ตรัง", value: "L9-11" },
+    { id: 27, name: "Office รับเอง", value: "Office" },
   ];
 
   useEffect(() => {
@@ -657,7 +662,7 @@ const OrderList = () => {
                                   <p>{order.emp.emp_nickname}</p>
                                 </div>
                                 <div className="flex justify-center">
-                                  <p>({order.province})</p>
+                                  <p>({order.mem_route.route_name})</p>
                                 </div>
                                 <div className="flex justify-end pb-1">
                                   <p className="font-bold">

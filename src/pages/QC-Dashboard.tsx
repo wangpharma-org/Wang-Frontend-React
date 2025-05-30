@@ -1088,10 +1088,16 @@ const QCDashboard = () => {
                 <div className="w-full bg-blue-500 text-base text-white p-1 font-bold rounded-sm hover:bg-blue-600 select-none cursor-pointer">
                   ฝากขนส่งอื่น
                 </div>
-                <div className="w-full bg-amber-500 text-base text-white p-1 font-bold rounded-sm hover:bg-amber-600 select-none cursor-pointer mt-2">
-                  ฝากขนส่งอื่น
+                <div 
+                  className="w-full bg-amber-500 text-base text-white p-1 font-bold rounded-sm hover:bg-amber-600 select-none cursor-pointer mt-2"
+                  onClick={() => {window.open('/special')}}
+                >
+                  กรณีด่วนพิเศษ
                 </div>
-                <div className="w-full bg-red-700 text-base text-white p-1 font-bold rounded-sm hover:bg-red-800 select-none cursor-pointer mt-2">
+                <div 
+                  className="w-full bg-red-700 text-base text-white p-1 font-bold rounded-sm hover:bg-red-800 select-none cursor-pointer mt-2"
+                  onClick={()=>{window.open('/fragileprint')}}
+                >
                   ระวังแตก
                 </div>
                 <div className="w-full bg-yellow-500 text-base text-white p-1 font-bold rounded-sm hover:bg-yellow-600 select-none cursor-pointer mt-2">

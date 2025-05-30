@@ -50,7 +50,7 @@ const FormatSticker = () => {
     }, 1000);
     window.onafterprint = () => {
       localStorage.setItem("print_status", "done");
-      window.close();
+      // window.close();
     };
     return () => {
       clearTimeout(printTimeout);
