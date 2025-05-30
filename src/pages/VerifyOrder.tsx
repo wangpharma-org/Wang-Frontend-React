@@ -62,7 +62,7 @@ function VerifyOrder() {
   const [status, setStatus] = useState("");
   const [enabled, setEnabled] = useState(false);// false = white, true = yellow
   const inputRef = useRef<HTMLInputElement>(null);
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
 
 
@@ -108,6 +108,8 @@ function VerifyOrder() {
       console.error("❌ Failed to connect to server:", error.message);
       socket.emit("invoice:get");
     });
+
+    clearSearch(); // Clear the search input
   }, [])
 
   const fetchAllInvoices = useCallback(() => {
@@ -276,7 +278,7 @@ function VerifyOrder() {
     setIsOpen(false); // Close the dropdown after selection
     setStatus(status); // Set the selected status
     console.log("Selected status:", status);
-    clearSearch(); // Clear the search input
+
   };
 
   const toggleDropdown = () => {
