@@ -42,6 +42,14 @@ export interface Product {
   product_image_url: string;
   so_picking_time: string;
   attribute: ProductAttr[];
+  productDetail: ProductDetail;
+}
+
+export interface ProductDetail {
+  created_at: number;
+  purchase_entry_no: string;
+  quantity: number;
+  unit: string;
 }
 
 export interface ProductAttr {
@@ -56,6 +64,7 @@ export interface Members {
   mem_name: string;
   mem_note: string;
   province: string;
+  mem_route: MemRoute;
 }
 
 export interface Employees {
@@ -67,6 +76,11 @@ export interface Employees {
   emp_nickname: string;
   emp_tel: string | null;
   emp_floor: string | null;
+}
+
+export interface MemRoute {
+  route_code: string;
+  route_name: string;
 }
 
 export type ShoppingHead = Root[];
@@ -94,7 +108,8 @@ const QCDashboard = () => {
   const inputBarcode = useRef<HTMLInputElement>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [orderForQC, setOrderForQC] = useState<ShoppingOrder>();
-  const [countBox, setCountBox] = useState<number>(0);
+
+  const [countBox, setCountBox] = useState<number>(1);
 
   // State ของ Input พนักงาน
   const [prepareEmp, setPrepareEmp] = useState<Employees>();
@@ -108,6 +123,8 @@ const QCDashboard = () => {
   const [qcNote, setQCNote] = useState<string | null>(null);
   const [qcAmount, setQCAmount] = useState<number>(0);
   const [oldQCAmount, setOldQCAmount] = useState<number>(0);
+
+  const [isReady, setIsReady] = useState<boolean>(false);
 
   useEffect(() => {
     if (prepareEmp?.emp_code) {
@@ -178,6 +195,14 @@ const QCDashboard = () => {
       newSocket.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    if (packedEMP && prepareEmp && QCEmp) {
+      setIsReady(true);
+    } else{
+      setIsReady(false);
+    }
+  }, [packedEMP, prepareEmp, QCEmp]);
 
   useEffect(() => {
     if (socket && wantConnect) {
@@ -277,7 +302,14 @@ const QCDashboard = () => {
   };
 
   const handleScan = async (barcode: string) => {
-    const foundOrder = order.find((o) => o.product.product_barcode === barcode && o.so_already_qc === "No");
+    console.log(barcode);
+    console.log("order", order);
+    const foundOrder = order.find(
+      (o) =>
+        (o.product.product_barcode === barcode && o.so_already_qc !== "No") ||
+        (o.product.product_barcode === barcode &&
+          o.so_already_qc !== "Incomplete")
+    );
     if (foundOrder) {
       const so_running = foundOrder.so_running;
       console.log("so_running ที่เจอ:", so_running);
@@ -337,7 +369,7 @@ const QCDashboard = () => {
     }
   };
 
-  const handleSubmitQC = async(
+  const handleSubmitQC = async (
     data: ShoppingOrder & {
       emp_prepare_by: string;
       emp_qc_by: string;
@@ -362,8 +394,8 @@ const QCDashboard = () => {
       }
     );
     console.log(response.status);
-    if(response.status === 201){
-      setModalOpen(false)
+    if (response.status === 201) {
+      setModalOpen(false);
     }
   };
 
@@ -372,6 +404,7 @@ const QCDashboard = () => {
     if (orderForQC) {
       setModalOpen(true);
       setQCNote(orderForQC.so_qc_note);
+      console.log("so_qc_amount", orderForQC.so_qc_amount);
       setQCAmount(orderForQC.so_amount - orderForQC.so_qc_amount);
       setOldQCAmount(orderForQC.so_qc_amount);
     }
@@ -448,7 +481,7 @@ const QCDashboard = () => {
                   </p>
                 </div>
               </div>
-              <div className="flex justify-between px-30 mt-2">
+              {/* <div className="flex justify-between px-30 mt-2">
                 <div className="flex gap-2">
                   <p className="text-xl">ซื้อล่าสุด</p>
                   <p className="text-xl">วันที่</p>
@@ -457,12 +490,18 @@ const QCDashboard = () => {
                   <p className="text-xl">30.00</p>
                   <p className="text-xl">ขวด</p>
                 </div>
-              </div>
+              </div> */}
               <div className="flex w-full justify-center mt-5">
+                {orderForQC?.picking_status === "picking" ? 
                 <div className="flex gap-2 text-5xl">
                   <p>คนหยิบ</p>
-                  <p>นาย</p>
-                </div>
+                  <p>{orderForQC.emp_code_floor_picking}</p>
+                </div> 
+                :
+                <div className="flex gap-2 text-5xl">
+                  <p>ยังไม่จัด</p>
+                </div> 
+                }
               </div>
               <div className="flex w-full justify-center mt-6">
                 <div className="flex gap-2 text-4xl font">
@@ -556,7 +595,11 @@ const QCDashboard = () => {
                   emp_packed_by: packedEMP.emp_code,
                   emp_qc_by: QCEmp.emp_code,
                   sh_running: Array.isArray(dataQC) ? null : dataQC?.sh_running,
-                  mem_code: Array.isArray(dataQC) ? dataQC.length > 0 ? dataQC[0]?.members?.mem_code : null : null
+                  mem_code: Array.isArray(dataQC)
+                    ? dataQC.length > 0
+                      ? dataQC[0]?.members?.mem_code
+                      : null
+                    : null,
                 });
               }
             }}
@@ -598,7 +641,7 @@ const QCDashboard = () => {
                   : null;
 
                 return (
-                  <div key={index} className="bg-blue-400 p-2 rounded-lg mt-3">
+                  <div key={index} className={` p-2 rounded-lg mt-3 ${isReady ? 'bg-blue-400' : 'bg-gray-500'}`}>
                     <p className="text-lg text-white font-bold">
                       หมายเลขบิลที่ {index + 1}
                     </p>
@@ -606,6 +649,7 @@ const QCDashboard = () => {
                       <input
                         className="bg-white w-5/6 h-12 text-center placeholder-gray-500 rounded-sm text-xl"
                         placeholder="หมายเลขบิล"
+                        disabled={!isReady}
                         ref={index === 0 ? inputBill : null}
                         readOnly={isInputLocked}
                         onChange={(e) => {
@@ -621,7 +665,7 @@ const QCDashboard = () => {
                         value={InputValues[index]}
                       ></input>
                       <div className="px-4 py-2 bg-white rounded-sm">
-                        <p className="text-green-600 font-bold text-2xl">
+                        <p className={`font-bold text-2xl ${isReady ? "text-green-600" : "text-black"}`}>
                           {bill ? bill?.shoppingOrders?.length : "-"}
                         </p>
                       </div>
@@ -660,10 +704,10 @@ const QCDashboard = () => {
                         <p className="text-lg">
                           {Array.isArray(dataQC)
                             ? dataQC.length > 0
-                              ? dataQC[0]?.members?.province
+                              ? dataQC[0]?.members?.mem_route?.route_name
                               : "-"
                             : dataQC
-                            ? dataQC?.members?.province
+                            ? dataQC?.members?.mem_route?.route_name
                             : "-"}
                         </p>
                       </div>
@@ -781,199 +825,219 @@ const QCDashboard = () => {
                   </thead>
                   <tbody className="py-5">
                     {order?.length > 0 ? (
-                      order.map((so, index) => {
-                        return (
-                          <tr className={`  border-b-2 border-blue-200 ${so.so_already_qc === "Yes" ? "bg-green-100 hover:bg-green-100" : "bg-white hover:bg-gray-50"}`}>
-                            <td className="py-4 text-lg border-r-2 border-blue-200 font-semibold px-2">
-                              {index + 1}
-                            </td>
-                            <td className="py-4 text-lg border-r-2 border-blue-200">
-                              <div className="flex flex-col items-center justify-center text-center">
-                                <p className="text-lg">
-                                  ชั้น {so?.product?.product_floor || "ชั้น 1"}
-                                </p>
-                                <div
-                                  className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full mt-1 ${
-                                    so.product.product_floor === "5"
-                                      ? "bg-green-500"
-                                      : so.product.product_floor === "4"
-                                      ? "bg-red-500"
-                                      : so.product.product_floor === "3"
-                                      ? "bg-blue-500"
-                                      : so.product.product_floor === "2"
-                                      ? "bg-yellow-500"
-                                      : "bg-gray-400"
-                                  } `}
-                                ></div>
-                              </div>
-                            </td>
-                            <td className="py-4 text-lg border-r-2 border-blue-200 px-1">
-                              <div className="flex flex-col items-center justify-center text-center">
-                                <p className="text-lg">
-                                  {so?.product?.product_code}
-                                </p>
-                                <p
-                                  className={`text-base font-bold ${
-                                    so?.picking_status === "pending"
-                                      ? "text-red-600"
-                                      : "text-green-600"
-                                  }`}
-                                >
-                                  {so?.picking_status === "pending"
-                                    ? "ยังไม่จัด"
-                                    : "จัดแล้ว"}
-                                </p>
-                              </div>
-                            </td>
-                            <td className="py-4 text-lg border-r-2 border-blue-200">
-                              <div className="flex flex-col items-center justify-center text-center">
-                                <p className="text-lg">
-                                  {so?.product?.product_barcode}
-                                </p>
-                              </div>
-                            </td>
-                            <td className="py-4 text-lg border-r-2 border-blue-200">
-                              <div className="flex flex-col items-center justify-center text-center">
-                                <p className="text-lg pb-1.5">
-                                  {so?.product?.product_name}
-                                </p>
-                                <div className="w-full px-3.5">
-                                  <div className="border-t-2 border-blue-200 w-full mb-1.5"></div>
-                                </div>
-                                <div className="flex justify-between w-full px-10 ">
-                                  <p className="text-base text-blue-500 font-bold">
-                                    รับเข้า
+                      order
+                        .sort((a, b) => {
+                          const aDone = a.so_already_qc === "Yes" ? 1 : 0;
+                          const bDone = b.so_already_qc === "Yes" ? 1 : 0;
+                          return aDone - bDone;
+                        })
+                        .map((so, index) => {
+                          return (
+                            <tr
+                              className={`  border-b-2 border-blue-200 ${
+                                so.so_already_qc === "Yes"
+                                  ? "bg-green-100 hover:bg-green-100"
+                                  : "bg-white hover:bg-gray-50"
+                              }`}
+                            >
+                              <td className="py-4 text-lg border-r-2 border-blue-200 font-semibold px-2">
+                                {index + 1}
+                              </td>
+                              <td className="py-4 text-lg border-r-2 border-blue-200">
+                                <div className="flex flex-col items-center justify-center text-center">
+                                  <p className="text-lg">
+                                    ชั้น{" "}
+                                    {so?.product?.product_floor || "ชั้น 1"}
                                   </p>
-                                  <p className="text-base">{15}</p>
+                                  <div
+                                    className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full mt-1 ${
+                                      so.product.product_floor === "5"
+                                        ? "bg-green-500"
+                                        : so.product.product_floor === "4"
+                                        ? "bg-red-500"
+                                        : so.product.product_floor === "3"
+                                        ? "bg-blue-500"
+                                        : so.product.product_floor === "2"
+                                        ? "bg-yellow-500"
+                                        : "bg-gray-400"
+                                    } `}
+                                  ></div>
                                 </div>
-                                <div className="flex justify-between w-full px-10">
-                                  <p className="text-base text-blue-500 font-bold">
-                                    จำนวน
+                              </td>
+                              <td className="py-4 text-lg border-r-2 border-blue-200 px-1">
+                                <div className="flex flex-col items-center justify-center text-center">
+                                  <p className="text-lg">
+                                    {so?.product?.product_code}
                                   </p>
-                                  <p className="text-base">{15}</p>
-                                </div>
-                                <div className="flex justify-between w-full px-10">
-                                  <p className="text-base text-blue-500 font-bold">
-                                    เลขคีย์ใบซื้อ
+                                  <p
+                                    className={`text-base font-bold ${
+                                      so?.picking_status === "pending"
+                                        ? "text-red-600"
+                                        : "text-green-600"
+                                    }`}
+                                  >
+                                    {so?.picking_status === "pending"
+                                      ? "ยังไม่จัด"
+                                      : "จัดแล้ว"}
                                   </p>
-                                  <p className="text-base">{15}</p>
                                 </div>
-                              </div>
-                            </td>
-                            <td className="py-4 text-lg border-r-2 border-blue-200">
-                              <div>
+                              </td>
+                              <td className="py-4 text-lg border-r-2 border-blue-200">
+                                <div className="flex flex-col items-center justify-center text-center">
+                                  <p className="text-lg">
+                                    {so?.product?.product_barcode}
+                                  </p>
+                                </div>
+                              </td>
+                              <td className="py-4 text-lg border-r-2 border-blue-200">
+                                <div className="flex flex-col items-center justify-center text-center">
+                                  <p className="text-lg pb-1.5">
+                                    {so?.product?.product_name}
+                                  </p>
+                                  <div className="w-full px-3.5">
+                                    <div className="border-t-2 border-blue-200 w-full mb-1.5"></div>
+                                  </div>
+                                  <div className="flex justify-between w-full px-10 ">
+                                    <p className="text-base text-blue-500 font-bold">
+                                      รับเข้า
+                                    </p>
+                                    <div className="flex justify-center gap-1">
+                                      <p className="text-base text-blue-500 font-bold">
+                                        คงเหลือ
+                                      </p>
+                                      <p className="text-base">
+                                        {so.product.product_stock}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex justify-between w-full px-10">
+                                    <p className="text-base text-blue-500 font-bold">
+                                      จำนวน
+                                    </p>
+                                    {/* <p className="text-base">{15}</p> */}
+                                  </div>
+                                  <div className="flex justify-between w-full px-10">
+                                    <p className="text-base text-blue-500 font-bold">
+                                      เลขคีย์ใบซื้อ
+                                    </p>
+                                    {/* <p className="text-base">{15}</p> */}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-4 text-lg border-r-2 border-blue-200">
+                                <div>
+                                  <p className="text-xl font-bold">
+                                    {so.so_amount}
+                                  </p>
+                                  <p className="text-base text-blue-500">
+                                    ใบขาว
+                                  </p>
+                                </div>
+                              </td>
+                              <td className="py-4 text-lg border-r-2 border-blue-200">
+                                <p className="text-2xl font-bold text-red-600">
+                                  {so.so_amount - so.so_qc_amount}
+                                </p>
+                              </td>
+                              <td className="py-4 text-lg border-r-2 border-blue-200">
                                 <p className="text-xl font-bold">
-                                  {so.so_amount}
+                                  {so.so_unit}
                                 </p>
                                 <p className="text-base text-blue-500">ใบขาว</p>
-                              </div>
-                            </td>
-                            <td className="py-4 text-lg border-r-2 border-blue-200">
-                              <p className="text-2xl font-bold text-red-600">
-                                {so.so_amount - so.so_qc_amount}
-                              </p>
-                            </td>
-                            <td className="py-4 text-lg border-r-2 border-blue-200">
-                              <p className="text-xl font-bold">{so.so_unit}</p>
-                              <p className="text-base text-blue-500">ใบขาว</p>
-                            </td>
-                            <td className="py-4 text-lg border-r-2 border-blue-200">
-                              <div className="flex items-center justify-center">
-                                <img
-                                  src={
-                                    so.so_already_qc === "Yes"
-                                      ? accept
-                                      : incorect
-                                  }
-                                  className="w-10"
-                                ></img>
-                              </div>
-                            </td>
-                            <td className="py-4 text-sm border-r-2 border-blue-200">
-                              <div className="flex flex-col space-y-1 px-2">
-                                <label className="inline-flex items-center space-x-2">
-                                  <input
-                                    type="radio"
-                                    name={`qc_status_${so.so_running}`}
-                                    checked={so.so_qc_note === "ขาด"}
-                                    value="ขาด"
-                                    className="text-blue-600"
-                                  />
-                                  <span className="text-base font-bold text-blue-800">
-                                    ขาด
-                                  </span>
-                                </label>
-
-                                <label className="inline-flex items-center space-x-2">
-                                  <input
-                                    type="radio"
-                                    name={`qc_status_${so.so_running}`}
-                                    checked={so.so_qc_note === "ไม่ครบ"}
-                                    value="ไม่ครบ"
-                                    className="text-blue-600"
-                                  />
-                                  <span className="text-base font-bold text-green-700">
-                                    ไม่ครบ
-                                  </span>
-                                </label>
-
-                                <label className="inline-flex items-center space-x-2">
-                                  <input
-                                    type="radio"
-                                    name={`qc_status_${so.so_running}`}
-                                    checked={so.so_qc_note === "หยิบผิด"}
-                                    value="หยิบผิด"
-                                    className="text-blue-600"
-                                  />
-                                  <span className="text-base font-bold text-blue-500">
-                                    หยิบผิด
-                                  </span>
-                                </label>
-
-                                <label className="inline-flex items-center space-x-2">
-                                  <input
-                                    type="radio"
-                                    name={`qc_status_${so.so_running}`}
-                                    checked={
-                                      so.so_qc_note === "หยิบเกิน"
+                              </td>
+                              <td className="py-4 text-lg border-r-2 border-blue-200">
+                                <div className="flex items-center justify-center">
+                                  <img
+                                    src={
+                                      so.so_already_qc === "Yes"
+                                        ? accept
+                                        : incorect
                                     }
-                                    value="หยิบเกิน"
-                                    className="text-blue-600"
-                                  />
-                                  <span className="text-base font-bold text-orange-500">
-                                    หยิบเกิน
-                                  </span>
-                                </label>
+                                    className="w-10"
+                                  ></img>
+                                </div>
+                              </td>
+                              <td className="py-4 text-sm border-r-2 border-blue-200">
+                                <div className="flex flex-col space-y-1 px-2">
+                                  <label className="inline-flex items-center space-x-2">
+                                    <input
+                                      type="radio"
+                                      name={`qc_status_${so.so_running}`}
+                                      checked={so.so_qc_note === "ขาด"}
+                                      value="ขาด"
+                                      className="text-blue-600"
+                                    />
+                                    <span className="text-base font-bold text-blue-800">
+                                      ขาด
+                                    </span>
+                                  </label>
 
-                                <label className="inline-flex items-center space-x-2">
-                                  <input
-                                    type="radio"
-                                    name={`qc_status_${so.so_running}`}
-                                    checked={
-                                      so.so_qc_note === "ไม่มีของ"
-                                    }
-                                    value="ไม่มีของ"
-                                    className="text-blue-600"
-                                  />
-                                  <span className="text-base font-bold text-red-600">
-                                    ไม่มีของ
-                                  </span>
-                                </label>
-                              </div>
-                            </td>
-                            <td className="py-4 text-lg">
-                              <div className="flex flex-col space-y-2 px-3">
-                                <button className="bg-blue-500 p-1 rounded-lg text-base text-white hover:bg-blue-600 cursor-pointer">
-                                  ขอใหม่
-                                </button>
-                                <button className="bg-red-500 p-1 rounded-lg text-base text-white hover:bg-red-600 cursor-pointer">
-                                  ส่ง RT
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
+                                  <label className="inline-flex items-center space-x-2">
+                                    <input
+                                      type="radio"
+                                      name={`qc_status_${so.so_running}`}
+                                      checked={so.so_qc_note === "ไม่ครบ"}
+                                      value="ไม่ครบ"
+                                      className="text-blue-600"
+                                    />
+                                    <span className="text-base font-bold text-green-700">
+                                      ไม่ครบ
+                                    </span>
+                                  </label>
+
+                                  <label className="inline-flex items-center space-x-2">
+                                    <input
+                                      type="radio"
+                                      name={`qc_status_${so.so_running}`}
+                                      checked={so.so_qc_note === "หยิบผิด"}
+                                      value="หยิบผิด"
+                                      className="text-blue-600"
+                                    />
+                                    <span className="text-base font-bold text-blue-500">
+                                      หยิบผิด
+                                    </span>
+                                  </label>
+
+                                  <label className="inline-flex items-center space-x-2">
+                                    <input
+                                      type="radio"
+                                      name={`qc_status_${so.so_running}`}
+                                      checked={so.so_qc_note === "หยิบเกิน"}
+                                      value="หยิบเกิน"
+                                      className="text-blue-600"
+                                    />
+                                    <span className="text-base font-bold text-orange-500">
+                                      หยิบเกิน
+                                    </span>
+                                  </label>
+
+                                  <label className="inline-flex items-center space-x-2">
+                                    <input
+                                      type="radio"
+                                      name={`qc_status_${so.so_running}`}
+                                      checked={so.so_qc_note === "ไม่มีของ"}
+                                      value="ไม่มีของ"
+                                      className="text-blue-600"
+                                    />
+                                    <span className="text-base font-bold text-red-600">
+                                      ไม่มีของ
+                                    </span>
+                                  </label>
+                                </div>
+                              </td>
+                              <td className="py-4 text-lg">
+                                <div className="flex flex-col space-y-2 px-3">
+                                  <button className="bg-blue-500 p-1 rounded-lg text-base text-white hover:bg-blue-600 cursor-pointer">
+                                    ขอใหม่
+                                  </button>
+                                  <button className="bg-red-500 p-1 rounded-lg text-base text-white hover:bg-red-600 cursor-pointer">
+                                    ส่ง RT
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
                     ) : (
                       <tr></tr>
                     )}
@@ -1076,7 +1140,7 @@ const QCDashboard = () => {
                   <div
                     className="bg-red-700 text-2xl font-bold text-white py-1 rounded-sm mt-1 hover:bg-red-800 cursor-pointer select-none"
                     onClick={() =>
-                      countBox > 0 && setCountBox((prev) => prev - 1)
+                      countBox > 1 && setCountBox((prev) => prev - 1)
                     }
                   >
                     -
@@ -1085,22 +1149,55 @@ const QCDashboard = () => {
               </div>
 
               <div className="mt-5 px-13">
-                <div className="w-full bg-blue-500 text-base text-white p-1 font-bold rounded-sm hover:bg-blue-600 select-none cursor-pointer">
+                <div
+                  className="w-full bg-blue-500 text-base text-white p-1 font-bold rounded-sm hover:bg-blue-600 select-none cursor-pointer"
+                  onClick={() => {
+                    const mem_code = Array.isArray(dataQC)
+                      ? dataQC.length > 0
+                        ? dataQC[0]?.members?.mem_code
+                        : null
+                      : dataQC?.members?.mem_code ?? null;
+                    window.open(`/othercourier?mem_code=${mem_code}`);
+                  }}
+                >
                   ฝากขนส่งอื่น
                 </div>
-                <div 
+                <div
                   className="w-full bg-amber-500 text-base text-white p-1 font-bold rounded-sm hover:bg-amber-600 select-none cursor-pointer mt-2"
-                  onClick={() => {window.open('/special')}}
+                  onClick={() => {
+                    window.open("/special");
+                  }}
                 >
                   กรณีด่วนพิเศษ
                 </div>
-                <div 
+                <div
                   className="w-full bg-red-700 text-base text-white p-1 font-bold rounded-sm hover:bg-red-800 select-none cursor-pointer mt-2"
-                  onClick={()=>{window.open('/fragileprint')}}
+                  onClick={() => {
+                    window.open("/fragileprint");
+                  }}
                 >
                   ระวังแตก
                 </div>
-                <div className="w-full bg-yellow-500 text-base text-white p-1 font-bold rounded-sm hover:bg-yellow-600 select-none cursor-pointer mt-2">
+                <div
+                  className="w-full bg-yellow-500 text-base text-white p-1 font-bold rounded-sm hover:bg-yellow-600 select-none cursor-pointer mt-2"
+                  onClick={() => {
+                    const mem_code = Array.isArray(dataQC)
+                      ? dataQC.length > 0
+                        ? dataQC[0]?.members?.mem_code
+                        : null
+                      : dataQC?.members?.mem_code ?? null;
+
+                    const mem_name = Array.isArray(dataQC)
+                      ? dataQC.length > 0
+                        ? dataQC[0]?.members?.mem_name
+                        : null
+                      : dataQC?.members?.mem_name ?? null;
+
+                    window.open(
+                      `/basket-sticker?mem_code=${mem_code}&mem_name=${mem_name}&print=${countBox}`
+                    );
+                  }}
+                >
                   ติดตะกร้า รอลงลัง ส่งฟรี
                 </div>
                 <div className="w-full bg-green-500 text-base text-white p-3 font-bold rounded-sm hover:bg-green-600 select-none cursor-pointer mt-4">

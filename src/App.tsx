@@ -19,6 +19,8 @@ import ReportEmployee from "./pages/ReportEmployee";
 import QCDashboard from "./pages/QC-Dashboard";
 import FragilePrint from "./components/FragilePrint";
 import SpecialExpressPrint from "./pages/SpecialExpress";
+import OtherCourier from "./pages/OtherCourier";
+import BasketSticker from "./pages/BasketSticker";
 
 function App() {
   return (
@@ -49,6 +51,18 @@ function App() {
             path="/fragileprint"
             element={
               <FragilePrint />
+            }
+          />
+          <Route
+            path="/othercourier"
+            element={
+              <OtherCourier />
+            }
+          />
+          <Route
+            path="/basket-sticker"
+            element={
+              <BasketSticker />
             }
           />
           <Route
