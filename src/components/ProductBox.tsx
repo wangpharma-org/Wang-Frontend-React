@@ -1,5 +1,6 @@
 import { Socket } from "socket.io-client";
 import { ShoppingOrder } from "../pages/ProductList";
+import box from "../assets/product-17.png"
 
 interface ProductBoxProps {
     orderItem: ShoppingOrder;
@@ -23,7 +24,7 @@ export default function ProductBox({ orderItem, handleDoubleClick }: ProductBoxP
         >
             <div
                 //   onDoubleClick={(event) => doubleClick(event)}
-                onClick={() => handleDoubleClick(orderItem, 'picking')} // เพิ่ม onClick สำหรับดับเบิลคลิก
+                onClick={() => handleDoubleClick(orderItem, 'picking')}
                 className={`py-2 px-1 rounded-smm-1 cursor-pointer ${orderItem.picking_status === "pending"
                     ? "bg-white"
                     : orderItem.picking_status === "picking"
@@ -34,7 +35,11 @@ export default function ProductBox({ orderItem, handleDoubleClick }: ProductBoxP
                 <div className="flex justify-stretch p-1">
                     <div className="w-1/3 border border-gray-500 flex justify-center ">
                         <img
-                            src={orderItem.product.product_image_url || 'https://icons.veryicon.com/png/o/application/applet-1/product-17.png'}
+                            src={
+                                orderItem.product.product_image_url.startsWith('..')
+                                  ? `https://www.wangpharma.com${orderItem.product.product_image_url.slice(2)}`
+                                  : orderItem.product.product_image_url || box
+                            }
                             className="w-25 h-25 object-cover"
                         />
                     </div>
@@ -43,17 +48,18 @@ export default function ProductBox({ orderItem, handleDoubleClick }: ProductBoxP
                             <p className="font-bold w-50 truncate ...   ">
                                 {orderItem.product.product_name}
                             </p>
-
                         </div>
                         <div className="flex justify-between pt-1 px-1">
-                            <p>{orderItem.so_running}</p>
+                            <p className="text-amber-500 font-bold">
+                                {orderItem.product.product_code}
+                            </p>
                             <p className="px-2 py-2 rounded-sm bg-yellow-500 text-white">
                                 {orderItem.so_amount} {orderItem.so_unit}
                             </p>
                         </div>
                         <div className="flex justify-between pt-1 px-1">
-                            <p className="text-amber-500 font-bold">
-                                Bar : {orderItem.product.product_code}
+                            <p className="text-black">
+                                Bar : {orderItem.product.product_barcode}
                             </p>
                             <p>
                                 เหลือ {orderItem.product.product_stock}{" "}

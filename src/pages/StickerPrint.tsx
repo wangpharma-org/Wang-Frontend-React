@@ -27,6 +27,7 @@ const StickerPrint = () => {
   const [pendingTickets, setPendingTickets] = useState<FloorInfo[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedRoute, setSelectedRoute] = useState("all");
+
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
     console.log(token);
@@ -66,34 +67,36 @@ const StickerPrint = () => {
     };
   }, []);
 
+  
+
   const route = [
-    { route_name: "ทั้งหมด", value: "all" },
-    { route_name: "L1-1 หาดใหญ่", value: "หาดใหญ่" },
-    { route_name: "L1-2 สงขลา", value: "สงขลา" },
-    { route_name: "L1-3 สะเดา", value: "สะเดา" },
-    { route_name: "L1-5 สทิงพระ", value: "สทิงพระ" },
-    { route_name: "L10 นครศรีฯ", value: "นครศรีธรรมราช" },
-    { route_name: "L11 กระบี่", value: "กระบี่" },
-    { route_name: "L12 ภูเก็ต", value: "ภูเก็ต" },
-    { route_name: "L13 สุราษฏร์ธานี", value: "สุราษฎร์ธานี" },
-    { route_name: "L16 ยาแห้ง ส่งฟรี ทั่วไทย", value: "ยาแห้ง ส่งฟรี ทั่วไทย" },
-    { route_name: "L17 พังงา", value: "พังงา" },
-    { route_name: "L18 เกาะสมุย", value: "เกาะสมุย" },
-    { route_name: "L19 พัทลุง-นครฯ", value: "พัทลุง-นคร" },
-    { route_name: "L2 ปัตตานี", value: "ปัตตานี" },
-    { route_name: "L20 ชุมพร", value: "ชุมพร" },
-    { route_name: "L21 เกาะลันตา", value: "เกาะลันตา" },
-    { route_name: "L22 เกาะพะงัน", value: "เกาะพะงัน" },
-    { route_name: "L3 สตูล", value: "สตูล" },
-    { route_name: "L4 พัทลุง", value: "พัทลุง" },
-    { route_name: "L4-1 พัทลุง VIP", value: "พัทลุง VIP" },
-    { route_name: "L5-1 นราธิวาส", value: "นราธิวาส" },
-    { route_name: "L1-3 สุไหงโกลก", value: "สุไหงโกลก" },
-    { route_name: "L6 ยะลา", value: "ยะลา" },
-    { route_name: "L7 เบตง", value: "เบตง" },
-    { route_name: "L9 ตรัง", value: "ตรัง" },
-    { route_name: "L9-11 กระบี่-ตรัง", value: "กระบี่-ตรัง" },
-    { route_name: "Office รับเอง", value: "Office รับเอง" },
+    { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
+    { id: 2, name: "หาดใหญ่", value: "L1-1" },
+    { id: 3, name: "สงขลา", value: "L1-2" },
+    { id: 4, name: "สะเดา", value: "L1-3" },
+    { id: 5, name: "สทิงพระ", value: "L1-5" },
+    { id: 6, name: "นครศรีธรรมราช", value: "L10" },
+    { id: 7, name: "กระบี่", value: "L11" },
+    { id: 8, name: "ภูเก็ต", value: "L12" },
+    { id: 9, name: "สุราษฎร์ธานี", value: "L13" },
+    { id: 10, name: "ยาแห้ง ส่งฟรี ทั่วไทย", value: "L16" },
+    { id: 11, name: "พังงา", value: "L17" },
+    { id: 12, name: "เกาะสมุย", value: "L18" },
+    { id: 13, name: "พัทลุง-นคร", value: "L19" },
+    { id: 14, name: "ปัตตานี", value: "L2" },
+    { id: 15, name: "ชุมพร", value: "L20" },
+    { id: 16, name: "เกาะลันตา", value: "L21" },
+    { id: 17, name: "เกาะพะงัน", value: "L22" },
+    { id: 18, name: "สตูล", value: "L3" },
+    { id: 19, name: "พัทลุง", value: "L4" },
+    { id: 20, name: "พัทลุง VIP", value: "L4-1" },
+    { id: 21, name: "นราธิวาส", value: "L5-1" },
+    { id: 22, name: "สุไหงโกลก", value: "L5-2" },
+    { id: 23, name: "ยะลา", value: "L6" },
+    { id: 24, name: "เบตง", value: "L7" },
+    { id: 25, name: "ตรัง", value: "L9" },
+    { id: 26, name: "กระบี่-ตรัง", value: "L9-11" },
+    { id: 27, name: "Office รับเอง", value: "Office" },
   ];
 
   const getCellClass = (status: string | undefined) => {
@@ -204,7 +207,7 @@ const StickerPrint = () => {
               route.value === selectedRoute ? "bg-blue-500 text-white" : ""
             }`}
           >
-            {route.route_name}
+            {route.name}
           </button>
         ))}
       </div>
@@ -247,7 +250,7 @@ const StickerPrint = () => {
                     <td className="px-6 py-4 text-center">{index + 1}</td>
                     <td className="px-6 py-4 text-center">{list.mem_code}</td>
                     <td className="px-6 py-4 text-center">{list.mem_name}</td>
-                    <td className="px-6 py-4 text-center">{list.province}</td>
+                    <td className="px-6 py-4 text-center">{list.province ? route.find(r => r.value === list.province)?.name : 'อื่นๆ'}</td>
 
                     {[2, 3, 4, 5].map((floor) => (
                       <td
