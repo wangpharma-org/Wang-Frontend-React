@@ -1,17 +1,9 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY . . 
 
-RUN npm install --frozen-lockfile
-
-COPY . .
-
-RUN npm run build
-
-# COPY . . 
-
-# RUN npm install && npm run build
+RUN npm install && npm run build
 
 FROM nginx:alpine
 
