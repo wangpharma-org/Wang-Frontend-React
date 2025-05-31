@@ -277,6 +277,7 @@ function VerifyOrder() {
     setInvoice(filteredInvoices);
     setIsOpen(false); // Close the dropdown after selection
     setStatus(status); // Set the selected status
+    clearSearch(); // Clear the search input when clicking outside
     console.log("Selected status:", status);
 
   };
@@ -317,7 +318,7 @@ function VerifyOrder() {
         <div className="flex items-center">
           <div className="flex w-full justify-center">
             <div className="flex items-center justify-center mr-4">
-              <p className="mr-2 text-gray-600 text-xs">Focus Mode</p>
+              <p className="mr-2 text-gray-600">ใบขาว</p>
               <div className="p-4">
                 {/* Toggle switch */}
                 <div
@@ -330,9 +331,8 @@ function VerifyOrder() {
                       }`}
                   />
                 </div>
-
-
               </div>
+              <p className="mr-2 text-gray-600">ใบเหลือง</p>
             </div>
           </div>
           <div className="flex w-full justify-end">
@@ -347,56 +347,44 @@ function VerifyOrder() {
         </div>
         <div className="flex justify-around mb-8">
           <div className=" w-full flex flex-col">
-            <div className="flex justify-center mb-4">
-              <p>เพิ่มข้อมูล</p>
-            </div>
+
             <div className="flex mx-5">
               {/* Conditional input */}
               {!enabled && (
+
                 <div className="w-full">
+                  <div className="flex justify-center mb-4">
+                    <p>สแกนใบขาว</p>
+                  </div>
                   <form onSubmit={handleSubmit} className="relative flex items-center gap-2">
                     <input
                       type="text"
                       name="whitePaper"
                       autoComplete="off"
+                      autoFocus
                       className={`border text-black w-full p-2 rounded-xs text-3xl ${errorWhitePaper == true ? "border-red-500 bg-red-200" : " border-gray-500  bg-blue-50"}`}
                       onChange={() => { setErrorWhitePaper(false), setInvoice(originalData), clearSearch() }}
                       placeholder="ใบขาว"
                     />
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="size-6 absolute transform -translate-y-1/2 right-3 top-1/2 text-gray-400"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
                   </form>
                   <p className="text-xs text-gray-400 text-center">SH_running / mem_code / count_list / price</p>
                 </div>
               )}
               {enabled && (
                 <div className=" w-full">
+                  <div className="flex justify-center mb-4">
+                    <p>สแกนใบเหลือง</p>
+                  </div>
                   {/* Conditional input */}
                   <form onSubmit={handleSubmit} className="relative flex items-center gap-2">
                     <input
                       type="text"
                       name="yellowPaper"
                       autoComplete="off"
+                      autoFocus
                       className={`border text-black w-full p-2 rounded-xs text-3xl ${errorYellowPaper == true ? "border-red-500 bg-red-200" : "bg-yellow-50 border-gray-500"}`}
                       onChange={() => { setErrorYellowPaper(false), setInvoice(originalData), clearSearch() }}
                       placeholder="ใบเหลือง" />
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="size-6 absolute transform -translate-y-1/2 right-3 top-1/2 text-gray-400">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
                   </form>
                   <p className="text-xs text-gray-400 text-center">SH_running / mem_code / invoice_code / count_list / price</p>
                 </div>
