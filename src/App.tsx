@@ -21,6 +21,7 @@ import FragilePrint from "./components/FragilePrint";
 import SpecialExpressPrint from "./pages/SpecialExpress";
 import OtherCourier from "./pages/OtherCourier";
 import BasketSticker from "./pages/BasketSticker";
+import PrintRT from "./pages/RTPrint";
 
 function App() {
   return (
@@ -63,6 +64,12 @@ function App() {
             path="/basket-sticker"
             element={
               <BasketSticker />
+            }
+          />
+          <Route
+            path="/print-rt"
+            element={
+              <PrintRT />
             }
           />
           <Route
