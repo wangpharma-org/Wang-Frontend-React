@@ -4,6 +4,9 @@ import { io, Socket } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import Clock from "../components/Clock";
 import ProductBox from "../components/ProductBox";
+import { Bounce, toast, ToastContainer } from "react-toastify";
+import axios from "axios";
+import print from "../assets/printing.png";
 
 interface Product {
   product_code: string;
@@ -246,8 +249,67 @@ function ProductList() {
     logout();
   };
 
+  const printSticker = async (mem_code: string) => {
+    console.log("printSticker", mem_code);
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/picking/createTicket`,
+        {
+          mem_code: mem_code,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("access_token")}`,
+          },
+        }
+      );
+      console.log("response", response);
+      if (response.status === 201) {
+        console.log("Sticker created successfully!");
+        toast.success("สั่งพิมพ์สติกเกอร์สำเร็จ", {
+          position: "top-center",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: false,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+          transition: Bounce,
+        });
+      } else {
+        toast.error("มีข้อผิดพลาดในการสั่งพิมพ์", {
+          position: "top-center",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: false,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+          transition: Bounce,
+        });
+      }
+    } catch (error) {
+      console.error("Error printing sticker:", error);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen">
+      <ToastContainer
+          position="top-center"
+          autoClose={2000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick={false}
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+          transition={Bounce}
+        />
       <header
         className={`p-2 sticky top-0 bg-blue-400 z-40 text-white font-medium ${
           selectedFloor === "1"
@@ -321,7 +383,7 @@ function ProductList() {
               </button>
             </div>
           </div>
-          <div className="flex justify-start">
+          <div className="flex justify-between items-center">
             <div id="button" className="flex justify-start">
               <button
                 ref={buttonRef}
@@ -363,7 +425,13 @@ function ProductList() {
               </svg>
               &nbsp;
               <p>{listproduct?.mem_code}</p>&nbsp;
-              <p className=" w-48 truncate">{listproduct?.mem_name}</p>
+              <p className="w-40 truncate">{listproduct?.mem_name}</p>
+            </div>
+            <div 
+              className="mr-2"
+              onClick={() => mem_code && printSticker(mem_code)}
+            >
+              <img src={print} className="w-7"/>
             </div>
           </div>
         </div>
@@ -496,6 +564,7 @@ function ProductList() {
                             orderItem.product.product_code.includes(search);
                           return matchFloor && matchSearch;
                         })
+                        .reverse()
                         .map((orderItem, Orderindex) => {
                           if (socket) {
                             console.log("orderItem2", orderItem);

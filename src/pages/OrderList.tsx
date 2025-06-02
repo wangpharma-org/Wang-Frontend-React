@@ -690,6 +690,9 @@ const OrderList = () => {
                                   <p>บิล</p>&nbsp;
                                   <p className="text-red-500 font-bold">
                                     {
+                                      order.shoppingHeads.flatMap(
+                                        (h) => h.shoppingOrders
+                                      ).length -
                                       order.shoppingHeads
                                         .flatMap((h) => h.shoppingOrders)
                                         .filter(
@@ -700,7 +703,7 @@ const OrderList = () => {
                                             so.picking_status === "ไม่เจอ" ||
                                             so.picking_status === "เสีย" ||
                                             so.picking_status === "ด้านล่าง"
-                                        ).length
+                                        ).length 
                                     }
                                   </p>
                                   &nbsp;
