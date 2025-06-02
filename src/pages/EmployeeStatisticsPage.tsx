@@ -97,7 +97,7 @@ const EmployeeStatisticsPage = () => {
 
     // ถ้ามีข้อมูล ให้เปิดวันล่าสุดอัตโนมัติ
     if (dates.length > 0) {
-      setExpandedDates(new Set([dates[0].formattedDate]));
+      setExpandedDates(new Set([dates[3].formattedDate]));
     }
   };
 
@@ -115,7 +115,7 @@ const EmployeeStatisticsPage = () => {
         }
       );
 
-      console.log("API Response:", response.data);
+      // console.log("API Response:", response.data);
 
       if (
         response.data &&
@@ -296,12 +296,13 @@ const EmployeeStatisticsPage = () => {
         totalDurationHr += stats.header.durationHr;
       }
 
-      // รวมข้อมูลแต่ละชั้น
+      // รวมข้อมูลแต่ละชั้น พร้อม normalize floor เป็น "?" ถ้าไม่ถูกต้อง
       stats.floors.forEach((floor) => {
-        if (!floorsMap[floor.floor]) {
-          // สร้างข้อมูลใหม่ถ้ายังไม่มี
-          floorsMap[floor.floor] = {
-            floor: floor.floor,
+        const floorKey = floor.floor && /^[1-5]$/.test(floor.floor) ? floor.floor : "?";
+
+        if (!floorsMap[floorKey]) {
+          floorsMap[floorKey] = {
+            floor: floorKey,
             totalOrders: 0,
             totalAmount: 0,
             remaining: 0,
@@ -310,12 +311,11 @@ const EmployeeStatisticsPage = () => {
           };
         }
 
-        // รวมข้อมูลชั้น
-        floorsMap[floor.floor].totalOrders += floor.totalOrders;
-        floorsMap[floor.floor].totalAmount += floor.totalAmount;
-        floorsMap[floor.floor].remaining += floor.remaining;
-        floorsMap[floor.floor].inProgress += floor.inProgress;
-        floorsMap[floor.floor].completed += floor.completed;
+        floorsMap[floorKey].totalOrders += floor.totalOrders;
+        floorsMap[floorKey].totalAmount += floor.totalAmount;
+        floorsMap[floorKey].remaining += floor.remaining;
+        floorsMap[floorKey].inProgress += floor.inProgress;
+        floorsMap[floorKey].completed += floor.completed;
       });
     });
 
@@ -463,9 +463,9 @@ const EmployeeStatisticsPage = () => {
                     <span className="text-blue-700">
                       {dateGroup.formattedDate}
                     </span>
-                    <span className="ml-2 text-gray-500 text-sm">
+                    {/* <span className="ml-2 text-gray-500 text-sm">
                       ({dateGroup.employees.length} คน)
-                    </span>
+                    </span> */}
                   </div>
                   <span className="text-lg">
                     {isExpanded ? (
@@ -557,19 +557,19 @@ const EmployeeStatisticsPage = () => {
                           <table className="w-full text-sm">
                             <thead>
                               <tr className="bg-gray-50">
-                                <th className="text-center py-2 border">
+                                <th className="text-center py-2 border border-gray-300">
                                   ชั้น
                                 </th>
-                                <th className="text-center py-2 border">
+                                <th className="text-center py-2 border border-gray-300">
                                   ทั้งหมด
                                 </th>
-                                <th className="text-center py-2 border">
+                                <th className="text-center py-2 border border-gray-300">
                                   เหลือจัด
                                 </th>
-                                <th className="text-center py-2 border">
+                                <th className="text-center py-2 border border-gray-300">
                                   กำลังจัด
                                 </th>
-                                <th className="text-center py-2 border">
+                                <th className="text-center py-2 border border-gray-300">
                                   จัดแล้ว
                                 </th>
                               </tr>
@@ -585,7 +585,7 @@ const EmployeeStatisticsPage = () => {
                                 else if (floor.floor === "4")
                                   bgColorClass = "bg-red-50";
                                 else if (floor.floor === "5")
-                                  bgColorClass = "bg-green-50";
+                                  bgColorClass = "bg-white";
 
                                 return (
                                   <tr
@@ -601,13 +601,13 @@ const EmployeeStatisticsPage = () => {
                                     <td className="text-center px-4 py-2 border border-gray-300">
                                       {floor.totalAmount}
                                     </td>
-                                    <td className="text-center px-4 py-2 border border-gray-300 text-red-600">
+                                    <td className="text-center px-4 py-2 border border-gray-300">
                                       {floor.remaining}
                                     </td>
-                                    <td className="text-center px-4 py-2 border border-gray-300 text-yellow-600">
+                                    <td className="text-center px-4 py-2 border border-gray-300">
                                       {floor.inProgress}
                                     </td>
-                                    <td className="text-center px-4 py-2 border border-gray-300 text-green-600">
+                                    <td className="text-center px-4 py-2 border border-gray-300">
                                       {floor.completed}
                                     </td>
                                   </tr>
@@ -619,9 +619,9 @@ const EmployeeStatisticsPage = () => {
                                 const totals = calculateTotals(employeeData);
                                 return (
                                   totals && (
-                                    <tr className="bg-yellow-100 font-bold">
+                                    <tr className="bg-white font-bold">
                                       <td className="text-center px-4 py-2 border border-gray-300">
-                                        รวม {employeeData.floors.length} ชั้น
+                                        รวม <span className="text-yellow-400">{employeeData.floors.length}</span> ชั้น
                                       </td>
                                       <td className="text-center px-4 py-2 border border-gray-300 text-purple-600">
                                         {totals.totalAmount}
@@ -645,37 +645,42 @@ const EmployeeStatisticsPage = () => {
 
                         {/* Employee Speed */}
                         <div className="grid grid-cols-2 p-4">
-                          <div className="text-center pr-8">
-                            <div className="text-lg">ความเร็ว</div>
+                          <div className="flex items-center justify-center text-center pr-8">
+                            <div className="text-sm">ความเร็ว</div>
                           </div>
                           <div className="text-center">
-                            <div className="font-medium">
-                              {employeeData.header.durationMin > 0
-                                ? (
-                                    (new Date(employeeData.header.endTime).getTime() -
-                                    new Date(employeeData.header.startTime).getTime()) /
-                                    (1000 * 60) / employeeData.floors.reduce((acc, floor) => acc + floor.completed, 0)
-                                  ).toFixed(2)
-                                : "0.00"}{" "}
-                              ชิ้น/นาที
-                            </div>
-                            <div className="font-medium">
-                              {employeeData.header.durationHr > 0
-                                ? (
-                                  (new Date(employeeData.header.endTime).getTime() -
-                                  new Date(employeeData.header.startTime).getTime()) /
-                                  (1000 * 60 * 60) / employeeData.floors.reduce((acc, floor) => acc + floor.completed, 0)
-                                ).toFixed(2)
-                                : "0.00"}{" "}
-                              ชิ้น/ชั่วโมง
-                            </div>
+                            {(() => {
+                              const totalCompleted = employeeData.floors.reduce((acc, floor) => acc + floor.completed, 0);
+                              // const totalCompleted = 0;
+                              const start = new Date(employeeData.header.startTime).getTime();
+                              const end = new Date(employeeData.header.endTime).getTime();
+
+                              const speedPerMinute = totalCompleted > 0
+                                ? ((end - start) / (1000 * 60)) / totalCompleted
+                                : 0;
+
+                              const speedPerHour = totalCompleted > 0
+                                ? ((end - start) / (1000 * 60 * 60)) / totalCompleted
+                                : 0;
+
+                              return (
+                                <>
+                                  <div className="font-medium">
+                                    {speedPerMinute.toFixed(2)} ชิ้น/นาที
+                                  </div>
+                                  <div className="font-medium">
+                                    {speedPerHour.toFixed(2)} ชิ้น/ชั่วโมง
+                                  </div>
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
 
                         {/* Remaining + In Progress */}
                         <div className="grid grid-cols-2 p-4 border-t border-gray-200">
                           <div className="text-center pr-8">
-                            <div className="text-lg">เหลือ + กำลังจัด</div>
+                            <div className="text-sm">เหลือ + กำลังจัด</div>
                           </div>
                           <div className="text-center">
                             <div className="font-medium">
@@ -693,7 +698,7 @@ const EmployeeStatisticsPage = () => {
                         {/* Completion Time */}
                         <div className="grid grid-cols-2 p-4 border-t border-gray-200">
                           <div className="text-center pr-8">
-                            <div className="text-lg">ประมาณการแล้วเสร็จ</div>
+                            <div className="text-sm">ประมาณการแล้วเสร็จ</div>
                           </div>
                           <div className="text-center">
                             <div className="font-medium text-red-500">
@@ -701,30 +706,36 @@ const EmployeeStatisticsPage = () => {
                                 // คำนวณเวลาแล้วเสร็จจากสูตรใหม่: startTime + (totalAmount ÷ speedPerMinute)
                                 // ตรวจสอบว่า startTime มีค่าและ speedPerMinute > 0
                                 const totals = calculateTotals(employeeData);
-                                const totalAmount = totals ? totals.totalAmount : 0;
+                                // const totalAmount = totals ? totals.totalAmount : 0;
                                 if (
-                                  !employeeData.header.startTime ||
+                                  !employeeData.header.endTime ||
                                   employeeData.floors.reduce((acc, floor) => acc + floor.completed, 0) <= 0
                                 ) {
                                   return "-";
                                 }
                                 // ความเร็วเฉลี่ยต่อนาที
-                                const speedPerMinute =
-                                  (new Date(employeeData.header.endTime).getTime() -
-                                  new Date(employeeData.header.startTime).getTime()) /
-                                  (1000 * 60) / employeeData.floors.reduce((acc, floor) => acc + floor.completed, 0);
+                                const totalCompleted = employeeData.floors.reduce((acc, floor) => acc + floor.completed, 0);
+                                const start = new Date(employeeData.header.startTime).getTime();
+                                const end = new Date(employeeData.header.endTime).getTime();
+  
+                                const speedPerMinute = totalCompleted > 0
+                                  ? ((end - start) / (1000 * 60)) / totalCompleted
+                                  : 0;
+
                                 if (speedPerMinute <= 0) {
                                   return "-";
                                 }
-                                // เวลาสิ้นสุดโดยประมาณ = startTime + (totalAmount / speedPerMinute) * 60 * 1000
+
+                                const remaining = (totals?.remaining || 0) + (totals?.inProgress || 0);
                                 const estimatedFinishTimestamp =
-                                  new Date(employeeData.header.startTime).getTime() +
-                                  (totalAmount / speedPerMinute) * 60 * 1000;
+                                  new Date(employeeData.header.endTime).getTime() +
+                                  (remaining / speedPerMinute) * 60 * 1000;
                                 const estimatedFinish = new Date(estimatedFinishTimestamp);
                                 const finishHours = estimatedFinish.getHours().toString().padStart(2, '0');
                                 const finishMinutes = estimatedFinish.getMinutes().toString().padStart(2, '0');
                                 const finishSeconds = estimatedFinish.getSeconds().toString().padStart(2, '0');
                                 return `${finishHours}:${finishMinutes}:${finishSeconds}`;
+                                
                               })()}
                               {/* {(() => {
                                 // 🔧 กำหนดค่าแบบ hardcoded เพื่อทดสอบการคำนวณ
