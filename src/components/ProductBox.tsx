@@ -70,6 +70,7 @@ export default function ProductBox({ orderItem, handleDoubleClick }: ProductBoxP
                         <div className="flex justify-between pt-1 px-1">
                             <div className="flex font-semibold text-violet-600 text-[13px]">
                                 <p>F{orderItem.product.product_floor || '1'}</p>&nbsp;
+                                <p>/</p>&nbsp;
                                 <p>{orderItem.product.product_addr}</p>
                             </div>
                         </div>

@@ -575,17 +575,17 @@ const OrderList = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full mb-36 mt-3">
                   {orderList
                     .sort((a, b) => {
-                      if (
-                        a.picking_status === "picking" &&
-                        b.picking_status !== "picking"
-                      )
-                        return -1;
-                      if (
-                        a.picking_status !== "picking" &&
-                        b.picking_status === "picking"
-                      )
-                        return 1;
-                      return 0;
+                      const maxA = Math.max(
+                        ...a.shoppingHeads.map((sh) =>
+                          new Date(sh.sh_datetime).getTime()
+                        )
+                      );
+                      const maxB = Math.max(
+                        ...b.shoppingHeads.map((sh) =>
+                          new Date(sh.sh_datetime).getTime()
+                        )
+                      );
+                      return maxA - maxB;
                     })
                     .filter((order) => filteredData.includes(order))
                     .map((order) => {
@@ -689,10 +689,9 @@ const OrderList = () => {
                                   &nbsp;
                                   <p>บิล</p>&nbsp;
                                   <p className="text-red-500 font-bold">
-                                    {
-                                      order.shoppingHeads.flatMap(
-                                        (h) => h.shoppingOrders
-                                      ).length -
+                                    {order.shoppingHeads.flatMap(
+                                      (h) => h.shoppingOrders
+                                    ).length -
                                       order.shoppingHeads
                                         .flatMap((h) => h.shoppingOrders)
                                         .filter(
@@ -703,8 +702,7 @@ const OrderList = () => {
                                             so.picking_status === "ไม่เจอ" ||
                                             so.picking_status === "เสีย" ||
                                             so.picking_status === "ด้านล่าง"
-                                        ).length 
-                                    }
+                                        ).length}
                                   </p>
                                   &nbsp;
                                   <p>/</p>&nbsp;

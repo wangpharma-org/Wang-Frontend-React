@@ -31,6 +31,7 @@ export interface ShoppingOrder {
 
 interface ShoppingHead {
   sh_running: string;
+  emp_code_picking: string;
   shoppingOrders: ShoppingOrder[];
 }
 
@@ -100,8 +101,15 @@ function ProductList() {
     };
   }, []);
 
+  useEffect(()=>{
+    if(CanSubmit) {
+      submitPicking()
+    }
+  },[CanSubmit])
+
   useEffect(() => {
     if (listproduct) {
+      console.log('listproduct:',listproduct);
       const hasPending = (listproduct?.shoppingHeads ?? []).some((head) =>
         head.shoppingOrders.some((order) => order.picking_status === "pending")
       );
@@ -668,7 +676,7 @@ function ProductList() {
               disabled={
                 !CanSubmit ||
                 !listproduct ||
-                userInfo?.emp_code !== listproduct.emp_code_picking
+                userInfo?.emp_code !== listproduct.emp_code_picking 
               }
               className={`w-full px-3 py-1 shadow-md text-lg rounded-sm font-semibold  text-white mt-3 ${
                 CanSubmit &&
