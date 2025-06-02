@@ -64,6 +64,7 @@ function VerifyOrder() {
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
+console.log("VITE_API_URL_VERIFY_ORDER", import.meta.env.VITE_API_URL_VERIFY_ORDER);
 
 
   useEffect(() => {
@@ -107,9 +108,11 @@ function VerifyOrder() {
     socket.on("connect_error", (error) => {
       console.error("❌ Failed to connect to server:", error.message);
       socket.emit("invoice:get");
+      console.log("Socket " + socket.id + " reconnected");
     });
 
     clearSearch(); // Clear the search input
+
   }, [])
 
   const fetchAllInvoices = useCallback(() => {
@@ -210,7 +213,7 @@ function VerifyOrder() {
         console.log('Performing search for:', searchValue);
         // setIsLoading(true); // Optional: set loading state
         try {
-          const response = await fetch(`http://localhost:3007/invoice/${searchValue}`);
+          const response = await fetch(`${import.meta.env.VITE_API_URL_VERIFY_ORDER}/invoice/${searchValue}`);
           // const response = await fetch(`${import.meta.env.VITE_API_INVOICE_SEARCH_URL}/invoice/${searchValue}`); // Recommended: Use env variable
 
           if (!response.ok) {
@@ -316,9 +319,9 @@ function VerifyOrder() {
       /> */}
       <div>
         <div className="flex items-center">
-          <div className="flex w-full justify-center">
+          <div className="flex w-full justify-center ">
             <div className="flex items-center justify-center mr-4">
-              <p className="mr-2 text-gray-600">ใบขาว</p>
+              <p className=" text-gray-600 ">ใบขาว</p>
               <div className="p-4">
                 {/* Toggle switch */}
                 <div
@@ -332,7 +335,7 @@ function VerifyOrder() {
                   />
                 </div>
               </div>
-              <p className="mr-2 text-gray-600">ใบเหลือง</p>
+              <p className="mr-2 text-gray-600 text-center">ใบเหลือง</p>
             </div>
           </div>
           <div className="flex w-full justify-end">
