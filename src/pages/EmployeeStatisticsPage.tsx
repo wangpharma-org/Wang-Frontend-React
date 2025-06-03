@@ -45,20 +45,16 @@ interface EmployeeGroup {
   isExpanded: boolean;
 }
 
-// เพิ่ม interface สำหรับข้อมูลตามวัน
-interface DateGroup {
-  date: string; // รูปแบบ "YYYY-MM-DD"
-  formattedDate: string; // รูปแบบไทย "dd/mm/yy วัน"
-  employees: EmployeeGroup[]; // เก็บพนักงานในวันนั้นๆ
-}
-
 const EmployeeStatisticsPage = () => {
   const [employeeGroups, setEmployeeGroups] = useState<EmployeeGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
-  const [dateList, setDateList] = useState<DateGroup[]>([]);
-
+  const [expandedEmployees, setExpandedEmployees] = useState<Set<string>>(
+    new Set()
+  );
+  const [expandedDates, setExpandedDates] = useState<
+    Record<string, Set<string>>
+  >({});
   const { userInfo } = useAuth();
 
   useEffect(() => {
@@ -133,7 +129,13 @@ const EmployeeStatisticsPage = () => {
         groups.sort((a, b) => a.empCode.localeCompare(b.empCode));
 
         setEmployeeGroups(groups);
-        extractDatesFromResponse(groups);
+
+        // Initialize expandedDates for each employee
+        const datesMap: Record<string, Set<string>> = {};
+        groups.forEach((group) => {
+          datesMap[group.empCode] = new Set();
+        });
+        setExpandedDates(datesMap);
       } else {
         setEmployeeGroups([]);
         throw new Error("Invalid data format received");
@@ -159,14 +161,14 @@ const EmployeeStatisticsPage = () => {
     }
   };
 
-  // Toggle expanded state for a date
-  const toggleDate = (dateStr: string) => {
-    setExpandedDates((prev) => {
+  // Toggle expanded state for an employee
+  const toggleEmployee = (empCode: string) => {
+    setExpandedEmployees((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(dateStr)) {
-        newSet.delete(dateStr);
+      if (newSet.has(empCode)) {
+        newSet.delete(empCode);
       } else {
-        newSet.add(dateStr);
+        newSet.add(empCode);
       }
       return newSet;
     });
@@ -450,18 +452,15 @@ const EmployeeStatisticsPage = () => {
             const employeeData = combineEmployeeDataByDate(dateGroup.employees, dateGroup.date);
 
             return (
-              <div
-                key={dateGroup.formattedDate}
-                className="bg-white rounded shadow"
-              >
-                {/* Date Header - แทนที่ Employee Header */}
+              <div key={employee.empCode} className="bg-white rounded shadow">
+                {/* Employee Header */}
                 <div
-                  onClick={() => toggleDate(dateGroup.formattedDate)}
+                  onClick={() => toggleEmployee(employee.empCode)}
                   className="px-6 py-3 bg-blue-50 border-b border-gray-200 hover:bg-blue-100 cursor-pointer flex items-center justify-between"
                 >
                   <div className="font-medium">
                     <span className="text-blue-700">
-                      {dateGroup.formattedDate}
+                      {formatEmployeeName(employee.empCode)}
                     </span>
                     {/* <span className="ml-2 text-gray-500 text-sm">
                       ({dateGroup.employees.length} คน)
@@ -476,12 +475,12 @@ const EmployeeStatisticsPage = () => {
                   </span>
                 </div>
 
-                {/* Content - ยังคงใช้เนื้อหาเดิมเมื่อ expand */}
-                {isExpanded && employeeData && (
+                {/* Employee Content */}
+                {isExpanded && (
                   <div className="px-4 py-3">
                     {employeeData.floors.length === 0 ? (
                       <div className="text-center py-4 text-gray-500">
-                        ไม่พบข้อมูลสถิติสำหรับวันนี้
+                        ไม่พบข้อมูลสถิติสำหรับพนักงานนี้
                       </div>
                     ) : (
                       <>
