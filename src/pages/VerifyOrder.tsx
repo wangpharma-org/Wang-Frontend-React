@@ -64,7 +64,7 @@ function VerifyOrder() {
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
-console.log("VITE_API_URL_VERIFY_ORDER", import.meta.env.VITE_API_URL_VERIFY_ORDER);
+  console.log("VITE_API_URL_VERIFY_ORDER", import.meta.env.VITE_API_URL_VERIFY_ORDER);
 
 
   useEffect(() => {
@@ -75,9 +75,6 @@ console.log("VITE_API_URL_VERIFY_ORDER", import.meta.env.VITE_API_URL_VERIFY_ORD
       `${import.meta.env.VITE_API_URL_VERIFY_ORDER}/socket/verify-order/invoice`,
       {
         path: "/socket/verify-order",
-        // extraHeaders: {
-        //   Authorization: `Bearer ${sessionStorage.getItem("access_token")}`,
-        // },
       }
     );
     setSocket(socket);
@@ -108,7 +105,7 @@ console.log("VITE_API_URL_VERIFY_ORDER", import.meta.env.VITE_API_URL_VERIFY_ORD
     socket.on("connect_error", (error) => {
       console.error("❌ Failed to connect to server:", error.message);
       socket.emit("invoice:get");
-      console.log("Socket " + socket.id + " reconnected");
+      // console.log("Socket " + socket.id + " reconnected");
     });
 
     clearSearch(); // Clear the search input
@@ -264,16 +261,6 @@ console.log("VITE_API_URL_VERIFY_ORDER", import.meta.env.VITE_API_URL_VERIFY_ORD
     if (searchInput) searchInput.value = '';
   }
 
-  // const clearWhite = () => {
-  //   const whiteInput = document.querySelector<HTMLInputElement>("input[name='search']");
-  //   if (whiteInput) whiteInput.value = '';
-  // }
-  // const clearYellow = () => {
-  //   const yellowInput = document.querySelector<HTMLInputElement>("input[name='search']");
-  //   if (yellowInput) yellowInput.value = '';
-  // }
-
-
   const filterPaperStatus = (status: string) => {
     const filteredInvoices = invoice.filter((item) => item.paperStatus === status);
     console.log("Filtered invoices:", filteredInvoices);
@@ -421,7 +408,6 @@ console.log("VITE_API_URL_VERIFY_ORDER", import.meta.env.VITE_API_URL_VERIFY_ORD
                       name="search"
                       autoComplete="off"
                       className="border border-gray-500 text-black w-full mr-1 p-2 rounded-xs text-right text-3xl"
-                      onChange={() => { setInvoice(originalData) }}
                       placeholder="ค้นหาข้อมูล" />
                   </div>
                 </form>
@@ -493,6 +479,11 @@ console.log("VITE_API_URL_VERIFY_ORDER", import.meta.env.VITE_API_URL_VERIFY_ORD
                     </div>
                   )}
                 </div>
+              </div>
+              <div className="">
+                <button onClick={() => { setInvoice(originalData), clearSearch(), setStatus("") }}
+                 className="flex items-center justify-center border px-2 py-1 rounded-lg text-white bg-indigo-500 hover:bg-indigo-600">
+                  ล้างข้อมูลค้นหา</button>
               </div>
             </div>
           </div>
