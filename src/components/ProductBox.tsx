@@ -53,13 +53,14 @@ export default function ProductBox({ orderItem, handleDoubleClick }: ProductBoxP
                             <p className="text-amber-500 font-bold">
                                 {orderItem.product.product_code}
                             </p>
-                            <p className="px-2 py-2 rounded-sm bg-yellow-500 text-white">
+                            <p className="px-2 py-2 rounded-sm bg-blue-800 text-white text-sm font-bold">
                                 {orderItem.so_amount} {orderItem.so_unit}
                             </p>
                         </div>
+                        <p className="pl-1 font-bold">เลขบาร์โค้ด</p>
                         <div className="flex justify-between pt-1 px-1">
-                            <p className="text-black">
-                                Bar : {orderItem.product.product_barcode}
+                            <p className="text-black text-[13px] font-bold">
+                                {orderItem.product.product_barcode}
                             </p>
                             <p>
                                 เหลือ {orderItem.product.product_stock}{" "}
@@ -67,8 +68,9 @@ export default function ProductBox({ orderItem, handleDoubleClick }: ProductBoxP
                             </p>
                         </div>
                         <div className="flex justify-between pt-1 px-1">
-                            <div className="flex font-semibold text-violet-600">
+                            <div className="flex font-semibold text-violet-600 text-[13px]">
                                 <p>F{orderItem.product.product_floor || '1'}</p>&nbsp;
+                                <p>/</p>&nbsp;
                                 <p>{orderItem.product.product_addr}</p>
                             </div>
                         </div>
