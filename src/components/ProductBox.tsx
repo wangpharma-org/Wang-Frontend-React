@@ -4,7 +4,7 @@ import box from "../assets/product-17.png"
 
 interface ProductBoxProps {
     orderItem: ShoppingOrder;
-    headShRunning: string;
+    // headShRunning: string;
     //   handleOutofStock: (orderItem: ShoppingOrder, status: string,socket:Socket) => void;
     socket: Socket;
     handleDoubleClick: (orderItem: ShoppingOrder, status: string) => void;
@@ -45,7 +45,7 @@ export default function ProductBox({ orderItem, handleDoubleClick }: ProductBoxP
                     </div>
                     <div className="text-xs w-2/3 ml-1">
                         <div className="flex justify-between pt-1 px-1">
-                            <p className="font-bold">
+                            <p className="font-bold w-50 truncate ...   ">
                                 {orderItem.product.product_name}
                             </p>
                         </div>
