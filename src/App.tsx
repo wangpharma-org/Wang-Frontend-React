@@ -73,6 +73,12 @@ function App() {
             }
           />
           <Route
+            path="/dashboard-qc"
+            element={
+              <QCDashboard />
+            }
+          />
+          <Route
             path="/special"
             element={
               <SpecialExpressPrint />

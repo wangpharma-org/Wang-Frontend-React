@@ -7,6 +7,7 @@ import axios from "axios";
 import { Bounce, ToastContainer, toast } from "react-toastify";
 import flag from "../assets/finish.png";
 import check from "../assets/accept.png";
+import print from "../assets/printing_black.png";
 
 interface Product {
   product_floor: string;
@@ -78,7 +79,7 @@ const OrderList = () => {
   const [floorCounts, setFloorCounts] = useState<Record<string, number>>({});
   const handleDoubleClick = useDoubleClick();
   const [requestProduct, setRequestProduct] = useState(null);
-  const [showRequestList, setShowRequestList] = useState(true);
+  const [showRequestList, setShowRequestList] = useState(false);
 
   console.log("selectedFloor", selectedFloor);
 
@@ -337,9 +338,13 @@ const OrderList = () => {
     setSelectedFloor(null);
   };
 
-  const submitCheck = async(so_running: string, sh_running: string, mem_code: string) => {
+  const submitCheck = async (
+    so_running: string,
+    sh_running: string,
+    mem_code: string
+  ) => {
     if (so_running && sh_running && mem_code) {
-      const response =  await axios.post(
+      const response = await axios.post(
         `${import.meta.env.VITE_API_URL_ORDER}/api/qc/submit-req-qc`,
         {
           so_running,
@@ -349,9 +354,9 @@ const OrderList = () => {
       );
       console.log(response);
     } else {
-      return
+      return;
     }
-  }
+  };
 
   const routeButtons = [
     { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
@@ -574,10 +579,21 @@ const OrderList = () => {
                         } ${item.product_product_addr ?? "-"}`}</p>
                       </div>
                       <div className="col-span-1 flex-col justify-center items-center">
-                        <img 
-                          src={check} 
+                        <img
+                          src={print}
                           className="w-10 mb-1"
-                          onClick={() => submitCheck(item.order_so_running, item.head_sh_running, item.member_mem_code)}
+                          onClick={() => printSticker(item.member_mem_code)}
+                        ></img>
+                        <img
+                          src={check}
+                          className="w-10 mb-1"
+                          onClick={() =>
+                            submitCheck(
+                              item.order_so_running,
+                              item.head_sh_running,
+                              item.member_mem_code
+                            )
+                          }
                         ></img>
                         <div className="bg-amber-300 p-1 rounded font-bold">
                           <p>{item.order_so_qc_request}</p>

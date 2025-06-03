@@ -10,8 +10,6 @@ import axios from "axios";
 import prepareIcon from "../assets/received.png";
 import QCIcon from "../assets/quality-control.png";
 import PackingIcon from "../assets/package-delivered.png";
-import OrderList from "./OrderList";
-import { data } from "react-router";
 
 export interface Root {
   sh_running: string;
@@ -24,6 +22,7 @@ export interface ShoppingOrder {
   so_running: string;
   so_amount: number;
   so_unit: string;
+  sh_running: string;
   picking_status: string;
   emp_code_floor_picking: string;
   so_picking_time: string;
@@ -78,11 +77,17 @@ export interface Employees {
   emp_nickname: string;
   emp_tel: string | null;
   emp_floor: string | null;
+  restricted_qc: string[] | null;
 }
 
 export interface MemRoute {
   route_code: string;
   route_name: string;
+}
+
+export interface dataForEmp {
+  dataEmp: Employees;
+  mem_route: MemRoute[];
 }
 
 export type ShoppingHead = Root[];
@@ -131,9 +136,9 @@ const QCDashboard = () => {
   const [isReady, setIsReady] = useState<boolean>(false);
 
   // State ของ Input พนักงาน
-  const [prepareEmp, setPrepareEmp] = useState<Employees>();
-  const [QCEmp, setQCEmp] = useState<Employees>();
-  const [packedEMP, setPackedEmp] = useState<Employees>();
+  const [prepareEmp, setPrepareEmp] = useState<dataForEmp>();
+  const [QCEmp, setQCEmp] = useState<dataForEmp>();
+  const [packedEMP, setPackedEmp] = useState<dataForEmp>();
   const [inputPrepare, setInputPrepare] = useState<string>("");
   const [inputQC, setInputQC] = useState<string>("");
   const [inputPacked, setInputPacked] = useState<string>("");
@@ -147,24 +152,40 @@ const QCDashboard = () => {
   const [submitSuccess, setSubmitSucess] = useState<boolean>(false);
   const [submitFailed, setSubmitFailed] = useState<boolean>(false);
 
+  // State ของการจำกัดเส้นทาง
+  const [restrictedQC, setRestrictedQC] = useState<string[] | null>(null);
+  const [route, setRoute] = useState<MemRoute[] | null>(null);
+
   // ทำให้รหัสพนักงานไม่หายเมื่อ Refresh
   useEffect(() => {
-    if (prepareEmp?.emp_code) {
+    if (prepareEmp?.dataEmp?.emp_code) {
       setInputPrepare(
-        `${prepareEmp.emp_code} ${prepareEmp.emp_nickname || ""}`
+        `${prepareEmp.dataEmp.emp_code} ${
+          prepareEmp.dataEmp.emp_nickname || ""
+        }`
       );
     }
   }, [prepareEmp]);
 
   useEffect(() => {
-    if (QCEmp?.emp_code) {
-      setInputQC(`${QCEmp.emp_code} ${QCEmp.emp_nickname || ""}`);
+    if (QCEmp?.dataEmp?.emp_code) {
+      setInputQC(
+        `${QCEmp.dataEmp.emp_code} ${QCEmp.dataEmp.emp_nickname || ""}`
+      );
+    }
+    if (QCEmp?.dataEmp?.emp_code) {
+      setRestrictedQC(QCEmp.dataEmp.restricted_qc);
+    }
+    if (QCEmp?.mem_route) {
+      setRoute(QCEmp?.mem_route);
     }
   }, [QCEmp]);
 
   useEffect(() => {
-    if (packedEMP?.emp_code) {
-      setInputPacked(`${packedEMP.emp_code} ${packedEMP.emp_nickname || ""}`);
+    if (packedEMP?.dataEmp?.emp_code) {
+      setInputPacked(
+        `${packedEMP.dataEmp.emp_code} ${packedEMP.dataEmp.emp_nickname || ""}`
+      );
     }
   }, [packedEMP]);
 
@@ -304,6 +325,14 @@ const QCDashboard = () => {
       setRT(rt);
       inputBarcode.current?.focus();
       setSHRunningArray(shRunningArray);
+    }
+    if (dataQC) {
+      if (Array.isArray(dataQC) && dataQC.length > 0) {
+        if (restrictedQC?.includes(dataQC[0]?.members?.mem_route?.route_code)) {
+          alert("คุณไม่มีสิทธิ์ทำงานในเส้นทางของลูกค้าคนนี้");
+          handleClear();
+        }
+      }
     }
   }, [dataQC]);
 
@@ -468,6 +497,7 @@ const QCDashboard = () => {
       sessionStorage.removeItem("qc-emp");
       setQCEmp(undefined);
       setInputQC("");
+      setRoute(null);
       inputRefEmpQC.current?.focus();
       // setDataQC(null);
     } else if (type_emp === "packed-emp") {
@@ -531,6 +561,24 @@ const QCDashboard = () => {
         console.log("SubmitShoppingHead Failed");
         setSubmitFailed(true);
       }
+    }
+  };
+
+  const handleRT = async (
+    so_running: string,
+    sh_running: string,
+    mem_code: string
+  ) => {
+    const data = await axios.post(
+      `${import.meta.env.VITE_API_URL_ORDER}/api/qc/update-rt`,
+      {
+        so_running: so_running,
+        sh_running: sh_running,
+        mem_code: mem_code,
+      }
+    );
+    if (data.status === 201) {
+      window.open(`/print-rt?so_running=${so_running}`);
     }
   };
 
@@ -838,10 +886,16 @@ const QCDashboard = () => {
         <h1 className="text-2xl font-bold text-center mt-7">
           เส้นทางที่สามารถทำงานได้
         </h1>
-        <p className="mt-2">
-          หาดใหญ่ , สงขลา , สะเดา , ปัตตานี , สตูล , นราธิวาส , สุไหงโกลก , ยะลา
-          , เบตง , นครศรี ฯ , รับเอง , อื่นๆ , สทิงพระ , ภูเก็ต , สุราษฏร์ธานี ,
-          พังงา , ยาแห้ง ส่งฟรี ทั่วไทย , พัทลุง-นคร , ชุมพร , กระบี่ - ตรัง
+        <p className="mt-2 px-10 text-lg">
+          {route ? route
+            ?.filter((r) => !restrictedQC?.includes(r.route_code))
+            ?.filter((r) => r.route_name !== "อื่นๆ")
+            .map((r, index, arr) => (
+              <span key={r.route_code}>
+                {r.route_name}
+                {index < arr.length - 1 ? " , " : ""}
+              </span>
+            )) : 'กรุณาป้อนรหัสพนักงาน QC เพื่อแสดงเส้นทางที่ทำงานได้'}
         </p>
         <div className="w-full mt-5 h-8 px-6">
           <div className="grid grid-cols-6 gap-3">
@@ -1060,9 +1114,13 @@ const QCDashboard = () => {
                     {order?.length > 0 ? (
                       order
                         .sort((a, b) => {
-                          const aDone = a.so_already_qc === "Yes" ? 1 : 0;
-                          const bDone = b.so_already_qc === "Yes" ? 1 : 0;
-                          return aDone - bDone;
+                          const getPriority = (item: any) => {
+                            if (item.so_already_qc === "RT") return 2;
+                            if (item.so_already_qc === "Yes") return 1;
+                            return 0; // ยังไม่ QC
+                          };
+
+                          return getPriority(a) - getPriority(b);
                         })
                         .map((so, index) => {
                           return (
@@ -1070,6 +1128,8 @@ const QCDashboard = () => {
                               className={`  border-b-2 border-blue-200 ${
                                 so.so_already_qc === "Yes"
                                   ? "bg-green-100 hover:bg-green-100"
+                                  : so.so_already_qc === "RT"
+                                  ? "bg-red-100 hover:bg-red-100"
                                   : "bg-white hover:bg-gray-50"
                               }`}
                             >
@@ -1184,6 +1244,8 @@ const QCDashboard = () => {
                                     src={
                                       so.so_already_qc === "Yes"
                                         ? accept
+                                        : so.so_already_qc === "RT"
+                                        ? box
                                         : incorect
                                     }
                                     className="w-10"
@@ -1273,8 +1335,29 @@ const QCDashboard = () => {
                                   >
                                     ขอใหม่
                                   </button>
-                                  <button className="bg-red-500 p-1 rounded-lg text-base text-white hover:bg-red-600 cursor-pointer">
-                                    ส่ง RT
+                                  <button
+                                    // disabled={so.so_already_qc === 'RT'}
+                                    className={` p-1 rounded-lg text-base text-white cursor-pointer ${
+                                      so.so_already_qc === "RT"
+                                        ? "hover:bg-gray-600 bg-gray-500"
+                                        : "hover:bg-red-600 bg-red-500"
+                                    }`}
+                                    onClick={() => {
+                                      const mem_code = Array.isArray(dataQC)
+                                        ? dataQC.length > 0
+                                          ? dataQC[0]?.members?.mem_code
+                                          : null
+                                        : dataQC?.members?.mem_code ?? null;
+                                      handleRT(
+                                        so.so_running,
+                                        so.sh_running,
+                                        mem_code
+                                      );
+                                    }}
+                                  >
+                                    {so.so_already_qc === "RT"
+                                      ? "ส่ง RT แล้ว"
+                                      : "ส่ง RT"}
                                   </button>
                                 </div>
                               </td>
