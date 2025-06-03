@@ -4,6 +4,8 @@ import { io, Socket } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import Clock from "../components/Clock";
 import ProductBox from "../components/ProductBox";
+import ButtonMenu from "../components/buttonMenu";
+
 
 interface Product {
   product_code: string;
@@ -12,7 +14,7 @@ interface Product {
   product_barcode: string;
   product_floor: string | null;
   product_addr: string;
-  product_stock: string;
+  product_stock: number;
   product_unit: string;
 }
 
@@ -56,17 +58,19 @@ function ProductList() {
   const [openMenu, setOpenMenu] = useState(false);
   const [search, setSearch] = useState("");
   const [showInput, setShowInput] = useState(false);
-  const [, setIsFiltered] = useState(false)
+  const [, setIsFiltered] = useState(false);
   // const handleDoubleClick = useDoubleClick();
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
     console.log(token);
-    console.log(`${import.meta.env.VITE_API_URL_ORDER}/socket/picking/listproducts`);
+    console.log(
+      `${import.meta.env.VITE_API_URL_ORDER}/socket/picking/listproducts`
+    );
     const newSocket = io(
       `${import.meta.env.VITE_API_URL_ORDER}/socket/picking/listproducts`,
       {
-        path: '/socket/picking',
+        path: "/socket/picking",
         extraHeaders: {
           Authorization: `Bearer ${token}`,
         },
@@ -78,7 +82,6 @@ function ProductList() {
       console.log("✅ Connected to WebSocket");
       newSocket.emit("join_room", mem_code);
     });
-
 
     newSocket.on("listproduct:get", (data) => {
       setListproduct(data);
@@ -103,7 +106,7 @@ function ProductList() {
       );
       setCanSubmit(!hasPending);
     }
-    console.log(listproduct)
+    console.log(listproduct);
   }, [listproduct]);
 
   useEffect(() => {
@@ -166,20 +169,19 @@ function ProductList() {
         all_sh_running: listproduct?.all_sh_running,
       });
     }
-  }
+  };
 
   useEffect(() => {
     setIsFiltered(!!search || !!selectedFloor);
   }, [search, selectedFloor]);
 
-  console.log("search " + search);
-  console.log("selectedFloor " + selectedFloor);
+  // console.log("search " + search);
+  // console.log("selectedFloor " + selectedFloor);
 
   const setButton = () => {
-    setSearch('');
-    setSelectedFloor(null)
-  }
-
+    setSearch("");
+    setSelectedFloor(null);
+  };
 
   const totalOrders =
     (listproduct?.shoppingHeads ?? []).reduce(
@@ -192,7 +194,13 @@ function ProductList() {
       (total, head) =>
         total +
         head.shoppingOrders.filter(
-          (order) => order.picking_status === "picking" || order.picking_status === "หมด" || order.picking_status === "ไม่พอ" || order.picking_status === "ไม่เจอ" || order.picking_status === "เสีย" || order.picking_status === "ด้านล่าง",
+          (order) =>
+            order.picking_status === "picking" ||
+            order.picking_status === "หมด" ||
+            order.picking_status === "ไม่พอ" ||
+            order.picking_status === "ไม่เจอ" ||
+            order.picking_status === "เสีย" ||
+            order.picking_status === "ด้านล่าง"
         ).length,
       0
     ) || 0;
@@ -216,13 +224,27 @@ function ProductList() {
   ];
 
   const Btnlogout = () => {
-    logout()
+    logout();
   };
 
   return (
     <div className="flex flex-col h-screen">
       <header
-        className={`p-2 sticky top-0 bg-blue-400 z-40 text-white font-medium ${selectedFloor === '1' ? "bg-gray-500" : selectedFloor === '2' ? "bg-yellow-500" : selectedFloor === '3' ? "bg-blue-500" : selectedFloor === '4' ? "bg-red-500" : selectedFloor === '5' ? "bg-emerald-500" : selectedFloor === 'box' ? "bg-purple-500" : "bg-blue-400"} `}
+        className={`p-2 sticky top-0 bg-blue-400 z-40 text-white font-medium ${
+          selectedFloor === "1"
+            ? "bg-gray-500"
+            : selectedFloor === "2"
+            ? "bg-yellow-500"
+            : selectedFloor === "3"
+            ? "bg-blue-500"
+            : selectedFloor === "4"
+            ? "bg-red-500"
+            : selectedFloor === "5"
+            ? "bg-emerald-500"
+            : selectedFloor === "box"
+            ? "bg-purple-500"
+            : "bg-blue-400"
+        } `}
       >
         <div>
           <div className="flex justify-between">
@@ -234,11 +256,19 @@ function ProductList() {
             <div>
               {showInput && (
                 <div ref={popupRef} className="flex absolute ">
-                  <input type="text" placeholder="พิมพ์ข้อมูลที่ต้องการค้นหา" value={search} onChange={(e) => setSearch(e.target.value)} className="p-1 border rounded-sm text-black bg-white flex z-10 h-8" />
+                  <input
+                    type="text"
+                    placeholder="พิมพ์ข้อมูลที่ต้องการค้นหา"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="p-1 border rounded-sm text-black bg-white flex z-10 h-8"
+                  />
                 </div>
               )}
               <div className="flex justify-center text-sm">
-                <p><Clock></Clock></p>
+                <p>
+                  <Clock></Clock>
+                </p>
               </div>
               <div className="flex justify-center text-xs">
                 <p>
@@ -252,7 +282,11 @@ function ProductList() {
               </div>
             </div>
             <div>
-              <button ref={buttonRef} onClick={() => setShowInput((prev) => !prev)} className="bg-white rounded-sm px-3 py-1 text-black drop-shadow-xs">
+              <button
+                ref={buttonRef}
+                onClick={() => setShowInput((prev) => !prev)}
+                className="bg-white rounded-sm px-3 py-1 text-black drop-shadow-xs"
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
@@ -270,7 +304,11 @@ function ProductList() {
           </div>
           <div className="flex justify-start">
             <div id="button" className="flex justify-start">
-              <button ref={buttonRef} onClick={() => setOpenMenu((prev) => !prev)} className="px-3 pt-2 cursor-pointer text-center ">
+              <button
+                ref={buttonRef}
+                onClick={() => setOpenMenu((prev) => !prev)}
+                className="px-3 pt-2 cursor-pointer text-center "
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
@@ -288,14 +326,25 @@ function ProductList() {
             <div
               id="name"
               onClick={() => navigate("/order-list")}
-              className="flex pt-2 cursor-pointer text-center justify-center mx-auto"
+              className="flex pt-2 cursor-pointer text-center justify-center items-center mx-auto"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-              </svg>&nbsp;
-
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                className="size-5"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+                />
+              </svg>
+              &nbsp;
               <p>{listproduct?.mem_code}</p>&nbsp;
-              <p>{listproduct?.mem_name}</p>
+              <p className=" w-48 truncate">{listproduct?.mem_name}</p>
             </div>
           </div>
         </div>
@@ -304,25 +353,51 @@ function ProductList() {
       <div className="relative content bg-white overflow-y-auto h-full text-[#444444]">
         <div>
           {openMenu && (
-            <div ref={popupRef} className="fixed top-0 left-0 h-full z-50 w-3/5 sm:w-1/2 md:w-1/4 bg-blue-900 transition-transform duration-2000 ease-in-out transform translate-x-0">
+            <div
+              ref={popupRef}
+              className="fixed top-0 left-0 h-full z-50 w-3/5 sm:w-1/2 md:w-1/4 bg-blue-900 transition-transform duration-2000 ease-in-out transform translate-x-0"
+            >
               <div id="infomation" className="p-4">
                 <div className="py-5">
                   <div className="bg-gray-100 p-1 rounded-full w-18 h-18 mx-auto">
-                    <img className="rounded-full w-16 h-16 bg-white mx-auto"
-                      src="https://as2.ftcdn.net/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg" />
+                    <img
+                      className="rounded-full w-16 h-16 bg-white mx-auto"
+                      src="https://as2.ftcdn.net/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg"
+                    />
                   </div>
-                  <p className="flex justify-center mt-2 text-white">{userInfo?.emp_code}</p>
-                  <p className="flex justify-center text-white">{userInfo?.username}</p>
-                  <p className="flex justify-center text-white">คุณเป็นพนักงานประจำชั้น</p>
-                  <p className="flex justify-center text-white">{userInfo?.floor_picking || "-"}</p>
+                  <div>
+                    <p className="flex justify-center mt-3 text-white">
+                      รหัสพนักงาน : {userInfo?.emp_code}
+                    </p>
+                    <p className="flex justify-center mt-1 text-white">
+                      ชื่อ : {userInfo?.firstname} {userInfo?.lastname}
+                    </p>
+                    <p className="flex justify-center mt-1 text-white">
+                      ชื่อเล่น : {userInfo?.nickname}
+                    </p>
+                    <p className="flex justify-center mt-1 text-white">
+                      {`ประจำชั้น ${userInfo?.floor_picking || ""}`}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex justify-center px-3 text-white">
-                  <button onClick={Btnlogout} className="w-full mx-auto flex py-2 hover:bg-red-600 cursor-pointer text-center items-center font-light rounded-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none"
-                      viewBox="0 0 24 24" strokeWidth={1.2} stroke="currentColor"
-                      className="size-9 rounded-full mr-1 ml-1 p-1 text-white">
-                      <path strokeLinecap="round" strokeLinejoin="round"
-                        d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
+                  <button
+                    onClick={Btnlogout}
+                    className="w-full mx-auto flex py-2 hover:bg-red-600 cursor-pointer text-center items-center font-light rounded-sm"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.2}
+                      stroke="currentColor"
+                      className="size-9 rounded-full mr-1 ml-1 p-1 text-white"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15"
+                      />
                     </svg>
                     ออกจากระบบ
                   </button>
@@ -337,21 +412,35 @@ function ProductList() {
           </div>
         ) : !listproduct?.shoppingHeads ? (
           <div className="flex flex-col items-center mt-5">
-            <p className="font-bold text-2xl">รายการคำสั่งซื้อนี้ยืนยันไปแล้ว</p>
-            <button onClick={() => navigate("/order-list")} className="bg-blue-400 px-3 py-1 mt-4 rounded-sm text-white">กลับ</button>
-          </div>) : (
+            <p className="font-bold text-2xl">
+              รายการคำสั่งซื้อนี้ยืนยันไปแล้ว
+            </p>
+            <button
+              onClick={() => navigate("/order-list")}
+              className="bg-blue-400 px-3 py-1 mt-4 rounded-sm text-white"
+            >
+              กลับ
+            </button>
+          </div>
+        ) : (
           <div>
-            {listproduct.shoppingHeads.some(head =>
-              head.shoppingOrders.some(orderItem => {
+            {listproduct.shoppingHeads.some((head) =>
+              head.shoppingOrders.some((orderItem) => {
                 const matchFloor = selectedFloor
-                  ? (orderItem.product.product_floor || '1') === selectedFloor
+                  ? (orderItem.product.product_floor || "1") === selectedFloor
                   : true;
 
                 const matchSearch =
                   !search ||
-                  orderItem.product.product_name.toLowerCase().includes(search.toLowerCase()) ||
-                  orderItem.so_running.toLowerCase().includes(search.toLowerCase()) ||
-                  orderItem.product.product_code.toLowerCase().includes(search.toLowerCase());
+                  orderItem.product.product_name
+                    .toLowerCase()
+                    .includes(search.toLowerCase()) ||
+                  orderItem.so_running
+                    .toLowerCase()
+                    .includes(search.toLowerCase()) ||
+                  orderItem.product.product_code
+                    .toLowerCase()
+                    .includes(search.toLowerCase());
 
                 return matchFloor && matchSearch;
               })
@@ -366,17 +455,29 @@ function ProductList() {
                       {head.shoppingOrders
                         .filter((orderItem) => {
                           const matchFloor = selectedFloor
-                            ? (orderItem.product.product_floor || '1') === selectedFloor
-                            : true
+                            ? (orderItem.product.product_floor || "1") ===
+                              selectedFloor
+                            : true;
 
-                          const matchSearch = !search || orderItem.product.product_name.includes(search) || orderItem.so_running.includes(search) || orderItem.product.product_code.includes(search);
+                          const matchSearch =
+                            !search ||
+                            orderItem.product.product_name.includes(search) ||
+                            orderItem.so_running.includes(search) ||
+                            orderItem.product.product_code.includes(search);
                           return matchFloor && matchSearch;
-                        }
-                        )
+                        })
                         .map((orderItem, Orderindex) => {
                           if (socket) {
-                            console.log("orderItem2", orderItem)
-                            return <ProductBox orderItem={orderItem} key={Orderindex} headShRunning={head.sh_running} socket={socket} handleDoubleClick={handleDoubleClick} />
+                            console.log("orderItem2", orderItem);
+                            return (
+                              <ProductBox
+                                orderItem={orderItem}
+                                key={Orderindex}
+                                headShRunning={head.sh_running}
+                                socket={socket}
+                                handleDoubleClick={handleDoubleClick}
+                              />
+                            );
                           }
                         })}
                     </div>
@@ -385,32 +486,52 @@ function ProductList() {
               </div>
             ) : (
               (search || selectedFloor) && (
-
                 <div className="flex flex-col justify-center items-center text-center h-[70vh]">
                   <div className=" font-bold mt-4 text-red-500 text-2xl">
-
                     {search && (
                       <div>
                         <p>ไม่มีรายการสินค้าชื่อ</p>
-                        <p >{search}</p>
-                        <p ></p>
+                        <p>{search}</p>
+                        <p></p>
                       </div>
                     )}
                     {selectedFloor && (
                       <div>
                         <p>ไม่มีสินค้าที่ต้องจัดในชั้น</p>
-                        <p > {selectedFloor}</p>
+                        <p> {selectedFloor}</p>
                       </div>
                     )}
                   </div>
-                  <button onClick={setButton} className="px-5 py-1 rounded-sm mt-2 text-xl bg-red-500 text-white shadow-xl border-gray-300">คืนค่าเดิม</button>
+                  <button
+                    onClick={setButton}
+                    className="px-5 py-1 rounded-sm mt-2 text-xl bg-red-500 text-white shadow-xl border-gray-300"
+                  >
+                    คืนค่าเดิม
+                  </button>
                 </div>
-              ))}
+              )
+            )}
           </div>
         )}
       </div>
       <div>
-        <footer className={`p-3 fixed bottom-0 left-0 right-0 z-40  text-white font-medium ${selectedFloor === '1' ? "bg-gray-500" : selectedFloor === '2' ? "bg-yellow-500" : selectedFloor === '3' ? "bg-blue-500" : selectedFloor === '4' ? "bg-red-500" : selectedFloor === '5' ? "bg-emerald-500" : selectedFloor === 'box' ? "bg-purple-500" : "bg-blue-400"}`}>
+        <footer
+          className={`p-3 fixed bottom-0 left-0 right-0 z-40  text-white font-medium ${
+            selectedFloor === "1"
+              ? "bg-gray-500"
+              : selectedFloor === "2"
+              ? "bg-yellow-500"
+              : selectedFloor === "3"
+              ? "bg-blue-500"
+              : selectedFloor === "4"
+              ? "bg-red-500"
+              : selectedFloor === "5"
+              ? "bg-emerald-500"
+              : selectedFloor === "box"
+              ? "bg-purple-500"
+              : "bg-blue-400"
+          }`}
+        >
           <div className="flex">
             {floorButtons.map((btn) => (
               <button
@@ -422,10 +543,12 @@ function ProductList() {
                 }
                 className={`border border-gray-500 py-1 px-1 rounded-sm shadow-lg w-full mx-1
                             ${btn.color} 
-                            ${selectedFloor === btn.value
-                    ? "ring-2 ring-yellow-300"
-                    : ""
-                  }`}>
+                            ${
+                              selectedFloor === btn.value
+                                ? "ring-2 ring-yellow-300"
+                                : ""
+                            }`}
+              >
                 {btn.label}
               </button>
             ))}
@@ -433,13 +556,29 @@ function ProductList() {
           <div>
             <button
               onClick={() => {
-                submitPicking()
-                navigate('/order-list')
+                submitPicking();
+                navigate("/order-list");
               }}
-              disabled={!CanSubmit || !listproduct || userInfo?.emp_code !== listproduct.emp_code_picking}
-              className={`w-full px-3 py-1 shadow-md text-lg rounded-sm font-semibold  text-white mt-3 ${(CanSubmit && listproduct && userInfo?.emp_code === listproduct.emp_code_picking) ? "bg-green-400" : "bg-gray-400"}`}
+              disabled={
+                !CanSubmit ||
+                !listproduct ||
+                userInfo?.emp_code !== listproduct.emp_code_picking
+              }
+              className={`w-full px-3 py-1 shadow-md text-lg rounded-sm font-semibold  text-white mt-3 ${
+                CanSubmit &&
+                listproduct &&
+                userInfo?.emp_code === listproduct.emp_code_picking
+                  ? "bg-green-400"
+                  : "bg-gray-400"
+              }`}
             >
-              {(!CanSubmit || !listproduct || userInfo?.emp_code !== listproduct.emp_code_picking) ? `คุณไม่มีสิทธิ์ในการยืนยัน` : (!CanSubmit) ? `กรุณาจัดสินค้าให้ครบ` : `ยืนยันการจัดสินค้า`}
+              {!CanSubmit ||
+              !listproduct ||
+              userInfo?.emp_code !== listproduct.emp_code_picking
+                ? `คุณไม่มีสิทธิ์ในการยืนยัน`
+                : !CanSubmit
+                ? `กรุณาจัดสินค้าให้ครบ`
+                : `ยืนยันการจัดสินค้า`}
             </button>
           </div>
         </footer>

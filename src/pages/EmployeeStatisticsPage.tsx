@@ -45,61 +45,21 @@ interface EmployeeGroup {
   isExpanded: boolean;
 }
 
-// เพิ่ม interface สำหรับข้อมูลตามวัน
-interface DateGroup {
-  date: string; // รูปแบบ "YYYY-MM-DD"
-  formattedDate: string; // รูปแบบไทย "dd/mm/yy วัน"
-  employees: EmployeeGroup[]; // เก็บพนักงานในวันนั้นๆ
-}
-
 const EmployeeStatisticsPage = () => {
   const [employeeGroups, setEmployeeGroups] = useState<EmployeeGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
-  const [dateList, setDateList] = useState<DateGroup[]>([]);
-
+  const [expandedEmployees, setExpandedEmployees] = useState<Set<string>>(
+    new Set()
+  );
+  const [expandedDates, setExpandedDates] = useState<
+    Record<string, Set<string>>
+  >({});
   const { userInfo } = useAuth();
 
   useEffect(() => {
     fetchAllEmployeeStatistics();
   }, []);
-
-  // สร้างรายการวันจากข้อมูล API
-  const extractDatesFromResponse = (employees: EmployeeGroup[]) => {
-    const dateMap = new Map<string, DateGroup>();
-
-    employees.forEach((employee) => {
-      if (employee.statistics?.date) {
-        // ใช้ date ที่ backend ส่งมาโดยตรง
-        const dateStr = employee.statistics.date;
-
-        if (!dateMap.has(dateStr)) {
-          dateMap.set(dateStr, {
-            date: dateStr,
-            formattedDate: formatDateForKey(dateStr),
-            employees: [],
-          });
-        }
-
-        // เพิ่มพนักงานในวันนั้น
-        dateMap.get(dateStr)?.employees.push(employee);
-      }
-    });
-
-    // แปลง Map เป็น Array และเรียงลำดับวันที่ล่าสุดอยู่ด้านล่าง
-    const dates = Array.from(dateMap.values());
-    dates.sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-
-    setDateList(dates);
-
-    // ถ้ามีข้อมูล ให้เปิดวันล่าสุดอัตโนมัติ
-    if (dates.length > 0) {
-      setExpandedDates(new Set([dates[0].formattedDate]));
-    }
-  };
 
   const fetchAllEmployeeStatistics = async () => {
     try {
@@ -133,7 +93,13 @@ const EmployeeStatisticsPage = () => {
         groups.sort((a, b) => a.empCode.localeCompare(b.empCode));
 
         setEmployeeGroups(groups);
-        extractDatesFromResponse(groups);
+
+        // Initialize expandedDates for each employee
+        const datesMap: Record<string, Set<string>> = {};
+        groups.forEach((group) => {
+          datesMap[group.empCode] = new Set();
+        });
+        setExpandedDates(datesMap);
       } else {
         setEmployeeGroups([]);
         throw new Error("Invalid data format received");
@@ -159,14 +125,14 @@ const EmployeeStatisticsPage = () => {
     }
   };
 
-  // Toggle expanded state for a date
-  const toggleDate = (dateStr: string) => {
-    setExpandedDates((prev) => {
+  // Toggle expanded state for an employee
+  const toggleEmployee = (empCode: string) => {
+    setExpandedEmployees((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(dateStr)) {
-        newSet.delete(dateStr);
+      if (newSet.has(empCode)) {
+        newSet.delete(empCode);
       } else {
-        newSet.add(dateStr);
+        newSet.add(empCode);
       }
       return newSet;
     });
@@ -220,135 +186,6 @@ const EmployeeStatisticsPage = () => {
         completed: 0,
       }
     );
-  };
-
-  // เพิ่มฟังก์ชันนี้ในคอมโพเนนต์
-  const combineEmployeeDataByDate = (
-    employees: EmployeeGroup[],
-    date?: string
-  ): EmployeeStatistics => {
-    // สร้างข้อมูลพื้นฐาน
-    const combinedData: EmployeeStatistics = {
-      empCode: "ALL", // รวมทุกคน
-      header: {
-        startTime: "",
-        endTime: "",
-        durationMin: 0,
-        durationHr: 0,
-      },
-      floors: [],
-      totalPicked: 0,
-      date: date || "", // ผูก date ไว้กับ group
-    };
-
-    // รวมข้อมูลจากทุกพนักงาน
-    if (employees.length === 0) return combinedData;
-
-    // Map เก็บข้อมูลแต่ละชั้น
-    const floorsMap: Record<string, FloorData> = {};
-
-    // ค่า startTime เริ่มต้น (จะหาค่าที่เร็วที่สุด)
-    let earliestStartTime: Date | null = null;
-    // ค่า endTime สุดท้าย (จะหาค่าที่ช้าที่สุด)
-    let latestEndTime: Date | null = null;
-
-    // รวม durationMin/ durationHr จาก header
-    let totalDurationMin = 0;
-    let totalDurationHr = 0;
-    let countWithDuration = 0;
-
-    // วนลูปผ่านทุกพนักงาน
-    employees.forEach((employee) => {
-      const stats = employee.statistics;
-
-      // รวม totalPicked
-      combinedData.totalPicked += stats.totalPicked;
-
-      // ตรวจสอบและปรับปรุง startTime และ endTime
-      if (stats.header.startTime) {
-        const startTime = new Date(stats.header.startTime);
-        if (!earliestStartTime || startTime < earliestStartTime) {
-          earliestStartTime = startTime;
-          combinedData.header.startTime = stats.header.startTime;
-        }
-      }
-
-      if (stats.header.endTime) {
-        const endTime = new Date(stats.header.endTime);
-        if (!latestEndTime || endTime > latestEndTime) {
-          latestEndTime = endTime;
-          combinedData.header.endTime = stats.header.endTime;
-        }
-      }
-
-      // รวม durationMin/Hr (ใช้ค่าที่ backend ส่งมา)
-      if (
-        typeof stats.header.durationMin === "number" &&
-        !isNaN(stats.header.durationMin)
-      ) {
-        totalDurationMin += stats.header.durationMin;
-        countWithDuration++;
-      }
-      if (
-        typeof stats.header.durationHr === "number" &&
-        !isNaN(stats.header.durationHr)
-      ) {
-        totalDurationHr += stats.header.durationHr;
-      }
-
-      // รวมข้อมูลแต่ละชั้น
-      stats.floors.forEach((floor) => {
-        if (!floorsMap[floor.floor]) {
-          // สร้างข้อมูลใหม่ถ้ายังไม่มี
-          floorsMap[floor.floor] = {
-            floor: floor.floor,
-            totalOrders: 0,
-            totalAmount: 0,
-            remaining: 0,
-            inProgress: 0,
-            completed: 0,
-          };
-        }
-
-        // รวมข้อมูลชั้น
-        floorsMap[floor.floor].totalOrders += floor.totalOrders;
-        floorsMap[floor.floor].totalAmount += floor.totalAmount;
-        floorsMap[floor.floor].remaining += floor.remaining;
-        floorsMap[floor.floor].inProgress += floor.inProgress;
-        floorsMap[floor.floor].completed += floor.completed;
-      });
-    });
-
-    // ใช้ durationMin/Hr รวม (หรือเฉลี่ย)
-    combinedData.header.durationMin = totalDurationMin;
-    combinedData.header.durationHr = totalDurationHr;
-
-    // แปลง floorsMap เป็น array
-    combinedData.floors = Object.values(floorsMap);
-
-    // เติมชั้นที่ไม่มีข้อมูล เพื่อให้แสดงครบทุกชั้น
-    const allFloors = ['?', '1', '2', '3', '4', '5'];
-    allFloors.forEach((floorId) => {
-      if (!floorsMap[floorId]) {
-        combinedData.floors.push({
-          floor: floorId,
-          totalOrders: 0,
-          totalAmount: 0,
-          remaining: 0,
-          inProgress: 0,
-          completed: 0,
-        });
-      }
-    });
-
-    // เรียงลำดับใหม่อีกครั้งหลังเติมครบ
-    combinedData.floors.sort((a, b) => {
-      if (a.floor === '?') return -1;
-      if (b.floor === '?') return 1;
-      return parseInt(a.floor) - parseInt(b.floor);
-    });
-
-    return combinedData;
   };
 
   if (loading) {
@@ -442,29 +279,24 @@ const EmployeeStatisticsPage = () => {
 
       <div className="min-h-screen bg-gray-100">
         <div className="p-4 space-y-4">
-          {/* Date List - แทนที่ Employee List */}
-          {dateList.map((dateGroup, index) => {
-            const isExpanded = expandedDates.has(dateGroup.formattedDate);
-            // ในอนาคตเราจะกรองข้อมูลตามวันที่ที่เลือก
-            // ใช้ข้อมูลพนักงานจากวันที่เลือก
-            const employeeData = combineEmployeeDataByDate(dateGroup.employees, dateGroup.date);
+          {/* Employee List */}
+          {employeeGroups.map((employee) => {
+            const isExpanded = expandedEmployees.has(employee.empCode);
+            const employeeData = employee.statistics;
 
             return (
-              <div
-                key={dateGroup.formattedDate}
-                className="bg-white rounded shadow"
-              >
-                {/* Date Header - แทนที่ Employee Header */}
+              <div key={employee.empCode} className="bg-white rounded shadow">
+                {/* Employee Header */}
                 <div
-                  onClick={() => toggleDate(dateGroup.formattedDate)}
+                  onClick={() => toggleEmployee(employee.empCode)}
                   className="px-6 py-3 bg-blue-50 border-b border-gray-200 hover:bg-blue-100 cursor-pointer flex items-center justify-between"
                 >
                   <div className="font-medium">
                     <span className="text-blue-700">
-                      {dateGroup.formattedDate}
+                      {formatEmployeeName(employee.empCode)}
                     </span>
                     <span className="ml-2 text-gray-500 text-sm">
-                      ({dateGroup.employees.length} คน)
+                      ({employee.empCode})
                     </span>
                   </div>
                   <span className="text-lg">
@@ -476,143 +308,155 @@ const EmployeeStatisticsPage = () => {
                   </span>
                 </div>
 
-                {/* Content - ยังคงใช้เนื้อหาเดิมเมื่อ expand */}
-                {isExpanded && employeeData && (
+                {/* Employee Content */}
+                {isExpanded && (
                   <div className="px-4 py-3">
                     {employeeData.floors.length === 0 ? (
                       <div className="text-center py-4 text-gray-500">
-                        ไม่พบข้อมูลสถิติสำหรับวันนี้
+                        ไม่พบข้อมูลสถิติสำหรับพนักงานนี้
                       </div>
                     ) : (
                       <>
-                        {/* ส่วนแสดงช่วงเวลา */}
-                        <div className="flex flex-row flex-wrap justify-center text-center gap-2 p-4 text-xs sm:text-sm">
-                          <div>
-                            <div className="text-xs sm:text-sm">ตั้งแต่</div>
-                            <div className="font-medium whitespace-nowrap">
-                              00:00:00
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-xs sm:text-sm">จนถึง</div>
-                            <div className="font-medium whitespace-nowrap">
-                              23:59:59
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-xs sm:text-sm">เวลา</div>
-                            <div className="font-medium whitespace-nowrap">
-                              &nbsp;
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-xs sm:text-sm">ชิ้นแรก</div>
-                            <div className="font-medium whitespace-nowrap">
-                              {employeeData.header.startTime
-                                ? new Date(
-                                    employeeData.header.startTime
-                                  ).toLocaleTimeString("th-TH")
-                                : "-"}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-xs sm:text-sm">ชิ้นล่าสุด</div>
-                            <div className="font-medium whitespace-nowrap">
-                              {employeeData.header.endTime
-                                ? new Date(
-                                    employeeData.header.endTime
-                                  ).toLocaleTimeString("th-TH")
-                                : "-"}
-                            </div>
-                          </div>
-                          <div>&nbsp;</div>
-                        </div>
+                        {/* Employee Statistics Summary */}
+                        <div className="bg-gray-50 p-4 mb-4 rounded">
+                          <h3 className="font-medium mb-2">สรุปผลงาน</h3>
 
-                        {/* ส่วนแสดงเวลาทำงาน */}
-                        <div className="p-2 mb-4 text-center text-xs sm:text-sm">
-                          <span>ชิ้นล่าสุด - ชิ้นแรก = เวลาทำงาน</span>
-                          <span className="font-bold ml-2">
-                            {employeeData.header.startTime && employeeData.header.endTime
-                              ? Math.round(
-                                  (new Date(employeeData.header.endTime).getTime() -
-                                    new Date(employeeData.header.startTime).getTime()) /
-                                    (1000 * 60)
-                                )
-                              : "-"} นาที
-                          </span>
-                          <span className="ml-2 text-xs sm:text-sm">หรือ</span>
-                          <span className="font-bold ml-2">
-                            {employeeData.header.startTime && employeeData.header.endTime
-                              ? Math.round(
-                                  (new Date(employeeData.header.endTime).getTime() -
-                                    new Date(employeeData.header.startTime).getTime()) /
-                                    (1000 * 60 * 60)
-                                )
-                              : "-"} ชั่วโมง
-                          </span>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="bg-white p-3 rounded border border-gray-200">
+                              <div className="text-sm text-gray-500">
+                                จำนวนที่จัดทั้งหมด
+                              </div>
+                              <div className="text-xl font-bold text-green-600">
+                                {employeeData.totalPicked} ชิ้น
+                              </div>
+                            </div>
+
+                            <div className="bg-white p-3 rounded border border-gray-200">
+                              <div className="text-sm text-gray-500">
+                                เวลาแล้วเสร็จ
+                              </div>
+                              <div className="text-xl font-bold text-blue-600">
+                                {(() => {
+                                  // คำนวณเวลาแล้วเสร็จจากความเร็วและงานทั้งหมด
+                                  if (
+                                    employeeData.header.durationMin <= 0 ||
+                                    employeeData.totalPicked <= 0
+                                  ) {
+                                    return "-";
+                                  }
+
+                                  // คำนวณความเร็วเฉลี่ยต่อนาที
+                                  const speedPerMinute =
+                                    employeeData.totalPicked /
+                                    employeeData.header.durationMin;
+
+                                  // นำผลรวมของคอลัมน์ "ทั้งหมด" มาคำนวณ
+                                  const totals = calculateTotals(employeeData);
+                                  const totalAmount = totals
+                                    ? totals.totalAmount
+                                    : 0;
+
+                                  // คำนวณเวลาที่ต้องใช้ทั้งหมด (นาที)
+                                  const totalMinutes =
+                                    speedPerMinute > 0
+                                      ? Math.ceil(totalAmount / speedPerMinute)
+                                      : 0;
+
+                                  // คำนวณเวลาแล้วเสร็จ
+                                  const totalHours = Math.floor(
+                                    totalMinutes / 60
+                                  );
+                                  const finalMinutes = totalMinutes % 60;
+
+                                  // แสดงผลเป็น ชั่วโมง:นาที
+                                  return totalMinutes > 0
+                                    ? `${
+                                        totalHours > 0
+                                          ? `${totalHours} ชั่วโมง `
+                                          : ""
+                                      }${finalMinutes} นาที`
+                                    : "เสร็จสิ้นแล้ว";
+                                })()}
+                              </div>
+                            </div>
+
+                            <div className="bg-white p-3 rounded border border-gray-200">
+                              <div className="text-sm text-gray-500">
+                                ความเร็วเฉลี่ย
+                              </div>
+                              <div className="grid grid-cols-2 gap-4 text-xl font-bold text-purple-600">
+                                <div>
+                                  {employeeData.header.durationMin > 0
+                                    ? (
+                                        employeeData.totalPicked /
+                                        employeeData.header.durationMin
+                                      ).toFixed(2)
+                                    : "0.00"}{" "}
+                                  ชิ้น/นาที
+                                </div>
+                                <div>
+                                  {employeeData.header.durationHr > 0
+                                    ? (
+                                        employeeData.totalPicked /
+                                        employeeData.header.durationHr
+                                      ).toFixed(2)
+                                    : "0.00"}{" "}
+                                  ชิ้น/ชั่วโมง
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
 
                         {/* Employee Statistics Table */}
                         <div>
+                          <h3 className="font-medium mb-2">ข้อมูลตามชั้น</h3>
                           <table className="w-full text-sm">
                             <thead>
                               <tr className="bg-gray-50">
-                                <th className="text-center py-2 border">
+                                <th className="text-center px-4 py-2 border border-gray-300">
                                   ชั้น
                                 </th>
-                                <th className="text-center py-2 border">
+                                <th className="text-center px-4 py-2 border border-gray-300">
                                   ทั้งหมด
                                 </th>
-                                <th className="text-center py-2 border">
+                                <th className="text-center px-4 py-2 border border-gray-300">
                                   เหลือจัด
                                 </th>
-                                <th className="text-center py-2 border">
+                                <th className="text-center px-4 py-2 border border-gray-300">
                                   กำลังจัด
                                 </th>
-                                <th className="text-center py-2 border">
+                                <th className="text-center px-4 py-2 border border-gray-300">
                                   จัดแล้ว
                                 </th>
                               </tr>
                             </thead>
                             <tbody>
                               {/* Floor Data */}
-                              {employeeData.floors.map((floor, index) => {
-                                let bgColorClass = "";
-                                if (floor.floor === "2")
-                                  bgColorClass = "bg-yellow-50";
-                                else if (floor.floor === "3")
-                                  bgColorClass = "bg-blue-50";
-                                else if (floor.floor === "4")
-                                  bgColorClass = "bg-red-50";
-                                else if (floor.floor === "5")
-                                  bgColorClass = "bg-green-50";
-
-                                return (
-                                  <tr
-                                    key={floor.floor}
-                                    className={
-                                      bgColorClass ||
-                                      (index % 2 === 0 ? "" : "bg-gray-50")
-                                    }
-                                  >
-                                    <td className="text-center px-4 py-2 border border-gray-300">
-                                      {floor.floor}
-                                    </td>
-                                    <td className="text-center px-4 py-2 border border-gray-300">
-                                      {floor.totalAmount}
-                                    </td>
-                                    <td className="text-center px-4 py-2 border border-gray-300 text-red-600">
-                                      {floor.remaining}
-                                    </td>
-                                    <td className="text-center px-4 py-2 border border-gray-300 text-yellow-600">
-                                      {floor.inProgress}
-                                    </td>
-                                    <td className="text-center px-4 py-2 border border-gray-300 text-green-600">
-                                      {floor.completed}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
+                              {employeeData.floors.map((floor, index) => (
+                                <tr
+                                  key={floor.floor}
+                                  className={
+                                    index % 2 === 0 ? "" : "bg-gray-50"
+                                  }
+                                >
+                                  <td className="text-center px-4 py-2 border border-gray-300">
+                                    {floor.floor}
+                                  </td>
+                                  <td className="text-center px-4 py-2 border border-gray-300">
+                                    {floor.totalAmount}
+                                  </td>
+                                  <td className="text-center px-4 py-2 border border-gray-300 text-red-600">
+                                    {floor.remaining}
+                                  </td>
+                                  <td className="text-center px-4 py-2 border border-gray-300 text-yellow-600">
+                                    {floor.inProgress}
+                                  </td>
+                                  <td className="text-center px-4 py-2 border border-gray-300 text-green-600">
+                                    {floor.completed}
+                                  </td>
+                                </tr>
+                              ))}
 
                               {/* Sum Row */}
                               {(() => {
@@ -643,120 +487,42 @@ const EmployeeStatisticsPage = () => {
                           </table>
                         </div>
 
-                        {/* Employee Speed */}
-                        <div className="grid grid-cols-2 p-4">
-                          <div className="text-center pr-8">
-                            <div className="text-lg">ความเร็ว</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-medium">
-                              {employeeData.header.durationMin > 0
-                                ? (
-                                    (new Date(employeeData.header.endTime).getTime() -
-                                    new Date(employeeData.header.startTime).getTime()) /
-                                    (1000 * 60) / employeeData.floors.reduce((acc, floor) => acc + floor.completed, 0)
-                                  ).toFixed(2)
-                                : "0.00"}{" "}
-                              ชิ้น/นาที
+                        {/* Employee Activity Times */}
+                        <div className="mt-4 pt-4 border-t">
+                          <h3 className="font-medium mb-2">รายละเอียดเวลา</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="bg-white p-3 rounded border border-gray-200">
+                              <div className="text-sm text-gray-500">
+                                ตั้งแต่ - จนถึง
+                              </div>
+                              <div className="font-medium">
+                                <span>00:00:00 ถึง 23:59:59</span>
+                              </div>
                             </div>
-                            <div className="font-medium">
-                              {employeeData.header.durationHr > 0
-                                ? (
-                                  (new Date(employeeData.header.endTime).getTime() -
-                                  new Date(employeeData.header.startTime).getTime()) /
-                                  (1000 * 60 * 60) / employeeData.floors.reduce((acc, floor) => acc + floor.completed, 0)
-                                ).toFixed(2)
-                                : "0.00"}{" "}
-                              ชิ้น/ชั่วโมง
+                            <div className="bg-white p-3 rounded border border-gray-200">
+                              <div className="text-sm text-gray-500">
+                                เวลาเริ่มงาน
+                              </div>
+                              <div className="font-medium">
+                                {employeeData.header.startTime
+                                  ? new Date(
+                                      employeeData.header.startTime
+                                    ).toLocaleTimeString("th-TH")
+                                  : "-"}
+                              </div>
                             </div>
-                          </div>
-                        </div>
 
-                        {/* Remaining + In Progress */}
-                        <div className="grid grid-cols-2 p-4 border-t border-gray-200">
-                          <div className="text-center pr-8">
-                            <div className="text-lg">เหลือ + กำลังจัด</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-medium">
-                              {(() => {
-                                const totals = calculateTotals(employeeData);
-                                return totals
-                                  ? totals.remaining + totals.inProgress
-                                  : 0;
-                              })()}{" "}
-                              รายการ
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Completion Time */}
-                        <div className="grid grid-cols-2 p-4 border-t border-gray-200">
-                          <div className="text-center pr-8">
-                            <div className="text-lg">ประมาณการแล้วเสร็จ</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-medium text-red-500">
-                              {(() => {
-                                // คำนวณเวลาแล้วเสร็จจากสูตรใหม่: startTime + (totalAmount ÷ speedPerMinute)
-                                // ตรวจสอบว่า startTime มีค่าและ speedPerMinute > 0
-                                const totals = calculateTotals(employeeData);
-                                const totalAmount = totals ? totals.totalAmount : 0;
-                                if (
-                                  !employeeData.header.startTime ||
-                                  employeeData.floors.reduce((acc, floor) => acc + floor.completed, 0) <= 0
-                                ) {
-                                  return "-";
-                                }
-                                // ความเร็วเฉลี่ยต่อนาที
-                                const speedPerMinute =
-                                  (new Date(employeeData.header.endTime).getTime() -
-                                  new Date(employeeData.header.startTime).getTime()) /
-                                  (1000 * 60) / employeeData.floors.reduce((acc, floor) => acc + floor.completed, 0);
-                                if (speedPerMinute <= 0) {
-                                  return "-";
-                                }
-                                // เวลาสิ้นสุดโดยประมาณ = startTime + (totalAmount / speedPerMinute) * 60 * 1000
-                                const estimatedFinishTimestamp =
-                                  new Date(employeeData.header.startTime).getTime() +
-                                  (totalAmount / speedPerMinute) * 60 * 1000;
-                                const estimatedFinish = new Date(estimatedFinishTimestamp);
-                                const finishHours = estimatedFinish.getHours().toString().padStart(2, '0');
-                                const finishMinutes = estimatedFinish.getMinutes().toString().padStart(2, '0');
-                                const finishSeconds = estimatedFinish.getSeconds().toString().padStart(2, '0');
-                                return `${finishHours}:${finishMinutes}:${finishSeconds}`;
-                              })()}
-                              {/* {(() => {
-                                // 🔧 กำหนดค่าแบบ hardcoded เพื่อทดสอบการคำนวณ
-                                const startTime = new Date("2025-05-28T08:00:00"); // Local time
-                                const endTime = new Date("2025-05-28T08:30:00");   // Local time
-                                const totalAmount = 10; // จำนวนทั้งหมดที่ต้องจัด
-                                const completed = 5; // จำนวนที่จัดไปแล้ว
-
-                                // ตรวจสอบค่าพื้นฐาน
-                                if (!startTime || completed <= 0) {
-                                  return "-";
-                                }
-
-                                // คำนวณความเร็วเฉลี่ยต่อนาที
-                                const speedPerMinute =
-                                  (endTime.getTime() - startTime.getTime()) / (1000 * 60) / completed;
-
-                                if (speedPerMinute <= 0) {
-                                  return "-";
-                                }
-
-                                // คำนวณเวลาที่จะเสร็จโดยประมาณ
-                                const estimatedFinishTimestamp =
-                                  startTime.getTime() + (totalAmount / speedPerMinute) * 60 * 1000;
-
-                                const estimatedFinish = new Date(estimatedFinishTimestamp);
-                                const finishHours = estimatedFinish.getHours().toString().padStart(2, "0");
-                                const finishMinutes = estimatedFinish.getMinutes().toString().padStart(2, "0");
-                                const finishSeconds = estimatedFinish.getSeconds().toString().padStart(2, "0");
-
-                                return `${finishHours}:${finishMinutes}:${finishSeconds}`;
-                              })()} */}
+                            <div className="bg-white p-3 rounded border border-gray-200">
+                              <div className="text-sm text-gray-500">
+                                เวลาเลิกงาน
+                              </div>
+                              <div className="font-medium text-red-500">
+                                {employeeData.header.endTime
+                                  ? new Date(
+                                      employeeData.header.endTime
+                                    ).toLocaleTimeString("th-TH")
+                                  : "-"}
+                              </div>
                             </div>
                           </div>
                         </div>
