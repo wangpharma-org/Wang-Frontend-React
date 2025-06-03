@@ -69,12 +69,12 @@ console.log("VITE_API_URL_VERIFY_ORDER", import.meta.env.VITE_API_URL_VERIFY_ORD
 
   useEffect(() => {
     console.log(
-      `${import.meta.env.VITE_API_URL_VERIFY_ORDER}/verify-order/invoice`
+      `${import.meta.env.VITE_API_URL_VERIFY_ORDER}/socket/verify-order/invoice`
     );
     const socket = io(
-      `${import.meta.env.VITE_API_URL_VERIFY_ORDER}/verify-order/invoice`,
+      `${import.meta.env.VITE_API_URL_VERIFY_ORDER}/socket/verify-order/invoice`,
       {
-        path: "/verify-order",
+        path: "/socket/verify-order",
         // extraHeaders: {
         //   Authorization: `Bearer ${sessionStorage.getItem("access_token")}`,
         // },
@@ -124,9 +124,9 @@ console.log("VITE_API_URL_VERIFY_ORDER", import.meta.env.VITE_API_URL_VERIFY_ORD
 
   useEffect(() => {
     const checkdata = io(
-      `${import.meta.env.VITE_API_URL_VERIFY_ORDER}/verify-order/invoice`,
+      `${import.meta.env.VITE_API_URL_VERIFY_ORDER}/socket/verify-order/invoice`,
       {
-        path: "/verify-order",
+        path: "/socket/verify-order",
       }
     );
 
