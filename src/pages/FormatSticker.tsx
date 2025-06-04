@@ -45,6 +45,7 @@ const FormatSticker = () => {
   console.log(ticketId);
   useEffect(() => {
     if (!sticker) return;
+    console.log('sticker', sticker);
     const printTimeout = setTimeout(() => {
         window.print();
     }, 1000);
@@ -69,6 +70,7 @@ const FormatSticker = () => {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
+        console.log(response)
         if (!isCancelled) {
           setSticker(response.data);
           setLoading(false);

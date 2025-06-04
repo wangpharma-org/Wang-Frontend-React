@@ -17,6 +17,11 @@ import EmployeeStatisticsPage from "./pages/EmployeeStatisticsPage";
 import VerifyOrder from "./pages/VerifyOrder";
 import ReportEmployee from "./pages/ReportEmployee";
 import QCDashboard from "./pages/QC-Dashboard";
+import FragilePrint from "./components/FragilePrint";
+import SpecialExpressPrint from "./pages/SpecialExpress";
+import OtherCourier from "./pages/OtherCourier";
+import BasketSticker from "./pages/BasketSticker";
+import PrintRT from "./pages/RTPrint";
 import Dashboard from "./pages/ReportQcKPI";
 
 function App() {
@@ -42,6 +47,42 @@ function App() {
                 <Navbar />
                 <Login />
               </div>
+            }
+          />
+          <Route
+            path="/fragileprint"
+            element={
+              <FragilePrint />
+            }
+          />
+          <Route
+            path="/othercourier"
+            element={
+              <OtherCourier />
+            }
+          />
+          <Route
+            path="/basket-sticker"
+            element={
+              <BasketSticker />
+            }
+          />
+          <Route
+            path="/print-rt"
+            element={
+              <PrintRT />
+            }
+          />
+          <Route
+            path="/dashboard-qc"
+            element={
+              <QCDashboard />
+            }
+          />
+          <Route
+            path="/special"
+            element={
+              <SpecialExpressPrint />
             }
           />
           <Route

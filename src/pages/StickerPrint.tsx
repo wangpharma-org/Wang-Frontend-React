@@ -11,11 +11,17 @@ interface TicketItem {
   picking_status: string;
   mem_name: string;
   province: string;
+  mem_route: MemRoute;
   F2: FloorInfo | null;
   F3: FloorInfo | null;
   F4: FloorInfo | null;
   F5: FloorInfo | null;
   [key: string]: any;
+}
+
+interface MemRoute {
+  route_code: string;
+  route_name: string;
 }
 
 const StickerPrint = () => {
@@ -66,8 +72,6 @@ const StickerPrint = () => {
       newSocket.disconnect();
     };
   }, []);
-
-  
 
   const route = [
     { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
@@ -236,7 +240,7 @@ const StickerPrint = () => {
                   (list) =>
                     selectedRoute === "all" ||
                     selectedRoute === "" ||
-                    list.province === selectedRoute
+                    list?.mem_route?.route_code === selectedRoute
                 )
                 .map((list, index) => (
                   <tr
@@ -250,7 +254,7 @@ const StickerPrint = () => {
                     <td className="px-6 py-4 text-center">{index + 1}</td>
                     <td className="px-6 py-4 text-center">{list.mem_code}</td>
                     <td className="px-6 py-4 text-center">{list.mem_name}</td>
-                    <td className="px-6 py-4 text-center">{list.province ? route.find(r => r.value === list.province)?.name : 'อื่นๆ'}</td>
+                    <td className="px-6 py-4 text-center">{list.mem_route?.route_name ? list.mem_route?.route_name : 'อื่นๆ'}</td>
 
                     {[2, 3, 4, 5].map((floor) => (
                       <td
