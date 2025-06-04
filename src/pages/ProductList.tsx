@@ -4,8 +4,9 @@ import { io, Socket } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import Clock from "../components/Clock";
 import ProductBox from "../components/ProductBox";
-import ButtonMenu from "../components/buttonMenu";
-
+import { Bounce, toast, ToastContainer } from "react-toastify";
+import axios from "axios";
+import print from "../assets/printing.png";
 
 interface Product {
   product_code: string;
@@ -30,6 +31,7 @@ export interface ShoppingOrder {
 
 interface ShoppingHead {
   sh_running: string;
+  emp_code_picking: string;
   shoppingOrders: ShoppingOrder[];
 }
 
@@ -52,7 +54,7 @@ function ProductList() {
   const navigate = useNavigate();
   const mem_code = new URLSearchParams(window.location.search).get("mem_code");
   const { userInfo, logout } = useAuth();
-
+  const [floorCounts, setFloorCounts] = useState<Record<string, number>>({});
   const popupRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [openMenu, setOpenMenu] = useState(false);
@@ -99,14 +101,42 @@ function ProductList() {
     };
   }, []);
 
+  useEffect(()=>{
+    if(CanSubmit) {
+      submitPicking()
+    }
+  },[CanSubmit])
+
   useEffect(() => {
     if (listproduct) {
+      console.log('listproduct:',listproduct);
       const hasPending = (listproduct?.shoppingHeads ?? []).some((head) =>
         head.shoppingOrders.some((order) => order.picking_status === "pending")
       );
       setCanSubmit(!hasPending);
     }
     console.log(listproduct);
+
+    if (listproduct && Array.isArray(listproduct.shoppingHeads)) {
+      const floorCountMap: Record<string, number> = {};
+      listproduct.shoppingHeads.forEach((head) => {
+        head.shoppingOrders.forEach((order) => {
+          const status = order.picking_status;
+          const unit = order.so_unit || "";
+          const isBox = unit.includes("ลัง");
+    
+          if (status !== "picking") {
+            const floorKey = isBox
+              ? "box"
+              : order.product.product_floor || "1";
+            floorCountMap[floorKey] = (floorCountMap[floorKey] || 0) + 1;
+          }
+        });
+      });
+      setFloorCounts(floorCountMap);
+      console.log("จำนวนสินค้าที่ยังไม่ถูก pick ตามแต่ละชั้น (รวม box):", floorCountMap);
+    }
+    
   }, [listproduct]);
 
   useEffect(() => {
@@ -220,15 +250,74 @@ function ProductList() {
     { label: "3", value: "3", color: "bg-blue-500" },
     { label: "4", value: "4", color: "bg-red-500" },
     { label: "5", value: "5", color: "bg-emerald-500" },
-    { label: "ยกลัง", value: "box", color: "bg-purple-500" }, // ถ้าคุณจะใช้ type พิเศษ
+    { label: "ยกลัง", value: "box", color: "bg-purple-500" },
   ];
 
   const Btnlogout = () => {
     logout();
   };
 
+  const printSticker = async (mem_code: string) => {
+    console.log("printSticker", mem_code);
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/picking/createTicket`,
+        {
+          mem_code: mem_code,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("access_token")}`,
+          },
+        }
+      );
+      console.log("response", response);
+      if (response.status === 201) {
+        console.log("Sticker created successfully!");
+        toast.success("สั่งพิมพ์สติกเกอร์สำเร็จ", {
+          position: "top-center",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: false,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+          transition: Bounce,
+        });
+      } else {
+        toast.error("มีข้อผิดพลาดในการสั่งพิมพ์", {
+          position: "top-center",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: false,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+          transition: Bounce,
+        });
+      }
+    } catch (error) {
+      console.error("Error printing sticker:", error);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen">
+      <ToastContainer
+          position="top-center"
+          autoClose={2000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick={false}
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+          transition={Bounce}
+        />
       <header
         className={`p-2 sticky top-0 bg-blue-400 z-40 text-white font-medium ${
           selectedFloor === "1"
@@ -302,7 +391,7 @@ function ProductList() {
               </button>
             </div>
           </div>
-          <div className="flex justify-start">
+          <div className="flex justify-between items-center">
             <div id="button" className="flex justify-start">
               <button
                 ref={buttonRef}
@@ -344,7 +433,13 @@ function ProductList() {
               </svg>
               &nbsp;
               <p>{listproduct?.mem_code}</p>&nbsp;
-              <p className=" w-48 truncate">{listproduct?.mem_name}</p>
+              <p className="w-40 truncate">{listproduct?.mem_name}</p>
+            </div>
+            <div 
+              className="mr-2"
+              onClick={() => mem_code && printSticker(mem_code)}
+            >
+              <img src={print} className="w-7"/>
             </div>
           </div>
         </div>
@@ -426,9 +521,15 @@ function ProductList() {
           <div>
             {listproduct.shoppingHeads.some((head) =>
               head.shoppingOrders.some((orderItem) => {
-                const matchFloor = selectedFloor
-                  ? (orderItem.product.product_floor || "1") === selectedFloor
-                  : true;
+                const matchFloor = !selectedFloor || (() => {
+                  const unit = orderItem.so_unit || "";
+                  const floor = orderItem.product.product_floor || "1";
+                
+                  if (selectedFloor === "box") {
+                    return unit.includes("ลัง");
+                  }
+                  return floor === selectedFloor;
+                })();
 
                 const matchSearch =
                   !search ||
@@ -454,10 +555,15 @@ function ProductList() {
                     >
                       {head.shoppingOrders
                         .filter((orderItem) => {
-                          const matchFloor = selectedFloor
-                            ? (orderItem.product.product_floor || "1") ===
-                              selectedFloor
-                            : true;
+                          const matchFloor = !selectedFloor || (() => {
+                            const unit = orderItem.so_unit || "";
+                            const floor = orderItem.product.product_floor || "1";
+                          
+                            if (selectedFloor === "box") {
+                              return unit.includes("ลัง");
+                            }
+                            return floor === selectedFloor;
+                          })();
 
                           const matchSearch =
                             !search ||
@@ -466,6 +572,7 @@ function ProductList() {
                             orderItem.product.product_code.includes(search);
                           return matchFloor && matchSearch;
                         })
+                        .reverse()
                         .map((orderItem, Orderindex) => {
                           if (socket) {
                             console.log("orderItem2", orderItem);
@@ -541,7 +648,7 @@ function ProductList() {
                     prev === btn.value ? null : btn.value
                   )
                 }
-                className={`border border-gray-500 py-1 px-1 rounded-sm shadow-lg w-full mx-1
+                className={`border border-gray-500 py-1 px-1 rounded-sm shadow-lg w-full flex justify-center mx-1 relative
                             ${btn.color} 
                             ${
                               selectedFloor === btn.value
@@ -549,7 +656,14 @@ function ProductList() {
                                 : ""
                             }`}
               >
-                {btn.label}
+                <div className="flex text-center gap-2">
+                  <span className="text-white font-medium ">
+                    {btn.label}
+                  </span>
+                </div>
+                <span className="absolute -top-3 -right-1 text-[12px] bg-white text-black font-bold rounded-full px-2 py-0.5 shadow-sm">
+                      {floorCounts[String(btn.value)] || 0}
+                </span>
               </button>
             ))}
           </div>
@@ -562,7 +676,7 @@ function ProductList() {
               disabled={
                 !CanSubmit ||
                 !listproduct ||
-                userInfo?.emp_code !== listproduct.emp_code_picking
+                userInfo?.emp_code !== listproduct.emp_code_picking 
               }
               className={`w-full px-3 py-1 shadow-md text-lg rounded-sm font-semibold  text-white mt-3 ${
                 CanSubmit &&

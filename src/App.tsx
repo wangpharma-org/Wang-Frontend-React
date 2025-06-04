@@ -22,6 +22,7 @@ import SpecialExpressPrint from "./pages/SpecialExpress";
 import OtherCourier from "./pages/OtherCourier";
 import BasketSticker from "./pages/BasketSticker";
 import PrintRT from "./pages/RTPrint";
+import Dashboard from "./pages/ReportQcKPI";
 
 function App() {
   return (
@@ -147,6 +148,12 @@ function App() {
               <RequireAuth>
               <ProductList />
               </RequireAuth>
+            }
+          />
+          <Route
+            path="/dashboard-kpi"
+            element={
+              <Dashboard />
             }
           />
           <Route
