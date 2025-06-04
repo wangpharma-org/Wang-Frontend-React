@@ -17,6 +17,7 @@ import EmployeeStatisticsPage from "./pages/EmployeeStatisticsPage";
 import VerifyOrder from "./pages/VerifyOrder";
 import ReportEmployee from "./pages/ReportEmployee";
 import QCDashboard from "./pages/QC-Dashboard";
+import Dashboard from "./pages/ReportQcKPI";
 
 function App() {
   return (
@@ -106,6 +107,12 @@ function App() {
               <RequireAuth>
               <ProductList />
               </RequireAuth>
+            }
+          />
+          <Route
+            path="/dashboard-kpi"
+            element={
+              <Dashboard />
             }
           />
           <Route

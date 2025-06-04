@@ -11,13 +11,22 @@ interface QCStation {
   lastOrderTime: string | null;
 }
 
+interface floorData {
+  floor: string;
+  color: object;
+  firstOrderToday: string | null;
+  remainingItems: number;
+  lastOrderToday: string | null;
+  completedItems: number | null;
+}
+
 const Dashboard: React.FC = () => {
 
   const totalsOfQc = 975;
   const addQc = 10;
   const reduceQc = 10;
 
-  const floorData = [
+  const floorData: floorData[] = [
     {
       floor: 'F1',
       color: { primary: 'bg-cyan-400', secondary: 'bg-cyan-300', border: 'border-cyan-500' },
@@ -106,7 +115,7 @@ const Dashboard: React.FC = () => {
       completedBoxes: 145,
       firstOrderTime: '07:00',
       lastOrderTime: '14:30'
-    }
+    },
   ];
 
     // ฟังก์ชันคำนวณเวลาทำงาน (ชั่วโมง)
