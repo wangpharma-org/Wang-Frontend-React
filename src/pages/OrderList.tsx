@@ -8,7 +8,6 @@ import { Bounce, ToastContainer, toast } from "react-toastify";
 
 interface Product {
   product_floor: string;
-  product_unit: string;
 }
 
 interface ShoppingOrder {
@@ -17,7 +16,6 @@ interface ShoppingOrder {
   so_procode: string;
   so_running: string;
   so_picking_time: string;
-  so_unit: string;
 }
 
 interface ShoppingHead {
@@ -70,6 +68,13 @@ const OrderList = () => {
   const [openMenu, setOpenMenu] = useState(false);
   const [floorCounts, setFloorCounts] = useState<Record<string, number>>({});
   const handleDoubleClick = useDoubleClick();
+
+  console.log("selectedFloor", selectedFloor);
+
+  useEffect(() => {
+    const totalOrders = orderList.length;
+    localStorage.setItem("totalOrdersCount", JSON.stringify(totalOrders));
+  }, [orderList]);
 
   const togglePopup = (id: string) => {
     setOpenPopupId((prev) => (prev === id ? null : id));
@@ -172,22 +177,22 @@ const OrderList = () => {
     // });
     // setLatestTimes(latestByFloor);
 
-    const newFloorCounts: Record<string, number> = {};
-
+    const newFloorCounts: Record<number, number> = {};
     orderList.forEach((member) => {
       member.shoppingHeads.forEach((head) => {
         head.shoppingOrders.forEach((order) => {
           if (order.picking_status === "pending") {
-            const unit = order.so_unit || "";
-            const hasBox = unit.includes("ลัง");
-            const floorKey = hasBox
-              ? "box"
-              : order.product.product_floor || "1";
-            newFloorCounts[floorKey] = (newFloorCounts[floorKey] || 0) + 1;
+            const floorRaw = order.product.product_floor;
+            const floor = floorRaw && floorRaw !== "" ? Number(floorRaw) : "1";
+            if (!newFloorCounts[floor]) {
+              newFloorCounts[floor] = 0;
+            }
+            newFloorCounts[floor]++;
           }
         });
       });
     });
+    console.log("newfloorCounts", newFloorCounts);
     setFloorCounts(newFloorCounts);
     console.log("order List " + JSON.stringify(orderList));
   }, [orderList]);
@@ -227,14 +232,10 @@ const OrderList = () => {
   };
 
   const changeToPicking = (mem_code: string) => {
-    console.log("socket status", socket?.connected);
     if (socket?.connected) {
-      console.log("can emit");
       socket.emit("listorder:picking", {
         mem_code: mem_code,
       });
-    } else {
-      throw new Error("can not emit change to picking");
     }
   };
 
@@ -247,16 +248,9 @@ const OrderList = () => {
     const matchFloor =
       !selectedFloor ||
       order.shoppingHeads.some((sh) =>
-        sh.shoppingOrders.some((so) => {
-          const unit = so.so_unit || "";
-          const floor = so.product.product_floor || "1";
-
-          if (selectedFloor === "box") {
-            return unit.includes("ลัง");
-          }
-
-          return floor === selectedFloor;
-        })
+        sh.shoppingOrders.some(
+          (so) => (so.product.product_floor || "1") === selectedFloor
+        )
       );
 
     const matchRoute =
@@ -588,19 +582,6 @@ const OrderList = () => {
               <div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full mb-36 mt-3">
                   {orderList
-                    .sort((a, b) => {
-                      const maxA = Math.max(
-                        ...a.shoppingHeads.map((sh) =>
-                          new Date(sh.sh_datetime).getTime()
-                        )
-                      );
-                      const maxB = Math.max(
-                        ...b.shoppingHeads.map((sh) =>
-                          new Date(sh.sh_datetime).getTime()
-                        )
-                      );
-                      return maxA - maxB;
-                    })
                     .filter((order) => filteredData.includes(order))
                     .map((order) => {
                       const allFloors = ["1", "2", "3", "4", "5"];
@@ -647,9 +628,7 @@ const OrderList = () => {
                               <div className="flex justify-between">
                                 <div className="flex justify-start">
                                   <p>{order.mem_code}</p>&nbsp;
-                                  <p className="truncate max-w-[170px]">
-                                    {order.mem_name}
-                                  </p>
+                                  <p>{order.mem_name}</p>
                                 </div>
                                 <div>
                                   <p>
@@ -659,15 +638,7 @@ const OrderList = () => {
                                           new Date(sh.sh_datetime).getTime()
                                         )
                                       )
-                                    ).toLocaleString("th-TH", {
-                                      year: "2-digit",
-                                      month: "2-digit",
-                                      day: "2-digit",
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                      hour12: false,
-                                      timeZone: "UTC",
-                                    })}
+                                    ).toLocaleString()}
                                   </p>
                                 </div>
                               </div>
@@ -686,9 +657,7 @@ const OrderList = () => {
                                   </p>&nbsp;
                                   <p>บิล</p>&nbsp;
                                   <p className="text-red-500 font-bold">
-                                    {order.shoppingHeads.flatMap(
-                                      (h) => h.shoppingOrders
-                                    ).length -
+                                    {
                                       order.shoppingHeads
                                         .flatMap((h) => h.shoppingOrders)
                                         .filter(
@@ -699,9 +668,9 @@ const OrderList = () => {
                                             so.picking_status === "ไม่เจอ" ||
                                             so.picking_status === "เสีย" ||
                                             so.picking_status === "ด้านล่าง"
-                                        ).length}
-                                  </p>
-                                  &nbsp;
+                                        ).length
+                                    }
+                                  </p>&nbsp;
                                   <p>/</p>&nbsp;
                                   <p className="text-violet-500 font-bold">
                                     {
@@ -883,16 +852,7 @@ const OrderList = () => {
                                           เปิดบิล:{" "}
                                           {new Date(
                                             sh.sh_datetime
-                                          ).toLocaleString("th-TH", {
-                                            year: "numeric",
-                                            month: "2-digit",
-                                            day: "2-digit",
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                            second: "2-digit",
-                                            hour12: false,
-                                            timeZone: "UTC",
-                                          })}
+                                          ).toLocaleString()}
                                         </p>
                                       </div>
                                       <div className="flex justify-start">
@@ -908,31 +868,15 @@ const OrderList = () => {
                                     </li>
                                   ))}
                                   <button
-                                    disabled={
-                                      order?.picking_status !== "picking"
-                                    }
-                                    className={`border rounded-sm px-3 py-2 text-xs w-full mb-2 text-white ${
-                                      order?.picking_status === "picking"
-                                        ? "hover:bg-lime-700 bg-green-600"
-                                        : "hover:bg-gray-600 bg-gray-500"
-                                    }`}
-                                    // className={`border rounded-sm px-3 py-2 text-xs w-full mb-2 text-white hover:bg-lime-700 bg-green-600`}
+                                    className="border rounded-sm px-3 py-2 text-xs w-full mb-2 bg-green-600 text-white hover:bg-lime-700"
                                     onClick={() => {
-                                      handleDoubleClick(async () => {
-                                        if (
-                                          order?.picking_status === "picking"
-                                        ) {
-                                          console.log(
-                                            'if order?.picking_status === "picking"'
-                                          );
+                                      handleDoubleClick(() => {
+                                        if (order?.picking_status === "picking") {
                                           navigate(
                                             `/product-list?mem_code=${order?.mem_code}`
                                           );
                                         } else {
-                                          console.log("else");
-                                          await changeToPicking(
-                                            order?.mem_code
-                                          );
+                                          changeToPicking(order?.mem_code);
                                           navigate(
                                             `/product-list?mem_code=${order?.mem_code}`
                                           );
@@ -1003,7 +947,7 @@ const OrderList = () => {
                       </span>
                     </div>
                     <span className="absolute -top-3 -right-1 text-[12px] bg-white text-black font-bold rounded-full px-2 py-0.5 shadow-sm">
-                      {floorCounts[String(btn.value)] || 0}
+                      {floorCounts[Number(btn.value)] || 0}
                     </span>
                   </button>
                 ))}
