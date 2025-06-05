@@ -709,7 +709,13 @@ const QCDashboard = () => {
         <div className="grid grid-cols-7 mt-6">
           <div className="col-span-3">
             <img
-              src={orderForQC?.product?.product_image_url}
+              src={
+                orderForQC?.product?.product_image_url.startsWith("..")
+                  ? `https://www.wangpharma.com${orderForQC?.product?.product_image_url.slice(
+                      2
+                    )}`
+                  : orderForQC?.product?.product_image_url || box
+              }
               className="w-sm drop-shadow-xl rounded-lg"
             ></img>
           </div>
@@ -887,15 +893,17 @@ const QCDashboard = () => {
           เส้นทางที่สามารถทำงานได้
         </h1>
         <p className="mt-2 px-10 text-lg">
-          {route ? route
-            ?.filter((r) => !restrictedQC?.includes(r.route_code))
-            ?.filter((r) => r.route_name !== "อื่นๆ")
-            .map((r, index, arr) => (
-              <span key={r.route_code}>
-                {r.route_name}
-                {index < arr.length - 1 ? " , " : ""}
-              </span>
-            )) : 'กรุณาป้อนรหัสพนักงาน QC เพื่อแสดงเส้นทางที่ทำงานได้'}
+          {route
+            ? route
+                ?.filter((r) => !restrictedQC?.includes(r.route_code))
+                ?.filter((r) => r.route_name !== "อื่นๆ")
+                .map((r, index, arr) => (
+                  <span key={r.route_code}>
+                    {r.route_name}
+                    {index < arr.length - 1 ? " , " : ""}
+                  </span>
+                ))
+            : "กรุณาป้อนรหัสพนักงาน QC เพื่อแสดงเส้นทางที่ทำงานได้"}
         </p>
         <div className="w-full mt-5 h-8 px-6">
           <div className="grid grid-cols-6 gap-3">
@@ -1164,21 +1172,28 @@ const QCDashboard = () => {
                                   </p>
                                   <p
                                     className={`text-base font-bold ${
-                                      so?.picking_status === "pending"
-                                        ? "text-red-600"
-                                        : "text-green-600"
+                                      so?.picking_status === "picking"
+                                        ? "text-green-600"
+                                        : "text-red-600"
                                     }`}
                                   >
                                     {so?.picking_status === "pending"
                                       ? "ยังไม่จัด"
-                                      : "จัดแล้ว"}
+                                      : so?.picking_status === "picking"
+                                      ? "จัดแล้ว"
+                                      : so?.picking_status === "request"
+                                      ? "กำลังขอเพิ่ม"
+                                      : so?.picking_status}
                                   </p>
                                 </div>
                               </td>
                               <td className="py-4 text-lg border-r-2 border-blue-200">
                                 <div className="flex flex-col items-center justify-center text-center">
-                                  <p className="text-lg">
-                                    {so?.product?.product_barcode}
+                                  <p className="text-base">
+                                    {so?.product?.product_barcode?.replace(
+                                      /^.{4}/,
+                                      "____"
+                                    )}
                                   </p>
                                 </div>
                               </td>
@@ -1405,7 +1420,7 @@ const QCDashboard = () => {
                         handleGetDataEmp(e.currentTarget.value, "prepare-emp");
                       }
                     }}
-                    readOnly={!!prepareEmp?.emp_code}
+                    readOnly={!!prepareEmp?.dataEmp?.emp_code}
                   ></input>
                 </div>
               </div>
@@ -1430,7 +1445,7 @@ const QCDashboard = () => {
                       }
                     }}
                     value={inputQC}
-                    readOnly={!!QCEmp?.emp_code}
+                    readOnly={!!QCEmp?.dataEmp?.emp_code}
                   ></input>
                 </div>
               </div>
@@ -1449,7 +1464,7 @@ const QCDashboard = () => {
                     placeholder="พนักงานแพ็คสินค้าลงลัง"
                     ref={inputRefEmpPacked}
                     value={inputPacked}
-                    readOnly={!!packedEMP?.emp_code}
+                    readOnly={!!packedEMP?.dataEmp?.emp_code}
                     onChange={(e) => setInputPacked(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
