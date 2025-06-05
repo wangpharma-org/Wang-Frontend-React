@@ -2,7 +2,7 @@ import React from "react";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Socket, io } from "socket.io-client";
 import dayjs from "dayjs";
-import { Bounce, Id, ToastContainer, toast } from 'react-toastify';
+// import { Bounce, Id, ToastContainer, toast } from 'react-toastify';
 // import { Fieldset } from "@headlessui/react";
 import { useAuth } from "../context/AuthContext";
 import utc from 'dayjs/plugin/utc';
@@ -61,7 +61,7 @@ function VerifyOrder() {
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const [errorWhitePaper, setErrorWhitePaper] = useState<boolean>(false);
   const [errorYellowPaper, setErrorYellowPaper] = useState<boolean>(false);
-  const [status, setStatus] = useState("");
+  const [searchText, setSearchText] = useState("");
 
 
 
@@ -221,7 +221,7 @@ function VerifyOrder() {
 
           if (data) {
             setInvoice([data]); // Display the single found invoice
-            toast.success(`แสดงผลการค้นหาสำหรับ: ${searchValue}`);
+            // toast.success(`แสดงผลการค้นหาสำหรับ: ${searchValue}`);
           } else {
             console.log(`No data returned for invoice ID ${searchValue}, though request was successful.`);
             setInvoice([]);
@@ -232,7 +232,6 @@ function VerifyOrder() {
           setInvoice([]); // Clear results on network error or JSON parsing error
           // toast.error("เกิดข้อผิดพลาดในการเชื่อมต่อหรือประมวลผลข้อมูลการค้นหา");
         } finally {
-          setStatus("");
           // setIsLoading(false); // Optional: clear loading state
         }
       } else {
@@ -267,9 +266,6 @@ function VerifyOrder() {
     console.log("Filtered invoices:", filteredInvoices);
     setInvoice(filteredInvoices);
     setIsOpen(false); // Close the dropdown after selection
-    setStatus(status); // Set the selected status
-    console.log("Selected status:", status);
-    clearSearch(); // Clear the search input
   };
 
   const toggleDropdown = () => {
@@ -279,8 +275,6 @@ function VerifyOrder() {
       setInvoice(originalData); // Reset to original data when dropdown is closed
       console.log("originalData", originalData);
       console.log("Dropdown closed, resetting invoice data.");
-      setStatus("");
-
     }
   };
 
@@ -311,7 +305,7 @@ function VerifyOrder() {
                   type="text"
                   name="whitePaper"
                   className={`border text-black w-full mr-1 p-2 rounded-xs text-3xl ${errorWhitePaper == true ? "border-red-500 bg-red-200" : " border-gray-500  bg-blue-50"}`}
-                  onChange={() => { setErrorWhitePaper(false), setInvoice(originalData), clearSearch() }}
+                  onChange={() => { setErrorWhitePaper(false), setInvoice(originalData), clearSearch()}}
                   placeholder="ใบขาว"
                 />
                 <svg
@@ -333,7 +327,7 @@ function VerifyOrder() {
                   type="text"
                   name="yellowPaper"
                   className={`border text-black w-full p-2 rounded-xs text-3xl ${errorYellowPaper == true ? "border-red-500 bg-red-200" : "bg-yellow-50 border-gray-500"}`}
-                  onChange={() => { setErrorYellowPaper(false), setInvoice(originalData), clearSearch() }}
+                  onChange={() => {setErrorYellowPaper(false),setInvoice(originalData),clearSearch()}}
                   placeholder="ใบเหลือง" />
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -375,7 +369,7 @@ function VerifyOrder() {
                     type="text"
                     name="search"
                     className="border border-gray-500 text-black w-full mr-1 p-2 rounded-xs text-right text-3xl"
-                    onChange={() => { setInvoice(originalData) }}
+                    onChange={() => { setInvoice(originalData)}}
                     placeholder="ค้นหาข้อมูล" />
                 </div>
               </form>
@@ -383,37 +377,11 @@ function VerifyOrder() {
             </div>
             <div>
               <div ref={dropdownRef}>
-                {status === "Match" ? (<button onClick={toggleDropdown} className=" text-black ">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-13 text-green-500">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                <button onClick={toggleDropdown} className=" text-black ">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-13 text-gray-500 hover:text-gray-700 ">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
                   </svg>
                 </button>
-                ) : status === "Not Match" ? (
-                  <button onClick={toggleDropdown} className=" text-black ">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-13 text-red-500">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                  </button>
-                ) : status === "Incomplete" ? (
-                  <button onClick={toggleDropdown} className=" text-black ">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-13 text-amber-500">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-                    </svg>
-                  </button>
-                ) : status === "Miss" ? (
-                  <button onClick={toggleDropdown} className=" text-black ">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-13 text-gray-500">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                  </button>
-                ) : (
-                  <button onClick={toggleDropdown} className=" text-black ">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="size-13 text-gray-500 hover:text-gray-700">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
-                    </svg>
-                  </button>
-
-                )}
                 {isOpen && (
                   <div>
                     <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 rounded-md shadow-lg z-10">
@@ -434,12 +402,6 @@ function VerifyOrder() {
                           <p className=" my-auto">Incomplete</p>
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-amber-500">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-                          </svg>
-                        </li>
-                        <li className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer flex justify-between items-center" onClick={() => filterPaperStatus("Incomplete")}>
-                          <p className=" my-auto">Miss</p>
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-gray-500">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                           </svg>
                         </li>
                       </ul>
@@ -513,11 +475,6 @@ function VerifyOrder() {
                     ) : item.paperStatus === "Incomplete" ? (
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-amber-500">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-                      </svg>
-
-                    ) : item.paperStatus === "Miss" ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-gray-500">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                       </svg>
 
                     ) : (
