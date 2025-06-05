@@ -737,14 +737,14 @@ const OrderList = () => {
                               <div className="flex justify-between">
                                 <div className="flex justify-start">
                                   <p className="text-gray-600">ผู้ดูแล</p>&nbsp;
-                                  <p>{order.emp.emp_nickname}</p>
+                                  <p>{order?.emp?.emp_nickname}</p>
                                 </div>
                                 <div className="flex justify-center">
-                                  <p>({order.mem_route.route_name})</p>
+                                  <p>({order?.mem_route?.route_name})</p>
                                 </div>
                                 <div className="flex justify-end pb-1">
                                   <p className="font-bold">
-                                    {order.shoppingHeads.length}
+                                    {order?.shoppingHeads?.length}
                                   </p>
                                   &nbsp;
                                   <p>บิล</p>&nbsp;
