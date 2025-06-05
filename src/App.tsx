@@ -22,6 +22,7 @@ import SpecialExpressPrint from "./pages/SpecialExpress";
 import OtherCourier from "./pages/OtherCourier";
 import BasketSticker from "./pages/BasketSticker";
 import PrintRT from "./pages/RTPrint";
+import Dashboard from "./pages/ReportQcKPI";
 
 function App() {
   return (
@@ -45,6 +46,14 @@ function App() {
               <div>
                 <Navbar />
                 <Login />
+              </div>
+            }
+          />
+          <Route
+            path="/dashboard-kpi"
+            element={
+              <div>
+                <Dashboard />
               </div>
             }
           />
