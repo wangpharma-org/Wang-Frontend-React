@@ -1,8 +1,8 @@
 import reciept from "../assets/receipt.png";
 import order from "../assets/sent.png";
 import statistics from "../assets/employees statistics.png";
-import qc from "../assets/settings.png"
-import { href, useNavigate } from "react-router";
+import checklist from "../assets/checklist.png";
+import { useNavigate } from "react-router";
 const listMenu = [
   {
     id: 1,
@@ -18,16 +18,16 @@ const listMenu = [
   },
   {
     id: 3,
-    name: "ระบบตรวจสอบสินค้า",
-    href: "/qc-dashboard",
-    imageSrc: qc,
+    name: "สถิติการจัดออเดอร์",
+    href: "/employee-statistics",
+    imageSrc: statistics,
   },
-  // {
-  //   id: 3,
-  //   name: "สถิติการจัดออเดอร์",
-  //   href: "/employee-statistics",
-  //   imageSrc: statistics,
-  // }
+  {
+    id: 4,
+    name: "ตรวจสอบบิล",
+    href: "/verify-order",
+    imageSrc: checklist,
+  },
 ];
 const Home = () => {
   const navigate = useNavigate()
