@@ -23,6 +23,7 @@ import OtherCourier from "./pages/OtherCourier";
 import BasketSticker from "./pages/BasketSticker";
 import PrintRT from "./pages/RTPrint";
 import Dashboard from "./pages/ReportQcKPI";
+import BoxSticker from "./pages/BoxSticker";
 
 function App() {
   return (
@@ -46,6 +47,14 @@ function App() {
               <div>
                 <Navbar />
                 <Login />
+              </div>
+            }
+          />
+          <Route
+            path="/box-sticker"
+            element={
+              <div>
+                <BoxSticker />
               </div>
             }
           />

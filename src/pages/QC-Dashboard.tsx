@@ -10,6 +10,7 @@ import axios from "axios";
 import prepareIcon from "../assets/received.png";
 import QCIcon from "../assets/quality-control.png";
 import PackingIcon from "../assets/package-delivered.png";
+import OrderList from "./OrderList";
 
 export interface Root {
   sh_running: string;
@@ -126,6 +127,7 @@ const QCDashboard = () => {
   const [shRunningArray, setSHRunningArray] = useState<
     string[] | string | null
   >(null);
+  const [memRoute, setMemRoute] = useState<string | null>(null);
 
   // State ของ AutoFocus
   const inputBill = useRef<HTMLInputElement>(null);
@@ -134,6 +136,7 @@ const QCDashboard = () => {
   const inputRefEmpQC = useRef<HTMLInputElement>(null);
   const inputRefEmpPacked = useRef<HTMLInputElement>(null);
   const [isReady, setIsReady] = useState<boolean>(false);
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
 
   // State ของ Input พนักงาน
   const [prepareEmp, setPrepareEmp] = useState<dataForEmp>();
@@ -291,6 +294,12 @@ const QCDashboard = () => {
       setInputValues(values);
     }
     if (dataQC) {
+      const mem_code = Array.isArray(dataQC)
+        ? dataQC[0]?.members?.mem_code
+        : dataQC.members?.mem_code;
+      const memRoute = Array.isArray(dataQC)
+        ? dataQC[0]?.members?.mem_route?.route_code
+        : dataQC.members?.mem_route?.route_code;
       const shRunningArray = Array.isArray(dataQC)
         ? dataQC.map((item) => item.sh_running)
         : dataQC.sh_running;
@@ -325,6 +334,8 @@ const QCDashboard = () => {
       setRT(rt);
       inputBarcode.current?.focus();
       setSHRunningArray(shRunningArray);
+      setMemRoute(memRoute);
+      setMem_code(mem_code);
     }
     if (dataQC) {
       if (Array.isArray(dataQC) && dataQC.length > 0) {
@@ -332,6 +343,13 @@ const QCDashboard = () => {
           alert("คุณไม่มีสิทธิ์ทำงานในเส้นทางของลูกค้าคนนี้");
           handleClear();
         }
+      }
+      if (
+        !Array.isArray(dataQC) &&
+        restrictedQC?.includes(dataQC?.members?.mem_route?.route_code)
+      ) {
+        alert("คุณไม่มีสิทธิ์ทำงานในเส้นทางของลูกค้าคนนี้");
+        handleClear();
       }
     }
   }, [dataQC]);
@@ -420,8 +438,11 @@ const QCDashboard = () => {
       );
       if (response.status === 201) {
         setModalRequestOpen(false);
+        setAmountRequest(1);
       }
+      setAmountRequest(1);
     } else {
+      setAmountRequest(1);
       return;
     }
   };
@@ -574,11 +595,30 @@ const QCDashboard = () => {
       {
         so_running: so_running,
         sh_running: sh_running,
+        emp_prepare_by: prepareEmp?.dataEmp.emp_code,
+        emp_qc_by: QCEmp?.dataEmp.emp_code,
+        emp_packed_by: packedEMP?.dataEmp.emp_code,
         mem_code: mem_code,
       }
     );
     if (data.status === 201) {
       window.open(`/print-rt?so_running=${so_running}`);
+    }
+  };
+
+  const handlePrintStickerBox = async () => {
+    if (dataQC) {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/qc/printSubmit`,
+        {
+          sh_running: shRunningArray,
+          box_amount: countBox,
+        }
+      );
+      if (response.status === 201) {
+        console.log("Update Success");
+        window.open(`/box-sticker?print=${countBox}`);
+      }
     }
   };
 
@@ -593,6 +633,18 @@ const QCDashboard = () => {
     }
   }, [orderForQC]);
 
+  useEffect(() => {
+    if (modalOpen) {
+      const interval = setInterval(() => {
+        if (confirmButtonRef.current) {
+          confirmButtonRef.current.focus();
+          clearInterval(interval);
+        }
+      }, 100);
+      setTimeout(() => clearInterval(interval), 2000);
+    }
+  }, [modalOpen]);
+
   return (
     <div>
       <Modal
@@ -605,7 +657,13 @@ const QCDashboard = () => {
         <div className="grid grid-cols-2">
           <div className="col-span-1 mt-3">
             <img
-              src={dataRequest?.product.product_image_url}
+              src={
+                dataRequest?.product?.product_image_url.startsWith("..")
+                  ? `https://www.wangpharma.com${dataRequest?.product?.product_image_url.slice(
+                      2
+                    )}`
+                  : dataRequest?.product?.product_image_url
+              }
               className="w-lg rounded-lg drop-shadow-2xl"
             ></img>
           </div>
@@ -671,6 +729,7 @@ const QCDashboard = () => {
                 onClick={() => {
                   setModalRequestOpen(false);
                   setDataRequest(null);
+                  setAmountRequest(1);
                 }}
               >
                 ยกเลิก
@@ -858,15 +917,16 @@ const QCDashboard = () => {
         </div>
         <div className="flex gap-10 w-full justify-center">
           <button
+            ref={confirmButtonRef}
             onClick={() => {
               if (orderForQC && prepareEmp && packedEMP && QCEmp) {
                 handleSubmitQC({
                   ...orderForQC,
                   so_qc_note: qcNote,
                   so_qc_amount: qcAmount,
-                  emp_prepare_by: prepareEmp.emp_code,
-                  emp_packed_by: packedEMP.emp_code,
-                  emp_qc_by: QCEmp.emp_code,
+                  emp_prepare_by: prepareEmp?.dataEmp?.emp_code,
+                  emp_packed_by: packedEMP?.dataEmp?.emp_code,
+                  emp_qc_by: QCEmp?.dataEmp?.emp_code,
                   sh_running: Array.isArray(dataQC) ? null : dataQC?.sh_running,
                   mem_code: Array.isArray(dataQC)
                     ? dataQC.length > 0
@@ -1190,10 +1250,11 @@ const QCDashboard = () => {
                               <td className="py-4 text-lg border-r-2 border-blue-200">
                                 <div className="flex flex-col items-center justify-center text-center">
                                   <p className="text-base">
-                                    {so?.product?.product_barcode?.replace(
+                                    {/* {so?.product?.product_barcode?.replace(
                                       /^.{4}/,
                                       "____"
-                                    )}
+                                    )} */}
+                                    {so?.product?.product_barcode}
                                   </p>
                                 </div>
                               </td>
@@ -1535,28 +1596,41 @@ const QCDashboard = () => {
                 >
                   ระวังแตก
                 </div>
-                <div
-                  className="w-full bg-yellow-500 text-base text-white p-1 font-bold rounded-sm hover:bg-yellow-600 select-none cursor-pointer mt-2"
-                  onClick={() => {
-                    const mem_code = Array.isArray(dataQC)
-                      ? dataQC.length > 0
-                        ? dataQC[0]?.members?.mem_code
-                        : null
-                      : dataQC?.members?.mem_code ?? null;
+                {hasNotQC === 0 && dataQC && (
+                  <div
+                    className="w-full bg-green-500 text-base text-white p-1 font-bold rounded-sm hover:bg-green-600 select-none cursor-pointer mt-2"
+                    onClick={() => {
+                      handlePrintStickerBox();
+                    }}
+                  >
+                    พิมพ์สติกเกอร์ติดลัง
+                  </div>
+                )}
 
-                    const mem_name = Array.isArray(dataQC)
-                      ? dataQC.length > 0
-                        ? dataQC[0]?.members?.mem_name
-                        : null
-                      : dataQC?.members?.mem_name ?? null;
+                {memRoute && memRoute === "L16" && (
+                  <div
+                    className="w-full bg-yellow-500 text-base text-white p-1 font-bold rounded-sm hover:bg-yellow-600 select-none cursor-pointer mt-2"
+                    onClick={() => {
+                      const mem_code = Array.isArray(dataQC)
+                        ? dataQC.length > 0
+                          ? dataQC[0]?.members?.mem_code
+                          : null
+                        : dataQC?.members?.mem_code ?? null;
 
-                    window.open(
-                      `/basket-sticker?mem_code=${mem_code}&mem_name=${mem_name}&print=${countBox}`
-                    );
-                  }}
-                >
-                  ติดตะกร้า รอลงลัง ส่งฟรี
-                </div>
+                      const mem_name = Array.isArray(dataQC)
+                        ? dataQC.length > 0
+                          ? dataQC[0]?.members?.mem_name
+                          : null
+                        : dataQC?.members?.mem_name ?? null;
+
+                      window.open(
+                        `/basket-sticker?mem_code=${mem_code}&mem_name=${mem_name}&print=${countBox}`
+                      );
+                    }}
+                  >
+                    ติดตะกร้า รอลงลัง ส่งฟรี
+                  </div>
+                )}
                 <button
                   disabled={hasNotQC !== 0}
                   className={`w-full  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${

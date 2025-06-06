@@ -551,7 +551,7 @@ function ProductList() {
                   {listproduct.shoppingHeads.map((head, headIdx) => (
                     <div
                       key={headIdx}
-                      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3"
+                      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 md:gap-3"
                     >
                       {head.shoppingOrders
                         .filter((orderItem) => {

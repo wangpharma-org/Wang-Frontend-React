@@ -50,6 +50,12 @@ export interface QCStation {
   firstQcTime: Date;
   lastQcTime: Date;
   qc_count: number;
+  box_amount: string;
+}
+
+export interface QuartarlyData {
+  quarter: string;
+  speed: number;
 }
 
 const Dashboard: React.FC = () => {
@@ -62,6 +68,7 @@ const Dashboard: React.FC = () => {
     null
   );
   const [dataOnTop, setDataOnTop] = useState<QCdatum[] | null>(null);
+  const [quartarlyData, setQuartarlyData] = useState<QuartarlyData[]>([])
 
   useEffect(() => {
     console.log(`${import.meta.env.VITE_API_URL_ORDER}/socket/kpi/dashboard`);
@@ -108,8 +115,29 @@ const Dashboard: React.FC = () => {
     }
   }, [data]);
 
-  const addQc = 10;
-  const reduceQc = 10;
+  useEffect(()=>{
+    if (qcStationsData) {
+      qcStationsData.map((station)=>{
+        const workingHours = calculateWorkingHours(
+          station.firstQcTime,
+          station.lastQcTime
+        );
+        const speed = calculateSpeed(station.qc_count, workingHours);
+        console.log(`Station ${station.stationId} Speed:`, speed);
+        setQuartarlyData((prevData) => [
+          ...prevData,
+          {
+            quarter: `Q${station.stationId}`,
+            speed: speed,
+          },
+        ]);
+        return station;
+      })
+    }
+  },[qcStationsData])
+
+  const addQc = 1;
+  const reduceQc = 1;
 
   // ฟังก์ชันคำนวณเวลาทำงาน (ชั่วโมง)
   const calculateWorkingHours = (
@@ -160,25 +188,19 @@ const Dashboard: React.FC = () => {
   // ฟังก์ชันคำนวณรายการต่อลัง
   const calculateItemsPerBox = (
     qc_count: number,
-    completedBoxes: number
+    box_amount: string
   ): number => {
-    if (completedBoxes === 0) return 0;
-    return Math.round(qc_count / completedBoxes);
+    if (Number(box_amount) === 0) return 0;
+    return Math.round(qc_count / Number(box_amount));
   };
 
   const getStationSpeed = (station: QCStation): number => {
-    const firstDate = new Date(station.firstQcTime);
-    const lastDate = new Date(station.lastQcTime);
     const workingHours = calculateWorkingHours(
-      firstDate?.toLocaleTimeString("en-TH", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }) || null,
-      lastDate?.toLocaleTimeString("en-TH", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }) || null
+      station.firstQcTime,
+      station.lastQcTime
     );
+    console.log("station.firstQcTime:", station.firstQcTime);
+    console.log("station.lastQcTime:", station.lastQcTime);
     return calculateSpeed(station.qc_count, workingHours);
   };
 
@@ -242,15 +264,6 @@ const Dashboard: React.FC = () => {
       : "__:__ น.";
   };
 
-  const quartarlyData = [
-    { quarter: "Q1", speed: 129 },
-    { quarter: "Q2", speed: 110 },
-    { quarter: "Q3", speed: 118 },
-    { quarter: "Q4", speed: 143 },
-    { quarter: "Q5", speed: 124 },
-    // { quarter: 'Q6', speed: 100},
-  ];
-
   const calculateCompletionTime = () => {
     // 1. เอาเวลาทั้งหมดมา
     const speedValues = quartarlyData.map((q) => q.speed);
@@ -258,12 +271,12 @@ const Dashboard: React.FC = () => {
     console.log("ผลบวกเวลา: ", sumSpeed);
 
     // เวลาเดิม (เวลาที่ต้องใช้ในการทำงาน)
-    const timeBeforeChange = totalsOfQc / sumSpeed;
+    const timeBeforeChange = (totalsOfQc ?? 0) / sumSpeed;
 
     // === การเพิ่ม QC ===
     // เวลาที่ต้องใช้หลังเพิ่ม Qc = (จำนวน Qc ทั้งหมด * เวลาที่ต้องใช้ในการทำงาน) / (จำนวน Qc ทั้งหมด+1)
-    const formulasAfterAddQc = (totalsOfQc * sumSpeed) / (totalsOfQc + addQc);
-    const timeAfterAddQc = totalsOfQc / formulasAfterAddQc;
+    const formulasAfterAddQc = ((totalsOfQc ?? 0) * sumSpeed) / ((totalsOfQc ?? 0) + addQc);
+    const timeAfterAddQc = (totalsOfQc ?? 0) / formulasAfterAddQc;
 
     // เวลาที่ลด (นาที) = เวลาที่ต้องใช้ในการทำงาน - เวลาที่ต้องใช้หลังเพิ่ม Qc
     const timeReduced = timeBeforeChange - timeAfterAddQc;
@@ -272,8 +285,8 @@ const Dashboard: React.FC = () => {
     // === การลด QC ===
     // เวลาที่ต้องใช้หลังลด Qc = (จำนวน Qc ทั้งหมด * เวลาที่ต้องใช้ในการทำงาน) / (จำนวน Qc ทั้งหมด - 1)
     const formulasAfterReduceQc =
-      (totalsOfQc * sumSpeed) / (totalsOfQc - reduceQc);
-    const timeAfterReduceQc = totalsOfQc / formulasAfterReduceQc;
+      ((totalsOfQc ?? 0) * sumSpeed) / ((totalsOfQc ?? 0) - reduceQc);
+    const timeAfterReduceQc = (totalsOfQc ?? 0) / formulasAfterReduceQc;
 
     // เวลาที่เพิ่ม (นาที) = เวลาที่ต้องใช้หลังลด Qc - เวลาที่ต้องใช้ในการทำงาน
     const timeIncreased = timeAfterReduceQc - timeBeforeChange;
@@ -336,7 +349,7 @@ const Dashboard: React.FC = () => {
     const speedValues = quartarlyData.map((q) => q.speed);
     const sumSpeed = speedValues.reduce((sum, speed) => sum + speed, 0);
 
-    const minutesNeeded = Math.ceil((totalsOfQc * 60) / sumSpeed);
+    const minutesNeeded = Math.ceil(((totalsOfQc ?? 0) * 60) / sumSpeed);
 
     const currentTime = new Date();
     const completionTime = new Date(
@@ -381,6 +394,34 @@ const Dashboard: React.FC = () => {
     completionTime,
   } = calculateActualCompletionTime();
 
+  const colorConfig: Record<string, Color> = {
+    "4": {
+      primary: "bg-red-700",
+      secondary: "bg-red-700",
+      border: "border-white",
+    },
+    "3": {
+      primary: "bg-blue-500",
+      secondary: "bg-blue-500",
+      border: "border-white",
+    },
+    "5": {
+      primary: "bg-green-500",
+      secondary: "bg-green-500",
+      border: "border-white",
+    },
+    "1": {
+      primary: "bg-gray-500",
+      secondary: "bg-gray-500",
+      border: "border-white",
+    },
+    "2": {
+      primary: "bg-yellow-500",
+      secondary: "bg-yellow-500",
+      border: "border-white",
+    },
+  };
+
   return (
     <>
       <Navbar />
@@ -415,41 +456,100 @@ const Dashboard: React.FC = () => {
             <div className="font-semibold text-gray-700 text-3xl text-center">
               SO <span className="text-sm">IN</span>
             </div>
-            {dataOnTop && <div className="text-center text-2xl font-bold">{dataOnTop[0]?.allOrders}</div>}
-            {dataOnTop && <div className="text-center text-2xl font-bold">{dataOnTop[1]?.allOrders}</div>}
-            {dataOnTop && <div className="text-center text-2xl font-bold">{dataOnTop[2]?.allOrders}</div>}
+            {dataOnTop && (
+              <div className="text-center text-2xl font-bold">
+                {dataOnTop[0]?.allOrders}
+              </div>
+            )}
+            {dataOnTop && (
+              <div className="text-center text-2xl font-bold">
+                {dataOnTop[1]?.allOrders}
+              </div>
+            )}
+            {dataOnTop && (
+              <div className="text-center text-2xl font-bold">
+                {dataOnTop[2]?.allOrders}
+              </div>
+            )}
 
             {/* ทั่วดิน Row */}
             <div className="font-semibold text-red-600 text-4xl text-center">
               ทั่วถิ่น
             </div>
-            {dataOnTop && <div className="text-center text-2xl font-bold">{dataOnTop[0]?.local}</div>}
-            {dataOnTop && <div className="text-center text-2xl font-bold">{dataOnTop[1]?.local}</div>}
-            {dataOnTop && <div className="text-center text-2xl font-bold">{dataOnTop[2]?.local}</div>}
+            {dataOnTop && (
+              <div className="text-center text-2xl font-bold">
+                {dataOnTop[0]?.local}
+              </div>
+            )}
+            {dataOnTop && (
+              <div className="text-center text-2xl font-bold">
+                {dataOnTop[1]?.local}
+              </div>
+            )}
+            {dataOnTop && (
+              <div className="text-center text-2xl font-bold">
+                {dataOnTop[2]?.local}
+              </div>
+            )}
 
             {/* หาดใหญ่ Row */}
             <div className="font-semibold text-blue-500 text-4xl text-center">
               หาดใหญ่
             </div>
-            {dataOnTop && <div className="text-center text-2xl font-bold">{dataOnTop[0]?.hatyai}</div>}
-            {dataOnTop && <div className="text-center text-2xl font-bold">{dataOnTop[1]?.hatyai}</div>}
-            {dataOnTop && <div className="text-center text-2xl font-bold">{dataOnTop[2]?.hatyai}</div>}
+            {dataOnTop && (
+              <div className="text-center text-2xl font-bold">
+                {dataOnTop[0]?.hatyai}
+              </div>
+            )}
+            {dataOnTop && (
+              <div className="text-center text-2xl font-bold">
+                {dataOnTop[1]?.hatyai}
+              </div>
+            )}
+            {dataOnTop && (
+              <div className="text-center text-2xl font-bold">
+                {dataOnTop[2]?.hatyai}
+              </div>
+            )}
 
             {/* ทั่วไทย Row */}
             <div className="font-semibold text-orange-500 text-4xl text-center">
               ทั่วไทย
             </div>
-            {dataOnTop && <div className="text-center text-2xl font-bold">{dataOnTop[0]?.country}</div>}
-            {dataOnTop && <div className="text-center text-2xl font-bold">{dataOnTop[1]?.country}</div>}
-            {dataOnTop && <div className="text-center text-2xl font-bold">{dataOnTop[2]?.country}</div>
-}
+            {dataOnTop && (
+              <div className="text-center text-2xl font-bold">
+                {dataOnTop[0]?.country}
+              </div>
+            )}
+            {dataOnTop && (
+              <div className="text-center text-2xl font-bold">
+                {dataOnTop[1]?.country}
+              </div>
+            )}
+            {dataOnTop && (
+              <div className="text-center text-2xl font-bold">
+                {dataOnTop[2]?.country}
+              </div>
+            )}
             {/* รวม Row */}
             <div className="font-semibold text-green-600 text-4xl text-center">
               รวม
             </div>
-            <div className="text-center text-2xl font-bold">{(dataOnTop?.[0]?.local ?? 0) + (dataOnTop?.[0]?.hatyai ?? 0) + (dataOnTop?.[0]?.country ?? 0)}</div>
-            <div className="text-center text-2xl font-bold">{(dataOnTop?.[1]?.local ?? 0) + (dataOnTop?.[1]?.hatyai ?? 0) + (dataOnTop?.[1]?.country ?? 0)}</div>
-            <div className="text-center text-2xl font-bold">{(dataOnTop?.[2]?.local ?? 0) + (dataOnTop?.[2]?.hatyai ?? 0) + (dataOnTop?.[2]?.country ?? 0)}</div>
+            <div className="text-center text-2xl font-bold">
+              {(dataOnTop?.[0]?.local ?? 0) +
+                (dataOnTop?.[0]?.hatyai ?? 0) +
+                (dataOnTop?.[0]?.country ?? 0)}
+            </div>
+            <div className="text-center text-2xl font-bold">
+              {(dataOnTop?.[1]?.local ?? 0) +
+                (dataOnTop?.[1]?.hatyai ?? 0) +
+                (dataOnTop?.[1]?.country ?? 0)}
+            </div>
+            <div className="text-center text-2xl font-bold">
+              {(dataOnTop?.[2]?.local ?? 0) +
+                (dataOnTop?.[2]?.hatyai ?? 0) +
+                (dataOnTop?.[2]?.country ?? 0)}
+            </div>
           </div>
         </div>
 
@@ -457,33 +557,33 @@ const Dashboard: React.FC = () => {
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex justify-center gap-20 items-center text-center">
-              <div className="text-sm text-gray-600 font-bold">
+              <div className="text-2xl text-gray-600 font-bold">
                 เหลือ QC ทั้งหมด
               </div>
-              <div className="text-8xl font-bold text-purple-600 mb-2">
+              <div className="text-8xl font-bold text-blue-600 mb-2">
                 {data?.AllQC}
               </div>
-              <div className="text-sm text-gray-600 font-bold">รายการ</div>
+              <div className="text-2xl text-gray-600 font-bold">รายการ</div>
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow-lg p-6">
-            <div className="flex justify-center items-center h-full min-h-[100px]">
-              <div className="text-2xl font-semibold">
-                เสร็จใน{" "}
-                <span className="text-purple-600 text-5xl">{thaiDate}</span>{" "}
-                <span className="text-purple-600 text-5xl">{thaiTime}</span> น.
-              </div>
-            </div>
-            <div className="flex justify-center gap-2">
-              <p className="text-[12px] text-green-500">
+            <div className="flex justify-center gap-1">
+              <p className="text-lg text-green-700 font-bold">
                 ทุกการเพิ่ม Qc 1 Stations จะช่วยลดเวลาได้ {minutesReduced} น.
               </p>
-              <p className="text-[12px]">ในทางกลับกัน</p>
-              <p className="text-[12px] text-red-500">
+              <p className="text-lg">-</p>
+              <p className="text-lg text-red-700 font-bold">
                 ทุกการ หายไปของ Qc 1 Stations จะเพิ่มเวลาการทำงาน{" "}
                 {minutesIncreased} น.
               </p>
+            </div>
+            <div className="flex justify-center items-center mt-3">
+              <div className="text-2xl font-semibold">
+                เสร็จใน{" "}
+                <span className="text-blue-600 text-5xl font-bold">{thaiDate}</span>{" "}
+                <span className="text-blue-600 text-5xl font-bold">{thaiTime}</span> น.
+              </div>
             </div>
           </div>
         </div>
@@ -493,62 +593,68 @@ const Dashboard: React.FC = () => {
           <div className="grid grid-cols-6 gap-0 mb-4">
             {/* Labels Column */}
             <div className="text-left bg-gray-100 border-r">
-              <div className="h-16 p-3 border-b text-black font-semibold text-sm flex items-center">
+              <div className="h-16 p-3 border-b text-black font-semibold text-lg flex items-center">
                 ชิ้นแรก วันนี้
               </div>
-              <div className="h-20 p-3 border-b text-black font-semibold text-sm flex items-center">
+              <div className="h-20 p-3 border-b text-black font-semibold text-lg flex items-center">
                 เหลือ ทั้งหมด
               </div>
-              <div className="h-12 p-3 border-b text-black font-semibold text-sm flex items-center">
+              <div className="h-12 p-3 border-b text-black font-semibold text-lg flex items-center">
                 ล่าสุด วันนี้
               </div>
-              <div className="h-16 p-3 text-black font-semibold text-sm flex items-center">
+              <div className="h-16 p-3 text-black font-semibold text-lg flex items-center">
                 ความเร็วเฉลี่ย
               </div>
             </div>
             {floorData
               ?.slice()
               .sort((a, b) => a.product_floor.localeCompare(b.product_floor))
-              .map((floor) => (
-                <div key={floor.product_floor} className="text-center">
-                  <div
-                    className={`${floor.color.primary} text-white h-16 border-b ${floor.color.border} flex flex-col justify-center`}
-                  >
-                    <div className="text-sm font-bold">
-                      F{floor.product_floor}
+              .map((floor) => {
+                const color = colorConfig[floor.product_floor];
+                return (
+                  <div key={floor.product_floor} className="text-center">
+                    <div
+                      className={`${color.primary} text-white h-16 border-b ${color.border} flex flex-col justify-center`}
+                    >
+                      <div className="text-lg font-bold">
+                        F{floor.product_floor}
+                      </div>
+                      <div className="text-sm font-bold">
+                        {displayTime(floor.firstPickingTime)}
+                      </div>
                     </div>
-                    <div className="text-xs">
-                      {displayTime(floor.firstPickingTime)}
+                    <div
+                      className={`${color.primary} text-white h-20 border-b ${color.border} flex items-center justify-center`}
+                    >
+                      <div className="text-5xl font-bold">
+                        {floor.remainingItem}
+                      </div>
+                    </div>
+                    <div
+                      className={`${
+                        color.secondary
+                      } text-white h-12 border-b ${color.border
+                        .replace("border-", "border-")
+                        .replace(
+                          "500",
+                          "400"
+                        )} flex items-center justify-center`}
+                    >
+                      <div className="text-sm font-bold">
+                        {displayTime(floor.lastPickingTime)}
+                      </div>
+                    </div>
+                    <div
+                      className={`${color.secondary} text-white h-16 flex flex-col justify-center`}
+                    >
+                      <div className="text-lg font-bold">
+                        {calculateAverageSpeed(floor).toFixed(2)}
+                      </div>
+                      <div className="text-xs">รก./นาที</div>
                     </div>
                   </div>
-                  <div
-                    className={`${floor.color.primary} text-white h-20 border-b ${floor.color.border} flex items-center justify-center`}
-                  >
-                    <div className="text-4xl font-bold">
-                      {floor.remainingItem}
-                    </div>
-                  </div>
-                  <div
-                    className={`${
-                      floor.color.secondary
-                    } text-white h-12 border-b ${floor.color.border
-                      .replace("border-", "border-")
-                      .replace("500", "400")} flex items-center justify-center`}
-                  >
-                    <div className="text-xs">
-                      {displayTime(floor.lastPickingTime)}
-                    </div>
-                  </div>
-                  <div
-                    className={`${floor.color.secondary} text-white h-16 flex flex-col justify-center`}
-                  >
-                    <div className="text-sm font-bold">
-                      {calculateAverageSpeed(floor).toFixed(2)}
-                    </div>
-                    <div className="text-xs">รก./นาที</div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
           </div>
         </div>
 
@@ -561,7 +667,7 @@ const Dashboard: React.FC = () => {
               );
               const itemsPerBox = calculateItemsPerBox(
                 station.qc_count,
-                station.completedBoxes
+                station.box_amount
               );
               const speed = getStationSpeed(station);
 
@@ -571,9 +677,9 @@ const Dashboard: React.FC = () => {
                     Q{station.stationId}
                   </div>
                   <div className="bg-gray-100 p-2 flex justify-center items-center text-xs">
-                    <span className="font-semibold">
-                      {station.prepare_nickname} หัวโต๊ะ + {station.qc_nickname} คิว
-                      + {station.prepare_nickname} แพ็ค
+                    <span className="font-semibold text-base">
+                      {station.prepare_nickname} หัวโต๊ะ + {station.qc_nickname}{" "}
+                      คิว + {station.packed_nickname} แพ็ค
                     </span>
                   </div>
                   <div className="bg-white flex">
@@ -583,23 +689,25 @@ const Dashboard: React.FC = () => {
                       </div>
                       <div className="text-xs text-gray-600">รก.</div>
                     </div>
-                    <div className="flex-1 p-4 text-center border-r border-gray-300">
+                    <div className="flex-1 p-4 text-center border-r border-gray-500">
                       <div className="text-3xl font-bold">{itemsPerBox}</div>
                       <div className="text-xs text-gray-600">รก / ลัง</div>
                     </div>
                     <div className="flex-1 p-4 text-center">
                       <div className="text-3xl font-bold">
-                        {station.completedBoxes}
+                        {station.box_amount ?? 0}
                       </div>
                       <div className="text-xs text-gray-600">ลัง</div>
                     </div>
                   </div>
-                  <div className="bg-white p-2 text-center text-xs text-gray-500 border-t border-gray-300">
+                  <div className="bg-white p-2 text-center text-base text-gray-500 border-t border-gray-300">
                     {station.firstQcTime
-                      ? `${dayjs(station.firstQcTime).format('HH:mm')} น.`
+                      ? `${dayjs(station.firstQcTime).format("HH:mm")} น.`
                       : "__:__"}{" "}
                     ชิ้นแรก &lt;== | {workingHours.toFixed(2)} | ==&gt; ล่าสุด{" "}
-                    {station.lastQcTime ? `${dayjs(station.lastQcTime).format('HH:mm')} น.` : "__:__"}
+                    {station.lastQcTime
+                      ? `${dayjs(station.lastQcTime).format("HH:mm")} น.`
+                      : "__:__"}
                   </div>
                   <div className="bg-orange-600 text-white p-3 text-center font-bold text-xs">
                     speed <span className="text-xl">{speed}</span> รก./ชม.

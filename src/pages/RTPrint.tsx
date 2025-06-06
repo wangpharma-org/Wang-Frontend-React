@@ -111,16 +111,20 @@ export interface Emp {
 }
 
 export interface Employees {
-    emp_id: number;
-    emp_code: string;
-    created_at: string;
-    updated_at: string;
-    emp_name: string;
-    emp_nickname: string;
-    emp_tel: string | null;
-    emp_floor: string | null;
-  }
-  
+  emp_id: number;
+  emp_code: string;
+  created_at: string;
+  updated_at: string;
+  emp_name: string;
+  emp_nickname: string;
+  emp_tel: string | null;
+  emp_floor: string | null;
+}
+
+export interface dataForEmp {
+  dataEmp: Employees;
+  mem_route: MemRoute[];
+}
 
 const styles = {
   container: {
@@ -168,10 +172,9 @@ const PrintRT: React.FC = () => {
   const packedEmpData = sessionStorage.getItem("packed-emp");
   const [imageLoaded, setImageLoaded] = useState(false);
 
-
-  const [JSONpackedEmpData, setJSONpackedEmpData] = useState<Employees>();
-  const [JSONQCEmpData, setJSONQCEmpData] = useState<Employees>();
-  const [JSONprepareEmpData, setJSONprepareEmpData] = useState<Employees>();
+  const [JSONpackedEmpData, setJSONpackedEmpData] = useState<dataForEmp>();
+  const [JSONQCEmpData, setJSONQCEmpData] = useState<dataForEmp>();
+  const [JSONprepareEmpData, setJSONprepareEmpData] = useState<dataForEmp>();
 
   const handleGetData = async (so_running: string) => {
     const data = await axios.get(
@@ -201,7 +204,13 @@ const PrintRT: React.FC = () => {
   }, [data]);
 
   useEffect(() => {
-    if (JSONQCEmpData && JSONpackedEmpData && JSONprepareEmpData && data && imageLoaded) {
+    if (
+      JSONQCEmpData &&
+      JSONpackedEmpData &&
+      JSONprepareEmpData &&
+      data &&
+      imageLoaded
+    ) {
       window.onafterprint = () => {
         window.close();
       };
@@ -238,15 +247,21 @@ const PrintRT: React.FC = () => {
           <div className="w-full grid grid-cols-3 text-center">
             <div className="grid-cols-1">
               <p className="text-[8px]">ผู้ดูแล</p>
-              <p className="text-[8px] font-bold">{JSONprepareEmpData?.emp_nickname}</p>
+              <p className="text-[8px] font-bold">
+                {JSONprepareEmpData?.dataEmp?.emp_nickname}
+              </p>
             </div>
             <div className="grid-cols-1">
               <p className="text-[8px]">ผู้จัด</p>
-              <p className="text-[8px] font-bold">{JSONQCEmpData?.emp_nickname}</p>
+              <p className="text-[8px] font-bold">
+                {JSONQCEmpData?.dataEmp?.emp_nickname}
+              </p>
             </div>
             <div className="grid-cols-1">
               <p className="text-[8px]">แพ็ค</p>
-              <p className="text-[8px] font-bold">{JSONpackedEmpData?.emp_nickname}</p>
+              <p className="text-[8px] font-bold">
+                {JSONpackedEmpData?.dataEmp?.emp_nickname}
+              </p>
             </div>
           </div>
         </div>
@@ -276,14 +291,18 @@ const PrintRT: React.FC = () => {
             <div className="w-full flex justify-between">
               <p className="text-[8px]">รหัสเจ้าหนี้</p>
               <p className="text-[8px]">
-                AP : {data?.product.detail[0]?.creditor_code}
+                AP :{" "}
+                {Array.isArray(data?.product?.detail) &&
+                data.product.detail.length > 0
+                  ? data.product.detail[0]?.creditor_code
+                  : "ไม่มีข้อมูล"}
               </p>
             </div>
-            {data?.product?.detail[0]?.creditor_code && (
+            {Array.isArray(data?.product?.detail) && data?.product?.detail[0]?.creditor_code && (
               <div className="flex justify-left overflow-hidden w-full">
                 <div className="scale-100">
                   <Barcode
-                    value={data?.product?.detail[0]?.creditor_code}
+                    value={Array.isArray(data?.product?.detail) && data?.product?.detail[0]?.creditor_code}
                     format="CODE128"
                     width={1.2}
                     height={20}
@@ -300,7 +319,13 @@ const PrintRT: React.FC = () => {
           <div className="flex justify-center">
             <img
               style={styles.img}
-              src={data?.product?.product_image_url}
+              src={
+                data?.product?.product_image_url.startsWith("..")
+                  ? `https://www.wangpharma.com${data?.product?.product_image_url.slice(
+                      2
+                    )}`
+                  : data?.product?.product_image_url
+              }
               onLoad={() => setImageLoaded(true)}
             ></img>
           </div>
@@ -385,9 +410,11 @@ const PrintRT: React.FC = () => {
           </div>
           <div className="flex gap-1 items-center">
             <p className="text-[10px] font-semibold">คนจัด : </p>
-            {<p className="text-[10px] font-semibold">
-              {data?.emp?.emp_nickname}
-            </p>}
+            {
+              <p className="text-[10px] font-semibold">
+                {data?.emp?.emp_nickname}
+              </p>
+            }
           </div>
         </div>
       </div>
@@ -395,9 +422,9 @@ const PrintRT: React.FC = () => {
         <div className="col-span-1 grid grid-rows-2">
           <div className="row-span-1 border-b flex justify-left w-full gap-1 p-1">
             <p className="text-[8px]">วันที่ :</p>
-            {data?.product?.detail[0]?.created_at && (
+            {Array.isArray(data?.product?.detail) && data?.product?.detail[0]?.created_at && (
               <p className="text-[8px]">
-                {dayjs(data?.product?.detail[0]?.created_at).format(
+                {Array.isArray(data?.product?.detail) && dayjs(data?.product?.detail[0]?.created_at).format(
                   "DD-MM-YYYY"
                 )}
               </p>
@@ -406,7 +433,7 @@ const PrintRT: React.FC = () => {
           <div className="row-span-1 flex justify-left w-full gap-1 p-1">
             <p className="text-[8px]">ซื้อ :</p>
             <p className="text-[8px]">
-              {data?.product?.detail[0]?.purchase_entry_no}
+              {Array.isArray(data?.product?.detail) && data?.product?.detail[0]?.purchase_entry_no}
             </p>
           </div>
         </div>
@@ -436,8 +463,8 @@ const PrintRT: React.FC = () => {
           <div className="col-span-1">
             <div className="flex justify-left w-full gap-1 p-1">
               <p className="text-[8px]">ซื้อ :</p>
-              <p className="text-[8px]">{data?.product?.detail[0]?.quantity}</p>
-              <p className="text-[8px]">{data?.product?.detail[0]?.unit}</p>
+              <p className="text-[8px]">{Array.isArray(data?.product?.detail) && data?.product?.detail[0]?.quantity}</p>
+              <p className="text-[8px]">{Array.isArray(data?.product?.detail) && data?.product?.detail[0]?.unit}</p>
             </div>
           </div>
           <div className="col-span-1">
@@ -473,11 +500,11 @@ const PrintRT: React.FC = () => {
           <div className="row-span-1 border-b">
             <div className="flex justify-center w-full gap-1 p-1">
               <p className="text-[8px]">
-                Lot : {data?.product?.detail[0]?.product_lot}
+                Lot : {Array.isArray(data?.product?.detail) && data?.product?.detail[0]?.product_lot}
               </p>
               <p className="text-[8px]">
                 Exp :{" "}
-                {dayjs(data?.product?.detail[0]?.product_exp).format(
+                {Array.isArray(data?.product?.detail) && dayjs(data?.product?.detail[0]?.product_exp).format(
                   "DD-MM-YYYY"
                 )}
               </p>

@@ -8,6 +8,7 @@ import { Bounce, ToastContainer, toast } from "react-toastify";
 import flag from "../assets/finish.png";
 import check from "../assets/accept.png";
 import print from "../assets/printing_black.png";
+import box from "../assets/product-17.png"
 
 interface Product {
   product_floor: string;
@@ -560,7 +561,13 @@ const OrderList = () => {
                       <div className="col-span-3">
                         <div>
                           <img
-                            src={item.product_product_image_url}
+                            src={
+                              item?.product_product_image_url.startsWith("..")
+                                ? `https://www.wangpharma.com${item?.product_product_image_url.slice(
+                                    2
+                                  )}`
+                                : item?.product_product_image_url || box
+                            }
                             className="w-full border"
                           />
                         </div>
