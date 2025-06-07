@@ -69,12 +69,13 @@ console.log("VITE_API_URL_VERIFY_ORDER", import.meta.env.VITE_API_URL_VERIFY_ORD
 
   useEffect(() => {
     console.log(
-      `${import.meta.env.VITE_API_URL_VERIFY_ORDER}/socket/verify-order/invoice`
+      `${import.meta.env.VITE_API_URL_VERIFY_ORDER}/socket/verify/invoice`
     );
     const socket = io(
-      `${import.meta.env.VITE_API_URL_VERIFY_ORDER}/socket/verify-order/invoice`,
+      `${import.meta.env.VITE_API_URL_VERIFY_ORDER}/socket/verify/invoice`,
       {
-        path: "/socket/verify-order",
+        path: "/socket/verify",
+        // transports: ["websocket"], // Use WebSocket and fallback to polling if needed
         // extraHeaders: {
         //   Authorization: `Bearer ${sessionStorage.getItem("access_token")}`,
         // },
@@ -124,9 +125,9 @@ console.log("VITE_API_URL_VERIFY_ORDER", import.meta.env.VITE_API_URL_VERIFY_ORD
 
   useEffect(() => {
     const checkdata = io(
-      `${import.meta.env.VITE_API_URL_VERIFY_ORDER}/socket/verify-order/invoice`,
+      `${import.meta.env.VITE_API_URL_VERIFY_ORDER}/socket/verify/invoice`,
       {
-        path: "/socket/verify-order",
+        path: "/socket/verify",
       }
     );
 
@@ -213,9 +214,10 @@ console.log("VITE_API_URL_VERIFY_ORDER", import.meta.env.VITE_API_URL_VERIFY_ORD
         console.log('Performing search for:', searchValue);
         // setIsLoading(true); // Optional: set loading state
         try {
-          const response = await fetch(`${import.meta.env.VITE_API_URL_VERIFY_ORDER}/invoice/${searchValue}`);
+          const response = await fetch(`${import.meta.env.VITE_API_URL_VERIFY_ORDER}/api/verify/${searchValue}`);
           // const response = await fetch(`${import.meta.env.VITE_API_INVOICE_SEARCH_URL}/invoice/${searchValue}`); // Recommended: Use env variable
-
+          console.log("Response status:", response.status);
+          console.log("Response statusText:", response);
           if (!response.ok) {
             if (response.status === 404) {
               console.log(`Invoice with ID ${searchValue} not found.`);
