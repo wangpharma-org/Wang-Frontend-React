@@ -14,7 +14,7 @@ interface Product {
   product_barcode: string;
   product_floor: string | null;
   product_addr: string;
-  product_stock: string;
+  product_stock: number;
   product_unit: string;
 }
 
@@ -230,20 +230,21 @@ function ProductList() {
   return (
     <div className="flex flex-col h-screen">
       <header
-        className={`p-2 sticky top-0 bg-blue-400 z-40 text-white font-medium ${selectedFloor === "1"
-          ? "bg-gray-500"
-          : selectedFloor === "2"
+        className={`p-2 sticky top-0 bg-blue-400 z-40 text-white font-medium ${
+          selectedFloor === "1"
+            ? "bg-gray-500"
+            : selectedFloor === "2"
             ? "bg-yellow-500"
             : selectedFloor === "3"
-              ? "bg-blue-500"
-              : selectedFloor === "4"
-                ? "bg-red-500"
-                : selectedFloor === "5"
-                  ? "bg-emerald-500"
-                  : selectedFloor === "box"
-                    ? "bg-purple-500"
-                    : "bg-blue-400"
-          } `}
+            ? "bg-blue-500"
+            : selectedFloor === "4"
+            ? "bg-red-500"
+            : selectedFloor === "5"
+            ? "bg-emerald-500"
+            : selectedFloor === "box"
+            ? "bg-purple-500"
+            : "bg-blue-400"
+        } `}
       >
         <div>
           <div className="flex justify-between">
@@ -343,7 +344,7 @@ function ProductList() {
               </svg>
               &nbsp;
               <p>{listproduct?.mem_code}</p>&nbsp;
-              <p>{listproduct?.mem_name}</p>
+              <p className=" w-48 truncate">{listproduct?.mem_name}</p>
             </div>
           </div>
         </div>
@@ -364,18 +365,20 @@ function ProductList() {
                       src="https://as2.ftcdn.net/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg"
                     />
                   </div>
-                  <p className="flex justify-center mt-2 text-white">
-                    {userInfo?.emp_code}
-                  </p>
-                  <p className="flex justify-center text-white">
-                    {userInfo?.username}
-                  </p>
-                  <p className="flex justify-center text-white">
-                    คุณเป็นพนักงานประจำชั้น
-                  </p>
-                  <p className="flex justify-center text-white">
-                    {userInfo?.floor_picking || "-"}
-                  </p>
+                  <div>
+                    <p className="flex justify-center mt-3 text-white">
+                      รหัสพนักงาน : {userInfo?.emp_code}
+                    </p>
+                    <p className="flex justify-center mt-1 text-white">
+                      ชื่อ : {userInfo?.firstname} {userInfo?.lastname}
+                    </p>
+                    <p className="flex justify-center mt-1 text-white">
+                      ชื่อเล่น : {userInfo?.nickname}
+                    </p>
+                    <p className="flex justify-center mt-1 text-white">
+                      {`ประจำชั้น ${userInfo?.floor_picking || ""}`}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex justify-center px-3 text-white">
                   <button
@@ -453,7 +456,7 @@ function ProductList() {
                         .filter((orderItem) => {
                           const matchFloor = selectedFloor
                             ? (orderItem.product.product_floor || "1") ===
-                            selectedFloor
+                              selectedFloor
                             : true;
 
                           const matchSearch =
@@ -470,6 +473,7 @@ function ProductList() {
                               <ProductBox
                                 orderItem={orderItem}
                                 key={Orderindex}
+                                headShRunning={head.sh_running}
                                 socket={socket}
                                 handleDoubleClick={handleDoubleClick}
                               />
@@ -512,20 +516,21 @@ function ProductList() {
       </div>
       <div>
         <footer
-          className={`p-3 fixed bottom-0 left-0 right-0 z-40  text-white font-medium ${selectedFloor === "1"
-            ? "bg-gray-500"
-            : selectedFloor === "2"
+          className={`p-3 fixed bottom-0 left-0 right-0 z-40  text-white font-medium ${
+            selectedFloor === "1"
+              ? "bg-gray-500"
+              : selectedFloor === "2"
               ? "bg-yellow-500"
               : selectedFloor === "3"
-                ? "bg-blue-500"
-                : selectedFloor === "4"
-                  ? "bg-red-500"
-                  : selectedFloor === "5"
-                    ? "bg-emerald-500"
-                    : selectedFloor === "box"
-                      ? "bg-purple-500"
-                      : "bg-blue-400"
-            }`}
+              ? "bg-blue-500"
+              : selectedFloor === "4"
+              ? "bg-red-500"
+              : selectedFloor === "5"
+              ? "bg-emerald-500"
+              : selectedFloor === "box"
+              ? "bg-purple-500"
+              : "bg-blue-400"
+          }`}
         >
           <div className="flex">
             {floorButtons.map((btn) => (
@@ -538,10 +543,11 @@ function ProductList() {
                 }
                 className={`border border-gray-500 py-1 px-1 rounded-sm shadow-lg w-full mx-1
                             ${btn.color} 
-                            ${selectedFloor === btn.value
-                    ? "ring-2 ring-yellow-300"
-                    : ""
-                  }`}
+                            ${
+                              selectedFloor === btn.value
+                                ? "ring-2 ring-yellow-300"
+                                : ""
+                            }`}
               >
                 {btn.label}
               </button>
@@ -558,20 +564,21 @@ function ProductList() {
                 !listproduct ||
                 userInfo?.emp_code !== listproduct.emp_code_picking
               }
-              className={`w-full px-3 py-1 shadow-md text-lg rounded-sm font-semibold  text-white mt-3 ${CanSubmit &&
+              className={`w-full px-3 py-1 shadow-md text-lg rounded-sm font-semibold  text-white mt-3 ${
+                CanSubmit &&
                 listproduct &&
                 userInfo?.emp_code === listproduct.emp_code_picking
-                ? "bg-green-400"
-                : "bg-gray-400"
-                }`}
+                  ? "bg-green-400"
+                  : "bg-gray-400"
+              }`}
             >
               {!CanSubmit ||
-                !listproduct ||
-                userInfo?.emp_code !== listproduct.emp_code_picking
+              !listproduct ||
+              userInfo?.emp_code !== listproduct.emp_code_picking
                 ? `คุณไม่มีสิทธิ์ในการยืนยัน`
                 : !CanSubmit
-                  ? `กรุณาจัดสินค้าให้ครบ`
-                  : `ยืนยันการจัดสินค้า`}
+                ? `กรุณาจัดสินค้าให้ครบ`
+                : `ยืนยันการจัดสินค้า`}
             </button>
           </div>
         </footer>
