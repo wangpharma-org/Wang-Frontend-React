@@ -8,6 +8,7 @@ interface ProductBoxProps {
     //   handleOutofStock: (orderItem: ShoppingOrder, status: string,socket:Socket) => void;
     socket: Socket;
     handleDoubleClick: (orderItem: ShoppingOrder, status: string) => void;
+    headShRunning: string;
 }
 
 export default function ProductBox({ orderItem, handleDoubleClick }: ProductBoxProps) {
@@ -37,8 +38,8 @@ export default function ProductBox({ orderItem, handleDoubleClick }: ProductBoxP
                         <img
                             src={
                                 orderItem.product.product_image_url.startsWith('..')
-                                  ? `https://www.wangpharma.com${orderItem.product.product_image_url.slice(2)}`
-                                  : orderItem.product.product_image_url || box
+                                    ? `https://www.wangpharma.com${orderItem.product.product_image_url.slice(2)}`
+                                    : orderItem.product.product_image_url || box
                             }
                             className="w-25 h-25 object-cover"
                         />
