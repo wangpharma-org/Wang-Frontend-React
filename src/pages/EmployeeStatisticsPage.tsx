@@ -30,6 +30,7 @@ interface EmployeeStatistics {
   header: StatisticsHeader;
   floors: FloorData[];
   totalPicked: number;
+  date: string; //เพิ่มฟิลด์นี้
 }
 
 interface APIResponse {
