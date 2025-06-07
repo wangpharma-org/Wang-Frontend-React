@@ -336,18 +336,6 @@ const OrderList = () => {
     setSelectedFloor(null);
   };
 
-  const setData = ()=> {
-    try{
-      const response = axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/report`);
-      console.log("response", response);
-      // setOrderList(response.data)
-    }
-    catch{
-      console.error("error");
-    }
-
-  }
-
   const routeButtons = [
     { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
     { id: 2, name: "หาดใหญ่", value: "หาดใหญ่" },

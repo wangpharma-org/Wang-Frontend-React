@@ -1,7 +1,7 @@
 // pages/EmployeeStatistics.tsx - Updated to fetch all employees
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { useAuth } from "../context/AuthContext";
+// import { useAuth } from "../context/AuthContext";
 import { Bounce, ToastContainer, toast } from "react-toastify";
 import Header from "../components/Header";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -52,10 +52,10 @@ const EmployeeStatisticsPage = () => {
   const [expandedEmployees, setExpandedEmployees] = useState<Set<string>>(
     new Set()
   );
-  const [expandedDates, setExpandedDates] = useState<
+  const [, setExpandedDates] = useState<
     Record<string, Set<string>>
   >({});
-  const { userInfo } = useAuth();
+  // const { userInfo } = useAuth();
 
   useEffect(() => {
     fetchAllEmployeeStatistics();
@@ -145,26 +145,26 @@ const EmployeeStatisticsPage = () => {
   };
 
   // Helper function to format date for display
-  const formatDateForKey = (dateString: string) => {
-    const date = new Date(dateString);
-    const buddhistYear = date.getFullYear() + 543;
-    const day = date.getDate().toString().padStart(2, "0");
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const yearShort = (buddhistYear % 100).toString().padStart(2, "0");
+  // const formatDateForKey = (dateString: string) => {
+  //   const date = new Date(dateString);
+  //   const buddhistYear = date.getFullYear() + 543;
+  //   const day = date.getDate().toString().padStart(2, "0");
+  //   const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  //   const yearShort = (buddhistYear % 100).toString().padStart(2, "0");
 
-    const thaiDays = [
-      "อาทิตย์",
-      "จันทร์",
-      "อังคาร",
-      "พุธ",
-      "พฤหัสบดี",
-      "ศุกร์",
-      "เสาร์",
-    ];
-    const dayName = thaiDays[date.getDay()];
+  //   const thaiDays = [
+  //     "อาทิตย์",
+  //     "จันทร์",
+  //     "อังคาร",
+  //     "พุธ",
+  //     "พฤหัสบดี",
+  //     "ศุกร์",
+  //     "เสาร์",
+  //   ];
+  //   const dayName = thaiDays[date.getDay()];
 
-    return `${day}/${month}/${yearShort} ${dayName}`;
-  };
+  //   return `${day}/${month}/${yearShort} ${dayName}`;
+  // };
 
   // Calculate totals for a specific employee
   const calculateTotals = (data: EmployeeStatistics) => {
