@@ -272,7 +272,6 @@ function VerifyOrder() {
     setInvoice(filteredInvoices);
     setIsOpen(false); // Close the dropdown after selection
     setStatus(status); // Set the selected status
-    clearSearch(); // Clear the search input when clicking outside
     console.log("Selected status:", status);
 
   };
@@ -284,8 +283,8 @@ function VerifyOrder() {
       setInvoice(originalData); // Reset to original data when dropdown is closed
       console.log("originalData", originalData);
       console.log("Dropdown closed, resetting invoice data.");
+      clearSearch(); // Clear the search input when clicking outside
       setStatus("");
-
     }
   };
 
@@ -420,11 +419,12 @@ function VerifyOrder() {
               </div>
               <div>
                 <div ref={dropdownRef}>
-                  {status === "Match" ? (<button onClick={toggleDropdown} className=" text-black ">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-13 text-green-500">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                  </button>
+                  {status === "Match" ? (
+                    <button onClick={toggleDropdown} className=" text-black ">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-13 text-green-500">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                      </svg>
+                    </button>
                   ) : status === "Not Match" ? (
                     <button onClick={toggleDropdown} className=" text-black ">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-13 text-red-500">
@@ -484,11 +484,6 @@ function VerifyOrder() {
                     </div>
                   )}
                 </div>
-              </div>
-              <div className="">
-                <button onClick={() => { setInvoice(originalData), clearSearch(), setStatus("") }}
-                 className="flex items-center justify-center border px-2 py-1 rounded-lg text-white bg-indigo-500 hover:bg-indigo-600">
-                  ล้างข้อมูลค้นหา</button>
               </div>
             </div>
           </div>
