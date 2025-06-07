@@ -31,6 +31,7 @@ export interface ShoppingOrder {
   so_qc_note: string | null;
   so_already_qc: string;
   so_qc_amount: number;
+  amount_max: number | null;
   product: Product;
 }
 
@@ -411,11 +412,11 @@ const QCDashboard = () => {
 
   // ดึงข้อมูลสำหรับแสดงในหน้าขอสินค้าเพิ่ม
 
-  const handleFetchData = async (so_running: string) => {
+  const handleFetchData = async (so_running: string, amount_max: number) => {
     const data = await axios.get(
       `${import.meta.env.VITE_API_URL_ORDER}/api/qc/get-order/${so_running}`
     );
-    setDataRequest(data.data);
+    setDataRequest({ ...data.data, amount_max });
   };
 
   const handleRequestMore = async (
@@ -434,6 +435,7 @@ const QCDashboard = () => {
               ? dataQC[0]?.members?.mem_code
               : null
             : null,
+          emp_code_request: QCEmp?.dataEmp?.emp_code,
         }
       );
       if (response.status === 201) {
@@ -568,9 +570,10 @@ const QCDashboard = () => {
         `${import.meta.env.VITE_API_URL_ORDER}/api/qc/submit-qc`,
         {
           sh_running: shRunningArray,
-          emp_prepare: prepareEmp,
-          emp_qc: QCEmp,
-          emp_packed: packedEMP,
+          emp_prepare: prepareEmp.dataEmp.emp_code,
+          emp_qc: QCEmp.dataEmp.emp_code,
+          emp_packed: packedEMP.dataEmp.emp_code,
+          mem_code: mem_code,
         }
       );
       if (response.status === 201) {
@@ -617,7 +620,7 @@ const QCDashboard = () => {
       );
       if (response.status === 201) {
         console.log("Update Success");
-        window.open(`/box-sticker?print=${countBox}`);
+        window.open(`/box-sticker?print=${countBox}&mem_code=${mem_code}`);
       }
     }
   };
@@ -697,9 +700,18 @@ const QCDashboard = () => {
                     onChange={(e) => {
                       const rawValue = e.target.value;
                       const numericValue = rawValue.replace(/\D/g, "");
-                      setAmountRequest(Number(numericValue));
+                      const numeric = Number(numericValue);
+
+                      if (!dataRequest?.amount_max) return;
+
+                      const valueToSet =
+                        numeric > dataRequest.amount_max
+                          ? dataRequest.amount_max
+                          : numeric;
+
+                      setAmountRequest(valueToSet);
                     }}
-                  ></input>
+                  />
                   <p className="text-xl font-bold ml-3">
                     {dataRequest?.so_unit}
                   </p>
@@ -1068,7 +1080,7 @@ const QCDashboard = () => {
                       เงื่อนไขการบรรจุสินค้า และการตรวจสอบ ของลูกค้านี้
                     </p>
                     <div className="bg-white  rounded-lg mt-2 items-start border-4 border-red-400 py-4.5 px-2 h-26">
-                      <p className="">
+                      <p className="text-lg font-bold">
                         {Array.isArray(dataQC)
                           ? dataQC[0]?.members?.mem_note ?? "ไม่ระบุเงื่อนไข"
                           : dataQC?.members?.mem_note ?? "ไม่ระบุเงื่อนไข"}
@@ -1406,7 +1418,10 @@ const QCDashboard = () => {
                                         : "bg-blue-500 hover:bg-blue-600"
                                     } `}
                                     onClick={() =>
-                                      handleFetchData(so.so_running)
+                                      handleFetchData(
+                                        so.so_running,
+                                        so.so_amount
+                                      )
                                     }
                                   >
                                     ขอใหม่

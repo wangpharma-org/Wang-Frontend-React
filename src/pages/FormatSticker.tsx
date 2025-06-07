@@ -51,7 +51,7 @@ const FormatSticker = () => {
     }, 1000);
     window.onafterprint = () => {
       localStorage.setItem("print_status", "done");
-      window.close();
+      // window.close();
     };
     return () => {
       clearTimeout(printTimeout);
@@ -104,6 +104,10 @@ const FormatSticker = () => {
             <p className="text-[16px]">คนจัด</p>
             <p className="text-[22px] font-bold">{sticker.emp.emp_nickname}</p>
         </div>
+        {sticker?.emp_request?.emp_nickname && <div className="flex items-baseline gap-1.5">
+            <p className="text-[16px]">รายการขอเพิ่ม : </p>
+            <p className="text-[22px] font-bold">{sticker?.emp_request?.emp_nickname}</p>
+        </div>}
         <div className="flex items-center justify-center">
         <QRCodeSVG
                   value={sticker.mem.mem_code}

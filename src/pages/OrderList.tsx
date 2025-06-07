@@ -291,13 +291,14 @@ const OrderList = () => {
     { label: "ยกลัง", value: "box", color: "bg-purple-500" },
   ];
 
-  const printSticker = async (mem_code: string) => {
+  const printSticker = async (mem_code: string, emp_code?: string) => {
     console.log("printSticker", mem_code);
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL_ORDER}/api/picking/createTicket`,
         {
           mem_code: mem_code,
+          emp_code_request: emp_code || null,
         },
         {
           headers: {
@@ -593,7 +594,7 @@ const OrderList = () => {
                         <img
                           src={print}
                           className="w-10 mb-1"
-                          onClick={() => printSticker(item.member_mem_code)}
+                          onClick={() => printSticker(item.member_mem_code , item.emp_code_request)}
                         ></img>
                         <img
                           src={check}

@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import Barcode from "react-barcode";
 import triangle from "../assets/bleach.png";
-import { QRCodeSVG } from "qrcode.react";
+import dayjs from "dayjs";
+import axios from "axios";
+import clock from "../assets/clock.png"
+import calendar from "../assets/check-mark.png"
+import correct from "../assets/correct.png";
 
 export interface Employees {
   emp_id: number;
@@ -12,6 +16,31 @@ export interface Employees {
   emp_nickname: string;
   emp_tel: string | null;
   emp_floor: string | null;
+}
+
+export interface MemRoute {
+  route_code: string;
+  route_name: string;
+}
+
+export interface dataForEmp {
+  dataEmp: Employees;
+  mem_route: MemRoute[];
+}
+
+export interface Address {
+    mem_name: string;
+    address_line1: string | null;
+    address_line2: string | null;
+    sub_district: string | null;
+    district: string | null;
+    postal_code: string | null;
+    province: string | null;
+    mem_tel: string | null;
+    route_code: string | null;
+    mem_shipping_note: string | null;
+    mem_route: MemRoute;
+    emp: Employees;
 }
 
 const styles = {
@@ -28,7 +57,6 @@ const styles = {
 const BoxSticker = () => {
   const queryParams = new URLSearchParams(location.search);
   const mem_code = queryParams.get("mem_code");
-  const mem_name = queryParams.get("mem_name");
   const printCount = parseInt(queryParams.get("print") || "1");
 
   const prepareEmpData = sessionStorage.getItem("prepare-emp");
@@ -49,9 +77,10 @@ const BoxSticker = () => {
   //       .replace(",", "");
   //   };
 
-  const [JSONpackedEmpData, setJSONpackedEmpData] = useState<Employees>();
-  const [JSONQCEmpData, setJSONQCEmpData] = useState<Employees>();
-  const [JSONprepareEmpData, setJSONprepareEmpData] = useState<Employees>();
+  const [JSONpackedEmpData, setJSONpackedEmpData] = useState<dataForEmp>();
+  const [JSONQCEmpData, setJSONQCEmpData] = useState<dataForEmp>();
+  const [JSONprepareEmpData, setJSONprepareEmpData] = useState<dataForEmp>();
+  const [dataPrint, setDataPrint] = useState<Address | null>(null);
 
   useEffect(() => {
     if (prepareEmpData && QCEmpData && packedEmpData) {
@@ -61,36 +90,49 @@ const BoxSticker = () => {
     }
   }, [prepareEmpData, QCEmpData, packedEmpData]);
 
-  //   useEffect(() => {
-  //     if (JSONQCEmpData && JSONpackedEmpData && JSONprepareEmpData) {
-  //       window.onafterprint = () => {
-  //         window.close();
-  //       };
-  //       window.print();
-  //     }
-  //   }, [JSONQCEmpData, JSONpackedEmpData, JSONprepareEmpData]);
+    useEffect(() => {
+      if (JSONQCEmpData && JSONpackedEmpData && JSONprepareEmpData && dataPrint) {
+        window.onafterprint = () => {
+          window.close();
+        };
+        window.print();
+      }
+    }, [JSONQCEmpData, JSONpackedEmpData, JSONprepareEmpData, dataPrint]);
 
   useEffect(() => {
-    window.onafterprint = () => {
-      window.close();
-    };
-    window.print();
+    if (mem_code) {
+      handleGet();
+    }
   }, []);
+
+  useEffect(()=>{
+    if(dataPrint) {
+      console.log('data print', dataPrint)
+    }  
+  },[dataPrint])
+
+  const handleGet = async() => {
+    const data = await axios.get(
+      `${import.meta.env.VITE_API_URL_ORDER}/api/qc/get-address/${mem_code}`
+    );
+    console.log(data);
+    setDataPrint(data.data);
+  }
 
   const renderSticker = (index: number) => (
     <div
       key={index}
-      className="border-t-2 border-b-2 mt-6 w-full p-2 text-sm break-after-page"
+      className="border-t-2 border-b-2 w-full p-2 text-sm break-after-page"
       style={styles.container}
     >
-      <div className="flex justify-between">
+      <div className="flex justify-between mt-2">
         <p className="font-semibold">Wangpharma</p>
         <p className="font-semibold text-[18px]">
           {index + 1} / {printCount}
         </p>
         <div className="flex flex-col justify-center items-center">
-          <p className="font-semibold text-[16px]">เส้นทาง</p>
-          <p className="text-[7px]">L1-3</p>
+          <p className="font-semibold text-[16px]">{dataPrint?.mem_route?.route_name ?? 'อื่นๆ'}</p>
+          <p className="text-[7px]">{dataPrint?.route_code ?? ''}</p>
         </div>
       </div>
       <div>
@@ -102,15 +144,15 @@ const BoxSticker = () => {
         </p>
       </div>
       <div className="border-t mt-1">
-        <div className="flex justify-between mt-2">
+        <div className="flex justify-between ">
           <div className="w-[70%] flex justify-center mt-5">
-            <p className="font-semibold text-[16px]">ชื่อร้าน</p>
+            <p className="font-semibold text-[18px]">{dataPrint?.mem_name}</p>
           </div>
           <div className="w-[30%] flex flex-col justify-center items-center mt-1">
             <p className="text-[7px]">Customer Code</p>
             <div className="scale-100">
               <Barcode
-                value="123456789012"
+                value={mem_code || ""}
                 format="CODE128"
                 width={0.8}
                 height={23}
@@ -122,64 +164,65 @@ const BoxSticker = () => {
             </div>
           </div>
         </div>
-        <div className="w-[100%] flex justify-between mt-1">
+        <div className="w-[100%] flex justify-between mt-1 pr-3">
           <div>
-            <p className="text-[8px]">ที่อยู่ลูกค้า เบอร์โทรลูกค้า</p>
-            <p className="text-[8px]">จังหวัด</p>
+            <p className="text-[8px]">{`${dataPrint?.address_line1 ?? ''} ${dataPrint?.address_line2 ?? ''} ต.${dataPrint?.sub_district ?? ''}`}</p>
+            <p className="text-[8px]">{`อ.${dataPrint?.district ?? ''} จ.${dataPrint?.province ?? ''} ${dataPrint?.postal_code ?? ''}`}</p>
           </div>
-          <p className="text-[8px]">ลูกค้า:</p>
+          <div>
+            <p className="text-[8px]">เบอร์โทรลูกค้า : {dataPrint?.mem_tel ?? '-'}</p>
+            {dataPrint?.emp?.emp_tel && <p className="text-[8px]">ฝ่ายขาย : {dataPrint?.emp?.emp_tel ?? '-'}</p>}
+          </div>
         </div>
         <div className="flex justify-between mt-1 border-t-1 border-b-1 py-1 px-26">
-          <div className="flex">
+          <div className="flex items-center gap-1">
+            <img src={calendar} className="w-3"></img>
             <p className="text-[7px]">อาทิตย์ - อาทิตย์</p>
           </div>
-          <div className="flex">
+          <div className="flex items-center gap-1">
+            <img src={clock} className="w-3"></img>
             <p className="text-[7px]">00.00 - 00.00</p>
           </div>
         </div>
         <div className="flex border-b-1 py-1 justify-center px-1">
-          <div className="w-[80%] flex justify-center">
-            <div className="flex border rounded-sm justify-center border-gray-500">
-              <div className="w-10 border-r p-2 flex justify-center items-center mr-1 border-gray-500">
+          <div className="w-[90%] flex justify-center">
+            <div className="flex border rounded-sm justify-center border-gray-800">
+              <div className="w-10 border-r p-2 flex justify-center items-center mr-1 border-gray-800">
                 <img src={triangle} className="m-1"></img>
               </div>
-              <div className="p-1">
+              <div className="p-1 flex items-center text-center">
                 <p className="text-center">
-                  ส่งสินค้าวันเว้นวัน ที่ร้านวัสดุก่อสร้าง
+                  {`${dataPrint?.mem_shipping_note ?? 'ไม่มีหมายเหตุการส่งสินค้า'}`}
                 </p>
               </div>
             </div>
           </div>
-          <div className="flex w-[20%] flex-col items-center justify-center">
-            <p className="text-[7px]">Shipping No.</p>
-            <QRCodeSVG value={`${132432 || ""}`} size={40} />
-          </div>
         </div>
       </div>
       <div className="flex justify-center items-center border-b">
-        <div className="w-[40%] flex flex-col justify-center items-center">
-          <div className="flex justify-between p-1 gap-5">
-            <p className="text-[8px]">Ordering time line:</p>
-            <p className="text-[8px]">ขาย / คีย์</p>
-          </div>
-          <p className="text-[8px] pb-1">[]</p>
-        </div>
-        <div className="w-[60%] flex flex-col justify-center items-center border-l">
+        <div className="w-[100%] flex flex-col justify-center items-center">
           <div className="flex justify-between p-1 gap-15">
             <p className="text-[8px]">Ordering time line:</p>
-            <p className="text-[8px]">ตรวจ / </p>
           </div>
-          <p className="text-[8px]">[] ชื่อ [] ชื่อ [] ชื่อ</p>
-          <p className="text-[8px] pb-1">| | </p>
+          <p className="text-[8px]">พนักงานเตรียมสินค้า / พนักงานตรวจสอบ / พนักงานแพ็คสินค้าลงลัง</p>
+          <p className="text-[8px]">[{JSONprepareEmpData?.dataEmp.emp_code}] {JSONprepareEmpData?.dataEmp?.emp_nickname} / [{JSONprepareEmpData?.dataEmp?.emp_code}] / {JSONQCEmpData?.dataEmp?.emp_nickname}  [{JSONpackedEmpData?.dataEmp.emp_code}] {JSONpackedEmpData?.dataEmp.emp_nickname}</p>
+          <p className="text-[8px] pb-1">{`${dayjs().format('DD-MM')}-${dayjs().year() + 543} ${dayjs().format('HH:mm')}`}</p>
         </div>
       </div>
       <div className="flex justify-center items-center border-b">
-        <div className="w-[33%] flex flex-col justify-center items-center border-r h-10">
-          <p className="text-[16px] font-bold p-2">ลังนี้มีบิล</p>
+        <div className="w-[33%] border-r h-10 ">
+          {index === 0 ? 
+          <div className="flex justify-center items-center">
+            <img src={correct} className="w-7"></img>
+            <p className="text-[16px] font-bold p-2">ลังนี้มีบิล</p>
+          </div>
+          :
+          <p className="text-[16px] p-2 text-center font-extrabold">-</p>
+          }
         </div>
         <div className="w-[33%] flex flex-col justify-center items-center border-r h-10">
           <p className="text-[8px]">สายรถ</p>
-          <p className="text-[10px]">เส้นทางขนส่ง</p>
+          <p className="text-[10px]">หาดใหญ่ - {dataPrint?.mem_route?.route_name ?? 'อื่นๆ'}</p>
         </div>
         <div className="w-[33%] flex flex-col justify-center items-center h-10">
           <p className="text-[8px]">จัดส่ง</p>
