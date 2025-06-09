@@ -572,7 +572,11 @@ function ProductList() {
                             orderItem.product.product_code.includes(search);
                           return matchFloor && matchSearch;
                         })
-                        .reverse()
+                        .sort((a, b) =>
+                          a.product.product_code.localeCompare(b.product.product_code, "th", {
+                            numeric: true,
+                          })
+                        )
                         .map((orderItem, Orderindex) => {
                           if (socket) {
                             console.log("orderItem2", orderItem);
