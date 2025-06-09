@@ -98,7 +98,7 @@ const FormatSticker = () => {
       </div>
   );
   return (
-    <div className="page h-full w-full">
+    <div className="page h-full w-full mt-2">
       <div className="p-2 flex justify-between align-text-top">
         <div className="flex items-baseline gap-1.5">
             <p className="text-[16px]">คนจัด</p>
@@ -166,7 +166,7 @@ const FormatSticker = () => {
             <tr className="border">
               {[2, 3, 4, 5].map((floor) => (
                 <td key={floor} className="border text-[15px] py-0.5">
-                  {sticker.floorCounts[floor] || 0} รก.
+                  {sticker.floorCounts[floor] || ''} รก.
                 </td>
               ))}
             </tr>

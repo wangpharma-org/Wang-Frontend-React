@@ -115,26 +115,27 @@ const Dashboard: React.FC = () => {
     }
   }, [data]);
 
-  useEffect(()=>{
+  useEffect(() => {
     if (qcStationsData) {
-      qcStationsData.map((station)=>{
+      console.log("qcStationsData:", qcStationsData);
+  
+      const newData: QuartarlyData[] = qcStationsData.map((station) => {
         const workingHours = calculateWorkingHours(
           station.firstQcTime,
           station.lastQcTime
         );
         const speed = calculateSpeed(station.qc_count, workingHours);
         console.log(`Station ${station.stationId} Speed:`, speed);
-        setQuartarlyData((prevData) => [
-          ...prevData,
-          {
-            quarter: `Q${station.stationId}`,
-            speed: speed,
-          },
-        ]);
-        return station;
-      })
+  
+        return {
+          quarter: `Q${station.stationId}`,
+          speed: speed,
+        };
+      });
+  
+      setQuartarlyData(newData);
     }
-  },[qcStationsData])
+  }, [qcStationsData]);
 
   const addQc = 1;
   const reduceQc = 1;
@@ -181,6 +182,9 @@ const Dashboard: React.FC = () => {
 
   // ฟังก์ชันคำนวณความเร็ว (รายการ/ชั่วโมง)
   const calculateSpeed = (qc_count: number, workingHours: number): number => {
+    console.log("=== calculateSpeed ===")
+    console.log("qc_count:", qc_count);
+    console.log("workingHours:", workingHours);
     if (workingHours === 0) return 0;
     return Math.round(qc_count / workingHours);
   };
