@@ -4,12 +4,12 @@ import statistics from "../assets/employees statistics.png";
 import checklist from "../assets/checklist.png";
 import { useNavigate } from "react-router";
 const listMenu = [
-  {
-    id: 1,
-    name: "ใบกำกับสินค้า",
-    href: "/invoice-all",
-    imageSrc: reciept,
-  },
+  // {
+  //   id: 1,
+  //   name: "ใบกำกับสินค้า",
+  //   href: "/invoice-all",
+  //   imageSrc: reciept,
+  // },
   {
     id: 2,
     name: "จัดออเดอร์",
@@ -22,12 +22,12 @@ const listMenu = [
     href: "/employee-statistics",
     imageSrc: statistics,
   },
-  {
-    id: 4,
-    name: "ตรวจสอบบิล",
-    href: "/verify-order",
-    imageSrc: checklist,
-  },
+  // {
+  //   id: 4,
+  //   name: "ตรวจสอบบิล",
+  //   href: "/verify-order",
+  //   imageSrc: checklist,
+  // },
 ];
 const Home = () => {
   const navigate = useNavigate()
