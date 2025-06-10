@@ -159,7 +159,7 @@ const FormatSticker = () => {
             </tr>
             <tr className="border">
               {[2, 3, 4, 5].map((floor) => (
-                <td key={floor} className="border text-[15px] py-0.5">
+                <td key={floor} className="border text-[15px] py-0.5 font-extrabold w-[25%]">
                   {sticker.floorCounts[floor] || ''} รก.
                 </td>
               ))}
