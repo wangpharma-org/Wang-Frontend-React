@@ -291,7 +291,7 @@ const OrderList = () => {
     { label: "ยกลัง", value: "box", color: "bg-purple-500" },
   ];
 
-  const printSticker = async (mem_code: string, emp_code?: string) => {
+  const printSticker = async (mem_code: string, emp_code?: string, sh_running?: string) => {
     console.log("printSticker", mem_code);
     try {
       const response = await axios.post(
@@ -299,6 +299,7 @@ const OrderList = () => {
         {
           mem_code: mem_code,
           emp_code_request: emp_code || null,
+          sh_running: sh_running || null,
         },
         {
           headers: {
@@ -558,8 +559,8 @@ const OrderList = () => {
               {requestProduct?.length > 0 ? (
                 requestProduct?.map((item) => {
                   return (
-                    <div className="w-full bg-white rounded grid grid-cols-10 p-2 mt-3 drop-shadow-xl items-center">
-                      <div className="col-span-3">
+                    <div className="w-full bg-white rounded grid grid-cols-13 p-2 mt-3 drop-shadow-xl items-center">
+                      <div className="col-span-4">
                         <div>
                           <img
                             src={
@@ -573,28 +574,28 @@ const OrderList = () => {
                           />
                         </div>
                       </div>
-                      <div className="col-span-6 text-left ml-2">
-                        <p className="text-sm truncate">{`${
+                      <div className="col-span-7 text-left ml-2">
+                        <p className="text-sm truncate text-[13px]">{`${
                           item.member_mem_code ?? "-"
                         } ${item.member_mem_name ?? "-"}`}</p>
-                        <p className="text-sm font-bold truncate">
+                        <p className="text-sm font-bold truncate text-[13px]">
                           {item.product_product_name ?? "-"}
                         </p>
-                        <p className="text-sm">
+                        <p className="text-sm text-[13px]">
                           รหัสสินค้า : {item.order_so_procode ?? "-"}
                         </p>
-                        <p className="text-sm">
+                        <p className="text-sm text-[13px]">
                           เลขบาร์โค้ด : {item.product_product_barcode ?? "-"}
                         </p>
-                        <p className="text-sm font-bold text-green-700">{`F${
+                        <p className="text-sm font-bold text-green-700 text-[13px]">{`F${
                           item.product_product_floor ?? "-"
                         } ${item.product_product_addr ?? "-"}`}</p>
                       </div>
-                      <div className="col-span-1 flex-col justify-center items-center">
+                      <div className="col-span-2 flex flex-col justify-left  items-end">
                         <img
                           src={print}
                           className="w-10 mb-1"
-                          onClick={() => printSticker(item.member_mem_code , item.emp_code_request)}
+                          onClick={() => printSticker(item.member_mem_code , item.emp_code_request, item.head_sh_running)}
                         ></img>
                         <img
                           src={check}
@@ -607,9 +608,9 @@ const OrderList = () => {
                             )
                           }
                         ></img>
-                        <div className="bg-amber-300 p-1 rounded font-bold">
-                          <p>{item.order_so_qc_request}</p>
-                          <p className="text-sm">{item.order_so_unit}</p>
+                        <div className="bg-amber-300 p-1 rounded font-bold text-[13px]">
+                          <p className="text-sm">{item.order_so_qc_request}</p>
+                          <p>{item.order_so_unit}</p>
                         </div>
                       </div>
                     </div>

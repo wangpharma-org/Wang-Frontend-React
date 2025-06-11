@@ -10,7 +10,6 @@ import axios from "axios";
 import prepareIcon from "../assets/received.png";
 import QCIcon from "../assets/quality-control.png";
 import PackingIcon from "../assets/package-delivered.png";
-import OrderList from "./OrderList";
 
 export interface Root {
   sh_running: string;
@@ -107,6 +106,7 @@ const QCDashboard = () => {
   const [isInputLocked, setIsInputLocked] = useState(false);
   const [InputValues, setInputValues] = useState<string[]>(Array(6).fill(""));
   const [countBox, setCountBox] = useState<number>(1);
+  const [error, setError] = useState<boolean>(false);
 
   // Modal Open QC
   const [modalOpen, setModalOpen] = useState<boolean>(false);
@@ -160,6 +160,9 @@ const QCDashboard = () => {
   const [restrictedQC, setRestrictedQC] = useState<string[] | null>(null);
   const [route, setRoute] = useState<MemRoute[] | null>(null);
 
+
+  const [inputMemCode, setInputMemCode] = useState<string | null>("");
+
   // ทำให้รหัสพนักงานไม่หายเมื่อ Refresh
   useEffect(() => {
     if (prepareEmp?.dataEmp?.emp_code) {
@@ -206,6 +209,7 @@ const QCDashboard = () => {
     setSocket(newSocket);
 
     newSocket.on("connect", () => {
+      setError(false);
       console.log("✅ Connected to WebSocket");
     });
 
@@ -213,12 +217,14 @@ const QCDashboard = () => {
       console.log("Received data:", data);
       setDataQC(data);
       setLoading(false);
+      setError(false);
     });
 
     newSocket.on("connect_error", (error) => {
+      console.log(error);
       console.error("❌ Failed to connect to server:", error.message);
-      setDataQC(null);
-      setLoading(true);
+      handleClear();
+      setError(true);
     });
 
     const prepareEmpData = sessionStorage.getItem("prepare-emp");
@@ -270,15 +276,15 @@ const QCDashboard = () => {
 
   useEffect(() => {
     if (socket && wantConnect) {
-      if (mem_code) {
-        socket.emit("join_room", { mem_code, sh_running: null });
+      if (inputMemCode) {
+        socket.emit("join_room", { inputMemCode, sh_running: null });
         setLoading(true);
       } else if (sh_running) {
         socket.emit("join_room", { mem_code: null, sh_running });
         setLoading(true);
       }
     }
-  }, [mem_code, sh_running, socket, wantConnect]);
+  }, [inputMemCode, sh_running, socket, wantConnect]);
 
   useEffect(() => {
     if (dataQC) {
@@ -366,11 +372,18 @@ const QCDashboard = () => {
   const handleConnect = (some_value: string) => {
     console.log(socket?.connected);
     if (socket?.connected) {
-      if (some_value.length === 10) {
-        setSh_running(some_value);
-        setMem_code(null);
+      if (some_value.includes('-')) {
+        const parts = some_value.split('-');
+        const lastPart = parts[parts.length - 1];
+        if (lastPart.length >= 6) {
+          setSh_running(some_value);
+          setInputMemCode(null);
+        } else {
+          setInputMemCode(some_value);
+          setSh_running(null);
+        }
       } else {
-        setMem_code(some_value);
+        setInputMemCode(some_value);
         setSh_running(null);
       }
       setIsInputLocked(true);
@@ -648,32 +661,41 @@ const QCDashboard = () => {
     }
   }, [modalOpen]);
 
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p className="text-2xl font-bold">ระบบล่ม กรุณาติดต่อเจ้าหน้าที่และรอสักครู่...</p>
+      </div>
+    );
+  }
+  else {
   return (
     <div>
-      <Modal
-        isOpen={modalReqestOpen}
-        onClose={() => setModalRequestOpen(false)}
-      >
-        <div className="text-center">
-          <p className="text-2xl font-bold mb-3">ขอสินค้าใหม่</p>
-        </div>
-        <div className="grid grid-cols-2">
-          <div className="col-span-1 mt-3">
-            <img
-              src={
-                dataRequest?.product?.product_image_url.startsWith("..")
-                  ? `https://www.wangpharma.com${dataRequest?.product?.product_image_url.slice(
-                      2
-                    )}`
-                  : dataRequest?.product?.product_image_url
-              }
-              className="w-lg rounded-lg drop-shadow-2xl"
-            ></img>
+      <div>
+        <Modal
+          isOpen={modalReqestOpen}
+          onClose={() => setModalRequestOpen(false)}
+        >
+          <div className="text-center">
+            <p className="text-2xl font-bold mb-3">ขอสินค้าใหม่</p>
           </div>
-          <div className="col-span-1 mt-20 ml-3 flex flex-col justify-between">
-            <div>
-              <p className="text-3xl font-bold">
-                {`
+          <div className="grid grid-cols-2">
+            <div className="col-span-1 mt-3">
+              <img
+                src={
+                  dataRequest?.product?.product_image_url.startsWith("..")
+                    ? `https://www.wangpharma.com${dataRequest?.product?.product_image_url.slice(
+                        2
+                      )}`
+                    : dataRequest?.product?.product_image_url
+                }
+                className="w-lg rounded-lg drop-shadow-2xl"
+              ></img>
+            </div>
+            <div className="col-span-1 mt-20 ml-3 flex flex-col justify-between">
+              <div>
+                <p className="text-3xl font-bold">
+                  {`
                 ${
                   Array.isArray(dataQC)
                     ? dataQC.length > 0
@@ -683,149 +705,151 @@ const QCDashboard = () => {
                     ? dataQC?.members?.mem_name
                     : "-"
                 }`}
-              </p>
-              <p className="text-4xl font-bold mt-6 line-clamp-2">
-                {dataRequest?.product.product_name}
-              </p>
-              <p className="text-xl mt-4">
-                รหัสสินค้า : {dataRequest?.product.product_barcode}
-              </p>
+                </p>
+                <p className="text-4xl font-bold mt-6 line-clamp-2">
+                  {dataRequest?.product.product_name}
+                </p>
+                <p className="text-xl mt-4">
+                  รหัสสินค้า : {dataRequest?.product.product_barcode}
+                </p>
 
-              <div className="mt-4">
-                <p className="font-bold mb-1">จำนวนที่ต้องการ</p>
-                <div className="flex items-center">
-                  <input
-                    className="border-3 text-4xl w-56 border-green-600 rounded-sm text-center text-green-800 font-bold"
-                    value={amountRequest}
-                    onChange={(e) => {
-                      const rawValue = e.target.value;
-                      const numericValue = rawValue.replace(/\D/g, "");
-                      const numeric = Number(numericValue);
+                <div className="mt-4">
+                  <p className="font-bold mb-1">จำนวนที่ต้องการ</p>
+                  <div className="flex items-center">
+                    <input
+                      className="border-3 text-4xl w-56 border-green-600 rounded-sm text-center text-green-800 font-bold"
+                      value={amountRequest}
+                      onChange={(e) => {
+                        const rawValue = e.target.value;
+                        const numericValue = rawValue.replace(/\D/g, "");
+                        const numeric = Number(numericValue);
 
-                      if (!dataRequest?.amount_max) return;
+                        if (!dataRequest?.amount_max) return;
 
-                      const valueToSet =
-                        numeric > dataRequest.amount_max
-                          ? dataRequest.amount_max
-                          : numeric;
+                        const valueToSet =
+                          numeric > dataRequest.amount_max
+                            ? dataRequest.amount_max
+                            : numeric;
 
-                      setAmountRequest(valueToSet);
-                    }}
-                  />
-                  <p className="text-xl font-bold ml-3">
-                    {dataRequest?.so_unit}
-                  </p>
+                        setAmountRequest(valueToSet);
+                      }}
+                    />
+                    <p className="text-xl font-bold ml-3">
+                      {dataRequest?.so_unit}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 w-full justify-end">
+                <button
+                  disabled={amountRequest === 0}
+                  className={`text-center text-white text-lg p-2 rounded-lg px-8 cursor-pointer ${
+                    amountRequest > 0
+                      ? "hover:bg-green-800 bg-green-700"
+                      : "hover:bg-gray-600 bg-gray-500"
+                  }`}
+                  onClick={() =>
+                    handleRequestMore(
+                      dataRequest?.so_running ?? null,
+                      amountRequest
+                    )
+                  }
+                >
+                  ยืนยัน
+                </button>
+                <div
+                  className="text-center text-white bg-red-700 text-lg p-2 rounded-lg hover:bg-red-800 cursor-pointer px-5"
+                  onClick={() => {
+                    setModalRequestOpen(false);
+                    setDataRequest(null);
+                    setAmountRequest(1);
+                  }}
+                >
+                  ยกเลิก
                 </div>
               </div>
             </div>
-
-            <div className="flex gap-3 w-full justify-end">
-              <button
-                disabled={amountRequest === 0}
-                className={`text-center text-white text-lg p-2 rounded-lg px-8 cursor-pointer ${
-                  amountRequest > 0
-                    ? "hover:bg-green-800 bg-green-700"
-                    : "hover:bg-gray-600 bg-gray-500"
-                }`}
-                onClick={() =>
-                  handleRequestMore(
-                    dataRequest?.so_running ?? null,
-                    amountRequest
-                  )
+          </div>
+        </Modal>
+        <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)}>
+          <div className="flex justify-between border-b-2 pb-3 border-gray-200">
+            <div className="text-red-600">
+              <p className="text-xl">{orderForQC?.product?.product_code}</p>
+              <p className="text-lg">{orderForQC?.product?.product_name}</p>
+            </div>
+            <div className="text-green-600">
+              <p className="text-xl">
+                {Array.isArray(dataQC)
+                  ? dataQC.length > 0
+                    ? dataQC[0]?.members?.mem_name
+                    : "ไม่มีเลขบิล"
+                  : dataQC
+                  ? dataQC?.members?.mem_name
+                  : "-"}
+              </p>
+              <p className="text-lg">
+                {Array.isArray(dataQC)
+                  ? dataQC.length > 0
+                    ? dataQC[0]?.members?.mem_code
+                    : "ไม่มีเลขบิล"
+                  : dataQC
+                  ? dataQC?.members?.mem_code
+                  : "-"}
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-7 mt-6">
+            <div className="col-span-3">
+              <img
+                src={
+                  orderForQC?.product?.product_image_url.startsWith("..")
+                    ? `https://www.wangpharma.com${orderForQC?.product?.product_image_url.slice(
+                        2
+                      )}`
+                    : orderForQC?.product?.product_image_url || box
                 }
-              >
-                ยืนยัน
-              </button>
-              <div
-                className="text-center text-white bg-red-700 text-lg p-2 rounded-lg hover:bg-red-800 cursor-pointer px-5"
-                onClick={() => {
-                  setModalRequestOpen(false);
-                  setDataRequest(null);
-                  setAmountRequest(1);
-                }}
-              >
-                ยกเลิก
-              </div>
+                className="w-sm drop-shadow-xl rounded-lg"
+              ></img>
             </div>
-          </div>
-        </div>
-      </Modal>
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)}>
-        <div className="flex justify-between border-b-2 pb-3 border-gray-200">
-          <div className="text-red-600">
-            <p className="text-xl">{orderForQC?.product?.product_code}</p>
-            <p className="text-lg">{orderForQC?.product?.product_name}</p>
-          </div>
-          <div className="text-green-600">
-            <p className="text-xl">
-              {Array.isArray(dataQC)
-                ? dataQC.length > 0
-                  ? dataQC[0]?.members?.mem_name
-                  : "ไม่มีเลขบิล"
-                : dataQC
-                ? dataQC?.members?.mem_name
-                : "-"}
-            </p>
-            <p className="text-lg">
-              {Array.isArray(dataQC)
-                ? dataQC.length > 0
-                  ? dataQC[0]?.members?.mem_code
-                  : "ไม่มีเลขบิล"
-                : dataQC
-                ? dataQC?.members?.mem_code
-                : "-"}
-            </p>
-          </div>
-        </div>
-        <div className="grid grid-cols-7 mt-6">
-          <div className="col-span-3">
-            <img
-              src={
-                orderForQC?.product?.product_image_url.startsWith("..")
-                  ? `https://www.wangpharma.com${orderForQC?.product?.product_image_url.slice(
-                      2
-                    )}`
-                  : orderForQC?.product?.product_image_url || box
-              }
-              className="w-sm drop-shadow-xl rounded-lg"
-            ></img>
-          </div>
-          <div className="col-span-4">
-            <div className="text-center">
-              <div className="w-full flex justify-center">
-                <div className="text-sm font-normal">
-                  <Barcode
-                    value={orderForQC?.product?.product_barcode}
-                    format="CODE128"
-                    width={1.2}
-                    height={25}
-                    displayValue={true}
-                    fontSize={11}
-                  />
+            <div className="col-span-4">
+              <div className="text-center">
+                <div className="w-full flex justify-center">
+                  <div className="text-sm font-normal">
+                    <Barcode
+                      value={orderForQC?.product?.product_barcode}
+                      format="CODE128"
+                      width={1.2}
+                      height={25}
+                      displayValue={true}
+                      fontSize={11}
+                    />
+                  </div>
                 </div>
-              </div>
-              <p className="text-2xl font-bold">
-                {orderForQC?.product?.product_code}
-              </p>
-              <p className="text-xl mt-2 font-bold">
-                {orderForQC?.product?.product_name}
-              </p>
-              <div className="flex justify-between px-30 mt-3">
-                <div className="flex gap-2">
-                  <p className="text-xl">คงเหลือ</p>
-                  <p className="text-xl font-bold text-green-700">
-                    {orderForQC?.product?.product_stock}
-                  </p>
-                  <p className="text-xl">{orderForQC?.product?.product_unit}</p>
+                <p className="text-2xl font-bold">
+                  {orderForQC?.product?.product_code}
+                </p>
+                <p className="text-xl mt-2 font-bold">
+                  {orderForQC?.product?.product_name}
+                </p>
+                <div className="flex justify-between px-30 mt-3">
+                  <div className="flex gap-2">
+                    <p className="text-xl">คงเหลือ</p>
+                    <p className="text-xl font-bold text-green-700">
+                      {orderForQC?.product?.product_stock}
+                    </p>
+                    <p className="text-xl">
+                      {orderForQC?.product?.product_unit}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 font-bold">
+                    <p className="text-xl">ชั้น</p>
+                    <p className="text-xl text-red-700">
+                      {orderForQC?.product?.product_floor}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex gap-2 font-bold">
-                  <p className="text-xl">ชั้น</p>
-                  <p className="text-xl text-red-700">
-                    {orderForQC?.product?.product_floor}
-                  </p>
-                </div>
-              </div>
-              {/* <div className="flex justify-between px-30 mt-2">
+                {/* <div className="flex justify-between px-30 mt-2">
                 <div className="flex gap-2">
                   <p className="text-xl">ซื้อล่าสุด</p>
                   <p className="text-xl">วันที่</p>
@@ -835,837 +859,845 @@ const QCDashboard = () => {
                   <p className="text-xl">ขวด</p>
                 </div>
               </div> */}
-              <div className="flex w-full justify-center mt-5">
-                {orderForQC?.picking_status === "picking" ? (
-                  <div className="flex gap-2 text-5xl">
-                    <p>คนหยิบ</p>
-                    <p>{orderForQC.emp_code_floor_picking}</p>
-                  </div>
-                ) : (
-                  <div className="flex gap-2 text-5xl">
-                    <p>ยังไม่จัด</p>
-                  </div>
-                )}
-              </div>
-              <div className="flex w-full justify-center mt-6">
-                <div className="flex gap-2 text-4xl font">
-                  <p>
-                    {orderForQC?.so_picking_time &&
-                      new Date(orderForQC.so_picking_time).toLocaleString(
-                        "th-TH",
-                        {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )}
-                  </p>
+                <div className="flex w-full justify-center mt-5">
+                  {orderForQC?.picking_status === "picking" ? (
+                    <div className="flex gap-2 text-5xl">
+                      <p>คนหยิบ</p>
+                      <p>{orderForQC.emp_code_floor_picking}</p>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2 text-5xl">
+                      <p>ยังไม่จัด</p>
+                    </div>
+                  )}
                 </div>
-              </div>
-              <div className="flex w-full justify-center mt-5">
-                <div className="flex gap-2 items-center">
-                  <p className="text-xl">จำนวนสั่งซื้อ</p>
-                  <input
-                    className="border-3 text-4xl w-56 border-green-600 rounded-sm text-center text-green-800 font-bold"
-                    value={qcAmount}
-                    onChange={(e) => {
-                      const rawValue = e.target.value;
-                      const numericValue = rawValue.replace(/\D/g, "");
-                      setQCAmount(Number(numericValue));
-                    }}
-                  ></input>
-                  <p className="text-xl">{orderForQC?.so_unit}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-12 mt-5 border-b-2 pb-4 border-gray-200">
-          <div className="p-2 bg-blue-500 text-white font-bold text-base rounded-sm">
-            เช็ค Lot สินค้าให้เป็น Lot เดียวกันทุกตัว ลูกคืนคืนถ้า Lot
-            ไม่ต้องการ
-          </div>
-          <div className="flex space-y-1 gap-4 items-center">
-            <div className="flex space-y-1 gap-4 items-center">
-              {["ขาด", "ไม่ครบ", "หยิบผิด", "หยิบเกิน", "ไม่มีของ"].map(
-                (label) => (
-                  <label
-                    key={label}
-                    className="inline-flex items-center space-x-2"
-                  >
-                    <input
-                      type="radio"
-                      name={`qc_status_${orderForQC?.so_running}`}
-                      value={label}
-                      className="text-blue-600"
-                      checked={qcNote === label}
-                      onChange={(e) => setQCNote(e.target.value)}
-                    />
-                    <span className="text-base font-bold">{label}</span>
-                  </label>
-                )
-              )}
-              <button
-                className="px-2 bg-blue-500 py-1 rounded-lg text-white font-bold hover:bg-blue-600 cursor-pointer"
-                onClick={() => setQCNote(null)}
-              >
-                เคลียร์ค่า
-              </button>
-            </div>
-          </div>
-        </div>
-        <div className="mt-4 flex justify-center gap-5">
-          {orderForQC?.product?.attribute?.slice(0, 4).map((url) => {
-            return (
-              <img
-                src={url.product_img_url}
-                alt=""
-                className="h-50 drop-shadow-xl rounded-sm"
-              />
-            );
-          })}
-        </div>
-        <div className="flex gap-10 w-full justify-center">
-          <button
-            ref={confirmButtonRef}
-            onClick={() => {
-              if (orderForQC && prepareEmp && packedEMP && QCEmp) {
-                handleSubmitQC({
-                  ...orderForQC,
-                  so_qc_note: qcNote,
-                  so_qc_amount: qcAmount,
-                  emp_prepare_by: prepareEmp?.dataEmp?.emp_code,
-                  emp_packed_by: packedEMP?.dataEmp?.emp_code,
-                  emp_qc_by: QCEmp?.dataEmp?.emp_code,
-                  sh_running: Array.isArray(dataQC) ? null : dataQC?.sh_running,
-                  mem_code: Array.isArray(dataQC)
-                    ? dataQC.length > 0
-                      ? dataQC[0]?.members?.mem_code
-                      : null
-                    : null,
-                });
-              }
-            }}
-            className="mt-4 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 cursor-pointer"
-          >
-            ตกลง
-          </button>
-          <button
-            onClick={handleModalClose}
-            className="mt-4 bg-red-700 text-white px-4 py-2 rounded-md hover:bg-red-800 cursor-pointer"
-          >
-            ยกเลิก
-          </button>
-        </div>
-      </Modal>
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-center mt-7">
-          เส้นทางที่สามารถทำงานได้
-        </h1>
-        <p className="mt-2 px-10 text-lg">
-          {route
-            ? route
-                ?.filter((r) => !restrictedQC?.includes(r.route_code))
-                ?.filter((r) => r.route_name !== "อื่นๆ")
-                .map((r, index, arr) => (
-                  <span key={r.route_code}>
-                    {r.route_name}
-                    {index < arr.length - 1 ? " , " : ""}
-                  </span>
-                ))
-            : "กรุณาป้อนรหัสพนักงาน QC เพื่อแสดงเส้นทางที่ทำงานได้"}
-        </p>
-        <div className="w-full mt-5 h-8 px-6">
-          <div className="grid grid-cols-6 gap-3">
-            <div className="col-span-1 bg-blue-50 p-4 rounded-xl self-start">
-              <button
-                className="bg-green-500 text-white p-2 px-6 rounded-lg hover:bg-green-600 cursor-pointer"
-                onClick={() => handleClear()}
-              >
-                ล้างข้อมูล
-              </button>
-              {Array.from({ length: 6 }).map((_, index) => {
-                const bill = Array.isArray(dataQC)
-                  ? dataQC[index]
-                  : index === 0
-                  ? dataQC
-                  : null;
-
-                return (
-                  <div
-                    key={index}
-                    className={` p-2 rounded-lg mt-3 ${
-                      isReady ? "bg-blue-400" : "bg-gray-500"
-                    }`}
-                  >
-                    <p className="text-lg text-white font-bold">
-                      หมายเลขบิลที่ {index + 1}
-                    </p>
-                    <div className="flex items-center gap-1.5 justify-center mt-1">
-                      <input
-                        className="bg-white w-5/6 h-12 text-center placeholder-gray-500 rounded-sm text-xl"
-                        placeholder="หมายเลขบิล"
-                        disabled={!isReady}
-                        ref={index === 0 ? inputBill : null}
-                        readOnly={isInputLocked}
-                        onChange={(e) => {
-                          const update = [...InputValues];
-                          update[index] = e.target.value;
-                          setInputValues(update);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            handleConnect(e.currentTarget.value);
+                <div className="flex w-full justify-center mt-6">
+                  <div className="flex gap-2 text-4xl font">
+                    <p>
+                      {orderForQC?.so_picking_time &&
+                        new Date(orderForQC.so_picking_time).toLocaleString(
+                          "th-TH",
+                          {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
                           }
-                        }}
-                        value={InputValues[index]}
-                      ></input>
-                      <div className="px-4 py-2 bg-white rounded-sm">
-                        <p
-                          className={`font-bold text-2xl ${
-                            isReady ? "text-green-600" : "text-black"
-                          }`}
-                        >
-                          {bill ? bill?.shoppingOrders?.length : "-"}
-                        </p>
+                        )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex w-full justify-center mt-5">
+                  <div className="flex gap-2 items-center">
+                    <p className="text-xl">จำนวนสั่งซื้อ</p>
+                    <input
+                      className="border-3 text-4xl w-56 border-green-600 rounded-sm text-center text-green-800 font-bold"
+                      value={qcAmount}
+                      onChange={(e) => {
+                        const rawValue = e.target.value;
+                        const numericValue = rawValue.replace(/\D/g, "");
+                        setQCAmount(Number(numericValue));
+                      }}
+                    ></input>
+                    <p className="text-xl">{orderForQC?.so_unit}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-12 mt-5 border-b-2 pb-4 border-gray-200">
+            <div className="p-2 bg-blue-500 text-white font-bold text-base rounded-sm">
+              เช็ค Lot สินค้าให้เป็น Lot เดียวกันทุกตัว ลูกคืนคืนถ้า Lot
+              ไม่ต้องการ
+            </div>
+            <div className="flex space-y-1 gap-4 items-center">
+              <div className="flex space-y-1 gap-4 items-center">
+                {["ขาด", "ไม่ครบ", "หยิบผิด", "หยิบเกิน", "ไม่มีของ"].map(
+                  (label) => (
+                    <label
+                      key={label}
+                      className="inline-flex items-center space-x-2"
+                    >
+                      <input
+                        type="radio"
+                        name={`qc_status_${orderForQC?.so_running}`}
+                        value={label}
+                        className="text-blue-600"
+                        checked={qcNote === label}
+                        onChange={(e) => setQCNote(e.target.value)}
+                      />
+                      <span className="text-base font-bold">{label}</span>
+                    </label>
+                  )
+                )}
+                <button
+                  className="px-2 bg-blue-500 py-1 rounded-lg text-white font-bold hover:bg-blue-600 cursor-pointer"
+                  onClick={() => setQCNote(null)}
+                >
+                  เคลียร์ค่า
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 flex justify-center gap-5">
+            {orderForQC?.product?.attribute?.slice(0, 4).map((url) => {
+              return (
+                <img
+                  src={url.product_img_url}
+                  alt=""
+                  className="h-50 drop-shadow-xl rounded-sm"
+                />
+              );
+            })}
+          </div>
+          <div className="flex gap-10 w-full justify-center">
+            <button
+              ref={confirmButtonRef}
+              onClick={() => {
+                if (orderForQC && prepareEmp && packedEMP && QCEmp) {
+                  handleSubmitQC({
+                    ...orderForQC,
+                    so_qc_note: qcNote,
+                    so_qc_amount: qcAmount,
+                    emp_prepare_by: prepareEmp?.dataEmp?.emp_code,
+                    emp_packed_by: packedEMP?.dataEmp?.emp_code,
+                    emp_qc_by: QCEmp?.dataEmp?.emp_code,
+                    sh_running: Array.isArray(dataQC)
+                      ? null
+                      : dataQC?.sh_running,
+                    mem_code: Array.isArray(dataQC)
+                      ? dataQC.length > 0
+                        ? dataQC[0]?.members?.mem_code
+                        : null
+                      : null,
+                  });
+                }
+              }}
+              className="mt-4 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 cursor-pointer"
+            >
+              ตกลง
+            </button>
+            <button
+              onClick={handleModalClose}
+              className="mt-4 bg-red-700 text-white px-4 py-2 rounded-md hover:bg-red-800 cursor-pointer"
+            >
+              ยกเลิก
+            </button>
+          </div>
+        </Modal>
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-center mt-7">
+            เส้นทางที่สามารถทำงานได้
+          </h1>
+          <p className="mt-2 px-10 text-lg">
+            {route
+              ? route
+                  ?.filter((r) => !restrictedQC?.includes(r.route_code))
+                  ?.filter((r) => r.route_name !== "อื่นๆ")
+                  .map((r, index, arr) => (
+                    <span key={r.route_code}>
+                      {r.route_name}
+                      {index < arr.length - 1 ? " , " : ""}
+                    </span>
+                  ))
+              : "กรุณาป้อนรหัสพนักงาน QC เพื่อแสดงเส้นทางที่ทำงานได้"}
+          </p>
+          <div className="w-full mt-5 h-8 px-6">
+            <div className="grid grid-cols-6 gap-3">
+              <div className="col-span-1 bg-blue-50 p-4 rounded-xl self-start">
+                <button
+                  className="bg-green-500 text-white p-2 px-6 rounded-lg hover:bg-green-600 cursor-pointer"
+                  onClick={() => handleClear()}
+                >
+                  ล้างข้อมูล
+                </button>
+                {Array.from({ length: 6 }).map((_, index) => {
+                  const bill = Array.isArray(dataQC)
+                    ? dataQC[index]
+                    : index === 0
+                    ? dataQC
+                    : null;
+
+                  return (
+                    <div
+                      key={index}
+                      className={` p-2 rounded-lg mt-3 ${
+                        isReady ? "bg-blue-400" : "bg-gray-500"
+                      }`}
+                    >
+                      <p className="text-lg text-white font-bold">
+                        หมายเลขบิลที่ {index + 1}
+                      </p>
+                      <div className="flex items-center gap-1.5 justify-center mt-1">
+                        <input
+                          className="bg-white w-5/6 h-12 text-center placeholder-gray-500 rounded-sm text-xl"
+                          placeholder="หมายเลขบิล"
+                          disabled={!isReady}
+                          ref={index === 0 ? inputBill : null}
+                          readOnly={isInputLocked}
+                          onChange={(e) => {
+                            const update = [...InputValues];
+                            update[index] = e.target.value;
+                            setInputValues(update);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleConnect(e.currentTarget.value);
+                            }
+                          }}
+                          value={InputValues[index]}
+                        ></input>
+                        <div className="px-4 py-2 bg-white rounded-sm">
+                          <p
+                            className={`font-bold text-2xl ${
+                              isReady ? "text-green-600" : "text-black"
+                            }`}
+                          >
+                            {bill ? bill?.shoppingOrders?.length : "-"}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="col-span-4 bg-blue-50 rounded-xl self-start pb-5 mb-10">
-              <div>
-                <div className="grid grid-cols-2 p-4 gap-2">
-                  <div className="col-span-1">
-                    <p className="text-red-600 font-black text-lg">
-                      ** ด่วน **
-                    </p>
-                    <div className="bg-white  rounded-lg mt-2 grid grid-cols-2 items-center border-4 border-blue-400">
-                      <p className="text-4xl font-bold border-r-3 py-5 mr-10 border-blue-400">
-                        {Array.isArray(dataQC)
-                          ? dataQC.length > 0
-                            ? dataQC[0]?.members?.mem_code
-                            : "-"
-                          : dataQC
-                          ? dataQC?.members?.mem_code
-                          : "-"}
+                  );
+                })}
+              </div>
+              <div className="col-span-4 bg-blue-50 rounded-xl self-start pb-5 mb-10">
+                <div>
+                  <div className="grid grid-cols-2 p-4 gap-2">
+                    <div className="col-span-1">
+                      <p className="text-red-600 font-black text-lg">
+                        ** ด่วน **
                       </p>
-                      <div className="p-2 pr-10">
-                        <p className="text-2xl font-bold border-b-3 pb-2 mb-2 border-blue-400">
+                      <div className="bg-white  rounded-lg mt-2 grid grid-cols-2 items-center border-4 border-blue-400">
+                        <p className="text-4xl font-bold border-r-3 py-5 mr-10 border-blue-400">
                           {Array.isArray(dataQC)
                             ? dataQC.length > 0
-                              ? dataQC[0]?.members?.mem_name
-                              : "ไม่มีเลขบิล"
-                            : dataQC
-                            ? dataQC?.members?.mem_name
-                            : "-"}
-                        </p>
-                        <p className="text-lg">
-                          {Array.isArray(dataQC)
-                            ? dataQC.length > 0
-                              ? dataQC[0]?.members?.mem_route?.route_name
+                              ? dataQC[0]?.members?.mem_code
                               : "-"
                             : dataQC
-                            ? dataQC?.members?.mem_route?.route_name
+                            ? dataQC?.members?.mem_code
                             : "-"}
                         </p>
+                        <div className="p-2 pr-10">
+                          <p className="text-2xl font-bold border-b-3 pb-2 mb-2 border-blue-400">
+                            {Array.isArray(dataQC)
+                              ? dataQC.length > 0
+                                ? dataQC[0]?.members?.mem_name
+                                : "ไม่มีเลขบิล"
+                              : dataQC
+                              ? dataQC?.members?.mem_name
+                              : "-"}
+                          </p>
+                          <p className="text-lg">
+                            {Array.isArray(dataQC)
+                              ? dataQC.length > 0
+                                ? dataQC[0]?.members?.mem_route?.route_name
+                                : "-"
+                              : dataQC
+                              ? dataQC?.members?.mem_route?.route_name
+                              : "-"}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="col-span-1">
-                    <p className="text-black font-black text-lg">
-                      เงื่อนไขการบรรจุสินค้า และการตรวจสอบ ของลูกค้านี้
-                    </p>
-                    <div className="bg-white  rounded-lg mt-2 items-start border-4 border-red-400 py-4.5 px-2 h-26">
-                      <p className="text-lg font-bold">
-                        {Array.isArray(dataQC)
-                          ? dataQC[0]?.members?.mem_note ?? "ไม่ระบุเงื่อนไข"
-                          : dataQC?.members?.mem_note ?? "ไม่ระบุเงื่อนไข"}
+                    <div className="col-span-1">
+                      <p className="text-black font-black text-lg">
+                        เงื่อนไขการบรรจุสินค้า และการตรวจสอบ ของลูกค้านี้
                       </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-center px-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full max-w-6xl">
-                    <div className="bg-white w-full text-3xl border-4 border-green-500 rounded-lg flex">
-                      <div className="w-1/2 flex justify-center items-center">
-                        <img
-                          src={accept}
-                          className="w-12 h-auto object-cover"
-                        />
-                      </div>
-                      <div className="w-1 bg-green-500"></div>
-                      <div className="w-1/2 flex justify-center items-center p-3">
-                        <p className="text-center text-3xl font-bold">
-                          {hasQC}
+                      <div className="bg-white  rounded-lg mt-2 items-start border-4 border-red-400 py-4.5 px-2 h-26">
+                        <p className="text-lg font-bold">
+                          {Array.isArray(dataQC)
+                            ? dataQC[0]?.members?.mem_note ?? "ไม่ระบุเงื่อนไข"
+                            : dataQC?.members?.mem_note ?? "ไม่ระบุเงื่อนไข"}
                         </p>
-                      </div>
-                    </div>
-                    <div className="bg-white w-full text-3xl border-4 border-red-500 rounded-lg flex">
-                      <div className="w-1/2 flex justify-center items-center">
-                        <img
-                          src={incorect}
-                          className="w-12 h-auto object-cover"
-                        />
-                      </div>
-                      <div className="w-1 bg-red-500"></div>
-                      <div className="w-1/2 flex justify-center items-center p-3">
-                        <p className="text-center text-3xl font-bold">
-                          {hasNotQC}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="bg-white w-full text-3xl border-4 border-yellow-500 rounded-lg flex">
-                      <div className="w-1/2 flex justify-center items-center">
-                        <img
-                          src={warning}
-                          className="w-12 h-auto object-cover"
-                        />
-                      </div>
-                      <div className="w-1 bg-yellow-500"></div>
-                      <div className="w-1/2 flex justify-center items-center p-3">
-                        <p className="text-center text-3xl font-bold">
-                          {inComplete}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="bg-white w-full text-3xl border-4 border-red-500 rounded-lg flex">
-                      <div className="w-1/2 flex justify-center items-center">
-                        <img src={box} className="w-12 h-auto object-cover" />
-                      </div>
-                      <div className="w-1 bg-red-500"></div>
-                      <div className="w-1/2 flex justify-center items-center p-3">
-                        <p className="text-center text-3xl font-bold">{RT}</p>
                       </div>
                     </div>
                   </div>
+                  <div className="flex items-center justify-center px-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full max-w-6xl">
+                      <div className="bg-white w-full text-3xl border-4 border-green-500 rounded-lg flex">
+                        <div className="w-1/2 flex justify-center items-center">
+                          <img
+                            src={accept}
+                            className="w-12 h-auto object-cover"
+                          />
+                        </div>
+                        <div className="w-1 bg-green-500"></div>
+                        <div className="w-1/2 flex justify-center items-center p-3">
+                          <p className="text-center text-3xl font-bold">
+                            {hasQC}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="bg-white w-full text-3xl border-4 border-red-500 rounded-lg flex">
+                        <div className="w-1/2 flex justify-center items-center">
+                          <img
+                            src={incorect}
+                            className="w-12 h-auto object-cover"
+                          />
+                        </div>
+                        <div className="w-1 bg-red-500"></div>
+                        <div className="w-1/2 flex justify-center items-center p-3">
+                          <p className="text-center text-3xl font-bold">
+                            {hasNotQC}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="bg-white w-full text-3xl border-4 border-yellow-500 rounded-lg flex">
+                        <div className="w-1/2 flex justify-center items-center">
+                          <img
+                            src={warning}
+                            className="w-12 h-auto object-cover"
+                          />
+                        </div>
+                        <div className="w-1 bg-yellow-500"></div>
+                        <div className="w-1/2 flex justify-center items-center p-3">
+                          <p className="text-center text-3xl font-bold">
+                            {inComplete}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="bg-white w-full text-3xl border-4 border-red-500 rounded-lg flex">
+                        <div className="w-1/2 flex justify-center items-center">
+                          <img src={box} className="w-12 h-auto object-cover" />
+                        </div>
+                        <div className="w-1 bg-red-500"></div>
+                        <div className="w-1/2 flex justify-center items-center p-3">
+                          <p className="text-center text-3xl font-bold">{RT}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-8 gap-3 mt-3 px-4">
-                <div className="col-span-1 border-green-500 border-4 bg-white p-2 px-5 rounded-lg">
-                  <p>หยิบแล้ว</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    {hasPicked}
-                  </p>
+                <div className="grid grid-cols-8 gap-3 mt-3 px-4">
+                  <div className="col-span-1 border-green-500 border-4 bg-white p-2 px-5 rounded-lg">
+                    <p>หยิบแล้ว</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {hasPicked}
+                    </p>
+                  </div>
+                  <div className="col-span-1 border-red-500 border-4 bg-white p-2 px-5  rounded-lg">
+                    <p>ยังไม่หยิบ</p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {hasNotPicked}
+                    </p>
+                  </div>
+                  <input
+                    disabled={!isReady}
+                    ref={inputBarcode}
+                    className={`col-span-6  border-4 p-2 px-5 rounded-lg text-4xl text-center ${
+                      isReady
+                        ? `bg-orange-100 border-orange-500`
+                        : `border-gray-500 bg-gray-200 `
+                    }`}
+                    placeholder="รหัสสินค้า / Barcode"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleScan(e.currentTarget.value);
+                      }
+                    }}
+                  ></input>
                 </div>
-                <div className="col-span-1 border-red-500 border-4 bg-white p-2 px-5  rounded-lg">
-                  <p>ยังไม่หยิบ</p>
-                  <p className="text-2xl font-bold text-red-600">
-                    {hasNotPicked}
-                  </p>
-                </div>
-                <input
-                  disabled={!isReady}
-                  ref={inputBarcode}
-                  className={`col-span-6  border-4 p-2 px-5 rounded-lg text-4xl text-center ${
-                    isReady
-                      ? `bg-orange-100 border-orange-500`
-                      : `border-gray-500 bg-gray-200 `
-                  }`}
-                  placeholder="รหัสสินค้า / Barcode"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleScan(e.currentTarget.value);
-                    }
-                  }}
-                ></input>
-              </div>
-              <div className="px-4 mt-3">
-                <table className="w-full rounded-lg overflow-hidden">
-                  <thead className="bg-blue-400">
-                    <tr className=" text-white rounded-lg">
-                      <th className="p-2">ที่</th>
-                      <th className="p-2">คนจัด</th>
-                      <th className="p-2">รหัสสินค้า</th>
-                      <th className="p-2">หมายเลขบาร์โค้ด</th>
-                      <th className="p-2">รายละเอียด</th>
-                      <th className="p-2">จำนวนสั่ง</th>
-                      <th className="p-2">ขาด</th>
-                      <th className="p-2">หน่วย</th>
-                      <th className="p-2">สถานะ</th>
-                      <th className="p-2">หมายเหตุ</th>
-                      <th className="p-2">พิมพ์จองสินค้า</th>
-                    </tr>
-                  </thead>
-                  <tbody className="py-5">
-                    {order?.length > 0 ? (
-                      order
-                        .sort((a, b) => {
-                          const getPriority = (item: any) => {
-                            if (item.so_already_qc === "RT") return 2;
-                            if (item.so_already_qc === "Yes") return 1;
-                            return 0; // ยังไม่ QC
-                          };
+                <div className="px-4 mt-3">
+                  <table className="w-full rounded-lg overflow-hidden">
+                    <thead className="bg-blue-400">
+                      <tr className=" text-white rounded-lg">
+                        <th className="p-2">ที่</th>
+                        <th className="p-2">คนจัด</th>
+                        <th className="p-2">รหัสสินค้า</th>
+                        <th className="p-2">หมายเลขบาร์โค้ด</th>
+                        <th className="p-2">รายละเอียด</th>
+                        <th className="p-2">จำนวนสั่ง</th>
+                        <th className="p-2">ขาด</th>
+                        <th className="p-2">หน่วย</th>
+                        <th className="p-2">สถานะ</th>
+                        <th className="p-2">หมายเหตุ</th>
+                        <th className="p-2">พิมพ์จองสินค้า</th>
+                      </tr>
+                    </thead>
+                    <tbody className="py-5">
+                      {order?.length > 0 ? (
+                        order
+                          .sort((a, b) => {
+                            const getPriority = (item: any) => {
+                              if (item.so_already_qc === "RT") return 2;
+                              if (item.so_already_qc === "Yes") return 1;
+                              return 0; // ยังไม่ QC
+                            };
 
-                          return getPriority(a) - getPriority(b);
-                        })
-                        .map((so, index) => {
-                          return (
-                            <tr
-                              className={`  border-b-2 border-blue-200 ${
-                                so.so_already_qc === "Yes"
-                                  ? "bg-green-100 hover:bg-green-100"
-                                  : so.so_already_qc === "RT"
-                                  ? "bg-red-100 hover:bg-red-100"
-                                  : "bg-white hover:bg-gray-50"
-                              }`}
-                            >
-                              <td className="py-4 text-lg border-r-2 border-blue-200 font-semibold px-2">
-                                {index + 1}
-                              </td>
-                              <td className="py-4 text-lg border-r-2 border-blue-200">
-                                <div className="flex flex-col items-center justify-center text-center">
-                                  <p className="text-lg">
-                                    ชั้น{" "}
-                                    {so?.product?.product_floor || "ชั้น 1"}
-                                  </p>
-                                  <div
-                                    className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full mt-1 ${
-                                      so.product.product_floor === "5"
-                                        ? "bg-green-500"
-                                        : so.product.product_floor === "4"
-                                        ? "bg-red-500"
-                                        : so.product.product_floor === "3"
-                                        ? "bg-blue-500"
-                                        : so.product.product_floor === "2"
-                                        ? "bg-yellow-500"
-                                        : "bg-gray-400"
-                                    } `}
-                                  ></div>
-                                </div>
-                              </td>
-                              <td className="py-4 text-lg border-r-2 border-blue-200 px-1">
-                                <div className="flex flex-col items-center justify-center text-center">
-                                  <p className="text-lg">
-                                    {so?.product?.product_code}
-                                  </p>
-                                  <p
-                                    className={`text-base font-bold ${
-                                      so?.picking_status === "picking"
-                                        ? "text-green-600"
-                                        : "text-red-600"
-                                    }`}
-                                  >
-                                    {so?.picking_status === "pending"
-                                      ? "ยังไม่จัด"
-                                      : so?.picking_status === "picking"
-                                      ? "จัดแล้ว"
-                                      : so?.picking_status === "request"
-                                      ? "กำลังขอเพิ่ม"
-                                      : so?.picking_status}
-                                  </p>
-                                </div>
-                              </td>
-                              <td className="py-4 text-lg border-r-2 border-blue-200">
-                                <div className="flex flex-col items-center justify-center text-center">
-                                  <p className="text-base">
-                                    {/* {so?.product?.product_barcode?.replace(
+                            return getPriority(a) - getPriority(b);
+                          })
+                          .map((so, index) => {
+                            return (
+                              <tr
+                                className={`  border-b-2 border-blue-200 ${
+                                  so.so_already_qc === "Yes"
+                                    ? "bg-green-100 hover:bg-green-100"
+                                    : so.so_already_qc === "RT"
+                                    ? "bg-red-100 hover:bg-red-100"
+                                    : "bg-white hover:bg-gray-50"
+                                }`}
+                              >
+                                <td className="py-4 text-lg border-r-2 border-blue-200 font-semibold px-2">
+                                  {index + 1}
+                                </td>
+                                <td className="py-4 text-lg border-r-2 border-blue-200">
+                                  <div className="flex flex-col items-center justify-center text-center">
+                                    <p className="text-lg">
+                                      ชั้น{" "}
+                                      {so?.product?.product_floor || "ชั้น 1"}
+                                    </p>
+                                    <div
+                                      className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full mt-1 ${
+                                        so.product.product_floor === "5"
+                                          ? "bg-green-500"
+                                          : so.product.product_floor === "4"
+                                          ? "bg-red-500"
+                                          : so.product.product_floor === "3"
+                                          ? "bg-blue-500"
+                                          : so.product.product_floor === "2"
+                                          ? "bg-yellow-500"
+                                          : "bg-gray-400"
+                                      } `}
+                                    ></div>
+                                  </div>
+                                </td>
+                                <td className="py-4 text-lg border-r-2 border-blue-200 px-1">
+                                  <div className="flex flex-col items-center justify-center text-center">
+                                    <p className="text-lg">
+                                      {so?.product?.product_code}
+                                    </p>
+                                    <p
+                                      className={`text-base font-bold ${
+                                        so?.picking_status === "picking"
+                                          ? "text-green-600"
+                                          : "text-red-600"
+                                      }`}
+                                    >
+                                      {so?.picking_status === "pending"
+                                        ? "ยังไม่จัด"
+                                        : so?.picking_status === "picking"
+                                        ? "จัดแล้ว"
+                                        : so?.picking_status === "request"
+                                        ? "กำลังขอเพิ่ม"
+                                        : so?.picking_status}
+                                    </p>
+                                  </div>
+                                </td>
+                                <td className="py-4 text-lg border-r-2 border-blue-200">
+                                  <div className="flex flex-col items-center justify-center text-center">
+                                    <p className="text-base">
+                                      {/* {so?.product?.product_barcode?.replace(
                                       /^.{4}/,
                                       "____"
                                     )} */}
-                                    {so?.product?.product_barcode}
-                                  </p>
-                                </div>
-                              </td>
-                              <td className="py-4 text-lg border-r-2 border-blue-200">
-                                <div className="flex flex-col items-center justify-center text-center">
-                                  <p className="text-lg pb-1.5">
-                                    {so?.product?.product_name}
-                                  </p>
-                                  <div className="w-full px-3.5">
-                                    <div className="border-t-2 border-blue-200 w-full mb-1.5"></div>
-                                  </div>
-                                  <div className="flex justify-between w-full px-10 ">
-                                    <p className="text-base text-blue-500 font-bold">
-                                      รับเข้า
+                                      {so?.product?.product_barcode}
                                     </p>
-                                    <div className="flex justify-center gap-1">
+                                  </div>
+                                </td>
+                                <td className="py-4 text-lg border-r-2 border-blue-200">
+                                  <div className="flex flex-col items-center justify-center text-center">
+                                    <p className="text-lg pb-1.5">
+                                      {so?.product?.product_name}
+                                    </p>
+                                    <div className="w-full px-3.5">
+                                      <div className="border-t-2 border-blue-200 w-full mb-1.5"></div>
+                                    </div>
+                                    <div className="flex justify-between w-full px-10 ">
                                       <p className="text-base text-blue-500 font-bold">
-                                        คงเหลือ
+                                        รับเข้า
                                       </p>
-                                      <p className="text-base">
-                                        {so.product.product_stock}
+                                      <div className="flex justify-center gap-1">
+                                        <p className="text-base text-blue-500 font-bold">
+                                          คงเหลือ
+                                        </p>
+                                        <p className="text-base">
+                                          {so.product.product_stock}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex justify-between w-full px-10">
+                                      <p className="text-base text-blue-500 font-bold">
+                                        จำนวน
                                       </p>
+                                      {/* <p className="text-base">{15}</p> */}
+                                    </div>
+                                    <div className="flex justify-between w-full px-10">
+                                      <p className="text-base text-blue-500 font-bold">
+                                        เลขคีย์ใบซื้อ
+                                      </p>
+                                      {/* <p className="text-base">{15}</p> */}
                                     </div>
                                   </div>
-                                  <div className="flex justify-between w-full px-10">
-                                    <p className="text-base text-blue-500 font-bold">
-                                      จำนวน
+                                </td>
+                                <td className="py-4 text-lg border-r-2 border-blue-200">
+                                  <div>
+                                    <p className="text-xl font-bold">
+                                      {so.so_amount}
                                     </p>
-                                    {/* <p className="text-base">{15}</p> */}
-                                  </div>
-                                  <div className="flex justify-between w-full px-10">
-                                    <p className="text-base text-blue-500 font-bold">
-                                      เลขคีย์ใบซื้อ
+                                    <p className="text-base text-blue-500">
+                                      ใบขาว
                                     </p>
-                                    {/* <p className="text-base">{15}</p> */}
                                   </div>
-                                </div>
-                              </td>
-                              <td className="py-4 text-lg border-r-2 border-blue-200">
-                                <div>
+                                </td>
+                                <td className="py-4 text-lg border-r-2 border-blue-200">
+                                  <p className="text-2xl font-bold text-red-600">
+                                    {so.so_amount - so.so_qc_amount}
+                                  </p>
+                                </td>
+                                <td className="py-4 text-lg border-r-2 border-blue-200">
                                   <p className="text-xl font-bold">
-                                    {so.so_amount}
+                                    {so.so_unit}
                                   </p>
                                   <p className="text-base text-blue-500">
                                     ใบขาว
                                   </p>
-                                </div>
-                              </td>
-                              <td className="py-4 text-lg border-r-2 border-blue-200">
-                                <p className="text-2xl font-bold text-red-600">
-                                  {so.so_amount - so.so_qc_amount}
-                                </p>
-                              </td>
-                              <td className="py-4 text-lg border-r-2 border-blue-200">
-                                <p className="text-xl font-bold">
-                                  {so.so_unit}
-                                </p>
-                                <p className="text-base text-blue-500">ใบขาว</p>
-                              </td>
-                              <td className="py-4 text-lg border-r-2 border-blue-200">
-                                <div className="flex items-center justify-center">
-                                  <img
-                                    src={
-                                      so.so_already_qc === "Yes"
-                                        ? accept
-                                        : so.so_already_qc === "RT"
-                                        ? box
-                                        : incorect
-                                    }
-                                    className="w-10"
-                                  ></img>
-                                </div>
-                              </td>
-                              <td className="py-4 text-sm border-r-2 border-blue-200">
-                                <div className="flex flex-col space-y-1 px-2">
-                                  <label className="inline-flex items-center space-x-2">
-                                    <input
-                                      type="radio"
-                                      name={`qc_status_${so.so_running}`}
-                                      checked={so.so_qc_note === "ขาด"}
-                                      value="ขาด"
-                                      className="text-blue-600"
-                                    />
-                                    <span className="text-base font-bold text-blue-800">
-                                      ขาด
-                                    </span>
-                                  </label>
+                                </td>
+                                <td className="py-4 text-lg border-r-2 border-blue-200">
+                                  <div className="flex items-center justify-center">
+                                    <img
+                                      src={
+                                        so.so_already_qc === "Yes"
+                                          ? accept
+                                          : so.so_already_qc === "RT"
+                                          ? box
+                                          : incorect
+                                      }
+                                      className="w-10"
+                                    ></img>
+                                  </div>
+                                </td>
+                                <td className="py-4 text-sm border-r-2 border-blue-200">
+                                  <div className="flex flex-col space-y-1 px-2">
+                                    <label className="inline-flex items-center space-x-2">
+                                      <input
+                                        type="radio"
+                                        name={`qc_status_${so.so_running}`}
+                                        checked={so.so_qc_note === "ขาด"}
+                                        value="ขาด"
+                                        className="text-blue-600"
+                                      />
+                                      <span className="text-base font-bold text-blue-800">
+                                        ขาด
+                                      </span>
+                                    </label>
 
-                                  <label className="inline-flex items-center space-x-2">
-                                    <input
-                                      type="radio"
-                                      name={`qc_status_${so.so_running}`}
-                                      checked={so.so_qc_note === "ไม่ครบ"}
-                                      value="ไม่ครบ"
-                                      className="text-blue-600"
-                                    />
-                                    <span className="text-base font-bold text-green-700">
-                                      ไม่ครบ
-                                    </span>
-                                  </label>
+                                    <label className="inline-flex items-center space-x-2">
+                                      <input
+                                        type="radio"
+                                        name={`qc_status_${so.so_running}`}
+                                        checked={so.so_qc_note === "ไม่ครบ"}
+                                        value="ไม่ครบ"
+                                        className="text-blue-600"
+                                      />
+                                      <span className="text-base font-bold text-green-700">
+                                        ไม่ครบ
+                                      </span>
+                                    </label>
 
-                                  <label className="inline-flex items-center space-x-2">
-                                    <input
-                                      type="radio"
-                                      name={`qc_status_${so.so_running}`}
-                                      checked={so.so_qc_note === "หยิบผิด"}
-                                      value="หยิบผิด"
-                                      className="text-blue-600"
-                                    />
-                                    <span className="text-base font-bold text-blue-500">
-                                      หยิบผิด
-                                    </span>
-                                  </label>
+                                    <label className="inline-flex items-center space-x-2">
+                                      <input
+                                        type="radio"
+                                        name={`qc_status_${so.so_running}`}
+                                        checked={so.so_qc_note === "หยิบผิด"}
+                                        value="หยิบผิด"
+                                        className="text-blue-600"
+                                      />
+                                      <span className="text-base font-bold text-blue-500">
+                                        หยิบผิด
+                                      </span>
+                                    </label>
 
-                                  <label className="inline-flex items-center space-x-2">
-                                    <input
-                                      type="radio"
-                                      name={`qc_status_${so.so_running}`}
-                                      checked={so.so_qc_note === "หยิบเกิน"}
-                                      value="หยิบเกิน"
-                                      className="text-blue-600"
-                                    />
-                                    <span className="text-base font-bold text-orange-500">
-                                      หยิบเกิน
-                                    </span>
-                                  </label>
+                                    <label className="inline-flex items-center space-x-2">
+                                      <input
+                                        type="radio"
+                                        name={`qc_status_${so.so_running}`}
+                                        checked={so.so_qc_note === "หยิบเกิน"}
+                                        value="หยิบเกิน"
+                                        className="text-blue-600"
+                                      />
+                                      <span className="text-base font-bold text-orange-500">
+                                        หยิบเกิน
+                                      </span>
+                                    </label>
 
-                                  <label className="inline-flex items-center space-x-2">
-                                    <input
-                                      type="radio"
-                                      name={`qc_status_${so.so_running}`}
-                                      checked={so.so_qc_note === "ไม่มีของ"}
-                                      value="ไม่มีของ"
-                                      className="text-blue-600"
-                                    />
-                                    <span className="text-base font-bold text-red-600">
-                                      ไม่มีของ
-                                    </span>
-                                  </label>
-                                </div>
-                              </td>
-                              <td className="py-4 text-lg">
-                                <div className="flex flex-col space-y-2 px-3">
-                                  <button
-                                    disabled={so.picking_status !== "picking"}
-                                    className={` p-1 rounded-lg text-base text-white cursor-pointer ${
-                                      so.picking_status !== "picking"
-                                        ? "bg-gray-500 hover:bg-gray-600"
-                                        : "bg-blue-500 hover:bg-blue-600"
-                                    } `}
-                                    onClick={() =>
-                                      handleFetchData(
-                                        so.so_running,
-                                        so.so_amount
-                                      )
-                                    }
-                                  >
-                                    ขอใหม่
-                                  </button>
-                                  <button
-                                    // disabled={so.so_already_qc === 'RT'}
-                                    className={` p-1 rounded-lg text-base text-white cursor-pointer ${
-                                      so.so_already_qc === "RT"
-                                        ? "hover:bg-gray-600 bg-gray-500"
-                                        : "hover:bg-red-600 bg-red-500"
-                                    }`}
-                                    onClick={() => {
-                                      const mem_code = Array.isArray(dataQC)
-                                        ? dataQC.length > 0
-                                          ? dataQC[0]?.members?.mem_code
-                                          : null
-                                        : dataQC?.members?.mem_code ?? null;
-                                      handleRT(
-                                        so.so_running,
-                                        so.sh_running,
-                                        mem_code
-                                      );
-                                    }}
-                                  >
-                                    {so.so_already_qc === "RT"
-                                      ? "ส่ง RT แล้ว"
-                                      : "ส่ง RT"}
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                    ) : (
-                      <tr></tr>
-                    )}
-                  </tbody>
-                </table>
-                {!dataQC && submitSuccess ? (
-                  <div className="w-full flex justify-center text-3xl mt-5 text-green-700 font-bold">
-                    <p>ยืนยันการตรวจสอบรายการสำเร็จ</p>
-                  </div>
-                ) : (
-                  !dataQC && (
-                    <div className="w-full flex justify-center text-3xl mt-5 text-red-700 font-bold">
-                      <p>
-                        กรุณากรอกรหัสพนักงานและรหัสลูกค้าหรือเลขบิลให้เรียบร้อย
-                      </p>
+                                    <label className="inline-flex items-center space-x-2">
+                                      <input
+                                        type="radio"
+                                        name={`qc_status_${so.so_running}`}
+                                        checked={so.so_qc_note === "ไม่มีของ"}
+                                        value="ไม่มีของ"
+                                        className="text-blue-600"
+                                      />
+                                      <span className="text-base font-bold text-red-600">
+                                        ไม่มีของ
+                                      </span>
+                                    </label>
+                                  </div>
+                                </td>
+                                <td className="py-4 text-lg">
+                                  <div className="flex flex-col space-y-2 px-3">
+                                    <button
+                                      disabled={so.picking_status !== "picking"}
+                                      className={` p-1 rounded-lg text-base text-white cursor-pointer ${
+                                        so.picking_status !== "picking"
+                                          ? "bg-gray-500 hover:bg-gray-600"
+                                          : "bg-blue-500 hover:bg-blue-600"
+                                      } `}
+                                      onClick={() =>
+                                        handleFetchData(
+                                          so.so_running,
+                                          so.so_amount
+                                        )
+                                      }
+                                    >
+                                      ขอใหม่
+                                    </button>
+                                    <button
+                                      // disabled={so.so_already_qc === 'RT'}
+                                      className={` p-1 rounded-lg text-base text-white cursor-pointer ${
+                                        so.so_already_qc === "RT"
+                                          ? "hover:bg-gray-600 bg-gray-500"
+                                          : "hover:bg-red-600 bg-red-500"
+                                      }`}
+                                      onClick={() => {
+                                        const mem_code = Array.isArray(dataQC)
+                                          ? dataQC.length > 0
+                                            ? dataQC[0]?.members?.mem_code
+                                            : null
+                                          : dataQC?.members?.mem_code ?? null;
+                                        handleRT(
+                                          so.so_running,
+                                          so.sh_running,
+                                          mem_code
+                                        );
+                                      }}
+                                    >
+                                      {so.so_already_qc === "RT"
+                                        ? "ส่ง RT แล้ว"
+                                        : "ส่ง RT"}
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                      ) : (
+                        <tr></tr>
+                      )}
+                    </tbody>
+                  </table>
+                  {!dataQC && submitSuccess ? (
+                    <div className="w-full flex justify-center text-3xl mt-5 text-green-700 font-bold">
+                      <p>ยืนยันการตรวจสอบรายการสำเร็จ</p>
                     </div>
-                  )
-                )}
+                  ) : (
+                    !dataQC && (
+                      <div className="w-full flex justify-center text-3xl mt-5 text-red-700 font-bold">
+                        <p>
+                          กรุณากรอกรหัสพนักงานและรหัสลูกค้าหรือเลขบิลให้เรียบร้อย
+                        </p>
+                      </div>
+                    )
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="col-span-1 bg-blue-50 rounded-xl self-start flex-col justify-center py-3">
-              <div className="w-full mt-3">
-                <p>พนักงานเตรียมสินค้า</p>
-                <div className="grid grid-cols-4 px-3 gap-2 mt-2">
-                  <div
-                    className="col-span-1 bg-amber-600 rounded-sm flex justify-center p-2 hover:bg-amber-700 cursor-pointer"
-                    onClick={() => handleClearEmpData("prepare-emp")}
-                  >
-                    <img src={prepareIcon} className="w-6"></img>
+              <div className="col-span-1 bg-blue-50 rounded-xl self-start flex-col justify-center py-3">
+                <div className="w-full mt-3">
+                  <p>พนักงานเตรียมสินค้า</p>
+                  <div className="grid grid-cols-4 px-3 gap-2 mt-2">
+                    <div
+                      className="col-span-1 bg-amber-600 rounded-sm flex justify-center p-2 hover:bg-amber-700 cursor-pointer"
+                      onClick={() => handleClearEmpData("prepare-emp")}
+                    >
+                      <img src={prepareIcon} className="w-6"></img>
+                    </div>
+                    <input
+                      className="col-span-3 bg-white text-lg justify-center text-center rounded-sm p-1 drop-shadow-sm"
+                      placeholder="พนักงานเตรียมสินค้า"
+                      value={inputPrepare}
+                      ref={inputRefEmpPrepare}
+                      onChange={(e) => setInputPrepare(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleGetDataEmp(
+                            e.currentTarget.value,
+                            "prepare-emp"
+                          );
+                        }
+                      }}
+                      readOnly={!!prepareEmp?.dataEmp?.emp_code}
+                    ></input>
                   </div>
-                  <input
-                    className="col-span-3 bg-white text-lg justify-center text-center rounded-sm p-1 drop-shadow-sm"
-                    placeholder="พนักงานเตรียมสินค้า"
-                    value={inputPrepare}
-                    ref={inputRefEmpPrepare}
-                    onChange={(e) => setInputPrepare(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleGetDataEmp(e.currentTarget.value, "prepare-emp");
+                </div>
+
+                <div className="w-full mt-2">
+                  <p>พนักงานตรวจสอบสินค้า</p>
+                  <div className="grid grid-cols-4 px-3 gap-2 mt-2">
+                    <div
+                      className="col-span-1 bg-red-700 rounded-sm flex justify-center p-2 hover:bg-red-800 cursor-pointer"
+                      onClick={() => handleClearEmpData("qc-emp")}
+                    >
+                      <img src={QCIcon} className="w-6"></img>
+                    </div>
+                    <input
+                      className="col-span-3 bg-white text-lg justify-center text-center rounded-sm p-1 drop-shadow-sm"
+                      placeholder="พนักงานตรวจสอบสินค้า"
+                      ref={inputRefEmpQC}
+                      onChange={(e) => setInputQC(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleGetDataEmp(e.currentTarget.value, "qc-emp");
+                        }
+                      }}
+                      value={inputQC}
+                      readOnly={!!QCEmp?.dataEmp?.emp_code}
+                    ></input>
+                  </div>
+                </div>
+
+                <div className="w-full mt-2">
+                  <p>พนักงานแพ็คสินค้าลงลัง</p>
+                  <div className="grid grid-cols-4 px-3 gap-2 mt-2">
+                    <div
+                      className="col-span-1 bg-green-600 rounded-sm flex justify-center p-2 hover:bg-green-700 cursor-pointer"
+                      onClick={() => handleClearEmpData("packed-emp")}
+                    >
+                      <img src={PackingIcon} className="w-6"></img>
+                    </div>
+                    <input
+                      className="col-span-3 bg-white text-lg justify-center text-center rounded-sm p-1 drop-shadow-sm"
+                      placeholder="พนักงานแพ็คสินค้าลงลัง"
+                      ref={inputRefEmpPacked}
+                      value={inputPacked}
+                      readOnly={!!packedEMP?.dataEmp?.emp_code}
+                      onChange={(e) => setInputPacked(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleGetDataEmp(e.currentTarget.value, "packed-emp");
+                        }
+                      }}
+                    ></input>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 mt-5 px-13 gap-5">
+                  <div className="col-span-1">
+                    <input
+                      className="text-5xl drop-shadow-sm text-center font-semibold bg-white w-23 p-3.5 rounded-sm"
+                      value={countBox}
+                      onChange={(e) => {
+                        const rawValue = e.target.value;
+                        const numericValue = rawValue.replace(/\D/g, "");
+                        setCountBox(Number(numericValue));
+                      }}
+                    ></input>
+                  </div>
+                  <div className="col-span-1">
+                    <div
+                      className="bg-green-600 text-2xl font-bold text-white py-1 rounded-sm hover:bg-green-700 cursor-pointer select-none"
+                      onClick={() => setCountBox((prev) => prev + 1)}
+                    >
+                      +
+                    </div>
+                    <div
+                      className="bg-red-700 text-2xl font-bold text-white py-1 rounded-sm mt-1 hover:bg-red-800 cursor-pointer select-none"
+                      onClick={() =>
+                        countBox > 1 && setCountBox((prev) => prev - 1)
                       }
-                    }}
-                    readOnly={!!prepareEmp?.dataEmp?.emp_code}
-                  ></input>
-                </div>
-              </div>
-
-              <div className="w-full mt-2">
-                <p>พนักงานตรวจสอบสินค้า</p>
-                <div className="grid grid-cols-4 px-3 gap-2 mt-2">
-                  <div
-                    className="col-span-1 bg-red-700 rounded-sm flex justify-center p-2 hover:bg-red-800 cursor-pointer"
-                    onClick={() => handleClearEmpData("qc-emp")}
-                  >
-                    <img src={QCIcon} className="w-6"></img>
-                  </div>
-                  <input
-                    className="col-span-3 bg-white text-lg justify-center text-center rounded-sm p-1 drop-shadow-sm"
-                    placeholder="พนักงานตรวจสอบสินค้า"
-                    ref={inputRefEmpQC}
-                    onChange={(e) => setInputQC(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleGetDataEmp(e.currentTarget.value, "qc-emp");
-                      }
-                    }}
-                    value={inputQC}
-                    readOnly={!!QCEmp?.dataEmp?.emp_code}
-                  ></input>
-                </div>
-              </div>
-
-              <div className="w-full mt-2">
-                <p>พนักงานแพ็คสินค้าลงลัง</p>
-                <div className="grid grid-cols-4 px-3 gap-2 mt-2">
-                  <div
-                    className="col-span-1 bg-green-600 rounded-sm flex justify-center p-2 hover:bg-green-700 cursor-pointer"
-                    onClick={() => handleClearEmpData("packed-emp")}
-                  >
-                    <img src={PackingIcon} className="w-6"></img>
-                  </div>
-                  <input
-                    className="col-span-3 bg-white text-lg justify-center text-center rounded-sm p-1 drop-shadow-sm"
-                    placeholder="พนักงานแพ็คสินค้าลงลัง"
-                    ref={inputRefEmpPacked}
-                    value={inputPacked}
-                    readOnly={!!packedEMP?.dataEmp?.emp_code}
-                    onChange={(e) => setInputPacked(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleGetDataEmp(e.currentTarget.value, "packed-emp");
-                      }
-                    }}
-                  ></input>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 mt-5 px-13 gap-5">
-                <div className="col-span-1">
-                  <input
-                    className="text-5xl drop-shadow-sm text-center font-semibold bg-white w-23 p-3.5 rounded-sm"
-                    value={countBox}
-                    onChange={(e) => {
-                      const rawValue = e.target.value;
-                      const numericValue = rawValue.replace(/\D/g, "");
-                      setCountBox(Number(numericValue));
-                    }}
-                  ></input>
-                </div>
-                <div className="col-span-1">
-                  <div
-                    className="bg-green-600 text-2xl font-bold text-white py-1 rounded-sm hover:bg-green-700 cursor-pointer select-none"
-                    onClick={() => setCountBox((prev) => prev + 1)}
-                  >
-                    +
-                  </div>
-                  <div
-                    className="bg-red-700 text-2xl font-bold text-white py-1 rounded-sm mt-1 hover:bg-red-800 cursor-pointer select-none"
-                    onClick={() =>
-                      countBox > 1 && setCountBox((prev) => prev - 1)
-                    }
-                  >
-                    -
+                    >
+                      -
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="mt-5 px-13">
-                <div
-                  className="w-full bg-blue-500 text-base text-white p-1 font-bold rounded-sm hover:bg-blue-600 select-none cursor-pointer"
-                  onClick={() => {
-                    const mem_code = Array.isArray(dataQC)
-                      ? dataQC.length > 0
-                        ? dataQC[0]?.members?.mem_code
-                        : null
-                      : dataQC?.members?.mem_code ?? null;
-                    window.open(`/othercourier?mem_code=${mem_code}`);
-                  }}
-                >
-                  ฝากขนส่งอื่น
-                </div>
-                <div
-                  className="w-full bg-amber-500 text-base text-white p-1 font-bold rounded-sm hover:bg-amber-600 select-none cursor-pointer mt-2"
-                  onClick={() => {
-                    window.open("/special");
-                  }}
-                >
-                  กรณีด่วนพิเศษ
-                </div>
-                <div
-                  className="w-full bg-red-700 text-base text-white p-1 font-bold rounded-sm hover:bg-red-800 select-none cursor-pointer mt-2"
-                  onClick={() => {
-                    window.open("/fragileprint");
-                  }}
-                >
-                  ระวังแตก
-                </div>
-                {hasNotQC === 0 && dataQC && (
+                <div className="mt-5 px-13">
                   <div
-                    className="w-full bg-green-500 text-base text-white p-1 font-bold rounded-sm hover:bg-green-600 select-none cursor-pointer mt-2"
-                    onClick={() => {
-                      handlePrintStickerBox();
-                    }}
-                  >
-                    พิมพ์สติกเกอร์ติดลัง
-                  </div>
-                )}
-
-                {memRoute && memRoute === "L16" && (
-                  <div
-                    className="w-full bg-yellow-500 text-base text-white p-1 font-bold rounded-sm hover:bg-yellow-600 select-none cursor-pointer mt-2"
+                    className="w-full bg-blue-500 text-base text-white p-1 font-bold rounded-sm hover:bg-blue-600 select-none cursor-pointer"
                     onClick={() => {
                       const mem_code = Array.isArray(dataQC)
                         ? dataQC.length > 0
                           ? dataQC[0]?.members?.mem_code
                           : null
                         : dataQC?.members?.mem_code ?? null;
-
-                      const mem_name = Array.isArray(dataQC)
-                        ? dataQC.length > 0
-                          ? dataQC[0]?.members?.mem_name
-                          : null
-                        : dataQC?.members?.mem_name ?? null;
-
-                      window.open(
-                        `/basket-sticker?mem_code=${mem_code}&mem_name=${mem_name}&print=${countBox}`
-                      );
+                      window.open(`/othercourier?mem_code=${mem_code}`);
                     }}
                   >
-                    ติดตะกร้า รอลงลัง ส่งฟรี
+                    ฝากขนส่งอื่น
                   </div>
-                )}
-                <button
-                  disabled={hasNotQC !== 0}
-                  className={`w-full  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${
-                    hasNotQC === 0
-                      ? "bg-green-500 hover:bg-green-600"
-                      : "bg-gray-500 hover:bg-gray-600"
-                  }`}
-                  onClick={() => SubmitShoppingHead()}
-                >
-                  เสร็จสิ้น
-                </button>
-                <p className="mt-2 font-bold text-red-700">
-                  {submitFailed ? `ยืนยันไม่สำเร็จ ลองอีกครั้ง` : ""}
-                </p>
+                  <div
+                    className="w-full bg-amber-500 text-base text-white p-1 font-bold rounded-sm hover:bg-amber-600 select-none cursor-pointer mt-2"
+                    onClick={() => {
+                      window.open("/special");
+                    }}
+                  >
+                    กรณีด่วนพิเศษ
+                  </div>
+                  <div
+                    className="w-full bg-red-700 text-base text-white p-1 font-bold rounded-sm hover:bg-red-800 select-none cursor-pointer mt-2"
+                    onClick={() => {
+                      window.open("/fragileprint");
+                    }}
+                  >
+                    ระวังแตก
+                  </div>
+                  {hasNotQC === 0 && dataQC && (
+                    <div
+                      className="w-full bg-green-500 text-base text-white p-1 font-bold rounded-sm hover:bg-green-600 select-none cursor-pointer mt-2"
+                      onClick={() => {
+                        handlePrintStickerBox();
+                      }}
+                    >
+                      พิมพ์สติกเกอร์ติดลัง
+                    </div>
+                  )}
+
+                  {memRoute && memRoute === "L16" && (
+                    <div
+                      className="w-full bg-yellow-500 text-base text-white p-1 font-bold rounded-sm hover:bg-yellow-600 select-none cursor-pointer mt-2"
+                      onClick={() => {
+                        const mem_code = Array.isArray(dataQC)
+                          ? dataQC.length > 0
+                            ? dataQC[0]?.members?.mem_code
+                            : null
+                          : dataQC?.members?.mem_code ?? null;
+
+                        const mem_name = Array.isArray(dataQC)
+                          ? dataQC.length > 0
+                            ? dataQC[0]?.members?.mem_name
+                            : null
+                          : dataQC?.members?.mem_name ?? null;
+
+                        window.open(
+                          `/basket-sticker?mem_code=${mem_code}&mem_name=${mem_name}&print=${countBox}`
+                        );
+                      }}
+                    >
+                      ติดตะกร้า รอลงลัง ส่งฟรี
+                    </div>
+                  )}
+                  <button
+                    disabled={hasNotQC !== 0}
+                    className={`w-full  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${
+                      hasNotQC === 0
+                        ? "bg-green-500 hover:bg-green-600"
+                        : "bg-gray-500 hover:bg-gray-600"
+                    }`}
+                    onClick={() => SubmitShoppingHead()}
+                  >
+                    เสร็จสิ้น
+                  </button>
+                  <p className="mt-2 font-bold text-red-700">
+                    {submitFailed ? `ยืนยันไม่สำเร็จ ลองอีกครั้ง` : ""}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  );
+  );}
 };
 export default QCDashboard;

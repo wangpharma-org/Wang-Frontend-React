@@ -35,9 +35,7 @@ function App() {
             element={
               <div>
                 <Navbar />
-                <RequireAuth>
-                  <Home />
-                </RequireAuth>
+                <Home />
               </div>
             }
           />
@@ -66,42 +64,12 @@ function App() {
               </div>
             }
           />
-          <Route
-            path="/fragileprint"
-            element={
-              <FragilePrint />
-            }
-          />
-          <Route
-            path="/othercourier"
-            element={
-              <OtherCourier />
-            }
-          />
-          <Route
-            path="/basket-sticker"
-            element={
-              <BasketSticker />
-            }
-          />
-          <Route
-            path="/print-rt"
-            element={
-              <PrintRT />
-            }
-          />
-          <Route
-            path="/dashboard-qc"
-            element={
-              <QCDashboard />
-            }
-          />
-          <Route
-            path="/special"
-            element={
-              <SpecialExpressPrint />
-            }
-          />
+          <Route path="/fragileprint" element={<FragilePrint />} />
+          <Route path="/othercourier" element={<OtherCourier />} />
+          <Route path="/basket-sticker" element={<BasketSticker />} />
+          <Route path="/print-rt" element={<PrintRT />} />
+          <Route path="/dashboard-qc" element={<QCDashboard />} />
+          <Route path="/special" element={<SpecialExpressPrint />} />
           <Route
             path="/invoice-all"
             element={
@@ -155,7 +123,7 @@ function App() {
             path="/order-list"
             element={
               <RequireAuth>
-              <OrderList />
+                <OrderList />
               </RequireAuth>
             }
           />
@@ -163,7 +131,7 @@ function App() {
             path="/product-list"
             element={
               <RequireAuth>
-              <ProductList />
+                <ProductList />
               </RequireAuth>
             }
           />
@@ -173,7 +141,7 @@ function App() {
               <div>
                 <Navbar />
                 {/* <RequireAuth> */}
-                  <StickerPrint />
+                <StickerPrint />
                 {/* </RequireAuth> */}
               </div>
             }
@@ -183,7 +151,7 @@ function App() {
             element={
               <div>
                 {/* <RequireAuth> */}
-                  <FormatSticker />
+                <FormatSticker />
                 {/* </RequireAuth> */}
               </div>
             }
@@ -194,14 +162,14 @@ function App() {
               <div>
                 <RequireAuth>
                   <ReportEmployee />
-                  </RequireAuth>
+                </RequireAuth>
               </div>
             }
           />
           <Route
             path="/employee-statistics"
             element={<EmployeeStatisticsPage />}
-            />
+          />
           <Route
             path="/verify-order"
             element={
@@ -219,7 +187,7 @@ function App() {
               <div>
                 <RequireAuth>
                   <QCDashboard />
-                  </RequireAuth>
+                </RequireAuth>
               </div>
             }
           />

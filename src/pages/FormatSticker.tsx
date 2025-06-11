@@ -9,36 +9,6 @@ const FormatSticker = () => {
   const token = sessionStorage.getItem("access_token");
   const [loading , setLoading] = useState(true);
 
-  const route = [
-    { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
-    { id: 2, name: "หาดใหญ่", value: "L1-1" },
-    { id: 3, name: "สงขลา", value: "L1-2" },
-    { id: 4, name: "สะเดา", value: "L1-3" },
-    { id: 5, name: "สทิงพระ", value: "L1-5" },
-    { id: 6, name: "นครศรีธรรมราช", value: "L10" },
-    { id: 7, name: "กระบี่", value: "L11" },
-    { id: 8, name: "ภูเก็ต", value: "L12" },
-    { id: 9, name: "สุราษฎร์ธานี", value: "L13" },
-    { id: 10, name: "ยาแห้ง ส่งฟรี ทั่วไทย", value: "L16" },
-    { id: 11, name: "พังงา", value: "L17" },
-    { id: 12, name: "เกาะสมุย", value: "L18" },
-    { id: 13, name: "พัทลุง-นคร", value: "L19" },
-    { id: 14, name: "ปัตตานี", value: "L2" },
-    { id: 15, name: "ชุมพร", value: "L20" },
-    { id: 16, name: "เกาะลันตา", value: "L21" },
-    { id: 17, name: "เกาะพะงัน", value: "L22" },
-    { id: 18, name: "สตูล", value: "L3" },
-    { id: 19, name: "พัทลุง", value: "L4" },
-    { id: 20, name: "พัทลุง VIP", value: "L4-1" },
-    { id: 21, name: "นราธิวาส", value: "L5-1" },
-    { id: 22, name: "สุไหงโกลก", value: "L5-2" },
-    { id: 23, name: "ยะลา", value: "L6" },
-    { id: 24, name: "เบตง", value: "L7" },
-    { id: 25, name: "ตรัง", value: "L9" },
-    { id: 26, name: "กระบี่-ตรัง", value: "L9-11" },
-    { id: 27, name: "Office รับเอง", value: "Office" },
-  ];
-
   console.log(
     `${import.meta.env.VITE_API_URL_ORDER}/api/picking/detail/${ticketId}`
   );
@@ -51,7 +21,7 @@ const FormatSticker = () => {
     }, 1000);
     window.onafterprint = () => {
       localStorage.setItem("print_status", "done");
-      // window.close();
+      window.close();
     };
     return () => {
       clearTimeout(printTimeout);

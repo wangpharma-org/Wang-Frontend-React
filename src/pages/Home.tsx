@@ -1,7 +1,8 @@
-import reciept from "../assets/receipt.png";
+// import reciept from "../assets/receipt.png";
 import order from "../assets/sent.png";
-import statistics from "../assets/employees statistics.png";
-import checklist from "../assets/checklist.png";
+// import statistics from "../assets/employees statistics.png";
+// import checklist from "../assets/checklist.png";
+import barcode from "../assets/barcode-scanner.png"
 import { useNavigate } from "react-router";
 const listMenu = [
   // {
@@ -18,10 +19,16 @@ const listMenu = [
   },
   {
     id: 3,
-    name: "สถิติการจัดออเดอร์",
-    href: "/employee-statistics",
-    imageSrc: statistics,
+    name: "ระบบตรวจสอบสินค้า (QC)",
+    href: "/dashboard-qc",
+    imageSrc: barcode,
   },
+  // {
+  //   id: 4,
+  //   name: "สถิติการจัดออเดอร์",
+  //   href: "/employee-statistics",
+  //   imageSrc: statistics,
+  // },
   // {
   //   id: 4,
   //   name: "ตรวจสอบบิล",
