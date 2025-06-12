@@ -24,6 +24,7 @@ import BasketSticker from "./pages/BasketSticker";
 import PrintRT from "./pages/RTPrint";
 import Dashboard from "./pages/ReportQcKPI";
 import BoxSticker from "./pages/BoxSticker";
+import BoxStickerBlock from "./pages/BoxStickerBlock";
 
 function App() {
   return (
@@ -53,6 +54,14 @@ function App() {
             element={
               <div>
                 <BoxSticker />
+              </div>
+            }
+          />
+          <Route
+            path="/box-sticker-block"
+            element={
+              <div>
+                <BoxStickerBlock />
               </div>
             }
           />

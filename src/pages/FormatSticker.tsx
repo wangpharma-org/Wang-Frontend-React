@@ -154,7 +154,7 @@ const FormatSticker = () => {
           <p className="flex justify-end text-[14px]">
             {sticker.date_print && dayjs(sticker.date_print).format('DD/MM/YYYY HH:mm')}
           </p>
-          <p className="flex justify-end text-[14px]">{sticker.mem.province && route.find(r => r.value === sticker.mem.province)?.name || "อื่นๆ"}</p>
+          <p className="flex justify-end text-[14px]">{sticker.mem.mem_route ? sticker.mem.mem_route.route_name : "อื่นๆ"}</p>
         </div>
       </div>
 
@@ -164,7 +164,7 @@ const FormatSticker = () => {
       </div>
 
       <div className="flex justify-between pl-2 text-[18px] font-bold">
-        <p>{sticker.mem.province && route.find(r => r.value === sticker.mem.province)?.name || "อื่นๆ"}</p>
+        <p>{sticker.mem.mem_route ? sticker.mem.mem_route.route_name : "อื่นๆ"}</p>
       </div>
     </div>
   );

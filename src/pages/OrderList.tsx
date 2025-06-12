@@ -60,6 +60,12 @@ type PickingTime = {
   latest_picking_time: Date;
 };
 
+interface RouteButton {
+  id: number;
+  name: string;
+  value: string;
+}
+
 const OrderList = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [orderList, setOrderList] = useState<orderList[]>([]);
@@ -82,6 +88,8 @@ const OrderList = () => {
   const handleDoubleClick = useDoubleClick();
   const [requestProduct, setRequestProduct] = useState(null);
   const [showRequestList, setShowRequestList] = useState(false);
+  const [apiRoute, setAPIRoute] = useState<MemRoute[] | null>(null);
+  const [routeButtons, setRouteButton] = useState<RouteButton[] | null>(null);
 
   console.log("selectedFloor", selectedFloor);
 
@@ -119,6 +127,8 @@ const OrderList = () => {
       }
     );
     setSocket(newSocket);
+
+    handleGetRoute();
 
     newSocket.on("connect", () => {
       console.log("✅ Connected to WebSocket");
@@ -217,6 +227,25 @@ const OrderList = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showInput]);
+
+  useEffect(() => {
+      if (apiRoute) {
+        const mappedRoutes: RouteButton[] = [
+          { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
+          ...apiRoute.map((route, index) => ({
+            id: index + 2,
+            name: route.route_name,
+            value: route.route_code,
+          })),
+        ];
+        setRouteButton(mappedRoutes);
+      }
+    }, [apiRoute]);
+
+  const handleGetRoute = async() => {
+    const route = await axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/picking/get-route`)
+    setAPIRoute(route.data);
+  }
 
   const changeToPending = (mem_code: string) => {
     if (socket?.connected) {
@@ -365,35 +394,6 @@ const OrderList = () => {
     }
   };
 
-  const routeButtons = [
-    { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
-    { id: 2, name: "หาดใหญ่", value: "L1-1" },
-    { id: 3, name: "สงขลา", value: "L1-2" },
-    { id: 4, name: "สะเดา", value: "L1-3" },
-    { id: 5, name: "สทิงพระ", value: "L1-5" },
-    { id: 6, name: "นครศรีธรรมราช", value: "L10" },
-    { id: 7, name: "กระบี่", value: "L11" },
-    { id: 8, name: "ภูเก็ต", value: "L12" },
-    { id: 9, name: "สุราษฎร์ธานี", value: "L13" },
-    { id: 10, name: "ยาแห้ง ส่งฟรี ทั่วไทย", value: "L16" },
-    { id: 11, name: "พังงา", value: "L17" },
-    { id: 12, name: "เกาะสมุย", value: "L18" },
-    { id: 13, name: "พัทลุง-นคร", value: "L19" },
-    { id: 14, name: "ปัตตานี", value: "L2" },
-    { id: 15, name: "ชุมพร", value: "L20" },
-    { id: 16, name: "เกาะลันตา", value: "L21" },
-    { id: 17, name: "เกาะพะงัน", value: "L22" },
-    { id: 18, name: "สตูล", value: "L3" },
-    { id: 19, name: "พัทลุง", value: "L4" },
-    { id: 20, name: "พัทลุง VIP", value: "L4-1" },
-    { id: 21, name: "นราธิวาส", value: "L5-1" },
-    { id: 22, name: "สุไหงโกลก", value: "L5-2" },
-    { id: 23, name: "ยะลา", value: "L6" },
-    { id: 24, name: "เบตง", value: "L7" },
-    { id: 25, name: "ตรัง", value: "L9" },
-    { id: 26, name: "กระบี่-ตรัง", value: "L9-11" },
-    { id: 27, name: "Office รับเอง", value: "Office" },
-  ];
 
   useEffect(() => {
     console.log("totalPicking", totalPicking);
@@ -532,7 +532,7 @@ const OrderList = () => {
               }}
               className="border border-gray-200 px-2 py-1 rounded text-black bg-white text-center flex justify-center w-full"
             >
-              {routeButtons.map((route) => (
+              {routeButtons?.map((route) => (
                 <option key={route.id} value={route.value}>
                   {route.name}
                 </option>
