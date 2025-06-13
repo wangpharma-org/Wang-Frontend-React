@@ -5,9 +5,7 @@ import dayjs from "dayjs";
 import { toast } from 'react-toastify';
 // import { Fieldset } from "@headlessui/react";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
-
-
+import { Search } from "lucide-react";
 
 export interface YellowPaper {
   id: number;
@@ -62,10 +60,6 @@ function VerifyOrder() {
   const [status, setStatus] = useState("");
   const [enabled, setEnabled] = useState(false);// false = white, true = yellow
   const inputRef = useRef<HTMLInputElement>(null);
-  const navigate = useNavigate();
-
-  console.log("VITE_API_URL_VERIFY_ORDER", import.meta.env.VITE_API_URL_VERIFY_ORDER);
-
 
   useEffect(() => {
     console.log(
@@ -86,10 +80,12 @@ function VerifyOrder() {
     socket.on("connect", () => {
       console.log("✅ Connected to WebSocket");
       socket.emit("invoice:get");
+      socket.emit("subscribeToConsistencyCheck");
+
     });
 
     socket.on('invoice:get', (invoiceData: Invoice[]) => {
-      console.log(invoiceData)
+      console.log("Data", invoiceData)
       setInvoice(invoiceData);
       setOriginalData(invoiceData);
     })
@@ -106,13 +102,16 @@ function VerifyOrder() {
       setErrorYellowPaper(!!errorMessage);
     });
 
+    socket.on("subscribeToConsistencyCheck", (data: Invoice[]) => {
+      console.log("Consistency Check Data:", data);
+      setMatch(data);
+    });
+
     socket.on("connect_error", (error) => {
       console.error("❌ Failed to connect to server:", error.message);
       socket.emit("invoice:get");
       // console.log("Socket " + socket.id + " reconnected");
     });
-
-    clearSearch(); // Clear the search input
 
   }, [])
 
@@ -122,27 +121,6 @@ function VerifyOrder() {
       socket.emit("invoice:get");
     }
   }, [socket]);
-
-  useEffect(() => {
-    const checkdata = io(
-      `${import.meta.env.VITE_API_URL_VERIFY_ORDER}/socket/verify/invoice`,
-      {
-        path: "/socket/verify",
-      }
-    );
-
-    checkdata.on("connect", () => {
-      console.log("✅ Connected to WebSocket");
-      checkdata.emit("subscribeToConsistencyCheck");
-    });
-    checkdata.on("subscribeToConsistencyCheck", (data: Invoice[]) => {
-      console.log("Consistency Check Data:", data);
-      setMatch(data);
-    });
-    checkdata.on("disconnect", () => {
-      console.log("❌ Disconnected from WebSocket");
-    });
-  }, []);
 
   const handleOutsideClick = useCallback((event: MouseEvent) => {
     if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -165,10 +143,11 @@ function VerifyOrder() {
   }, [enabled]);
 
   const parseWhitePaper = (value: string) => {
-    const [sh_running, mem_code, count_list, price] = value.split('/');
+    const [sh_running, mem_code, invoice_code, count_list, price] = value.split('/');
     return {
       sh_running,
       mem_code,
+      invoice_code,
       count_list: count_list,
       price,
       emp_code: userInfo?.emp_code,
@@ -256,6 +235,7 @@ function VerifyOrder() {
         fetchAllInvoices();
         // toast.info("แสดงข้อมูลทั้งหมด");
       }
+      return searchInput;
     }
   };
 
@@ -288,10 +268,9 @@ function VerifyOrder() {
     }
   };
 
-  const handlePrint = () => {
-    navigate("/log-report")
+  const handlePrint = (value: boolean) => {
+    window.open(`/log-report?today=${value}`, "_blank");
   }
-
 
   return (
     <div className="overflow-x-auto p-6">
@@ -317,7 +296,7 @@ function VerifyOrder() {
                 {/* Toggle switch */}
                 <div
                   onClick={() => setEnabled(!enabled)}
-                  className={`w-14 h-8 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${enabled ? "bg-yellow-200" : "bg-blue-100"
+                  className={`w-14 h-8 flex items-center rounded-full p-1 cursor-pointer shadow-sm transition-colors duration-300 ${enabled ? "bg-yellow-200" : "bg-blue-100"
                     }`}
                 >
                   <div
@@ -330,12 +309,22 @@ function VerifyOrder() {
             </div>
           </div>
           <div className="flex w-full justify-end">
-            <div className="">
-              <button onClick={handlePrint} className="flex items-center justify-center border px-2 py-1 rounded-lg text-white bg-indigo-500 hover:bg-indigo-600">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5 mr-2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z" />
-                </svg>
-                พิมพ์สรุปรายวัน</button>
+            <div className="p-2 border border-gray-500 rounded-xl shadow-sm">
+              <div className="flex items-center justify-center pb-2">
+                <p>รายงาน</p>
+              </div>
+              <div className="flex px-4">
+                <button onClick={() => handlePrint(false)} className="flex items-center justify-center border px-2 py-1 rounded-lg text-white bg-amber-500 hover:bg-amber-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5 mr-2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z" />
+                  </svg>
+                  เมื่อวาน</button>
+                <button onClick={() => handlePrint(true)} className="flex items-center justify-center border px-2 py-1 rounded-lg text-white bg-indigo-500 hover:bg-indigo-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5 mr-2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z" />
+                  </svg>
+                  วันนี้</button>
+              </div>
             </div>
           </div>
         </div>
@@ -361,7 +350,7 @@ function VerifyOrder() {
                       placeholder="ใบขาว"
                     />
                   </form>
-                  <p className="text-xs text-gray-400 text-center">SH_running / mem_code / count_list / price</p>
+                  <p className="text-xs text-gray-400 text-center">SH_running / mem_code / invoice_code / count_list / price</p>
                 </div>
               )}
               {enabled && (
@@ -494,21 +483,21 @@ function VerifyOrder() {
         <table className="min-w-full text-sm text-gray-800">
           <thead className="bg-gray-100 uppercase text-gray-700 text-sm font-semibold">
             <tr>
-              <th className="px-5 py-3 text-center border">ลำดับที่</th>
-              <th className="px-5 py-3 text-center border">เลขที่ใบจอง</th>
-              <th className="px-5 py-3 text-center border">รหัสสมาชิก</th>
-              <th className="px-5 py-3 text-center border">นามร้าน</th>
-              <th className="px-5 py-3 text-center border">จำนวนที่ขาย</th>
-              <th className="px-5 py-3 text-center border">มูลค่ารวม</th>
-              <th className="px-5 py-3 text-center border">วันที่ใบจอง</th>
-              <th className="px-5 py-3 text-center border">จำนวนครั้งที่สแกน</th>
-              <th className="px-5 py-3 text-center border">เวลาที่สแกนล่าสุด</th>
-              <th className="px-5 py-3 text-center bg-yellow-200 border">เลขบิล</th>
-              <th className="px-5 py-3 text-center bg-yellow-200 border">จำนวน</th>
-              <th className="px-5 py-3 text-center bg-yellow-200 border">มูลค่ารวม</th>
-              <th className="px-5 py-3 text-center bg-yellow-200 border">จำนวนครั้งที่สแกน</th>
-              <th className="px-5 py-3 text-center bg-yellow-200 border">เวลาที่สแกนล่าสุด</th>
-              <th className="px-5 py-3 text-center border">สถานะ</th>
+              <th className="px-5 py-1 text-center border">ลำดับที่</th>
+              <th className="px-5 py-1 text-center border">เลขที่ใบจอง</th>
+              <th className="px-5 py-1 text-center border">รหัสสมาชิก</th>
+              <th className="px-5 py-1 text-center border">นามร้าน</th>
+              <th className="px-5 py-1 text-center border">จำนวนที่ขาย</th>
+              <th className="px-5 py-1 text-center border">มูลค่ารวม</th>
+              <th className="px-5 py-1 text-center border">วันที่ใบจอง</th>
+              <th className="px-5 py-1 text-center border">จำนวนครั้งที่สแกน</th>
+              <th className="px-5 py-1 text-center border">เวลาที่สแกนล่าสุด</th>
+              <th className="px-5 py-1 text-center bg-yellow-200 border">เลขบิล</th>
+              <th className="px-5 py-1 text-center bg-yellow-200 border">จำนวน</th>
+              <th className="px-5 py-1 text-center bg-yellow-200 border">มูลค่ารวม</th>
+              <th className="px-5 py-1 text-center bg-yellow-200 border">จำนวนครั้งที่สแกน</th>
+              <th className="px-5 py-1 text-center bg-yellow-200 border">เวลาที่สแกนล่าสุด</th>
+              <th className="px-5 py-1 text-center border">สถานะ</th>
 
             </tr>
           </thead>
@@ -520,50 +509,49 @@ function VerifyOrder() {
                 </td>
               </tr>
             )}
-            {
-              sortedInvoice
-                .map((item, index) => (
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-center border-x-1 border-b-1">{index + 1}</td>
-                    <td className="px-6 py-4 text-center border-x-1 border-b-1">{item.sh_running}</td>
-                    <td className="px-6 py-4 text-center border-x-1 border-b-1">{item.mem_code}</td>
-                    <td className="px-6 py-4 text-center border-x-1 border-b-1">{item?.mem_name}</td>
-                    <td className="px-6 py-4 text-center border-x-1 border-b-1">{item?.whitePaper?.count_list || "-"}</td>
-                    <td className="px-6 py-4 text-center border-x-1 border-b-1">{item?.whitePaper?.price || "-"}</td>
-                    <td className="px-6 py-4 text-center border-x-1 border-b-1">{item?.dateInvoice ? dayjs(item?.dateInvoice).format("DD/MM/YYYY HH:mm:ss") : "-"}</td>
-                    <td className="px-6 py-4 text-center border-x-1 border-b-1">{item?.whitePaper?.whiteToEmployeeCount}</td>
-                    <td className="px-6 py-4 text-center border-x-1 border-b-1">{item?.whitePaper?.latestScan_timeW ? dayjs(item?.whitePaper?.latestScan_timeW).format("DD/MM/YYYY HH:mm:ss") : "-"}</td>
-                    <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.invoice_code || "-"}</td>
-                    <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.count_list || "-"}</td>
-                    <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.price || "-"}</td>
-                    <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.yellowToEmployeeCount || 0}</td>
-                    <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.latestScan_timeY ? dayjs(item?.yellowPaper?.latestScan_timeY).format("DD/MM/YYYY HH:mm:ss") : "-"}</td>
-                    <td className={`px-6 py-4 text-center border-x-1 border-b-1  border-black `}>{item.paperStatus === "Match" ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-green-500">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                      </svg>
+            {sortedInvoice
+              .map((item, index) => (
+                <tr key={index} className="hover:bg-gray-50">
+                  <td className="px-6 py-1 text-center border-x-1 border-b-1">{index + 1}</td>
+                  <td className="px-6 py-1 text-center border-x-1 border-b-1">{item.sh_running}</td>
+                  <td className="px-6 py-1 text-center border-x-1 border-b-1">{item.mem_code}</td>
+                  <td className="px-6 py-1 text-center border-x-1 border-b-1">{item?.mem_name}</td>
+                  <td className="px-6 py-1 text-center border-x-1 border-b-1">{item?.whitePaper?.count_list || "-"}</td>
+                  <td className="px-6 py-1 text-center border-x-1 border-b-1">{item?.whitePaper?.price || "-"}</td>
+                  <td className="px-6 py-1 text-center border-x-1 border-b-1">{item?.dateInvoice ? dayjs(item?.dateInvoice).format("DD/MM/YYYY HH:mm:ss") : "-"}</td>
+                  <td className="px-6 py-1 text-center border-x-1 border-b-1">{item?.whitePaper?.whiteToEmployeeCount}</td>
+                  <td className="px-6 py-1 text-center border-x-1 border-b-1">{item?.whitePaper?.latestScan_timeW ? dayjs(item?.whitePaper?.latestScan_timeW).format("DD/MM/YYYY HH:mm:ss") : "-"}</td>
+                  <td className="px-6 py-1 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.invoice_code || "-"}</td>
+                  <td className="px-6 py-1 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.count_list || "-"}</td>
+                  <td className="px-6 py-1 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.price || "-"}</td>
+                  <td className="px-6 py-1 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.yellowToEmployeeCount || 0}</td>
+                  <td className="px-6 py-1 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.latestScan_timeY ? dayjs(item?.yellowPaper?.latestScan_timeY).format("DD/MM/YYYY HH:mm:ss") : "-"}</td>
+                  <td className={`px-6 py-1 text-center border-x-1 border-b-1  border-black `}>{item.paperStatus === "Match" ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-green-500">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
 
-                    ) : item.paperStatus === "Not Match" ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-red-500">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                      </svg>
+                  ) : item.paperStatus === "Not Match" ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-red-500">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
 
-                    ) : item.paperStatus === "Incomplete" ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-amber-500">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-                      </svg>
+                  ) : item.paperStatus === "Incomplete" ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-amber-500">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                    </svg>
 
-                    ) : item.paperStatus === "Miss" ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-gray-500">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                      </svg>
+                  ) : item.paperStatus === "Miss" ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-gray-500">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
 
-                    ) : (
-                      "Unknown Status"
-                    )
-                    }</td>
-                  </tr>
-                ))}
+                  ) : (
+                    "Unknown Status"
+                  )
+                  }</td>
+                </tr>
+              ))}
           </tbody>
         </table>
       </div>
