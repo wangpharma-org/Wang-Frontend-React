@@ -5,9 +5,7 @@ import dayjs from "dayjs";
 import { toast } from 'react-toastify';
 // import { Fieldset } from "@headlessui/react";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
-
-
+import { Search } from "lucide-react";
 
 export interface YellowPaper {
   id: number;
@@ -62,7 +60,6 @@ function VerifyOrder() {
   const [status, setStatus] = useState("");
   const [enabled, setEnabled] = useState(false);// false = white, true = yellow
   const inputRef = useRef<HTMLInputElement>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     console.log(
@@ -116,7 +113,6 @@ function VerifyOrder() {
       // console.log("Socket " + socket.id + " reconnected");
     });
 
-    clearSearch(); // Clear the search input
   }, [])
 
   const fetchAllInvoices = useCallback(() => {
@@ -147,10 +143,11 @@ function VerifyOrder() {
   }, [enabled]);
 
   const parseWhitePaper = (value: string) => {
-    const [sh_running, mem_code, count_list, price] = value.split('/');
+    const [sh_running, mem_code, invoice_code, count_list, price] = value.split('/');
     return {
       sh_running,
       mem_code,
+      invoice_code,
       count_list: count_list,
       price,
       emp_code: userInfo?.emp_code,
@@ -238,6 +235,7 @@ function VerifyOrder() {
         fetchAllInvoices();
         // toast.info("แสดงข้อมูลทั้งหมด");
       }
+      return searchInput;
     }
   };
 
@@ -271,9 +269,8 @@ function VerifyOrder() {
   };
 
   const handlePrint = (value: boolean) => {
-    navigate("/log-report", { state: { today: value } })
+    window.open(`/log-report?today=${value}`, "_blank");
   }
-
 
   return (
     <div className="overflow-x-auto p-6">
@@ -353,7 +350,7 @@ function VerifyOrder() {
                       placeholder="ใบขาว"
                     />
                   </form>
-                  <p className="text-xs text-gray-400 text-center">SH_running / mem_code / count_list / price</p>
+                  <p className="text-xs text-gray-400 text-center">SH_running / mem_code / invoice_code / count_list / price</p>
                 </div>
               )}
               {enabled && (

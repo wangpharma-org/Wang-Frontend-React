@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import axios from "axios";
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
+
 
 dayjs.locale('th'); // ตั้ง locale ภาษาไทย
 
@@ -40,6 +41,7 @@ interface WhitePaper {
     id: number | null;
     sh_running: string | null;
     mem_code: string | null;
+    invoice_code: string | null;
     price: string | null;
     count_list: number | null;
     whiteToEmployeeCount: number;
@@ -79,7 +81,9 @@ interface ReportSumary {
 const FormatLogReport = () => {
     const [logReport, setLogReport] = useState<ReportItem | null>(null);
     const location = useLocation();
-    const today = location.state?.today ?? true;
+    const query = new URLSearchParams(location.search);
+    const today = query.get('today') !== 'false';
+    const pdfRef = useRef<HTMLDivElement>(null);
 
     console.log("today", today)
 
@@ -91,31 +95,41 @@ const FormatLogReport = () => {
                     : `${import.meta.env.VITE_API_URL_VERIFY_ORDER}/api/dailyreport/yesterday`;
 
                 const response = await axios.get(url);
+                console.log("url", url)
                 // console.log(response.data)
-                const ReportData = response.data
+                const ReportData = response?.data
                 setLogReport(ReportData)
             }
             catch (error) {
                 console.log(error)
             }
         }
+
         fetchData();
     }, [today])
 
     useEffect(() => {
-        if (logReport) {
-            console.log("logReport", logReport);
-            console.log("logReport", logReport.routeData);
-            console.log("logReport", logReport.reportSumary);
+        console.log("logReport", logReport)
+        if (!logReport) return;
+        const printTimeout = setTimeout(() => {
+            window.print();
+            console.log("Printing...");
+        }, 1000);
 
-            // console.log("typeof response.data.sh_sumprice", typeof  (logReport[0].sh_sumprice))
-        }
+        window.onafterprint = () => {
+            console.log("Cleaning up...");
+            window.close();
+        };
+        return () => {
+            clearTimeout(printTimeout);
+            window.onafterprint = null;
+        };
 
     }, [logReport])
 
     function parseThaiDate(dateString: Date) {
         const date = dayjs(dateString);
-
+        console.log("date", date);
         return {
             day: date.date(),                 // วันที่
             month: date.month() + 1,         // เดือน (0-based + 1)
@@ -127,44 +141,41 @@ const FormatLogReport = () => {
     }
     if (!logReport) return <div>Loading...</div>;
     const dateInfo = parseThaiDate(logReport?.date);
+    console.log("logReport?.date", logReport?.date);
+
     console.log("dateInfo", dateInfo);
 
-    // const CheckScaninWhite
-    // :()=()=> {
-
-    // }
-    const hasWhitePaper = logReport?.reportSumary?.some(item => item.whitePaper != null);
+    const hasWhitePaper = logReport?.reportSumary?.some(item => item?.whitePaper != null);
+    console.log("hasWhitePaper", hasWhitePaper);
 
     const formatDate = (dateString: string) => {
         const date = dayjs(dateString);
-        if (!date.isValid()) {
+        if (!date?.isValid()) {
             return '-';
         }
-        return date.format('DD/MM/YYYY HH:mm:ss');
-
+        return date?.format('DD/MM/YYYY HH:mm:ss');
     }
 
     return (
-
-        <div>
+        <div ref={pdfRef}>
             <div className="flex flex-col justify-center mt-15  text-center">
                 <style>
                     {`
-                @media print {
-                    .page-break {
-                    page-break-before: always;
+                    @media print {
+                        .page-break {
+                        page-break-before: always;
+                        }
                     }
-                }
-            `}
+                `}
                 </style>
                 <div className="flex flex-col">
                     <p className="text-4xl font-bold ">รายงาน</p>
                     <p className="text-2xl font-bold mt-3">ผลการตรวจสอบบันทึกการขายประจำวัน</p>
-                    <p className="text-base font-bold mt-3">ออกรายงาน วัน {dateInfo.weekday} ที่ {dateInfo.day} เดือน {dateInfo.monthName} พ.ศ. {dateInfo.year}</p>
+                    <p className="text-base font-bold mt-3">ออกรายงาน วัน {dateInfo?.weekday} ที่ {dateInfo?.day} เดือน {dateInfo?.monthName} พ.ศ. {dateInfo?.year}</p>
                 </div>
                 <div className="mt-50">
                     <p className="text-4xl font-bold">ประจำวัน</p>
-                    <p className="text-xl font-bold mt-3">วัน {dateInfo.weekday} ที่ {dateInfo.day} เดือน {dateInfo.monthName} พ.ศ. {dateInfo.year}</p>
+                    <p className="text-xl font-bold mt-3">วัน {dateInfo.weekday} ที่ {dateInfo?.day} เดือน {dateInfo?.monthName} พ.ศ. {dateInfo?.year}</p>
                 </div>
                 <div className="mt-50">
                     <p className="text-xl font-bold">รายงานนี้เป็นส่วนหนึ่งของขั้นตอนการตรวจสอบ</p>
@@ -175,66 +186,79 @@ const FormatLogReport = () => {
                     <div className="flex flex-col justify-center">
                         <p>ลงชื่อ____________________ออกรายงาน</p>
                         <p>(________________________)</p>
-                        <p>วันที่_{dateInfo.day}_/____/_{dateInfo.year}_</p>
+                        <p>วันที่_{dateInfo?.day}_/_{dateInfo?.monthName}_/_{dateInfo?.year}_</p>
                     </div>
                     <div>
                         <p>ลงชื่อ____________________ออกรายงาน</p>
                         <p>(________________________)</p>
-                        <p>วันที่_{dateInfo.day}_/____/_{dateInfo.year}_</p>
+                        <p>วันที่_{dateInfo?.day}_/_{dateInfo?.monthName}_/_{dateInfo?.year}_</p>
                     </div>
                 </div>
             </div>
             <div className="page-break flex flex-col justify-center mt-15 text-center">
-                <p className="text-base font-bold">ตารางสรุปรายชื่อลูกค้าตามใบกำกับการขาย ประจำวัน {dateInfo.weekday} ที่ {dateInfo.day} เดือน {dateInfo.monthName} พ.ศ. {dateInfo.year}</p>
-                <div className="grid grid-cols-6 mt-3 text-xs font-bold">
-                    {/* <p>{logReport?.date}</p> */}
-                    {logReport?.memberData.map((Memitem, indexs) => (
-                        <div key={indexs} className="border p-1 border-gray-300 flex justify-between">
-                            <div>
-                                <p className="">{Memitem.memCode}</p>
+                <p className="text-base font-bold">ตารางสรุปรายชื่อลูกค้าตามใบกำกับการขาย ประจำวัน {dateInfo?.weekday} ที่ {dateInfo?.day} เดือน {dateInfo?.monthName} พ.ศ. {dateInfo?.year}</p>
+                {logReport?.memberData?.length > 0 ? (
+                    logReport?.memberData?.map((Memitem, indexs) => (
+                        <div className="grid grid-cols-6 mt-3 text-xs font-bold">
+                            {/* <p>{logReport?.date}</p> */}
+
+                            <div key={indexs} className="border p-1 border-gray-300 flex justify-between">
+                                <div>
+                                    <p className="">{Memitem?.memCode}</p>
+                                </div>
+                                <div>
+                                    <p className="">{Memitem?.totalAmount_mem}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="">{Memitem.totalAmount_mem}</p>
-                            </div>
+
                         </div>
                     ))
-                    }
+                ) : (
+                    <div>
+                        <p className=" py-2 text-gray-500">ไม่มีข้อมูล</p>
+                    </div>
+                )}
 
-                </div>
             </div>
+
             <div className="flex flex-col justify-center mt-5 text-center">
                 <p className="text-base font-bold">ตารางสรุปพื้นที่การขายสินค้าตามใบกำกับ ประจำวัน {dateInfo.weekday} ที่ {dateInfo.day} เดือน {dateInfo.monthName} พ.ศ. {dateInfo.year}</p>
-                <div className="grid grid-cols-3 mt-3 text-xs font-bold">
-                    {logReport?.routeData.map((item, index) => (
-                        <div key={index} className="border p-1 border-gray-300 flex justify-between">
-                            <div className="flex">
-                                <p className="">{item.routeCode}</p>&nbsp;
-                                <p className="">{item.routeName}</p>
-                            </div>
-                            <div>
-                                <p className="">{item.totalAmount_route}</p>
+                {logReport?.routeData?.length > 0 ? (
+                    logReport?.routeData?.map((item, index) => (
+                        <div className="grid grid-cols-3 mt-3 text-xs font-bold">
+                            <div key={index} className="border p-1 border-gray-300 flex justify-between">
+                                <div className="flex">
+                                    <p className="">{item?.routeCode}</p>&nbsp;
+                                    <p className="">{item?.routeName}</p>
+                                </div>
+                                <div>
+                                    <p className="">{item?.totalAmount_route}</p>
+                                </div>
                             </div>
                         </div>
-                    ))}
-                </div>
+                    ))) : (
+                    <div>
+                        <p className=" py-2 text-gray-500">ไม่มีข้อมูล</p>
+                    </div>
+                )}
             </div>
             <div className="flex flex-col justify-center mt-5 text-center">
-                <p className="text-base font-bold">ตารางสรุปฝ่ายขาย ตามใบกำกับ ประจำวัน {dateInfo.weekday} ที่ {dateInfo.day} เดือน {dateInfo.monthName} พ.ศ. {dateInfo.year}</p>
-                <div className="grid grid-cols-3 mt-3 text-xs font-bold">
-                    {logReport?.employeeData
-                        // .filter()
-                        .map((employee, index) => (
+                <p className="text-base font-bold">ตารางสรุปฝ่ายขาย ตามใบกำกับ ประจำวัน {dateInfo?.weekday} ที่ {dateInfo?.day} เดือน {dateInfo?.monthName} พ.ศ. {dateInfo?.year}</p>
+                {logReport?.employeeData?.length > 0 ? (
+                    logReport?.employeeData?.map((employee, index) => (
+                        <div className="grid grid-cols-3 mt-3 text-xs font-bold">
+
                             <div key={index} className="border p-2 border-gray-300 text-xs font-bold">
                                 <div className="flex justify-center py-1 border-b-1 border-gray-300">
-                                    <p>[{employee.emp_code}]</p>
-                                    <p>{employee.emp_nickname}</p>
+                                    <p>[{employee?.emp_code}]</p>
+                                    <p>{employee?.emp_nickname}</p>
                                 </div>
                                 <div className="flex w-full mt-auto py-1 border-b-1 border-gray-300">
                                     <div className="flex flex-col w-1/2">
-                                        <p>ลูกค้า {employee.countMember} ราย</p>
+                                        <p>ลูกค้า {employee?.countMember} ราย</p>
                                     </div>
                                     <div className="flex flex-col w-1/2">
-                                        <p>ในพื้นที่: {employee.countRoute} เขต</p>
+                                        <p>ในพื้นที่: {employee?.countRoute} เขต</p>
                                     </div>
                                 </div>
 
@@ -251,18 +275,24 @@ const FormatLogReport = () => {
                                 </div>
                                 <div className="flex w-full mt-2">
                                     <div className="flex flex-col w-1/3">
-                                        <p>{employee.countBill}</p>
+                                        <p>{employee?.countBill}</p>
                                     </div>
                                     <div className="flex flex-col w-1/3">
-                                        <p>{employee.countlistOrder}</p>
+                                        <p>{employee?.countlistOrder}</p>
                                     </div>
                                     <div className="flex flex-col w-1/3">
-                                        <p>{employee.totalAmount_emp}</p>
+                                        <p>{employee?.totalAmount_emp}</p>
                                     </div>
                                 </div>
                             </div>
-                        ))}
-                </div>
+                        </div>
+                    ))
+                ) : (
+                    <div>
+                        <p className=" py-2 text-gray-500">ไม่มีข้อมูล</p>
+                    </div>
+                )
+                }
             </div>
             <div>
                 <p className="text-base font-bold text-center mt-5">รายการใบกำกับสินค้า</p>
@@ -290,18 +320,18 @@ const FormatLogReport = () => {
                                 logReport.reportSumary.map((item, index) => (
                                     <tr key={index}>
                                         <td className="border border-gray-300 px-1 py-1 text-center">{index + 1}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item.dateInvoice)}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-center"> {item.whitePaper == null ? '✕' : '✓'}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-center">{item.sh_running}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-center">{item.mem_code}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-right">{item.total}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-right">{item.discount  }</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-right">{item.total}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-right">{item.vat}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-right">{item.sh_sumprice}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-left">{item.emp_code_sale}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-left">{item.sh_running}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item.whitePaper?.latestScan_timeW || "-")}</td>
+                                        <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item?.dateInvoice)}</td>
+                                        <td className="border border-gray-300 px-1 py-1 text-center"> {item?.whitePaper == null ? '✕' : '✓'}</td>
+                                        <td className="border border-gray-300 px-1 py-1 text-center">{item?.whitePaper?.invoice_code || "-"}</td>
+                                        <td className="border border-gray-300 px-1 py-1 text-center">{item?.mem_code}</td>
+                                        <td className="border border-gray-300 px-1 py-1 text-right">{item?.total}</td>
+                                        <td className="border border-gray-300 px-1 py-1 text-right">{item?.discount}</td>
+                                        <td className="border border-gray-300 px-1 py-1 text-right">{item?.total}</td>
+                                        <td className="border border-gray-300 px-1 py-1 text-right">{item?.vat}</td>
+                                        <td className="border border-gray-300 px-1 py-1 text-right">{item?.sh_sumprice}</td>
+                                        <td className="border border-gray-300 px-1 py-1 text-left">{item?.emp_code_sale}</td>
+                                        <td className="border border-gray-300 px-1 py-1 text-left">{item?.sh_running}</td>
+                                        <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item?.whitePaper?.latestScan_timeW || "-")}</td>
                                     </tr>
                                 ))
                             ) : (
@@ -334,21 +364,21 @@ const FormatLogReport = () => {
                         <tbody className="text-[10px]">
                             {hasWhitePaper ?
                                 (logReport?.reportSumary
-                                    .filter(item => item.whitePaper != null)
-                                    .map((item, index) => (
+                                    ?.filter(item => item?.whitePaper != null)
+                                    ?.map((item, index) => (
                                         <tr key={index} >
                                             <td className="border border-gray-300 px-1 py-1 text-center">{index + 1}</td>
-                                            <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item.dateInvoice)}</td>
-                                            <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item.whitePaper?.latestScan_timeW || "-")}</td>
-                                            <td className="border border-gray-300 px-1 py-1 text-center">{item.whitePaper?.mem_code}</td>
-                                            <td className="border border-gray-300 px-1 py-1 text-left">{item.whitePaper?.sh_running}</td>
-                                            <td className="border border-gray-300 px-1 py-1 text-center">{item.yellowPaper == null ? "???" : ""}</td>
-                                            {item.yellowPaper != null ? (
+                                            <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item?.dateInvoice)}</td>
+                                            <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item?.whitePaper?.latestScan_timeW || "-")}</td>
+                                            <td className="border border-gray-300 px-1 py-1 text-center">{item?.whitePaper?.mem_code}</td>
+                                            <td className="border border-gray-300 px-1 py-1 text-left">{item?.whitePaper?.sh_running}</td>
+                                            <td className="border border-gray-300 px-1 py-1 text-center">{item?.yellowPaper == null ? "???" : ""}</td>
+                                            {item?.yellowPaper != null ? (
                                                 <>
-                                                    <td className="border border-gray-300 px-1 py-1 text-left">{item.yellowPaper?.invoice_code}</td>
-                                                    <td className="border border-gray-300 px-1 py-1 text-left">{item.yellowPaper?.mem_code}</td>
-                                                    <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item.dateInvoice)}</td>
-                                                    <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item.yellowPaper?.latestScan_timeW || "-")}</td>
+                                                    <td className="border border-gray-300 px-1 py-1 text-left">{item?.yellowPaper?.invoice_code}</td>
+                                                    <td className="border border-gray-300 px-1 py-1 text-left">{item?.yellowPaper?.mem_code}</td>
+                                                    <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item?.dateInvoice)}</td>
+                                                    <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item?.yellowPaper?.latestScan_timeW || "-")}</td>
                                                 </>
                                             ) : (
                                                 <td className="border border-gray-300 px-1 py-1 text-center font-bold" colSpan={4}>
@@ -359,9 +389,7 @@ const FormatLogReport = () => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={10} className="text-center py-2 text-sm text-gray-500">
-                                            ไม่มีข้อมูล
-                                        </td>
+                                        <td colSpan={14} className="text-center py-2 text-gray-500">ไม่มีข้อมูล</td>
                                     </tr>
                                 )}
                         </tbody>
