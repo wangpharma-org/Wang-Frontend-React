@@ -4,8 +4,6 @@ import box from "../assets/product-17.png"
 
 interface ProductBoxProps {
     orderItem: ShoppingOrder;
-    // headShRunning: string;
-    //   handleOutofStock: (orderItem: ShoppingOrder, status: string,socket:Socket) => void;
     socket: Socket;
     handleDoubleClick: (orderItem: ShoppingOrder, status: string) => void;
 }

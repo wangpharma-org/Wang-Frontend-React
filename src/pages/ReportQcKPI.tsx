@@ -137,8 +137,6 @@ const Dashboard: React.FC = () => {
     }
   }, [qcStationsData]);
 
-  const addQc = 1;
-  const reduceQc = 1;
 
   // ฟังก์ชันคำนวณเวลาทำงาน (ชั่วโมง)
   const calculateWorkingHours = (
@@ -185,8 +183,11 @@ const Dashboard: React.FC = () => {
     console.log("=== calculateSpeed ===")
     console.log("qc_count:", qc_count);
     console.log("workingHours:", workingHours);
+    const trimmedHours = Math.floor(workingHours * 100) / 100;
     if (workingHours === 0) return 0;
-    return Math.round(qc_count / workingHours);
+    const speed = qc_count / trimmedHours;
+    console.log('speed :', speed)
+    return Math.floor(speed);
   };
 
   // ฟังก์ชันคำนวณรายการต่อลัง
@@ -203,6 +204,7 @@ const Dashboard: React.FC = () => {
       station.firstQcTime,
       station.lastQcTime
     );
+    console.log('workingHours : ',workingHours);
     console.log("station.firstQcTime:", station.firstQcTime);
     console.log("station.lastQcTime:", station.lastQcTime);
     return calculateSpeed(station.qc_count, workingHours);
@@ -210,6 +212,8 @@ const Dashboard: React.FC = () => {
 
   // ฟังก์ชันคำนวณความเร็วเฉลี่ย
   const calculateAverageSpeed = (floor: FloorData): number => {
+    console.log('floor data :', floorData)
+    console.log('floor : ', floor)
     // ถ้ายังไม่เริ่มจัดออเดอร์วันนี้
     if (
       !floor.firstPickingTime ||
@@ -268,92 +272,18 @@ const Dashboard: React.FC = () => {
       : "__:__ น.";
   };
 
-  const calculateCompletionTime = () => {
-    // 1. เอาเวลาทั้งหมดมา
-    const speedValues = quartarlyData.map((q) => q.speed);
-    const sumSpeed = speedValues.reduce((sum, speed) => sum + speed, 0); // บวกเวลา
-    console.log("ผลบวกเวลา: ", sumSpeed);
 
-    // เวลาเดิม (เวลาที่ต้องใช้ในการทำงาน)
-    const timeBeforeChange = (totalsOfQc ?? 0) / sumSpeed;
-
-    // === การเพิ่ม QC ===
-    // เวลาที่ต้องใช้หลังเพิ่ม Qc = (จำนวน Qc ทั้งหมด * เวลาที่ต้องใช้ในการทำงาน) / (จำนวน Qc ทั้งหมด+1)
-    const formulasAfterAddQc = ((totalsOfQc ?? 0) * sumSpeed) / ((totalsOfQc ?? 0) + addQc);
-    const timeAfterAddQc = (totalsOfQc ?? 0) / formulasAfterAddQc;
-
-    // เวลาที่ลด (นาที) = เวลาที่ต้องใช้ในการทำงาน - เวลาที่ต้องใช้หลังเพิ่ม Qc
-    const timeReduced = timeBeforeChange - timeAfterAddQc;
-    const minutesReduced = Math.abs(Math.round(timeReduced * 60));
-
-    // === การลด QC ===
-    // เวลาที่ต้องใช้หลังลด Qc = (จำนวน Qc ทั้งหมด * เวลาที่ต้องใช้ในการทำงาน) / (จำนวน Qc ทั้งหมด - 1)
-    const formulasAfterReduceQc =
-      ((totalsOfQc ?? 0) * sumSpeed) / ((totalsOfQc ?? 0) - reduceQc);
-    const timeAfterReduceQc = (totalsOfQc ?? 0) / formulasAfterReduceQc;
-
-    // เวลาที่เพิ่ม (นาที) = เวลาที่ต้องใช้หลังลด Qc - เวลาที่ต้องใช้ในการทำงาน
-    const timeIncreased = timeAfterReduceQc - timeBeforeChange;
-    const minutesIncreased = Math.abs(Math.round(timeIncreased * 60));
-
-    console.log("=== Debug Info ===");
-    console.log("เวลาเดิม:", timeBeforeChange.toFixed(4), "ชั่วโมง");
-    console.log(
-      "เวลาหลังเพิ่ม",
-      addQc,
-      "QC:",
-      timeAfterAddQc.toFixed(4),
-      "ชั่วโมง"
-    );
-    console.log(
-      "เวลาที่ลด:",
-      timeReduced.toFixed(4),
-      "ชั่วโมง =",
-      minutesReduced,
-      "นาที"
-    );
-    console.log(
-      "เวลาหลังลด",
-      reduceQc,
-      "QC:",
-      timeAfterReduceQc.toFixed(4),
-      "ชั่วโมง"
-    );
-    console.log(
-      "เวลาที่เพิ่ม:",
-      timeIncreased.toFixed(4),
-      "ชั่วโมง =",
-      minutesIncreased,
-      "นาที"
-    );
-
-    // คำนวน ชม. เป็น เวลาปัจจุบัน
-    const currentTime = new Date();
-    const completionTime = new Date(
-      currentTime.getTime() + timeAfterAddQc * 60 * 60 * 1000
-    );
-
-    return {
-      minutesReduced: minutesReduced,
-      minutesIncreased: minutesIncreased,
-      timeBeforeChange: timeBeforeChange.toFixed(4),
-      timeAfterAddQc: timeAfterAddQc.toFixed(4),
-      timeAfterReduceQc: timeAfterReduceQc.toFixed(4),
-    };
-  };
-  const {
-    minutesReduced,
-    minutesIncreased,
-    timeBeforeChange,
-    timeAfterAddQc,
-    timeAfterReduceQc,
-  } = calculateCompletionTime();
-
+ 
   const calculateActualCompletionTime = () => {
     const speedValues = quartarlyData.map((q) => q.speed);
     const sumSpeed = speedValues.reduce((sum, speed) => sum + speed, 0);
 
     const minutesNeeded = Math.ceil(((totalsOfQc ?? 0) * 60) / sumSpeed);
+
+    const formulasAfterAddQc = ((totalsOfQc ?? 0) * sumSpeed) / ((totalsOfQc ?? 0) + 1);
+    const formulasAfterReduceQc = ((totalsOfQc ?? 0) * sumSpeed) / ((totalsOfQc ?? 0) - 1);
+    const timeAdd = minutesNeeded - formulasAfterAddQc;
+    const timeReduced = minutesNeeded - formulasAfterReduceQc;
 
     const currentTime = new Date();
     const completionTime = new Date(
@@ -387,15 +317,15 @@ const Dashboard: React.FC = () => {
       sumSpeed,
       currentTime: currentTime.toLocaleString("th-TH"),
       completionTime: completionTime.toLocaleString("th-TH"),
+      timeReduced: Math.ceil(timeReduced),
+      timeAdd: Math.ceil(timeAdd),
     };
   };
   const {
     thaiDate,
     thaiTime,
-    minutesNeeded,
-    sumSpeed,
-    currentTime,
-    completionTime,
+    timeReduced,
+    timeAdd,
   } = calculateActualCompletionTime();
 
   const colorConfig: Record<string, Color> = {
@@ -574,12 +504,12 @@ const Dashboard: React.FC = () => {
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex justify-center gap-1">
               <p className="text-lg text-green-700 font-bold">
-                ทุกการเพิ่ม Qc 1 Stations จะช่วยลดเวลาได้ {minutesReduced} น.
+                ทุกการเพิ่ม Qc 1 Stations จะช่วยลดเวลาได้ {timeAdd} น.
               </p>
               <p className="text-lg">-</p>
               <p className="text-lg text-red-700 font-bold">
                 ทุกการ หายไปของ Qc 1 Stations จะเพิ่มเวลาการทำงาน{" "}
-                {minutesIncreased} น.
+                {timeReduced} น.
               </p>
             </div>
             <div className="flex justify-center items-center mt-3">

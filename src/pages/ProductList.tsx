@@ -17,9 +17,11 @@ interface Product {
   product_addr: string;
   product_stock: number;
   product_unit: string;
+  product_shelf: string;
 }
 
 export interface ShoppingOrder {
+  sh_running: string;
   so_running: string;
   so_amount: number;
   so_unit: string;
@@ -156,10 +158,6 @@ function ProductList() {
     };
   }, [showInput]);
 
-  // const doubleClick = (event:React.MouseEvent<HTMLDivElement, MouseEvent>) =>{
-  //   console.log(event.detail)
-  // }
-
   const handleDoubleClick = (orderItem: ShoppingOrder, status: string) => {
     clickCountRef.current++;
 
@@ -174,9 +172,11 @@ function ProductList() {
 
       if (orderItem.picking_status !== "pending") {
         if (socket?.connected) {
+          console.log('orderItem to unpick : ', orderItem);
           socket.emit("listproduct:unpicked", {
             so_running: orderItem.so_running,
             mem_code: mem_code,
+            sh_running: orderItem.sh_running,
           });
         }
       } else {
@@ -185,6 +185,7 @@ function ProductList() {
             so_running: orderItem.so_running,
             mem_code: mem_code,
             status: status,
+            sh_running: orderItem.sh_running,
           });
         }
       }
@@ -573,7 +574,7 @@ function ProductList() {
                           return matchFloor && matchSearch;
                         })
                         .sort((a, b) =>
-                          a.product.product_code.localeCompare(b.product.product_code, "th", {
+                          a.product.product_code.localeCompare(b.product.product_shelf, "th", {
                             numeric: true,
                           })
                         )

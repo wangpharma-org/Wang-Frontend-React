@@ -552,14 +552,16 @@ const OrderList = () => {
       </header>
 
       <div className="relative flex-grow overflow-y-auto">
-        <div>
+        <div className="px-3">
+          
           {showRequestList && (
-            <div className="rounded mt-3 p-2 mx-3 bg-yellow-300 text-center">
-              <p>รายการขอเพิ่ม</p>
+            <div className="flex flex-col justify-center w-full bg-yellow-300 rounded mt-3 p-2">
+            <p className="text-center text-xl mt-1 mb-1">รายการขอเพิ่ม</p>
+            <div className="text-center grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2">
               {requestProduct?.length > 0 ? (
                 requestProduct?.map((item) => {
                   return (
-                    <div className="w-full bg-white rounded grid grid-cols-13 p-2 mt-3 drop-shadow-xl items-center">
+                    <div className="w-full bg-white rounded grid grid-cols-13 p-2 drop-shadow-xl items-center">
                       <div className="col-span-4">
                         <div>
                           <img
@@ -570,7 +572,7 @@ const OrderList = () => {
                                   )}`
                                 : item?.product_product_image_url || box
                             }
-                            className="w-full border"
+                            className="w-35 h-35 object-cover border"
                           />
                         </div>
                       </div>
@@ -591,7 +593,7 @@ const OrderList = () => {
                           item.product_product_floor ?? "-"
                         } ${item.product_product_addr ?? "-"}`}</p>
                       </div>
-                      <div className="col-span-2 flex flex-col justify-left  items-end">
+                      <div className="col-span-2 flex flex-col justify-left items-end">
                         <img
                           src={print}
                           className="w-10 mb-1"
@@ -608,7 +610,7 @@ const OrderList = () => {
                             )
                           }
                         ></img>
-                        <div className="bg-amber-300 p-1 rounded font-bold text-[13px]">
+                        <div className="bg-amber-300 w-13 py-1 rounded font-bold text-[13px]">
                           <p className="text-sm">{item.order_so_qc_request}</p>
                           <p>{item.order_so_unit}</p>
                         </div>
@@ -619,6 +621,7 @@ const OrderList = () => {
               ) : (
                 <p className="text-gray-500">ไม่มีรายการขอเพิ่ม</p>
               )}
+            </div>
             </div>
           )}
           {openMenu && (
@@ -682,7 +685,7 @@ const OrderList = () => {
           <div>
             {filteredData?.length > 0 ? (
               <div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full mb-36 mt-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2 w-full mb-36 mt-3">
                   {orderList
                     .sort((a, b) => {
                       const maxA = Math.max(
@@ -997,16 +1000,16 @@ const OrderList = () => {
                                           })}
                                         </p>
                                       </div>
-                                      <div className="flex justify-start">
+                                      {order?.emp_code_picking && <div className="flex justify-start">
                                         <p className="text-green-500 font-bold">
                                           {order?.emp_code_picking}{" "}
-                                          {order?.emp?.emp_nickname}
+                                          {order?.emp_picking?.emp_nickname}
                                         </p>
                                         &nbsp;
                                         <p className="text-red-500">
                                           กำลังทำงานอยู่
                                         </p>
-                                      </div>
+                                      </div>}
                                       <hr className="mt-2" />
                                     </li>
                                   ))}

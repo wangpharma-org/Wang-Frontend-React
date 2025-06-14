@@ -10,6 +10,7 @@ import axios from "axios";
 import prepareIcon from "../assets/received.png";
 import QCIcon from "../assets/quality-control.png";
 import PackingIcon from "../assets/package-delivered.png";
+import { QRCodeSVG } from "qrcode.react";
 
 export interface Root {
   sh_running: string;
@@ -38,6 +39,8 @@ export interface Product {
   product_code: string;
   product_name: string;
   product_barcode: string;
+  product_barcode2: string;
+  product_barcode3: string;
   product_floor: string;
   product_unit: string;
   product_stock: string;
@@ -110,11 +113,16 @@ const QCDashboard = () => {
 
   // Modal Open QC
   const [modalOpen, setModalOpen] = useState<boolean>(false);
+  const [inputShRunning, setInputShRunning] = useState<string>("");
+  const [errorMessageManage, setErrorMessageManage] = useState<string | null>(null);
 
   // Modal Request more product
   const [modalReqestOpen, setModalRequestOpen] = useState<boolean>(false);
   const [dataRequest, setDataRequest] = useState<ShoppingOrder | null>(null);
   const [amountRequest, setAmountRequest] = useState<number>(1);
+
+  // Modal Manage shopping head
+  const [modalManageOpen, setModalManageOpen] = useState<boolean>(false);
 
   // Data State
   const [orderForQC, setOrderForQC] = useState<ShoppingOrder>();
@@ -162,6 +170,10 @@ const QCDashboard = () => {
 
   const [inputMemCode, setInputMemCode] = useState<string | null>("");
   const [sh_running_array, setSh_running_array] = useState<string[] | null>([]);
+
+  // State ของสินค้าที่ไม่มี Barcode
+  const [productNotHaveBarcode, setProductNotHaveBarcode] =
+    useState<Product | null>(null);
 
   // ทำให้รหัสพนักงานไม่หายเมื่อ Refresh
   useEffect(() => {
@@ -492,9 +504,18 @@ const QCDashboard = () => {
     console.log("order", order);
     const foundOrder = order.find(
       (o) =>
-        o.product.product_barcode === barcode &&
-        o.so_already_qc !== "Yes" &&
-        o.so_already_qc !== "RT"
+        (o.product.product_barcode === barcode &&
+          o.so_already_qc !== "Yes" &&
+          o.so_already_qc !== "RT") ||
+        (o.product.product_code === barcode &&
+          o.so_already_qc !== "Yes" &&
+          o.so_already_qc !== "RT") ||
+        (o.product.product_barcode2 === barcode &&
+          o.so_already_qc !== "Yes" &&
+          o.so_already_qc !== "RT") ||
+        (o.product.product_barcode3 === barcode &&
+          o.so_already_qc !== "Yes" &&
+          o.so_already_qc !== "RT")
     );
     if (foundOrder) {
       const so_running = foundOrder.so_running;
@@ -601,9 +622,28 @@ const QCDashboard = () => {
   };
 
   const SubmitShoppingHead = async () => {
+    console.log({
+      amount: countBox,
+      sh_running: shRunningArray,
+      emp_qc: QCEmp?.dataEmp?.emp_code,
+      emp_packed: packedEMP?.dataEmp?.emp_code,
+      emp_prepare: prepareEmp?.dataEmp?.emp_code,
+      mem_code: mem_code,
+    });
     if (prepareEmp && QCEmp && packedEMP && dataQC && hasNotQC === 0) {
-      const block_credit = await axios.get("");
-      if (block_credit.status === 0) {
+      const block_credit = await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/picking/check-credit`,
+        {
+          amount: { sum: countBox },
+          sh_running: shRunningArray,
+          emp_qc: QCEmp?.dataEmp.emp_code,
+          emp_packed: packedEMP?.dataEmp.emp_code,
+          emp_prepare: prepareEmp?.dataEmp.emp_code,
+          mem_code: mem_code,
+        }
+      );
+      console.log("block_credit", block_credit);
+      if (block_credit.data.status === false) {
         const response = await axios.post(
           `${import.meta.env.VITE_API_URL_ORDER}/api/qc/submit-qc`,
           {
@@ -674,37 +714,94 @@ const QCDashboard = () => {
 
   const handlePrintStickerBox = async () => {
     if (dataQC) {
-      window.open(`/box-sticker-block?print=${countBox}&mem_code=${mem_code}&sh_running=${shRunningArray}`);
-      // const block_credit = await axios.get("");
-      // if (block_credit.status === 0) {
-      //   const response = await axios.post(
-      //     `${import.meta.env.VITE_API_URL_ORDER}/api/qc/printSubmit`,
-      //     {
-      //       sh_running: shRunningArray,
-      //       box_amount: countBox,
-      //     }
-      //   );
-      //   if (response.status === 201) {
-      //     console.log("Update Success");
-      //     window.open(
-      //       `/box-sticker-block?print=${countBox}&mem_code=${mem_code}&sh_running=${shRunningArray}`
-      //     );
-      //   }
-      // } else {
-      //   const response = await axios.post(
-      //     `${import.meta.env.VITE_API_URL_ORDER}/api/qc/printSubmit`,
-      //     {
-      //       sh_running: shRunningArray,
-      //       box_amount: countBox,
-      //     }
-      //   );
-      //   if (response.status === 201) {
-      //     console.log("Update Success");
-      //     window.open(`/box-sticker?print=${countBox}&mem_code=${mem_code}`);
-      //   }
-      // }
+      const block_credit = await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/picking/check-credit`,
+        {
+          amount: { sum: countBox },
+          sh_running: shRunningArray,
+          emp_qc: QCEmp?.dataEmp.emp_code,
+          emp_packed: packedEMP?.dataEmp.emp_code,
+          emp_prepare: prepareEmp?.dataEmp.emp_code,
+          mem_code: mem_code,
+        }
+      );
+      console.log("block_credit", block_credit);
+      if (block_credit.data.status === false) {
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_URL_ORDER}/api/qc/printSubmit`,
+          {
+            sh_running: shRunningArray,
+            box_amount: countBox,
+          }
+        );
+        if (response.status === 201) {
+          console.log("Update Success");
+          window.open(
+            `/box-sticker-block?print=${countBox}&mem_code=${mem_code}&sh_running=${shRunningArray}`
+          );
+        }
+      } else {
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_URL_ORDER}/api/qc/printSubmit`,
+          {
+            sh_running: shRunningArray,
+            box_amount: countBox,
+          }
+        );
+        if (response.status === 201) {
+          console.log("Update Success");
+          window.open(`/box-sticker?print=${countBox}&mem_code=${mem_code}`);
+        }
+      }
     }
   };
+
+  const handleReturnPicking = async (sh_running: string) => {
+    console.log('sh_running', sh_running);
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/qc/return-picking`,
+        {
+          sh_running: sh_running,
+          emp_code: QCEmp?.dataEmp?.emp_code,
+        }
+      );
+      if (response.status === 500) {
+        setErrorMessageManage("มีบางอย่างผิดพลาด กรุณาลองใหม่อีกครั้ง");
+        return;
+      }
+      if (response.status === 201) {
+        setModalManageOpen(false);
+        setInputShRunning("");
+        setErrorMessageManage(null);
+      }
+    } catch (error) {
+      setErrorMessageManage("มีบางอย่างผิดพลาด กรุณาตรวจสอบอีกครั้ง");
+    }
+  }
+
+  const handleSubmitPicking = async (sh_running: string) => {
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/qc/submit-picked-qc`,
+        {
+          sh_running: sh_running,
+          emp_code: QCEmp?.dataEmp?.emp_code,
+        }
+      );
+      if (response.status === 500) {
+        setErrorMessageManage("มีบางอย่างผิดพลาด กรุณาลองใหม่อีกครั้ง");
+        return;
+      }
+      if (response.status === 201) {
+        setModalManageOpen(false);
+        setInputShRunning("");
+        setErrorMessageManage(null);
+      }
+    } catch (error) {
+      setErrorMessageManage("มีบางอย่างผิดพลาด กรุณาตรวจสอบอีกครั้ง");
+    }
+  }
 
   useEffect(() => {
     console.log(orderForQC);
@@ -741,6 +838,52 @@ const QCDashboard = () => {
     return (
       <div>
         <div>
+          <Modal
+            isOpen={modalManageOpen}
+            onClose={() => setModalManageOpen(false)}
+          >
+            <div className="flex text-center justify-center">
+              <p className="text-3xl font-bold">ส่วนจัดการใบเบิก</p>
+            </div>
+            <div className="mt-4 flex justify-center items-center gap-4 my-2">
+              <input
+                className="bg-white text-2xl justify-center text-center rounded-sm p-2 drop-shadow-xl w-lg font-bold border-1 border-gray-300"
+                placeholder="เลขที่ใบเบิก"
+                value={inputShRunning}
+                onChange={(e) => setInputShRunning(e.target.value)}
+              ></input>
+              <button 
+                className="bg-orange-500 p-3 text-xl rounded-sm hover:bg-orange-600 text-white ml-2 drop-shadow-sm cursor-pointer"
+                onClick={() => {
+                  handleReturnPicking(inputShRunning)
+                  setErrorMessageManage(null);
+                }}  
+              >
+                ดึงกลับ - จัดใหม่
+              </button>
+              <button 
+                className="bg-green-600 p-3 text-xl rounded-sm hover:bg-green-700 text-white drop-shadow-sm cursor-pointer"
+                onClick={() => {
+                  handleSubmitPicking(inputShRunning);
+                  setErrorMessageManage(null);
+                }}
+              >
+                ยันทั้งใบ - ไม่จัด
+              </button>
+              <button
+                className="bg-red-700 p-3 text-xl rounded-sm hover:bg-red-800 text-white drop-shadow-sm cursor-pointer"
+                onClick={() => {
+                  setModalManageOpen(false);
+                  setErrorMessageManage(null);
+                }}
+              >
+                ย้อนกลับ
+              </button>
+            </div>
+            <div className="text-center text-red-600 text-2xl font-bold">
+              <p>{errorMessageManage}</p>
+            </div>
+          </Modal>
           <Modal
             isOpen={modalReqestOpen}
             onClose={() => setModalRequestOpen(false)}
@@ -1081,6 +1224,12 @@ const QCDashboard = () => {
                   >
                     ล้างข้อมูล
                   </button>
+                  <button
+                    className="bg-yellow-500 text-white p-2 px-6 rounded-lg hover:bg-yellow-600 cursor-pointer ml-2"
+                    onClick={() => setModalManageOpen(true)}
+                  >
+                    จัดการใบเบิก
+                  </button>
                   {Array.from({ length: 6 }).map((_, index) => {
                     const bill = Array.isArray(dataQC)
                       ? dataQC[index]
@@ -1140,32 +1289,50 @@ const QCDashboard = () => {
                         </p>
                         <div className="bg-white  rounded-lg mt-2 grid grid-cols-2 items-center border-4 border-blue-400">
                           <p className="text-4xl font-bold border-r-3 py-5 mr-10 border-blue-400">
-                            {Array.isArray(dataQC)
-                              ? dataQC.length > 0
-                                ? dataQC[0]?.members?.mem_code
-                                : "-"
-                              : dataQC
-                              ? dataQC?.members?.mem_code
-                              : "-"}
+                            {(() => {
+                              if (Array.isArray(dataQC)) {
+                                return dataQC.length > 0
+                                  ? dataQC[0]?.members?.mem_code ||
+                                      "ไม่มีเลขบิล"
+                                  : "ไม่มีเลขบิล";
+                              } else if (dataQC) {
+                                return dataQC?.members?.mem_code || "-";
+                              } else {
+                                return "-";
+                              }
+                            })()}
                           </p>
                           <div className="p-2 pr-10">
                             <p className="text-2xl font-bold border-b-3 pb-2 mb-2 border-blue-400">
-                              {Array.isArray(dataQC)
-                                ? dataQC.length > 0
-                                  ? dataQC[0]?.members?.mem_name
-                                  : "ไม่มีเลขบิล"
-                                : dataQC
-                                ? dataQC?.members?.mem_name
-                                : "-"}
+                              {(() => {
+                                if (Array.isArray(dataQC)) {
+                                  return dataQC.length > 0
+                                    ? dataQC[0]?.members?.mem_name ||
+                                        "ไม่มีเลขบิล"
+                                    : "ไม่มีเลขบิล";
+                                } else if (dataQC) {
+                                  return dataQC?.members?.mem_name || "-";
+                                } else {
+                                  return "-";
+                                }
+                              })()}
                             </p>
                             <p className="text-lg">
-                              {Array.isArray(dataQC)
-                                ? dataQC.length > 0
-                                  ? dataQC[0]?.members?.mem_route?.route_name
-                                  : "-"
-                                : dataQC
-                                ? dataQC?.members?.mem_route?.route_name
-                                : "-"}
+                              {(() => {
+                                if (Array.isArray(dataQC)) {
+                                  return dataQC.length > 0
+                                    ? dataQC[0]?.members?.mem_route
+                                        ?.route_name || "เส้นทาง : อื่นๆ"
+                                    : "-";
+                                } else if (dataQC) {
+                                  return (
+                                    dataQC?.members?.mem_route?.route_name ||
+                                    "เส้นทาง : อื่นๆ"
+                                  );
+                                } else {
+                                  return "-";
+                                }
+                              })()}
                             </p>
                           </div>
                         </div>
@@ -1343,6 +1510,7 @@ const QCDashboard = () => {
                                       <p className="text-lg">
                                         {so?.product?.product_code}
                                       </p>
+
                                       <p
                                         className={`text-base font-bold ${
                                           so?.picking_status === "picking"
@@ -1358,16 +1526,36 @@ const QCDashboard = () => {
                                           ? "กำลังขอเพิ่ม"
                                           : so?.picking_status}
                                       </p>
+                                      {!so.product.product_barcode &&
+                                        !so.product.product_barcode2 &&
+                                        !so.product.product_barcode3 && (
+                                          <button
+                                            className="mt-2 text-sm font-bold bg-green-500 text-white p-1 rounded-sm hover:bg-green-600 cursor-pointer"
+                                            onClick={() => {
+                                              setProductNotHaveBarcode(
+                                                so.product
+                                              );
+                                              window.scrollTo({
+                                                top: 0,
+                                                behavior: "smooth",
+                                              });
+                                            }}
+                                          >
+                                            แสดง QR Code
+                                          </button>
+                                        )}
                                     </div>
                                   </td>
                                   <td className="py-4 text-lg border-r-2 border-blue-200">
-                                    <div className="flex flex-col items-center justify-center text-center">
-                                      <p className="text-base">
-                                        {/* {so?.product?.product_barcode?.replace(
-                                      /^.{4}/,
-                                      "____"
-                                    )} */}
+                                    <div className="flex flex-col items-center justify-center text-center px-2">
+                                      <p className="text-base pb-1 mb-1 border-b-2 border-blue-200">
                                         {so?.product?.product_barcode}
+                                      </p>
+                                      <p className="text-base pb-1 mb-1 border-b-2 border-blue-200">
+                                        {so?.product?.product_barcode2}
+                                      </p>
+                                      <p className="text-base pb-1 border-b-2 border-blue-200">
+                                        {so?.product?.product_barcode3}
                                       </p>
                                     </div>
                                   </td>
@@ -1580,197 +1768,238 @@ const QCDashboard = () => {
                     )}
                   </div>
                 </div>
-                <div className="col-span-1 bg-blue-50 rounded-xl self-start flex-col justify-center py-3">
-                  <div className="w-full mt-3">
-                    <p>พนักงานเตรียมสินค้า</p>
-                    <div className="grid grid-cols-4 px-3 gap-2 mt-2">
-                      <div
-                        className="col-span-1 bg-amber-600 rounded-sm flex justify-center p-2 hover:bg-amber-700 cursor-pointer"
-                        onClick={() => handleClearEmpData("prepare-emp")}
-                      >
-                        <img src={prepareIcon} className="w-6"></img>
+                <div className="col-span-1">
+                  {productNotHaveBarcode && (
+                    <div className=" bg-blue-50 rounded-xl self-start flex-col justify-center py-3 mb-3">
+                      <div className="flex justify-end items-end pr-3">
+                        <img
+                          src={incorect}
+                          className="w-7 cursor-pointer"
+                          onClick={() => {
+                            setProductNotHaveBarcode(null);
+                          }}
+                        ></img>
                       </div>
-                      <input
-                        className="col-span-3 bg-white text-lg justify-center text-center rounded-sm p-1 drop-shadow-sm"
-                        placeholder="พนักงานเตรียมสินค้า"
-                        value={inputPrepare}
-                        ref={inputRefEmpPrepare}
-                        onChange={(e) => setInputPrepare(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            handleGetDataEmp(
-                              e.currentTarget.value,
-                              "prepare-emp"
-                            );
+                      <div className="flex flex-col justify-center items-center">
+                        {productNotHaveBarcode?.product_image_url && (
+                          <img
+                            src={
+                              productNotHaveBarcode?.product_image_url?.startsWith(
+                                ".."
+                              )
+                                ? `https://www.wangpharma.com${productNotHaveBarcode?.product_image_url.slice(
+                                    2
+                                  )}`
+                                : productNotHaveBarcode?.product_image_url
+                            }
+                            className="w-50 rounded-lg drop-shadow-sm"
+                          ></img>
+                        )}
+                        <p className="font-bold mt-2 text-xl text-red-600">
+                          ระวังผิด
+                        </p>
+                        <div className="bg-white p-2 mt-1 rounded-sm">
+                          {productNotHaveBarcode?.product_code && (
+                            <QRCodeSVG
+                              value={productNotHaveBarcode?.product_code}
+                            ></QRCodeSVG>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div className=" bg-blue-50 rounded-xl self-start flex-col justify-center py-3">
+                    <div className="w-full mt-3">
+                      <p>พนักงานเตรียมสินค้า</p>
+                      <div className="grid grid-cols-4 px-3 gap-2 mt-2">
+                        <div
+                          className="col-span-1 bg-amber-600 rounded-sm flex justify-center p-2 hover:bg-amber-700 cursor-pointer"
+                          onClick={() => handleClearEmpData("prepare-emp")}
+                        >
+                          <img src={prepareIcon} className="w-6"></img>
+                        </div>
+                        <input
+                          className="col-span-3 bg-white text-lg justify-center text-center rounded-sm p-1 drop-shadow-sm"
+                          placeholder="พนักงานเตรียมสินค้า"
+                          value={inputPrepare}
+                          ref={inputRefEmpPrepare}
+                          onChange={(e) => setInputPrepare(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleGetDataEmp(
+                                e.currentTarget.value,
+                                "prepare-emp"
+                              );
+                            }
+                          }}
+                          readOnly={!!prepareEmp?.dataEmp?.emp_code}
+                        ></input>
+                      </div>
+                    </div>
+
+                    <div className="w-full mt-2">
+                      <p>พนักงานตรวจสอบสินค้า</p>
+                      <div className="grid grid-cols-4 px-3 gap-2 mt-2">
+                        <div
+                          className="col-span-1 bg-red-700 rounded-sm flex justify-center p-2 hover:bg-red-800 cursor-pointer"
+                          onClick={() => handleClearEmpData("qc-emp")}
+                        >
+                          <img src={QCIcon} className="w-6"></img>
+                        </div>
+                        <input
+                          className="col-span-3 bg-white text-lg justify-center text-center rounded-sm p-1 drop-shadow-sm"
+                          placeholder="พนักงานตรวจสอบสินค้า"
+                          ref={inputRefEmpQC}
+                          onChange={(e) => setInputQC(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleGetDataEmp(e.currentTarget.value, "qc-emp");
+                            }
+                          }}
+                          value={inputQC}
+                          readOnly={!!QCEmp?.dataEmp?.emp_code}
+                        ></input>
+                      </div>
+                    </div>
+
+                    <div className="w-full mt-2">
+                      <p>พนักงานแพ็คสินค้าลงลัง</p>
+                      <div className="grid grid-cols-4 px-3 gap-2 mt-2">
+                        <div
+                          className="col-span-1 bg-green-600 rounded-sm flex justify-center p-2 hover:bg-green-700 cursor-pointer"
+                          onClick={() => handleClearEmpData("packed-emp")}
+                        >
+                          <img src={PackingIcon} className="w-6"></img>
+                        </div>
+                        <input
+                          className="col-span-3 bg-white text-lg justify-center text-center rounded-sm p-1 drop-shadow-sm"
+                          placeholder="พนักงานแพ็คสินค้าลงลัง"
+                          ref={inputRefEmpPacked}
+                          value={inputPacked}
+                          readOnly={!!packedEMP?.dataEmp?.emp_code}
+                          onChange={(e) => setInputPacked(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleGetDataEmp(
+                                e.currentTarget.value,
+                                "packed-emp"
+                              );
+                            }
+                          }}
+                        ></input>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 mt-5 px-13 gap-5">
+                      <div className="col-span-1">
+                        <input
+                          className="text-5xl drop-shadow-sm text-center font-semibold bg-white w-23 p-3.5 rounded-sm"
+                          value={countBox}
+                          onChange={(e) => {
+                            const rawValue = e.target.value;
+                            const numericValue = rawValue.replace(/\D/g, "");
+                            setCountBox(Number(numericValue));
+                          }}
+                        ></input>
+                      </div>
+                      <div className="col-span-1">
+                        <div
+                          className="bg-green-600 text-2xl font-bold text-white py-1 rounded-sm hover:bg-green-700 cursor-pointer select-none"
+                          onClick={() => setCountBox((prev) => prev + 1)}
+                        >
+                          +
+                        </div>
+                        <div
+                          className="bg-red-700 text-2xl font-bold text-white py-1 rounded-sm mt-1 hover:bg-red-800 cursor-pointer select-none"
+                          onClick={() =>
+                            countBox > 1 && setCountBox((prev) => prev - 1)
                           }
-                        }}
-                        readOnly={!!prepareEmp?.dataEmp?.emp_code}
-                      ></input>
-                    </div>
-                  </div>
-
-                  <div className="w-full mt-2">
-                    <p>พนักงานตรวจสอบสินค้า</p>
-                    <div className="grid grid-cols-4 px-3 gap-2 mt-2">
-                      <div
-                        className="col-span-1 bg-red-700 rounded-sm flex justify-center p-2 hover:bg-red-800 cursor-pointer"
-                        onClick={() => handleClearEmpData("qc-emp")}
-                      >
-                        <img src={QCIcon} className="w-6"></img>
-                      </div>
-                      <input
-                        className="col-span-3 bg-white text-lg justify-center text-center rounded-sm p-1 drop-shadow-sm"
-                        placeholder="พนักงานตรวจสอบสินค้า"
-                        ref={inputRefEmpQC}
-                        onChange={(e) => setInputQC(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            handleGetDataEmp(e.currentTarget.value, "qc-emp");
-                          }
-                        }}
-                        value={inputQC}
-                        readOnly={!!QCEmp?.dataEmp?.emp_code}
-                      ></input>
-                    </div>
-                  </div>
-
-                  <div className="w-full mt-2">
-                    <p>พนักงานแพ็คสินค้าลงลัง</p>
-                    <div className="grid grid-cols-4 px-3 gap-2 mt-2">
-                      <div
-                        className="col-span-1 bg-green-600 rounded-sm flex justify-center p-2 hover:bg-green-700 cursor-pointer"
-                        onClick={() => handleClearEmpData("packed-emp")}
-                      >
-                        <img src={PackingIcon} className="w-6"></img>
-                      </div>
-                      <input
-                        className="col-span-3 bg-white text-lg justify-center text-center rounded-sm p-1 drop-shadow-sm"
-                        placeholder="พนักงานแพ็คสินค้าลงลัง"
-                        ref={inputRefEmpPacked}
-                        value={inputPacked}
-                        readOnly={!!packedEMP?.dataEmp?.emp_code}
-                        onChange={(e) => setInputPacked(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            handleGetDataEmp(
-                              e.currentTarget.value,
-                              "packed-emp"
-                            );
-                          }
-                        }}
-                      ></input>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 mt-5 px-13 gap-5">
-                    <div className="col-span-1">
-                      <input
-                        className="text-5xl drop-shadow-sm text-center font-semibold bg-white w-23 p-3.5 rounded-sm"
-                        value={countBox}
-                        onChange={(e) => {
-                          const rawValue = e.target.value;
-                          const numericValue = rawValue.replace(/\D/g, "");
-                          setCountBox(Number(numericValue));
-                        }}
-                      ></input>
-                    </div>
-                    <div className="col-span-1">
-                      <div
-                        className="bg-green-600 text-2xl font-bold text-white py-1 rounded-sm hover:bg-green-700 cursor-pointer select-none"
-                        onClick={() => setCountBox((prev) => prev + 1)}
-                      >
-                        +
-                      </div>
-                      <div
-                        className="bg-red-700 text-2xl font-bold text-white py-1 rounded-sm mt-1 hover:bg-red-800 cursor-pointer select-none"
-                        onClick={() =>
-                          countBox > 1 && setCountBox((prev) => prev - 1)
-                        }
-                      >
-                        -
+                        >
+                          -
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="mt-5 px-13">
-                    <div
-                      className="w-full bg-blue-500 text-base text-white p-1 font-bold rounded-sm hover:bg-blue-600 select-none cursor-pointer"
-                      onClick={() => {
-                        const mem_code = Array.isArray(dataQC)
-                          ? dataQC.length > 0
-                            ? dataQC[0]?.members?.mem_code
-                            : null
-                          : dataQC?.members?.mem_code ?? null;
-                        window.open(`/othercourier?mem_code=${mem_code}`);
-                      }}
-                    >
-                      ฝากขนส่งอื่น
-                    </div>
-                    <div
-                      className="w-full bg-amber-500 text-base text-white p-1 font-bold rounded-sm hover:bg-amber-600 select-none cursor-pointer mt-2"
-                      onClick={() => {
-                        window.open("/special");
-                      }}
-                    >
-                      กรณีด่วนพิเศษ
-                    </div>
-                    <div
-                      className="w-full bg-red-700 text-base text-white p-1 font-bold rounded-sm hover:bg-red-800 select-none cursor-pointer mt-2"
-                      onClick={() => {
-                        window.open("/fragileprint");
-                      }}
-                    >
-                      ระวังแตก
-                    </div>
-                    {hasNotQC === 0 && dataQC && (
+                    <div className="mt-5 px-13">
                       <div
-                        className="w-full bg-green-500 text-base text-white p-1 font-bold rounded-sm hover:bg-green-600 select-none cursor-pointer mt-2"
-                        onClick={() => {
-                          handlePrintStickerBox();
-                        }}
-                      >
-                        พิมพ์สติกเกอร์ติดลัง
-                      </div>
-                    )}
-
-                    {memRoute && memRoute === "L16" && (
-                      <div
-                        className="w-full bg-yellow-500 text-base text-white p-1 font-bold rounded-sm hover:bg-yellow-600 select-none cursor-pointer mt-2"
+                        className="w-full bg-blue-500 text-base text-white p-1 font-bold rounded-sm hover:bg-blue-600 select-none cursor-pointer"
                         onClick={() => {
                           const mem_code = Array.isArray(dataQC)
                             ? dataQC.length > 0
                               ? dataQC[0]?.members?.mem_code
                               : null
                             : dataQC?.members?.mem_code ?? null;
-
-                          const mem_name = Array.isArray(dataQC)
-                            ? dataQC.length > 0
-                              ? dataQC[0]?.members?.mem_name
-                              : null
-                            : dataQC?.members?.mem_name ?? null;
-
-                          window.open(
-                            `/basket-sticker?mem_code=${mem_code}&mem_name=${mem_name}&print=${countBox}`
-                          );
+                          window.open(`/othercourier?mem_code=${mem_code}`);
                         }}
                       >
-                        ติดตะกร้า รอลงลัง ส่งฟรี
+                        ฝากขนส่งอื่น
                       </div>
-                    )}
-                    <button
-                      disabled={hasNotQC !== 0}
-                      className={`w-full  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${
-                        hasNotQC === 0
-                          ? "bg-green-500 hover:bg-green-600"
-                          : "bg-gray-500 hover:bg-gray-600"
-                      }`}
-                      onClick={() => SubmitShoppingHead()}
-                    >
-                      เสร็จสิ้น
-                    </button>
-                    <p className="mt-2 font-bold text-red-700">
-                      {submitFailed ? `ยืนยันไม่สำเร็จ ลองอีกครั้ง` : ""}
-                    </p>
+                      <div
+                        className="w-full bg-amber-500 text-base text-white p-1 font-bold rounded-sm hover:bg-amber-600 select-none cursor-pointer mt-2"
+                        onClick={() => {
+                          window.open("/special");
+                        }}
+                      >
+                        กรณีด่วนพิเศษ
+                      </div>
+                      <div
+                        className="w-full bg-red-700 text-base text-white p-1 font-bold rounded-sm hover:bg-red-800 select-none cursor-pointer mt-2"
+                        onClick={() => {
+                          window.open("/fragileprint");
+                        }}
+                      >
+                        ระวังแตก
+                      </div>
+                      {hasNotQC === 0 && dataQC && (
+                        <div
+                          className="w-full bg-green-500 text-base text-white p-1 font-bold rounded-sm hover:bg-green-600 select-none cursor-pointer mt-2"
+                          onClick={() => {
+                            handlePrintStickerBox();
+                          }}
+                        >
+                          พิมพ์สติกเกอร์ติดลัง
+                        </div>
+                      )}
+
+                      {memRoute && memRoute === "L16" && (
+                        <div
+                          className="w-full bg-yellow-500 text-base text-white p-1 font-bold rounded-sm hover:bg-yellow-600 select-none cursor-pointer mt-2"
+                          onClick={() => {
+                            const mem_code = Array.isArray(dataQC)
+                              ? dataQC.length > 0
+                                ? dataQC[0]?.members?.mem_code
+                                : null
+                              : dataQC?.members?.mem_code ?? null;
+
+                            const mem_name = Array.isArray(dataQC)
+                              ? dataQC.length > 0
+                                ? dataQC[0]?.members?.mem_name
+                                : null
+                              : dataQC?.members?.mem_name ?? null;
+
+                            window.open(
+                              `/basket-sticker?mem_code=${mem_code}&mem_name=${mem_name}&print=${countBox}`
+                            );
+                          }}
+                        >
+                          ติดตะกร้า รอลงลัง ส่งฟรี
+                        </div>
+                      )}
+                      <button
+                        disabled={hasNotQC !== 0}
+                        className={`w-full  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${
+                          hasNotQC === 0
+                            ? "bg-green-500 hover:bg-green-600"
+                            : "bg-gray-500 hover:bg-gray-600"
+                        }`}
+                        onClick={() => SubmitShoppingHead()}
+                      >
+                        เสร็จสิ้น
+                      </button>
+                      <p className="mt-2 font-bold text-red-700">
+                        {submitFailed ? `ยืนยันไม่สำเร็จ ลองอีกครั้ง` : ""}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
