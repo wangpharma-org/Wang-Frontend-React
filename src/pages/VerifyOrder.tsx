@@ -5,7 +5,7 @@ import dayjs from "dayjs";
 import { toast } from 'react-toastify';
 // import { Fieldset } from "@headlessui/react";
 import { useAuth } from "../context/AuthContext";
-import { Search } from "lucide-react";
+// import { Search } from "lucide-react";
 
 export interface YellowPaper {
   id: number;
@@ -59,6 +59,7 @@ function VerifyOrder() {
   const [errorYellowPaper, setErrorYellowPaper] = useState<boolean>(false);
   const [status, setStatus] = useState("");
   const [enabled, setEnabled] = useState(false);// false = white, true = yellow
+  // const [realSearchValue, setRealSearchValue] = useState<string>('')
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -86,7 +87,13 @@ function VerifyOrder() {
 
     socket.on('invoice:get', (invoiceData: Invoice[]) => {
       console.log("Data", invoiceData)
-      setInvoice(invoiceData);
+      const l = localStorage.getItem("searchValue");
+      console.log("l", l)
+
+      if (!l ) {
+        console.log("invoice",invoice)
+        setInvoice(invoiceData);
+      }
       setOriginalData(invoiceData);
     })
 
@@ -168,6 +175,7 @@ function VerifyOrder() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     const form = e.currentTarget;
 
     const whitePaperInput = form.elements.namedItem("whitePaper") as HTMLInputElement | null;
@@ -189,6 +197,8 @@ function VerifyOrder() {
     const searchInput = form.elements.namedItem("search") as HTMLInputElement | null;
     if (searchInput) { // Check if searchInput exists in the current form
       const searchValue = searchInput.value.trim();
+      console.log("Search value:", searchValue);
+      localStorage.setItem("searchValue", searchValue);
       if (searchValue) {
         console.log('Performing search for:', searchValue);
         // setIsLoading(true); // Optional: set loading state
@@ -235,7 +245,6 @@ function VerifyOrder() {
         fetchAllInvoices();
         // toast.info("แสดงข้อมูลทั้งหมด");
       }
-      return searchInput;
     }
   };
 
@@ -401,7 +410,8 @@ function VerifyOrder() {
                       name="search"
                       autoComplete="off"
                       className="border border-gray-500 text-black w-full mr-1 p-2 rounded-xs text-right text-3xl"
-                      placeholder="ค้นหาข้อมูล" />
+                      placeholder="ค้นหาข้อมูล"
+                    />
                   </div>
                 </form>
                 <p className="text-xs text-gray-400 text-center">SH_running หรือ mem_code </p>
