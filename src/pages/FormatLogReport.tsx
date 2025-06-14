@@ -8,6 +8,7 @@ import 'dayjs/locale/th';
 dayjs.locale('th'); // ตั้ง locale ภาษาไทย
 
 interface ReportItem {
+    whitePaper: any;
     memberData: MemberData[];
     employeeData: EmployeeData[];
     routeData: RouteData[];
@@ -56,7 +57,7 @@ interface YellowPaper {
     price: string | null;
     count_list: number | null;
     whiteToEmployeeCount: number;
-    latestScan_timeW: string | null;
+    latestScan_timeY: string | null;
 }
 
 interface ReportSumary {
@@ -96,7 +97,7 @@ const FormatLogReport = () => {
 
                 const response = await axios.get(url);
                 console.log("url", url)
-                // console.log(response.data)
+                console.log(response.data)
                 const ReportData = response?.data
                 setLogReport(ReportData)
             }
@@ -109,7 +110,6 @@ const FormatLogReport = () => {
     }, [today])
 
     useEffect(() => {
-        console.log("logReport", logReport)
         if (!logReport) return;
         const printTimeout = setTimeout(() => {
             window.print();
@@ -155,6 +155,20 @@ const FormatLogReport = () => {
         }
         return date?.format('DD/MM/YYYY HH:mm:ss');
     }
+
+    // const date1 = (dateString: string) => {
+    //     const date = dayjs(dateString);
+    //     if (!date?.isValid()) {
+    //         return '-';
+    //     }
+    //     return date?.format('DD/MM/YYYY');
+    // }
+    // const StringDate = String(logReport?.date);
+    // console.log("StringDate", StringDate);
+
+    // const lastScanWhite = String(logReport?.whitePaper?.latestScan_timeW);
+
+    // console.log("formatDate(logReport?.whitePaper?.latestScan_timeW)", date1(logReport?.whitePaper?.latestScan_timeW) == date1(StringDate));
 
     return (
         <div ref={pdfRef}>
@@ -317,7 +331,8 @@ const FormatLogReport = () => {
                         </thead>
                         <tbody className="text-[10px]">
                             {logReport?.reportSumary?.length > 0 ? (
-                                logReport.reportSumary.map((item, index) => (
+                                logReport.reportSumary
+                                .map((item, index) => (
                                     <tr key={index}>
                                         <td className="border border-gray-300 px-1 py-1 text-center">{index + 1}</td>
                                         <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item?.dateInvoice)}</td>
@@ -372,13 +387,13 @@ const FormatLogReport = () => {
                                             <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item?.whitePaper?.latestScan_timeW || "-")}</td>
                                             <td className="border border-gray-300 px-1 py-1 text-center">{item?.whitePaper?.mem_code}</td>
                                             <td className="border border-gray-300 px-1 py-1 text-left">{item?.whitePaper?.sh_running}</td>
-                                            <td className="border border-gray-300 px-1 py-1 text-center">{item?.yellowPaper == null ? "???" : ""}</td>
+                                            <td className="border border-gray-300 px-1 py-1 text-center">{item?.yellowPaper == null ? "???" : item?.paperStatus == "Match" ? "ตรง" : "ไม่ตรง"}</td>
                                             {item?.yellowPaper != null ? (
                                                 <>
                                                     <td className="border border-gray-300 px-1 py-1 text-left">{item?.yellowPaper?.invoice_code}</td>
                                                     <td className="border border-gray-300 px-1 py-1 text-left">{item?.yellowPaper?.mem_code}</td>
                                                     <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item?.dateInvoice)}</td>
-                                                    <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item?.yellowPaper?.latestScan_timeW || "-")}</td>
+                                                    <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item?.yellowPaper?.latestScan_timeY || "-")}</td>
                                                 </>
                                             ) : (
                                                 <td className="border border-gray-300 px-1 py-1 text-center font-bold" colSpan={4}>
