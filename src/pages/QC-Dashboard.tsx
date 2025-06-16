@@ -177,6 +177,10 @@ const QCDashboard = () => {
   // State เก็บไอดีห้องของการต่อ WebSocket
   const [myRoom, setMyRoom] = useState<string | null>(null);
 
+  const [errMessagePrintBox , setErrMsgPrintBox] = useState<string | null>(null);
+
+  const [errMessageSubmit , setErrMsgSubmit] = useState<string | null>(null);
+
   // ทำให้รหัสพนักงานไม่หายเมื่อ Refresh
   useEffect(() => {
     if (prepareEmp?.dataEmp?.emp_code) {
@@ -647,7 +651,7 @@ const QCDashboard = () => {
         }
       );
       console.log("block_credit", block_credit);
-      if (block_credit.data.status === false) {
+      if (block_credit.data.status === false && block_credit.data.message === "Block") {
         const response = await axios.post(
           `${import.meta.env.VITE_API_URL_ORDER}/api/qc/submit-qc`,
           {
@@ -657,6 +661,7 @@ const QCDashboard = () => {
             emp_packed: packedEMP.dataEmp.emp_code,
             mem_code: mem_code,
             block_credit: true,
+            block_type: "Block"
           }
         );
 
@@ -669,7 +674,35 @@ const QCDashboard = () => {
           console.log("SubmitShoppingHead Failed");
           setSubmitFailed(true);
         }
-      } else {
+      } else if (block_credit.data.status === false && block_credit.data.message === "A") {
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_URL_ORDER}/api/qc/submit-qc`,
+          {
+            sh_running: shRunningArray,
+            emp_prepare: prepareEmp.dataEmp.emp_code,
+            emp_qc: QCEmp.dataEmp.emp_code,
+            emp_packed: packedEMP.dataEmp.emp_code,
+            mem_code: mem_code,
+            block_credit: true,
+            block_type: "Customer-A"
+          }
+        );
+
+        if (response.status === 201) {
+          console.log("SubmitShoppingHead Success");
+          handleClear();
+          setSubmitFailed(false);
+          setSubmitSucess(true);
+        } else if (response.status === 500) {
+          console.log("SubmitShoppingHead Failed");
+          setSubmitFailed(true);
+        } 
+      } 
+      else if (block_credit.data.status === false && block_credit.data.message === "None") {
+        setErrMsgSubmit('ไม่เจอลูกค้ารายการนี้ในระบบกรุณาติดต่อพี่โต้')
+        return
+      }
+      else {
         const response = await axios.post(
           `${import.meta.env.VITE_API_URL_ORDER}/api/qc/submit-qc`,
           {
@@ -730,7 +763,7 @@ const QCDashboard = () => {
         }
       );
       console.log("block_credit", block_credit);
-      if (block_credit.data.status === false) {
+      if (block_credit.data.status === false && block_credit.data.message === "Block") {
         const response = await axios.post(
           `${import.meta.env.VITE_API_URL_ORDER}/api/qc/printSubmit`,
           {
@@ -744,6 +777,23 @@ const QCDashboard = () => {
             `/box-sticker-block?print=${countBox}&mem_code=${mem_code}&sh_running=${shRunningArray}`
           );
         }
+      } else if (block_credit.data.status === false && block_credit.data.message === "A") {
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_URL_ORDER}/api/qc/printSubmit`,
+          {
+            sh_running: shRunningArray,
+            box_amount: countBox,
+          }
+        );
+        if (response.status === 201) {
+          console.log("Update Success");
+          window.open(
+            `/box-sticker-a?print=${countBox}&mem_code=${mem_code}&sh_running=${shRunningArray}`
+          );
+        }
+      } else if (block_credit.data.status === false && block_credit.data.message === "None") {
+        setErrMsgPrintBox('ไม่เจอลูกค้ารายการนี้ในระบบกรุณาติดต่อพี่โต้');
+        return
       } else {
         const response = await axios.post(
           `${import.meta.env.VITE_API_URL_ORDER}/api/qc/printSubmit`,
@@ -1952,6 +2002,7 @@ const QCDashboard = () => {
                         ระวังแตก
                       </div>
                       {hasNotQC === 0 && dataQC && (
+                        <div>
                         <div
                           className="w-full bg-green-500 text-base text-white p-1 font-bold rounded-sm hover:bg-green-600 select-none cursor-pointer mt-2"
                           onClick={() => {
@@ -1959,6 +2010,8 @@ const QCDashboard = () => {
                           }}
                         >
                           พิมพ์สติกเกอร์ติดลัง
+                        </div>
+                        {errMessagePrintBox && <p className="mt-2 font-bold text-red-700">{errMessagePrintBox}</p>}
                         </div>
                       )}
 
@@ -2000,6 +2053,9 @@ const QCDashboard = () => {
                       <p className="mt-2 font-bold text-red-700">
                         {submitFailed ? `ยืนยันไม่สำเร็จ ลองอีกครั้ง` : ""}
                       </p>
+                      {errMessageSubmit && <p className="mt-2 font-bold text-red-700">
+                        {errMessageSubmit}
+                      </p>}
                     </div>
                   </div>
                 </div>

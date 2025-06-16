@@ -50,7 +50,7 @@ const styles = {
   },
 };
 
-const BoxStickerBlock = () => {
+const BoxStickerA = () => {
   const queryParams = new URLSearchParams(location.search);
   const mem_code = queryParams.get("mem_code");
   const printCount = parseInt(queryParams.get("print") || "1");
@@ -156,18 +156,16 @@ const BoxStickerBlock = () => {
             <p className="text-[12px]">{`${dataPrint?.address_line1 ?? ""} ${
               dataPrint?.address_line2 ?? ""
             } ผู้ดูแล : ${dataPrint?.sub_district ?? ""}`}</p>
-            <p className="text-[12px] mt-1">{`QC: ${
-              dataPrint?.district ?? ""
-            }`}</p>
           </div>
           <div>
             <p className="text-[12px]">
               เบอร์โทรลูกค้า : {dataPrint?.mem_tel ?? "-"}
             </p>
-            <p className="text-[12px] mt-1">
-              เส้นทาง : {dataPrint?.mem_route?.route_name ?? "อื่นๆ"}
-            </p>
           </div>
+        </div>
+        <div className="text-[12px] text-center mt-1">
+            <p>ลูกค้าจ่ายก่อนส่ง แจ้งฝ่ายขายวางบิลและแจ้งลูกค้าก่อน</p>
+            
         </div>
         <div className="w-[100%] flex justify-center mt-3">
           <div className="grid grid-cols-2 gap-x-20 gap-y-2">
@@ -189,4 +187,4 @@ const BoxStickerBlock = () => {
   );
 };
 
-export default BoxStickerBlock;
+export default BoxStickerA;
