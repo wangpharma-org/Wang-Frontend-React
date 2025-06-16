@@ -11,6 +11,7 @@ import prepareIcon from "../assets/received.png";
 import QCIcon from "../assets/quality-control.png";
 import PackingIcon from "../assets/package-delivered.png";
 import { QRCodeSVG } from "qrcode.react";
+import boxnotfound from "../assets/product-17.png";
 
 export interface Root {
   sh_running: string;
@@ -133,9 +134,7 @@ const QCDashboard = () => {
   const [hasNotPicked, setHasNotPicked] = useState<number>(0);
   const [inComplete, setInComplete] = useState<number>(0);
   const [RT, setRT] = useState<number>(0);
-  const [shRunningArray, setSHRunningArray] = useState<
-    string[] | string | null
-  >(null);
+  const [shRunningArray, setSHRunningArray] = useState<string[] | null>(null);
   const [memRoute, setMemRoute] = useState<string | null>(null);
 
   // State ของ AutoFocus
@@ -175,6 +174,9 @@ const QCDashboard = () => {
   const [productNotHaveBarcode, setProductNotHaveBarcode] =
     useState<Product | null>(null);
 
+  // State เก็บไอดีห้องของการต่อ WebSocket
+  const [myRoom, setMyRoom] = useState<string | null>(null);
+
   // ทำให้รหัสพนักงานไม่หายเมื่อ Refresh
   useEffect(() => {
     if (prepareEmp?.dataEmp?.emp_code) {
@@ -209,7 +211,6 @@ const QCDashboard = () => {
   }, [packedEMP]);
 
   // เริ่มต้นโปรแกรม
-
   useEffect(() => {
     console.log(`${import.meta.env.VITE_API_URL_ORDER}/socket/qc/dashboard`);
     const newSocket = io(
@@ -238,6 +239,11 @@ const QCDashboard = () => {
       handleClear();
       setError(true);
     });
+
+    newSocket.on("my_room", (room) => {
+      console.log("My room:", room);
+      setMyRoom(room);
+    })
 
     const prepareEmpData = sessionStorage.getItem("prepare-emp");
     const QCEmpData = sessionStorage.getItem("qc-emp");
@@ -327,6 +333,7 @@ const QCDashboard = () => {
         values[0] = dataQC.sh_running;
       }
       setInputValues(values);
+      socket?.emit('get_my_room')
     }
     if (dataQC) {
       const mem_code = Array.isArray(dataQC)
@@ -368,7 +375,7 @@ const QCDashboard = () => {
       setInComplete(inComplete);
       setRT(rt);
       inputBarcode.current?.focus();
-      setSHRunningArray(shRunningArray);
+      setSHRunningArray(Array.isArray(shRunningArray) ? shRunningArray : [shRunningArray]);
       setMemRoute(memRoute);
       setMem_code(mem_code);
     }
@@ -452,10 +459,7 @@ const QCDashboard = () => {
     setIsInputLocked(false);
     setHasnotQC(0);
     setInputValues(Array(6).fill(""));
-    if (socket) {
-      socket.emit("leave_room", { mem_code, sh_running });
-      console.log("✅ Left room");
-    }
+    setProductNotHaveBarcode(null)
   };
 
   // ดึงข้อมูลสำหรับแสดงในหน้าขอสินค้าเพิ่ม
@@ -1012,21 +1016,21 @@ const QCDashboard = () => {
               </div>
             </div>
             <div className="grid grid-cols-7 mt-6">
-              <div className="col-span-3">
+              <div className="col-span-3 flex justify-center items-center">
                 <img
                   src={
                     orderForQC?.product?.product_image_url.startsWith("..")
                       ? `https://www.wangpharma.com${orderForQC?.product?.product_image_url.slice(
                           2
                         )}`
-                      : orderForQC?.product?.product_image_url || box
+                      : orderForQC?.product?.product_image_url || boxnotfound
                   }
-                  className="w-sm drop-shadow-xl rounded-lg"
+                  className="w-sm h-sm drop-shadow-xl rounded-lg"
                 ></img>
               </div>
               <div className="col-span-4">
                 <div className="text-center">
-                  <div className="w-full flex justify-center">
+                  {orderForQC?.product?.product_barcode && <div className="w-full flex justify-center">
                     <div className="text-sm font-normal">
                       <Barcode
                         value={orderForQC?.product?.product_barcode}
@@ -1037,7 +1041,7 @@ const QCDashboard = () => {
                         fontSize={11}
                       />
                     </div>
-                  </div>
+                  </div>}
                   <p className="text-2xl font-bold">
                     {orderForQC?.product?.product_code}
                   </p>
@@ -1535,10 +1539,7 @@ const QCDashboard = () => {
                                               setProductNotHaveBarcode(
                                                 so.product
                                               );
-                                              window.scrollTo({
-                                                top: 0,
-                                                behavior: "smooth",
-                                              });
+                                              inputBarcode.current?.focus();
                                             }}
                                           >
                                             แสดง QR Code

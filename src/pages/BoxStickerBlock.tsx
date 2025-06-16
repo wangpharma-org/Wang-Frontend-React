@@ -60,7 +60,7 @@ const BoxStickerBlock = () => {
   const mem_code = queryParams.get("mem_code");
   const printCount = parseInt(queryParams.get("print") || "1");
 
-  const sh_running = queryParams.get("sh_running");
+  let sh_running = queryParams.get("sh_running");
 
   const [sh_running_array, setSh_running_array] = useState<string[]>([]);
 
@@ -72,6 +72,15 @@ const BoxStickerBlock = () => {
   const [JSONQCEmpData, setJSONQCEmpData] = useState<dataForEmp>();
   const [JSONprepareEmpData, setJSONprepareEmpData] = useState<dataForEmp>();
   const [dataPrint, setDataPrint] = useState<Address | null>(null);
+  const [transformedShRunning, setTransformedShRunning] = useState<string>("");
+
+  useEffect(() => {
+    if (sh_running && !sh_running.includes(",")) {
+        setTransformedShRunning(sh_running += ",")
+    } else {
+        setTransformedShRunning(sh_running || "");
+    }
+  },[sh_running]);
 
   useEffect(() => {
     if (prepareEmpData && QCEmpData && packedEmpData) {
@@ -79,11 +88,11 @@ const BoxStickerBlock = () => {
       setJSONpackedEmpData(JSON.parse(packedEmpData));
       setJSONprepareEmpData(JSON.parse(prepareEmpData));
     }
-    if (sh_running) {
-      const shRunningArray = sh_running.split(",");
+    if (transformedShRunning) {
+      const shRunningArray = transformedShRunning.split(",");
       setSh_running_array(shRunningArray);
     }
-  }, [prepareEmpData, QCEmpData, packedEmpData]);
+  }, [prepareEmpData, QCEmpData, packedEmpData, transformedShRunning]);
 
   useEffect(() => {
     if (JSONQCEmpData && JSONpackedEmpData && JSONprepareEmpData && dataPrint) {
@@ -136,7 +145,7 @@ const BoxStickerBlock = () => {
               <p className="text-[11px]">สแกนบาร์โค้ดที่เครื่อง QC</p>
               <p className="text-[11px]">เพื่อสั่งพิมพ์สติกเกอร์ติดลังใหม่</p>
             </div>
-            <QRCodeSVG value={sh_running || ""} size={60}></QRCodeSVG>
+            <QRCodeSVG value={transformedShRunning || ""} size={60}></QRCodeSVG>
           </div>
         </div>
       </div>
