@@ -181,6 +181,8 @@ const QCDashboard = () => {
 
   const [errMessageSubmit , setErrMsgSubmit] = useState<string | null>(null);
 
+  const [addShRunningArray , setAddShRunningArray] = useState<string[] | null>(null);
+
   // ทำให้รหัสพนักงานไม่หายเมื่อ Refresh
   useEffect(() => {
     if (prepareEmp?.dataEmp?.emp_code) {
@@ -249,6 +251,12 @@ const QCDashboard = () => {
       setMyRoom(room);
     })
 
+    newSocket.on("something_wrong", (msg) => {
+      console.log('something_wrong' , msg);
+      alert(msg);
+      handleClear();
+    })
+
     const prepareEmpData = sessionStorage.getItem("prepare-emp");
     const QCEmpData = sessionStorage.getItem("qc-emp");
     const packedEmpData = sessionStorage.getItem("packed-emp");
@@ -304,6 +312,7 @@ const QCDashboard = () => {
           mem_code: inputMemCode,
           sh_running: null,
           sh_running_array: null,
+          addShRunningArray: null,
         });
         setLoading(true);
       } else if (sh_running) {
@@ -311,18 +320,28 @@ const QCDashboard = () => {
           mem_code: null,
           sh_running,
           sh_running_array: null,
+          addShRunningArray: null,
         });
         setLoading(true);
       } else if (sh_running_array) {
         socket.emit("join_room", {
           mem_code: null,
           sh_running: null,
+          addShRunningArray: null,
           sh_running_array,
         });
         setLoading(true);
+      } else if (addShRunningArray) {
+        console.log('ได้แล้วโว้ยยยย')
+        socket.emit("join_room", {
+          mem_code: null,
+          sh_running: null,
+          sh_running_array: null,
+          addShRunningArray
+        });
       }
     }
-  }, [inputMemCode, sh_running, socket, wantConnect, sh_running_array]);
+  }, [inputMemCode, sh_running, socket, wantConnect, sh_running_array, addShRunningArray]);
 
   useEffect(() => {
     if (dataQC) {
@@ -407,6 +426,20 @@ const QCDashboard = () => {
     }
   }, [dataRequest]);
 
+  const handleAddSH = (some_value: string) => {
+    console.log('handleAddSH : ', some_value)
+    if (socket?.connected) {
+      if (shRunningArray) {
+        setAddShRunningArray([...shRunningArray, some_value]);
+        setSh_running(null);
+        setInputMemCode(null);
+        setSh_running_array(null);
+        // setIsInputLocked(true);
+        setWantConnect(true);
+      }
+    }
+  }
+
   // ตรวจสอบว่าเป็นรหัสลูกค้าหรือเลขบิล
   const handleConnect = (some_value: string) => {
     console.log(socket?.connected);
@@ -463,7 +496,9 @@ const QCDashboard = () => {
     setIsInputLocked(false);
     setHasnotQC(0);
     setInputValues(Array(6).fill(""));
-    setProductNotHaveBarcode(null)
+    setProductNotHaveBarcode(null);
+    setSHRunningArray(null);
+    setAddShRunningArray(null);
   };
 
   // ดึงข้อมูลสำหรับแสดงในหน้าขอสินค้าเพิ่ม
@@ -492,6 +527,7 @@ const QCDashboard = () => {
               : null
             : null,
           emp_code_request: QCEmp?.dataEmp?.emp_code,
+          addShRunningArray: addShRunningArray,
         }
       );
       if (response.status === 201) {
@@ -621,6 +657,7 @@ const QCDashboard = () => {
         emp_packed_by: data.emp_packed_by,
         mem_code: data.mem_code,
         sh_running: data.sh_running,
+        addShRunningArray: addShRunningArray,
       }
     );
     console.log(response.status);
@@ -742,6 +779,7 @@ const QCDashboard = () => {
         emp_qc_by: QCEmp?.dataEmp.emp_code,
         emp_packed_by: packedEMP?.dataEmp.emp_code,
         mem_code: mem_code,
+        addShRunningArray: addShRunningArray,
       }
     );
     if (data.status === 201) {
@@ -1307,7 +1345,7 @@ const QCDashboard = () => {
                             placeholder="หมายเลขบิล"
                             disabled={!isReady}
                             ref={index === 0 ? inputBill : null}
-                            readOnly={isInputLocked}
+                            readOnly={!!InputValues[index]}
                             onChange={(e) => {
                               const update = [...InputValues];
                               update[index] = e.target.value;
@@ -1315,7 +1353,11 @@ const QCDashboard = () => {
                             }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
-                                handleConnect(e.currentTarget.value);
+                                if(!shRunningArray) {
+                                  handleConnect(e.currentTarget.value);
+                                } {
+                                  handleAddSH(e.currentTarget.value);
+                                }
                               }
                             }}
                             value={InputValues[index]}
