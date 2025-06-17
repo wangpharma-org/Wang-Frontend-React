@@ -115,7 +115,9 @@ const QCDashboard = () => {
   // Modal Open QC
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [inputShRunning, setInputShRunning] = useState<string>("");
-  const [errorMessageManage, setErrorMessageManage] = useState<string | null>(null);
+  const [errorMessageManage, setErrorMessageManage] = useState<string | null>(
+    null
+  );
 
   // Modal Request more product
   const [modalReqestOpen, setModalRequestOpen] = useState<boolean>(false);
@@ -177,11 +179,13 @@ const QCDashboard = () => {
   // State เก็บไอดีห้องของการต่อ WebSocket
   const [myRoom, setMyRoom] = useState<string | null>(null);
 
-  const [errMessagePrintBox , setErrMsgPrintBox] = useState<string | null>(null);
+  const [errMessagePrintBox, setErrMsgPrintBox] = useState<string | null>(null);
 
-  const [errMessageSubmit , setErrMsgSubmit] = useState<string | null>(null);
+  const [errMessageSubmit, setErrMsgSubmit] = useState<string | null>(null);
 
-  const [addShRunningArray , setAddShRunningArray] = useState<string[] | null>(null);
+  const [addShRunningArray, setAddShRunningArray] = useState<string[] | null>(
+    null
+  );
 
   // ทำให้รหัสพนักงานไม่หายเมื่อ Refresh
   useEffect(() => {
@@ -249,13 +253,13 @@ const QCDashboard = () => {
     newSocket.on("my_room", (room) => {
       console.log("My room:", room);
       setMyRoom(room);
-    })
+    });
 
     newSocket.on("something_wrong", (msg) => {
-      console.log('something_wrong' , msg);
+      console.log("something_wrong", msg);
       alert(msg);
       handleClear();
-    })
+    });
 
     const prepareEmpData = sessionStorage.getItem("prepare-emp");
     const QCEmpData = sessionStorage.getItem("qc-emp");
@@ -332,16 +336,23 @@ const QCDashboard = () => {
         });
         setLoading(true);
       } else if (addShRunningArray) {
-        console.log('ได้แล้วโว้ยยยย')
+        console.log("ได้แล้วโว้ยยยย");
         socket.emit("join_room", {
           mem_code: null,
           sh_running: null,
           sh_running_array: null,
-          addShRunningArray
+          addShRunningArray,
         });
       }
     }
-  }, [inputMemCode, sh_running, socket, wantConnect, sh_running_array, addShRunningArray]);
+  }, [
+    inputMemCode,
+    sh_running,
+    socket,
+    wantConnect,
+    sh_running_array,
+    addShRunningArray,
+  ]);
 
   useEffect(() => {
     if (dataQC) {
@@ -356,7 +367,7 @@ const QCDashboard = () => {
         values[0] = dataQC.sh_running;
       }
       setInputValues(values);
-      socket?.emit('get_my_room')
+      socket?.emit("get_my_room");
     }
     if (dataQC) {
       const mem_code = Array.isArray(dataQC)
@@ -398,7 +409,9 @@ const QCDashboard = () => {
       setInComplete(inComplete);
       setRT(rt);
       inputBarcode.current?.focus();
-      setSHRunningArray(Array.isArray(shRunningArray) ? shRunningArray : [shRunningArray]);
+      setSHRunningArray(
+        Array.isArray(shRunningArray) ? shRunningArray : [shRunningArray]
+      );
       setMemRoute(memRoute);
       setMem_code(mem_code);
     }
@@ -427,7 +440,7 @@ const QCDashboard = () => {
   }, [dataRequest]);
 
   const handleAddSH = (some_value: string) => {
-    console.log('handleAddSH : ', some_value)
+    console.log("handleAddSH : ", some_value);
     if (socket?.connected) {
       if (shRunningArray) {
         setAddShRunningArray([...shRunningArray, some_value]);
@@ -438,7 +451,7 @@ const QCDashboard = () => {
         setWantConnect(true);
       }
     }
-  }
+  };
 
   // ตรวจสอบว่าเป็นรหัสลูกค้าหรือเลขบิล
   const handleConnect = (some_value: string) => {
@@ -520,14 +533,8 @@ const QCDashboard = () => {
         {
           so_running,
           amount,
-          sh_running: Array.isArray(dataQC) ? null : dataQC?.sh_running,
-          mem_code: Array.isArray(dataQC)
-            ? dataQC.length > 0
-              ? dataQC[0]?.members?.mem_code
-              : null
-            : null,
           emp_code_request: QCEmp?.dataEmp?.emp_code,
-          addShRunningArray: addShRunningArray,
+          room: myRoom,
         }
       );
       if (response.status === 201) {
@@ -640,7 +647,6 @@ const QCDashboard = () => {
       emp_prepare_by: string;
       emp_qc_by: string;
       emp_packed_by: string;
-      mem_code: string | null;
       sh_running: string | null;
     }
   ) => {
@@ -655,9 +661,8 @@ const QCDashboard = () => {
         emp_prepare_by: data.emp_prepare_by,
         emp_qc_by: data.emp_qc_by,
         emp_packed_by: data.emp_packed_by,
-        mem_code: data.mem_code,
         sh_running: data.sh_running,
-        addShRunningArray: addShRunningArray,
+        room: myRoom,
       }
     );
     console.log(response.status);
@@ -688,7 +693,10 @@ const QCDashboard = () => {
         }
       );
       console.log("block_credit", block_credit);
-      if (block_credit.data.status === false && block_credit.data.message === "Block") {
+      if (
+        block_credit.data.status === false &&
+        block_credit.data.message === "Block"
+      ) {
         const response = await axios.post(
           `${import.meta.env.VITE_API_URL_ORDER}/api/qc/submit-qc`,
           {
@@ -698,7 +706,7 @@ const QCDashboard = () => {
             emp_packed: packedEMP.dataEmp.emp_code,
             mem_code: mem_code,
             block_credit: true,
-            block_type: "Block"
+            block_type: "Block",
           }
         );
 
@@ -711,7 +719,10 @@ const QCDashboard = () => {
           console.log("SubmitShoppingHead Failed");
           setSubmitFailed(true);
         }
-      } else if (block_credit.data.status === false && block_credit.data.message === "A") {
+      } else if (
+        block_credit.data.status === false &&
+        block_credit.data.message === "A"
+      ) {
         const response = await axios.post(
           `${import.meta.env.VITE_API_URL_ORDER}/api/qc/submit-qc`,
           {
@@ -721,7 +732,7 @@ const QCDashboard = () => {
             emp_packed: packedEMP.dataEmp.emp_code,
             mem_code: mem_code,
             block_credit: true,
-            block_type: "Customer-A"
+            block_type: "Customer-A",
           }
         );
 
@@ -733,13 +744,14 @@ const QCDashboard = () => {
         } else if (response.status === 500) {
           console.log("SubmitShoppingHead Failed");
           setSubmitFailed(true);
-        } 
-      } 
-      else if (block_credit.data.status === false && block_credit.data.message === "None") {
-        setErrMsgSubmit('ไม่เจอลูกค้ารายการนี้ในระบบกรุณาติดต่อพี่โต้')
-        return
-      }
-      else {
+        }
+      } else if (
+        block_credit.data.status === false &&
+        block_credit.data.message === "None"
+      ) {
+        setErrMsgSubmit("ไม่เจอลูกค้ารายการนี้ในระบบกรุณาติดต่อพี่โต้");
+        return;
+      } else {
         const response = await axios.post(
           `${import.meta.env.VITE_API_URL_ORDER}/api/qc/submit-qc`,
           {
@@ -765,21 +777,15 @@ const QCDashboard = () => {
     }
   };
 
-  const handleRT = async (
-    so_running: string,
-    sh_running: string,
-    mem_code: string
-  ) => {
+  const handleRT = async (so_running: string) => {
     const data = await axios.post(
       `${import.meta.env.VITE_API_URL_ORDER}/api/qc/update-rt`,
       {
         so_running: so_running,
-        sh_running: sh_running,
         emp_prepare_by: prepareEmp?.dataEmp.emp_code,
         emp_qc_by: QCEmp?.dataEmp.emp_code,
         emp_packed_by: packedEMP?.dataEmp.emp_code,
-        mem_code: mem_code,
-        addShRunningArray: addShRunningArray,
+        room: myRoom,
       }
     );
     if (data.status === 201) {
@@ -801,7 +807,10 @@ const QCDashboard = () => {
         }
       );
       console.log("block_credit", block_credit);
-      if (block_credit.data.status === false && block_credit.data.message === "Block") {
+      if (
+        block_credit.data.status === false &&
+        block_credit.data.message === "Block"
+      ) {
         const response = await axios.post(
           `${import.meta.env.VITE_API_URL_ORDER}/api/qc/printSubmit`,
           {
@@ -815,7 +824,10 @@ const QCDashboard = () => {
             `/box-sticker-block?print=${countBox}&mem_code=${mem_code}&sh_running=${shRunningArray}`
           );
         }
-      } else if (block_credit.data.status === false && block_credit.data.message === "A") {
+      } else if (
+        block_credit.data.status === false &&
+        block_credit.data.message === "A"
+      ) {
         const response = await axios.post(
           `${import.meta.env.VITE_API_URL_ORDER}/api/qc/printSubmit`,
           {
@@ -829,9 +841,12 @@ const QCDashboard = () => {
             `/box-sticker-a?print=${countBox}&mem_code=${mem_code}&sh_running=${shRunningArray}`
           );
         }
-      } else if (block_credit.data.status === false && block_credit.data.message === "None") {
-        setErrMsgPrintBox('ไม่เจอลูกค้ารายการนี้ในระบบกรุณาติดต่อพี่โต้');
-        return
+      } else if (
+        block_credit.data.status === false &&
+        block_credit.data.message === "None"
+      ) {
+        setErrMsgPrintBox("ไม่เจอลูกค้ารายการนี้ในระบบกรุณาติดต่อพี่โต้");
+        return;
       } else {
         const response = await axios.post(
           `${import.meta.env.VITE_API_URL_ORDER}/api/qc/printSubmit`,
@@ -849,13 +864,14 @@ const QCDashboard = () => {
   };
 
   const handleReturnPicking = async (sh_running: string) => {
-    console.log('sh_running', sh_running);
+    console.log("sh_running", sh_running);
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL_ORDER}/api/qc/return-picking`,
         {
           sh_running: sh_running,
           emp_code: QCEmp?.dataEmp?.emp_code,
+          room: myRoom,
         }
       );
       if (response.status === 500) {
@@ -870,7 +886,7 @@ const QCDashboard = () => {
     } catch (error) {
       setErrorMessageManage("มีบางอย่างผิดพลาด กรุณาตรวจสอบอีกครั้ง");
     }
-  }
+  };
 
   const handleSubmitPicking = async (sh_running: string) => {
     try {
@@ -879,6 +895,7 @@ const QCDashboard = () => {
         {
           sh_running: sh_running,
           emp_code: QCEmp?.dataEmp?.emp_code,
+          room: myRoom,
         }
       );
       if (response.status === 500) {
@@ -893,7 +910,7 @@ const QCDashboard = () => {
     } catch (error) {
       setErrorMessageManage("มีบางอย่างผิดพลาด กรุณาตรวจสอบอีกครั้ง");
     }
-  }
+  };
 
   useEffect(() => {
     console.log(orderForQC);
@@ -944,16 +961,16 @@ const QCDashboard = () => {
                 value={inputShRunning}
                 onChange={(e) => setInputShRunning(e.target.value)}
               ></input>
-              <button 
+              <button
                 className="bg-orange-500 p-3 text-xl rounded-sm hover:bg-orange-600 text-white ml-2 drop-shadow-sm cursor-pointer"
                 onClick={() => {
-                  handleReturnPicking(inputShRunning)
+                  handleReturnPicking(inputShRunning);
                   setErrorMessageManage(null);
-                }}  
+                }}
               >
                 ดึงกลับ - จัดใหม่
               </button>
-              <button 
+              <button
                 className="bg-green-600 p-3 text-xl rounded-sm hover:bg-green-700 text-white drop-shadow-sm cursor-pointer"
                 onClick={() => {
                   handleSubmitPicking(inputShRunning);
@@ -1118,18 +1135,20 @@ const QCDashboard = () => {
               </div>
               <div className="col-span-4">
                 <div className="text-center">
-                  {orderForQC?.product?.product_barcode && <div className="w-full flex justify-center">
-                    <div className="text-sm font-normal">
-                      <Barcode
-                        value={orderForQC?.product?.product_barcode}
-                        format="CODE128"
-                        width={1.2}
-                        height={25}
-                        displayValue={true}
-                        fontSize={11}
-                      />
+                  {orderForQC?.product?.product_barcode && (
+                    <div className="w-full flex justify-center">
+                      <div className="text-sm font-normal">
+                        <Barcode
+                          value={orderForQC?.product?.product_barcode}
+                          format="CODE128"
+                          width={1.2}
+                          height={25}
+                          displayValue={true}
+                          fontSize={11}
+                        />
+                      </div>
                     </div>
-                  </div>}
+                  )}
                   <p className="text-2xl font-bold">
                     {orderForQC?.product?.product_code}
                   </p>
@@ -1270,11 +1289,6 @@ const QCDashboard = () => {
                       sh_running: Array.isArray(dataQC)
                         ? null
                         : dataQC?.sh_running,
-                      mem_code: Array.isArray(dataQC)
-                        ? dataQC.length > 0
-                          ? dataQC[0]?.members?.mem_code
-                          : null
-                        : null,
                     });
                   }
                 }}
@@ -1353,9 +1367,10 @@ const QCDashboard = () => {
                             }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
-                                if(!shRunningArray) {
+                                if (!shRunningArray) {
                                   handleConnect(e.currentTarget.value);
-                                } {
+                                }
+                                {
                                   handleAddSH(e.currentTarget.value);
                                 }
                               }
@@ -1820,16 +1835,7 @@ const QCDashboard = () => {
                                             : "hover:bg-red-600 bg-red-500"
                                         }`}
                                         onClick={() => {
-                                          const mem_code = Array.isArray(dataQC)
-                                            ? dataQC.length > 0
-                                              ? dataQC[0]?.members?.mem_code
-                                              : null
-                                            : dataQC?.members?.mem_code ?? null;
-                                          handleRT(
-                                            so.so_running,
-                                            so.sh_running,
-                                            mem_code
-                                          );
+                                          handleRT(so.so_running);
                                         }}
                                       >
                                         {so.so_already_qc === "RT"
@@ -2045,15 +2051,19 @@ const QCDashboard = () => {
                       </div>
                       {hasNotQC === 0 && dataQC && (
                         <div>
-                        <div
-                          className="w-full bg-green-500 text-base text-white p-1 font-bold rounded-sm hover:bg-green-600 select-none cursor-pointer mt-2"
-                          onClick={() => {
-                            handlePrintStickerBox();
-                          }}
-                        >
-                          พิมพ์สติกเกอร์ติดลัง
-                        </div>
-                        {errMessagePrintBox && <p className="mt-2 font-bold text-red-700">{errMessagePrintBox}</p>}
+                          <div
+                            className="w-full bg-green-500 text-base text-white p-1 font-bold rounded-sm hover:bg-green-600 select-none cursor-pointer mt-2"
+                            onClick={() => {
+                              handlePrintStickerBox();
+                            }}
+                          >
+                            พิมพ์สติกเกอร์ติดลัง
+                          </div>
+                          {errMessagePrintBox && (
+                            <p className="mt-2 font-bold text-red-700">
+                              {errMessagePrintBox}
+                            </p>
+                          )}
                         </div>
                       )}
 
@@ -2095,9 +2105,11 @@ const QCDashboard = () => {
                       <p className="mt-2 font-bold text-red-700">
                         {submitFailed ? `ยืนยันไม่สำเร็จ ลองอีกครั้ง` : ""}
                       </p>
-                      {errMessageSubmit && <p className="mt-2 font-bold text-red-700">
-                        {errMessageSubmit}
-                      </p>}
+                      {errMessageSubmit && (
+                        <p className="mt-2 font-bold text-red-700">
+                          {errMessageSubmit}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
