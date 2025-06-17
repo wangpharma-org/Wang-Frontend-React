@@ -681,6 +681,16 @@ const QCDashboard = () => {
       mem_code: mem_code,
     });
     if (prepareEmp && QCEmp && packedEMP && dataQC && hasNotQC === 0) {
+      console.log(
+        {
+          amount: { sum: countBox },
+          sh_running: shRunningArray,
+          emp_qc: QCEmp?.dataEmp.emp_code,
+          emp_packed: packedEMP?.dataEmp.emp_code,
+          emp_prepare: prepareEmp?.dataEmp.emp_code,
+          mem_code: mem_code,
+        }
+      )
       const block_credit = await axios.post(
         `${import.meta.env.VITE_API_URL_ORDER}/api/picking/check-credit`,
         {
