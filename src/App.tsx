@@ -18,7 +18,6 @@ import VerifyOrder from "./pages/VerifyOrder";
 import ReportEmployee from "./pages/ReportEmployee";
 import FormatLogReport from "./pages/FormatLogReport";
 import QCDashboard from "./pages/QC-Dashboard";
-import Dashboard from "./pages/ReportQcKPI";
 
 function App() {
   return (
@@ -108,12 +107,6 @@ function App() {
               <RequireAuth>
               <ProductList />
               </RequireAuth>
-            }
-          />
-          <Route
-            path="/dashboard-kpi"
-            element={
-              <Dashboard />
             }
           />
           <Route
