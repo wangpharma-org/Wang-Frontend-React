@@ -4,10 +4,11 @@ import box from "../assets/product-17.png"
 
 interface ProductBoxProps {
     orderItem: ShoppingOrder;
-    headShRunning: string;
+    // headShRunning: string;
     //   handleOutofStock: (orderItem: ShoppingOrder, status: string,socket:Socket) => void;
     socket: Socket;
     handleDoubleClick: (orderItem: ShoppingOrder, status: string) => void;
+    headShRunning: string;
 }
 
 export default function ProductBox({ orderItem, handleDoubleClick }: ProductBoxProps) {
@@ -37,15 +38,15 @@ export default function ProductBox({ orderItem, handleDoubleClick }: ProductBoxP
                         <img
                             src={
                                 orderItem.product.product_image_url.startsWith('..')
-                                  ? `https://www.wangpharma.com${orderItem.product.product_image_url.slice(2)}`
-                                  : orderItem.product.product_image_url || box
+                                    ? `https://www.wangpharma.com${orderItem.product.product_image_url.slice(2)}`
+                                    : orderItem.product.product_image_url || box
                             }
                             className="w-25 h-25 object-cover"
                         />
                     </div>
                     <div className="text-xs w-2/3 ml-1">
                         <div className="flex justify-between pt-1 px-1">
-                            <p className="font-bold">
+                            <p className="font-bold w-50 truncate ...   ">
                                 {orderItem.product.product_name}
                             </p>
                         </div>
