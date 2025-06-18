@@ -61,7 +61,7 @@ const OrderList = () => {
   const popupRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
-  const [selectroute, setSelectroute] = useState("เลือกเส้นทางขนส่ง");
+  const [selectroute, setSelectroute] = useState<string>(sessionStorage.getItem('route') ?? "เลือกเส้นทางขนส่ง");
   const { userInfo, logout } = useAuth();
   const navigate = useNavigate();
   const [latestTimes, setLatestTimes] = useState<PickingTime[]>([]);
@@ -101,6 +101,11 @@ const OrderList = () => {
     );
     setSocket(newSocket);
 
+    const routeSession = sessionStorage.getItem('route');
+    if (routeSession) {
+      setSelectroute(routeSession);
+    }
+    
     newSocket.on("connect", () => {
       console.log("✅ Connected to WebSocket");
       newSocket.emit("listorder:get");
@@ -125,6 +130,12 @@ const OrderList = () => {
       newSocket.disconnect();
     };
   }, []);
+
+  useEffect(()=>{
+    if(selectroute) {
+      sessionStorage.setItem('route', selectroute)
+    }
+  }, [selectroute])
 
   useEffect(() => {
     const totalShoppingOrders = orderList.reduce(
@@ -335,6 +346,8 @@ const OrderList = () => {
     setSelectroute("เลือกเส้นทางขนส่ง");
     setSelectedFloor(null);
   };
+
+
 
   const routeButtons = [
     { id: 1, name: "เส้นทางการขนส่ง", value: "all" },

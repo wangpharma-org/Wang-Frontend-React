@@ -62,6 +62,17 @@ function ProductList() {
   const [showInput, setShowInput] = useState(false);
   const [, setIsFiltered] = useState(false);
   // const handleDoubleClick = useDoubleClick();
+  const [selectroute, setSelectroute] = useState<string>(
+    sessionStorage.getItem("route") ?? "เลือกเส้นทางขนส่ง"
+  );
+  const [changeRoute, setChangeRoute] = useState<boolean>(false);
+
+  useEffect(()=>{
+    if (selectroute && changeRoute) {
+      sessionStorage.setItem('route', selectroute);
+      navigate('/order-list')
+    }
+  }, [selectroute, changeRoute])
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
@@ -303,6 +314,36 @@ function ProductList() {
     }
   };
 
+  const routeButtons = [
+    { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
+    { id: 2, name: "หาดใหญ่", value: "L1-1" },
+    { id: 3, name: "สงขลา", value: "L1-2" },
+    { id: 4, name: "สะเดา", value: "L1-3" },
+    { id: 5, name: "สทิงพระ", value: "L1-5" },
+    { id: 6, name: "นครศรีธรรมราช", value: "L10" },
+    { id: 7, name: "กระบี่", value: "L11" },
+    { id: 8, name: "ภูเก็ต", value: "L12" },
+    { id: 9, name: "สุราษฎร์ธานี", value: "L13" },
+    { id: 10, name: "ยาแห้ง ส่งฟรี ทั่วไทย", value: "L16" },
+    { id: 11, name: "พังงา", value: "L17" },
+    { id: 12, name: "เกาะสมุย", value: "L18" },
+    { id: 13, name: "พัทลุง-นคร", value: "L19" },
+    { id: 14, name: "ปัตตานี", value: "L2" },
+    { id: 15, name: "ชุมพร", value: "L20" },
+    { id: 16, name: "เกาะลันตา", value: "L21" },
+    { id: 17, name: "เกาะพะงัน", value: "L22" },
+    { id: 18, name: "สตูล", value: "L3" },
+    { id: 19, name: "พัทลุง", value: "L4" },
+    { id: 20, name: "พัทลุง VIP", value: "L4-1" },
+    { id: 21, name: "นราธิวาส", value: "L5-1" },
+    { id: 22, name: "สุไหงโกลก", value: "L5-2" },
+    { id: 23, name: "ยะลา", value: "L6" },
+    { id: 24, name: "เบตง", value: "L7" },
+    { id: 25, name: "ตรัง", value: "L9" },
+    { id: 26, name: "กระบี่-ตรัง", value: "L9-11" },
+    { id: 27, name: "Office รับเอง", value: "Office" },
+  ];
+
   return (
     <div className="flex flex-col h-screen">
       <ToastContainer
@@ -391,6 +432,7 @@ function ProductList() {
               </button>
             </div>
           </div>
+
           <div className="flex justify-between items-center">
             <div id="button" className="flex justify-start">
               <button
@@ -441,6 +483,26 @@ function ProductList() {
             >
               <img src={print} className="w-7"/>
             </div>
+          </div>
+          <div
+            id="route-select"
+            className="flex justify-center text-white w-full mt-1.5"
+          >
+            <select
+              value={selectroute}
+              onChange={(e) => {
+                setChangeRoute(true);
+                setSelectroute(e.target.value);
+                setSearch("");
+              }}
+              className="border border-gray-200 px-2 py-1 rounded text-black bg-white text-center flex justify-center w-full"
+            >
+              {routeButtons.map((route) => (
+                <option key={route.id} value={route.value}>
+                  {route.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </header>
@@ -572,7 +634,11 @@ function ProductList() {
                             orderItem.product.product_code.includes(search);
                           return matchFloor && matchSearch;
                         })
-                        .reverse()
+                        .sort((a, b) =>
+                          a.product.product_code.localeCompare(b.product.product_code, "th", {
+                            numeric: true,
+                          })
+                        )
                         .map((orderItem, Orderindex) => {
                           if (socket) {
                             console.log("orderItem2", orderItem);
