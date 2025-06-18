@@ -129,22 +129,28 @@ const FormatSticker = () => {
             <tr className="border">
               <th className="border text-[14px] pt-0.5">
                 เหลือง
-                <br />
-                F2
               </th>
               <th className="border text-[14px] pt-0.5">
                 น้ำเงิน
-                <br />
-                F3
               </th>
               <th className="border text-[14px] pt-0.5">
                 แดง
-                <br />
-                F4
               </th>
               <th className="border text-[14px] pt-0.5">
                 เขียว
-                <br />
+              </th>
+            </tr>
+            <tr className="border">
+              <th className="border text-[14px] pt-0.5">
+                F2
+              </th>
+              <th className="border text-[14px] pt-0.5">
+                F3
+              </th>
+              <th className="border text-[14px] pt-0.5">
+                F4
+              </th>
+              <th className="border text-[14px] pt-0.5">
                 F5
               </th>
             </tr>
@@ -153,14 +159,14 @@ const FormatSticker = () => {
             <tr className="border">
               {[2, 3, 4, 5].map((floor) => (
                 <td key={floor} className="border text-[12px] pt-0.5 font-bold">
-                 { sticker.floorCounts[floor] > 0 ? '✓' : '✗'}
+                 { sticker.floorCounts[floor] > 0 ? '✓' : ''}
                 </td>
               ))}
             </tr>
             <tr className="border">
               {[2, 3, 4, 5].map((floor) => (
                 <td key={floor} className="border text-[15px] py-0.5 font-extrabold w-[25%]">
-                  {sticker.floorCounts[floor] || ''} รก.
+                  {sticker.floorCounts[floor] || ''}
                 </td>
               ))}
             </tr>
