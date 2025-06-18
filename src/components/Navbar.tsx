@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Disclosure,
   DisclosureButton,
@@ -11,11 +10,10 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router";
 
 const navigation = [
-  { name: "หน้าหลัก", href: "/", exact: true },
-  { name: "รายการใบกำกับสินค้า", href: "/invoice-all" },
+  { name: "หน้าหลัก", href: "/", exact: true, current: false },
 ];
 
-function classNames(...classes) {
+function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
 }
 
@@ -65,7 +63,6 @@ export default function Navbar() {
                     aria-current={
                       location.pathname === item.href ? "page" : undefined
                     }
-                    exact={item.exact}
                   >
                     {item.name}
                   </NavLink>
@@ -75,7 +72,7 @@ export default function Navbar() {
           </div>
           <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0 gap-5">
             { isAuthenticated ? <p className="text-white text-base hidden sm:block">({userInfo?.emp_code}) {userInfo?.username} </p> : <p className="text-white text-base cursor-pointer " onClick={()=> navigate('/login')}>เข้าสู่ระบบ</p>}
-            { isAuthenticated && <p className="text-white text-base hover:text-red-500 cursor-pointer" onClick={logout}>Logut</p>}
+            { isAuthenticated && <p className="text-white text-base hover:text-red-500 cursor-pointer" onClick={logout}>Logout</p>}
           </div>
         </div>
       </div>

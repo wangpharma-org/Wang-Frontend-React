@@ -2,9 +2,10 @@ import { useAuth } from "../context/AuthContext"
 import { useState } from "react";
 import logoMini from "../assets/logoMini.svg";
 import { useNavigate } from "react-router";
+import { Bounce, ToastContainer, toast } from "react-toastify";
 
 const Login = () => {
-    const { login, isAuthenticated, userInfo, logout } = useAuth()
+    const { login, isAuthenticated } = useAuth()
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
     const navigate = useNavigate()
@@ -12,7 +13,19 @@ const Login = () => {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         const success = await login(username, password)
-        if (!success) alert('Login failed')
+        if (!success) {
+            toast.error('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', {
+                position: "top-center",
+                autoClose: 2000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                progress: undefined,
+                theme: "light",
+                transition: Bounce
+            });
+        }
     };
 
     if (isAuthenticated) {
@@ -23,6 +36,19 @@ const Login = () => {
     
     return (
       <>
+        <ToastContainer
+          position="top-center"
+          autoClose={2000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+          transition={Bounce}
+        />
         <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8 pt-35">
           <div className="sm:mx-auto sm:w-full sm:max-w-sm">
             <img

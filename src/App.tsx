@@ -10,88 +10,180 @@ import Home from "./pages/Home";
 import InvoicePart from "./pages/InvoicePart";
 import FormatPart from "./pages/FormatPart";
 import OrderList from "./pages/OrderList";
+import ProductList from "./pages/ProductList";
+import StickerPrint from "./pages/StickerPrint";
+import FormatSticker from "./pages/FormatSticker";
+import EmployeeStatisticsPage from "./pages/EmployeeStatisticsPage";
+import VerifyOrder from "./pages/VerifyOrder";
+import ReportEmployee from "./pages/ReportEmployee";
+import FormatLogReport from "./pages/FormatLogReport";
+import QCDashboard from "./pages/QC-Dashboard";
+import Dashboard from "./pages/ReportQcKPI";
+
 function App() {
   return (
     <>
       <Router>
-      <Routes>
-        <Route 
-          path="/" 
-          element={
-            <div>
-              <Navbar />
-              <Home />
-            </div>
-          } 
-        />
-        <Route 
-          path="/login" 
-          element={
-            <div>
-              <Navbar />
-              <Login />
-            </div>
-          } 
-        />
-        <Route
-          path="/invoice-all"
-          element={
-            <>
-              <Navbar />
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <div>
+                <Navbar />
+                <RequireAuth>
+                  <Home />
+                </RequireAuth>
+              </div>
+            }
+          />
+          <Route
+            path="/login"
+            element={
+              <div>
+                <Navbar />
+                <Login />
+              </div>
+            }
+          />
+          <Route
+            path="/invoice-all"
+            element={
+              <>
+                <Navbar />
+                <RequireAuth>
+                  <InvoiceList />
+                </RequireAuth>
+              </>
+            }
+          />
+          <Route
+            path="/invoice-vat"
+            element={
+              <>
+                <Navbar />
+                <RequireAuth>
+                  <InvoiceVat />
+                </RequireAuth>
+              </>
+            }
+          />
+          <Route
+            path="/invoice-part"
+            element={
+              <>
+                <Navbar />
+                <RequireAuth>
+                  <InvoicePart />
+                </RequireAuth>
+              </>
+            }
+          />
+          <Route
+            path="/format-vat"
+            element={
               <RequireAuth>
-                <InvoiceList />
+                <FormatVat />
               </RequireAuth>
-            </>
-          }
-        />
-        <Route
-          path="/invoice-vat"
-          element={
-            <>
-              <Navbar />
+            }
+          />
+          <Route
+            path="/format-part"
+            element={
               <RequireAuth>
-                <InvoiceVat />
+                <FormatPart />
               </RequireAuth>
-            </>
-          }
-        />
-        <Route
-          path="/invoice-part"
-          element={
-            <>
-              <Navbar />
+            }
+          />
+          <Route
+            path="/order-list"
+            element={
               <RequireAuth>
-                <InvoicePart />
-              </RequireAuth>
-            </>
-          }
-        />
-        <Route
-          path="/format-vat"
-          element={
-            <RequireAuth>
-              <FormatVat />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/format-part"
-          element={
-            <RequireAuth>
-              <FormatPart />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/order-list"
-          element={
-            <RequireAuth>
               <OrderList />
-            </RequireAuth>
-          }
-        />
-      </Routes>
-    </Router>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/product-list"
+            element={
+              <RequireAuth>
+              <ProductList />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/dashboard-kpi"
+            element={
+              <Dashboard />
+            }
+          />
+          <Route
+            path="/print-sticker"
+            element={
+              <div>
+                <Navbar />
+                {/* <RequireAuth> */}
+                  <StickerPrint />
+                {/* </RequireAuth> */}
+              </div>
+            }
+          />
+          <Route
+            path="/format-sticker"
+            element={
+              <div>
+                {/* <RequireAuth> */}
+                  <FormatSticker />
+                {/* </RequireAuth> */}
+              </div>
+            }
+          />
+          <Route
+            path="/report"
+            element={
+              <div>
+                <RequireAuth>
+                  <ReportEmployee />
+                  </RequireAuth>
+              </div>
+            }
+          />
+          <Route
+            path="/employee-statistics"
+            element={<EmployeeStatisticsPage />}
+            />
+          <Route
+            path="/verify-order"
+            element={
+              <div>
+                <Navbar />
+                <RequireAuth>
+                  <VerifyOrder />
+                </RequireAuth>
+              </div>
+            }
+          />
+          <Route
+            path="/log-report"
+            element={
+              <div>
+                <RequireAuth>
+                  <FormatLogReport />
+                </RequireAuth>
+              </div>
+            }
+          />
+          <Route
+            path="/qc-dashboard"
+            element={
+              <div>
+                <RequireAuth>
+                  <QCDashboard />
+                  </RequireAuth>
+              </div>
+            }
+          />
+        </Routes>
+      </Router>
     </>
   );
 }

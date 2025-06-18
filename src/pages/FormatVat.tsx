@@ -27,7 +27,6 @@ const bahtText = (amount: number): string => {
 
     let result = "";
     let position = 0;
-    let isMillion = false;
 
     while (num > 0) {
       const n = num % 10;
@@ -53,7 +52,6 @@ const bahtText = (amount: number): string => {
       if (position === 6 && num > 0) {
         result = "ล้าน" + result;
         position = 0;
-        isMillion = true;
       }
     }
 
@@ -148,7 +146,8 @@ const FormatVat = () => {
             .invoice-info,
             .totals,
             .footer {
-                margin-bottom: 5px;
+              margin-bottom: 5px;
+              
             }
             
             .title h1 {
@@ -218,7 +217,7 @@ const FormatVat = () => {
                 grid-row: span x;
                 grid-column-start: 9;
                 border: #000 solid 1px;
-                padding: 8px;
+                padding: 4px;
             }
             
             .footer {
@@ -374,7 +373,7 @@ const FormatVat = () => {
                   value={`${invoices.sh_running || ""}/${
                     invoices.sh_sumprice || ""
                   }`}
-                  size={45}
+                  size={40}
                 />
                 <p className="flex justify-center">Checking No.</p>
               </div>
@@ -388,7 +387,7 @@ const FormatVat = () => {
                     value={invoices.sh_running}
                     format="CODE128"
                     width={1}
-                    height={25}
+                    height={20}
                     displayValue={false}
                   />
                   <p className="flex justify-center">Invoice No.</p>
@@ -460,9 +459,12 @@ const FormatVat = () => {
                 </div>
               </div>
             </div>
-
+            <div className="flex justify-between mx-2 text-sm">
+              <p>074-366681 ถึง5</p>
+              <p>วังเภสัชส่งสินค้าทุกวัน ยกเว้นวันอาทิตย์ครับ/ค่ะ</p>
+            </div>
             {/* ตารางสินค้า */}
-            <table>
+            <table className="border">
               <thead>
                 <tr className="text-xs">
                   <th>ที่</th>
@@ -654,7 +656,7 @@ const FormatVat = () => {
                   value={invoices.sh_sumprice}
                   format="CODE128"
                   width={1}
-                  height={25}
+                  height={20}
                   displayValue={false}
                 />
                 <p className="text-center">Payment</p>
