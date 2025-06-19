@@ -7,6 +7,7 @@ import ProductBox from "../components/ProductBox";
 import { Bounce, toast, ToastContainer } from "react-toastify";
 import axios from "axios";
 import print from "../assets/printing.png";
+import ButtonMenu from "../components/buttonMenu"
 
 interface Product {
   product_code: string;
@@ -53,7 +54,7 @@ function ProductList() {
   const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
   const navigate = useNavigate();
   const mem_code = new URLSearchParams(window.location.search).get("mem_code");
-  const { userInfo, logout } = useAuth();
+  const { userInfo } = useAuth();
   const [floorCounts, setFloorCounts] = useState<Record<string, number>>({});
   const popupRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -67,7 +68,7 @@ function ProductList() {
   );
   const [changeRoute, setChangeRoute] = useState<boolean>(false);
 
-  useEffect(()=>{
+  useEffect(() => {
     if (selectroute && changeRoute) {
       sessionStorage.setItem('route', selectroute);
       navigate('/order-list')
@@ -112,15 +113,15 @@ function ProductList() {
     };
   }, []);
 
-  useEffect(()=>{
-    if(CanSubmit) {
+  useEffect(() => {
+    if (CanSubmit) {
       submitPicking()
     }
-  },[CanSubmit])
+  }, [CanSubmit])
 
   useEffect(() => {
     if (listproduct) {
-      console.log('listproduct:',listproduct);
+      console.log('listproduct:', listproduct);
       const hasPending = (listproduct?.shoppingHeads ?? []).some((head) =>
         head.shoppingOrders.some((order) => order.picking_status === "pending")
       );
@@ -135,7 +136,7 @@ function ProductList() {
           const status = order.picking_status;
           const unit = order.so_unit || "";
           const isBox = unit.includes("ลัง");
-    
+
           if (status !== "picking") {
             const floorKey = isBox
               ? "box"
@@ -147,7 +148,7 @@ function ProductList() {
       setFloorCounts(floorCountMap);
       console.log("จำนวนสินค้าที่ยังไม่ถูก pick ตามแต่ละชั้น (รวม box):", floorCountMap);
     }
-    
+
   }, [listproduct]);
 
   useEffect(() => {
@@ -264,9 +265,9 @@ function ProductList() {
     { label: "ยกลัง", value: "box", color: "bg-purple-500" },
   ];
 
-  const Btnlogout = () => {
-    logout();
-  };
+  // const Btnlogout = () => {
+  //   logout();
+  // };
 
   const printSticker = async (mem_code: string) => {
     console.log("printSticker", mem_code);
@@ -347,34 +348,33 @@ function ProductList() {
   return (
     <div className="flex flex-col h-screen">
       <ToastContainer
-          position="top-center"
-          autoClose={2000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick={false}
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-          transition={Bounce}
-        />
+        position="top-center"
+        autoClose={2000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick={false}
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+        transition={Bounce}
+      />
       <header
-        className={`p-2 sticky top-0 bg-blue-400 z-40 text-white font-medium ${
-          selectedFloor === "1"
+        className={`p-2 sticky top-0 bg-blue-400 z-40 text-white font-medium ${selectedFloor === "1"
             ? "bg-gray-500"
             : selectedFloor === "2"
-            ? "bg-yellow-500"
-            : selectedFloor === "3"
-            ? "bg-blue-500"
-            : selectedFloor === "4"
-            ? "bg-red-500"
-            : selectedFloor === "5"
-            ? "bg-emerald-500"
-            : selectedFloor === "box"
-            ? "bg-purple-500"
-            : "bg-blue-400"
-        } `}
+              ? "bg-yellow-500"
+              : selectedFloor === "3"
+                ? "bg-blue-500"
+                : selectedFloor === "4"
+                  ? "bg-red-500"
+                  : selectedFloor === "5"
+                    ? "bg-emerald-500"
+                    : selectedFloor === "box"
+                      ? "bg-purple-500"
+                      : "bg-blue-400"
+          } `}
       >
         <div>
           <div className="flex justify-between">
@@ -477,11 +477,11 @@ function ProductList() {
               <p>{listproduct?.mem_code}</p>&nbsp;
               <p className="w-40 truncate">{listproduct?.mem_name}</p>
             </div>
-            <div 
+            <div
               className="mr-2"
               onClick={() => mem_code && printSticker(mem_code)}
             >
-              <img src={print} className="w-7"/>
+              <img src={print} className="w-7" />
             </div>
           </div>
           <div
@@ -510,56 +510,8 @@ function ProductList() {
       <div className="relative content bg-white overflow-y-auto h-full text-[#444444]">
         <div>
           {openMenu && (
-            <div
-              ref={popupRef}
-              className="fixed top-0 left-0 h-full z-50 w-3/5 sm:w-1/2 md:w-1/4 bg-blue-900 transition-transform duration-2000 ease-in-out transform translate-x-0"
-            >
-              <div id="infomation" className="p-4">
-                <div className="py-5">
-                  <div className="bg-gray-100 p-1 rounded-full w-18 h-18 mx-auto">
-                    <img
-                      className="rounded-full w-16 h-16 bg-white mx-auto"
-                      src="https://as2.ftcdn.net/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg"
-                    />
-                  </div>
-                  <div>
-                    <p className="flex justify-center mt-3 text-white">
-                      รหัสพนักงาน : {userInfo?.emp_code}
-                    </p>
-                    <p className="flex justify-center mt-1 text-white">
-                      ชื่อ : {userInfo?.firstname} {userInfo?.lastname}
-                    </p>
-                    <p className="flex justify-center mt-1 text-white">
-                      ชื่อเล่น : {userInfo?.nickname}
-                    </p>
-                    <p className="flex justify-center mt-1 text-white">
-                      {`ประจำชั้น ${userInfo?.floor_picking || ""}`}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex justify-center px-3 text-white">
-                  <button
-                    onClick={Btnlogout}
-                    className="w-full mx-auto flex py-2 hover:bg-red-600 cursor-pointer text-center items-center font-light rounded-sm"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.2}
-                      stroke="currentColor"
-                      className="size-9 rounded-full mr-1 ml-1 p-1 text-white"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15"
-                      />
-                    </svg>
-                    ออกจากระบบ
-                  </button>
-                </div>
-              </div>
+            <div ref={popupRef}>
+              <ButtonMenu></ButtonMenu>
             </div>
           )}
         </div>
@@ -586,7 +538,7 @@ function ProductList() {
                 const matchFloor = !selectedFloor || (() => {
                   const unit = orderItem.so_unit || "";
                   const floor = orderItem.product.product_floor || "1";
-                
+
                   if (selectedFloor === "box") {
                     return unit.includes("ลัง");
                   }
@@ -620,7 +572,7 @@ function ProductList() {
                           const matchFloor = !selectedFloor || (() => {
                             const unit = orderItem.so_unit || "";
                             const floor = orderItem.product.product_floor || "1";
-                          
+
                             if (selectedFloor === "box") {
                               return unit.includes("ลัง");
                             }
@@ -689,21 +641,20 @@ function ProductList() {
       </div>
       <div>
         <footer
-          className={`p-3 fixed bottom-0 left-0 right-0 z-40  text-white font-medium ${
-            selectedFloor === "1"
+          className={`p-3 fixed bottom-0 left-0 right-0 z-40  text-white font-medium ${selectedFloor === "1"
               ? "bg-gray-500"
               : selectedFloor === "2"
-              ? "bg-yellow-500"
-              : selectedFloor === "3"
-              ? "bg-blue-500"
-              : selectedFloor === "4"
-              ? "bg-red-500"
-              : selectedFloor === "5"
-              ? "bg-emerald-500"
-              : selectedFloor === "box"
-              ? "bg-purple-500"
-              : "bg-blue-400"
-          }`}
+                ? "bg-yellow-500"
+                : selectedFloor === "3"
+                  ? "bg-blue-500"
+                  : selectedFloor === "4"
+                    ? "bg-red-500"
+                    : selectedFloor === "5"
+                      ? "bg-emerald-500"
+                      : selectedFloor === "box"
+                        ? "bg-purple-500"
+                        : "bg-blue-400"
+            }`}
         >
           <div className="flex">
             {floorButtons.map((btn) => (
@@ -716,11 +667,10 @@ function ProductList() {
                 }
                 className={`border border-gray-500 py-1 px-1 rounded-sm shadow-lg w-full flex justify-center mx-1 relative
                             ${btn.color} 
-                            ${
-                              selectedFloor === btn.value
-                                ? "ring-2 ring-yellow-300"
-                                : ""
-                            }`}
+                            ${selectedFloor === btn.value
+                    ? "ring-2 ring-yellow-300"
+                    : ""
+                  }`}
               >
                 <div className="flex text-center gap-2">
                   <span className="text-white font-medium ">
@@ -728,7 +678,7 @@ function ProductList() {
                   </span>
                 </div>
                 <span className="absolute -top-3 -right-1 text-[12px] bg-white text-black font-bold rounded-full px-2 py-0.5 shadow-sm">
-                      {floorCounts[String(btn.value)] || 0}
+                  {floorCounts[String(btn.value)] || 0}
                 </span>
               </button>
             ))}
@@ -742,23 +692,22 @@ function ProductList() {
               disabled={
                 !CanSubmit ||
                 !listproduct ||
-                userInfo?.emp_code !== listproduct.emp_code_picking 
+                userInfo?.emp_code !== listproduct.emp_code_picking
               }
-              className={`w-full px-3 py-1 shadow-md text-lg rounded-sm font-semibold  text-white mt-3 ${
-                CanSubmit &&
-                listproduct &&
-                userInfo?.emp_code === listproduct.emp_code_picking
+              className={`w-full px-3 py-1 shadow-md text-lg rounded-sm font-semibold  text-white mt-3 ${CanSubmit &&
+                  listproduct &&
+                  userInfo?.emp_code === listproduct.emp_code_picking
                   ? "bg-green-400"
                   : "bg-gray-400"
-              }`}
+                }`}
             >
               {!CanSubmit ||
-              !listproduct ||
-              userInfo?.emp_code !== listproduct.emp_code_picking
+                !listproduct ||
+                userInfo?.emp_code !== listproduct.emp_code_picking
                 ? `คุณไม่มีสิทธิ์ในการยืนยัน`
                 : !CanSubmit
-                ? `กรุณาจัดสินค้าให้ครบ`
-                : `ยืนยันการจัดสินค้า`}
+                  ? `กรุณาจัดสินค้าให้ครบ`
+                  : `ยืนยันการจัดสินค้า`}
             </button>
           </div>
         </footer>
