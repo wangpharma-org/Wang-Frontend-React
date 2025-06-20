@@ -42,7 +42,6 @@ interface WhitePaper {
     id: number | null;
     sh_running: string | null;
     mem_code: string | null;
-    invoice_code: string | null;
     price: string | null;
     count_list: number | null;
     whiteToEmployeeCount: number;
@@ -341,7 +340,7 @@ const FormatLogReport = () => {
                                             <td className="border border-gray-300 px-1 py-1 text-center">{index + 1}</td>
                                             <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item?.dateInvoice)}</td>
                                             <td className="border border-gray-300 px-1 py-1 text-center"> {item?.whitePaper == null ? '✕' : '✓'}</td>
-                                            <td className="border border-gray-300 px-1 py-1 text-center">{item?.whitePaper?.invoice_code || "-"}</td>
+                                            <td className="border border-gray-300 px-1 py-1 text-center">{item?.yellowPaper?.invoice_code || "-"}</td>
                                             <td className="border border-gray-300 px-1 py-1 text-center">{item?.mem_code}</td>
                                             <td className="border border-gray-300 px-1 py-1 text-right">{item?.total}</td>
                                             <td className="border border-gray-300 px-1 py-1 text-right">{item?.discount}</td>

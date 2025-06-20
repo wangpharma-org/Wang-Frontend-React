@@ -184,6 +184,11 @@ const Report = () => {
   }, [orderList]);
 
   useEffect(() => {
+    if (!Array.isArray(report)) {
+      setFilterData([]); // หรือไม่ต้องทำอะไร
+      return;
+    }
+
     const filterDate = report.filter(report => report.dateEnd);
     const sortDate = filterDate.sort((a, b) =>
       new Date(a.dateEnd).getTime() -
@@ -417,7 +422,7 @@ const Report = () => {
                           </div>
                           <div className="flex justify-center">
                             <p>รก.</p>&nbsp;
-                            <p>{floor.value === "1" ? emp?.floor1 : floor.value === "2" ? emp?.floor2 : floor.value === "3" ? emp?.floor3 : floor.value === "4" ? emp?.floor4 : floor.value === "5" ? emp?.floor5 : "0"}</p>&nbsp;                 
+                            <p>{floor.value === "1" ? emp?.floor1 : floor.value === "2" ? emp?.floor2 : floor.value === "3" ? emp?.floor3 : floor.value === "4" ? emp?.floor4 : floor.value === "5" ? emp?.floor5 : "0"}</p>&nbsp;
                           </div>
                         </div>
                       ))}
