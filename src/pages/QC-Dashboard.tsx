@@ -83,6 +83,7 @@ export interface Employees {
   emp_tel: string | null;
   emp_floor: string | null;
   restricted_qc: string[] | null;
+  manage_qc: string | null;
 }
 
 export interface MemRoute {
@@ -1340,12 +1341,12 @@ const QCDashboard = () => {
                   >
                     ล้างข้อมูล
                   </button>
-                  <button
+                  {QCEmp?.dataEmp.manage_qc === "Yes" &&<button
                     className="bg-yellow-500 text-white p-2 px-6 rounded-lg hover:bg-yellow-600 cursor-pointer ml-2"
                     onClick={() => setModalManageOpen(true)}
                   >
                     จัดการใบเบิก
-                  </button>
+                  </button>}
                   {Array.from({ length: 6 }).map((_, index) => {
                     const bill = Array.isArray(dataQC)
                       ? dataQC[index]
@@ -1687,7 +1688,7 @@ const QCDashboard = () => {
                                       </div>
                                       <div className="flex justify-between w-full px-10 ">
                                         <p className="text-base text-blue-500 font-bold">
-                                          รับเข้า
+                                          รับเข้า {}
                                         </p>
                                         <div className="flex justify-center gap-1">
                                           <p className="text-base text-blue-500 font-bold">
@@ -1695,18 +1696,18 @@ const QCDashboard = () => {
                                           </p>
                                           <p className="text-base">
                                             {so.product.product_stock}
-                                          </p>
+                                          </p> 
                                         </div>
                                       </div>
                                       <div className="flex justify-between w-full px-10">
                                         <p className="text-base text-blue-500 font-bold">
-                                          จำนวน
+                                          จำนวน {}
                                         </p>
                                         {/* <p className="text-base">{15}</p> */}
                                       </div>
                                       <div className="flex justify-between w-full px-10">
                                         <p className="text-base text-blue-500 font-bold">
-                                          เลขคีย์ใบซื้อ
+                                          เลขคีย์ใบซื้อ {}
                                         </p>
                                         {/* <p className="text-base">{15}</p> */}
                                       </div>
