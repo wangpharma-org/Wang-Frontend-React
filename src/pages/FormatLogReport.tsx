@@ -32,8 +32,8 @@ interface EmployeeData {
 }
 
 interface RouteData {
-    routeCode: string;
-    routeName: string;
+    route_code: string;
+    route_name: string;
     totalAmount_route: number;
 
 }
@@ -42,7 +42,6 @@ interface WhitePaper {
     id: number | null;
     sh_running: string | null;
     mem_code: string | null;
-    invoice_code: string | null;
     price: string | null;
     count_list: number | null;
     whiteToEmployeeCount: number;
@@ -209,58 +208,63 @@ const FormatLogReport = () => {
                     </div>
                 </div>
             </div>
+
             <div className="page-break flex flex-col justify-center mt-15 text-center">
                 <p className="text-base font-bold">ตารางสรุปรายชื่อลูกค้าตามใบกำกับการขาย ประจำวัน {dateInfo?.weekday} ที่ {dateInfo?.day} เดือน {dateInfo?.monthName} พ.ศ. {dateInfo?.year}</p>
                 {logReport?.memberData?.length > 0 ? (
-                    logReport?.memberData?.map((Memitem, indexs) => (
-                        <div className="grid grid-cols-6 mt-3 text-xs font-bold">
-                            {/* <p>{logReport?.date}</p> */}
-
-                            <div key={indexs} className="border p-1 border-gray-300 flex justify-between">
-                                <div>
-                                    <p className="">{Memitem?.memCode}</p>
+                    <div className="grid grid-cols-6 mt-3 text-xs font-bold">
+                        {logReport?.memberData
+                            ?.sort((a, b) => (a.memCode || '').localeCompare(b.memCode || ''))
+                            .map((Memitem, indexs) => (
+                                <div key={indexs} className="border p-1 border-gray-300 flex justify-between">
+                                    <div>
+                                        <p className="">{Memitem?.memCode}</p>
+                                    </div>
+                                    <div>
+                                        <p className="">{Memitem?.totalAmount_mem}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="">{Memitem?.totalAmount_mem}</p>
-                                </div>
-                            </div>
-
-                        </div>
-                    ))
+                            ))}
+                    </div>
                 ) : (
                     <div>
-                        <p className=" py-2 text-gray-500">ไม่มีข้อมูล</p>
+                        <p className="py-2 text-gray-500">ไม่มีข้อมูล</p>
                     </div>
                 )}
-
             </div>
 
             <div className="flex flex-col justify-center mt-5 text-center">
                 <p className="text-base font-bold">ตารางสรุปพื้นที่การขายสินค้าตามใบกำกับ ประจำวัน {dateInfo.weekday} ที่ {dateInfo.day} เดือน {dateInfo.monthName} พ.ศ. {dateInfo.year}</p>
                 {logReport?.routeData?.length > 0 ? (
-                    logReport?.routeData?.map((item, index) => (
-                        <div className="grid grid-cols-3 mt-3 text-xs font-bold">
+                    <div className="grid grid-cols-3 mt-3 text-xs font-bold">
+                        {logReport?.routeData
+                        ?.sort((a, b) => (a.route_code || '').localeCompare(b.route_code || ''))
+                        .map((item, index) => (
                             <div key={index} className="border p-1 border-gray-300 flex justify-between">
                                 <div className="flex">
-                                    <p className="">{item?.routeCode}</p>&nbsp;
-                                    <p className="">{item?.routeName}</p>
+                                    <p className="">{item?.route_code}</p>&nbsp;
+                                    <p className="">{item?.route_name}</p>
                                 </div>
                                 <div>
                                     <p className="">{item?.totalAmount_route}</p>
                                 </div>
                             </div>
-                        </div>
-                    ))) : (
+                        ))}
+                    </div>
+                ) : (
                     <div>
                         <p className=" py-2 text-gray-500">ไม่มีข้อมูล</p>
                     </div>
                 )}
             </div>
+
             <div className="flex flex-col justify-center mt-5 text-center">
                 <p className="text-base font-bold">ตารางสรุปฝ่ายขาย ตามใบกำกับ ประจำวัน {dateInfo?.weekday} ที่ {dateInfo?.day} เดือน {dateInfo?.monthName} พ.ศ. {dateInfo?.year}</p>
                 {logReport?.employeeData?.length > 0 ? (
-                    logReport?.employeeData?.map((employee, index) => (
-                        <div className="grid grid-cols-3 mt-3 text-xs font-bold">
+                    <div className="grid grid-cols-3 mt-3 text-xs font-bold">
+                        {logReport?.employeeData
+                        ?.sort((a, b) => (a.emp_code || '').localeCompare(b.emp_code || ''))
+                        .map((employee, index) => (
 
                             <div key={index} className="border p-2 border-gray-300 text-xs font-bold">
                                 <div className="flex justify-center py-1 border-b-1 border-gray-300">
@@ -299,14 +303,13 @@ const FormatLogReport = () => {
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    ))
+                        ))}
+                    </div>
                 ) : (
                     <div>
-                        <p className=" py-2 text-gray-500">ไม่มีข้อมูล</p>
+                        <p className="py-2 text-gray-500">ไม่มีข้อมูล</p>
                     </div>
-                )
-                }
+                )}
             </div>
             <div>
                 <p className="text-base font-bold text-center mt-5">รายการใบกำกับสินค้า</p>
@@ -332,23 +335,23 @@ const FormatLogReport = () => {
                         <tbody className="text-[10px]">
                             {logReport?.reportSumary?.length > 0 ? (
                                 logReport.reportSumary
-                                .map((item, index) => (
-                                    <tr key={index}>
-                                        <td className="border border-gray-300 px-1 py-1 text-center">{index + 1}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item?.dateInvoice)}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-center"> {item?.whitePaper == null ? '✕' : '✓'}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-center">{item?.whitePaper?.invoice_code || "-"}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-center">{item?.mem_code}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-right">{item?.total}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-right">{item?.discount}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-right">{item?.total}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-right">{item?.vat}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-right">{item?.sh_sumprice}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-left">{item?.emp_code_sale}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-left">{item?.sh_running}</td>
-                                        <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item?.whitePaper?.latestScan_timeW || "-")}</td>
-                                    </tr>
-                                ))
+                                    .map((item, index) => (
+                                        <tr key={index}>
+                                            <td className="border border-gray-300 px-1 py-1 text-center">{index + 1}</td>
+                                            <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item?.dateInvoice)}</td>
+                                            <td className="border border-gray-300 px-1 py-1 text-center"> {item?.whitePaper == null ? '✕' : '✓'}</td>
+                                            <td className="border border-gray-300 px-1 py-1 text-center">{item?.yellowPaper?.invoice_code || "-"}</td>
+                                            <td className="border border-gray-300 px-1 py-1 text-center">{item?.mem_code}</td>
+                                            <td className="border border-gray-300 px-1 py-1 text-right">{item?.total}</td>
+                                            <td className="border border-gray-300 px-1 py-1 text-right">{item?.discount}</td>
+                                            <td className="border border-gray-300 px-1 py-1 text-right">{item?.total}</td>
+                                            <td className="border border-gray-300 px-1 py-1 text-right">{item?.vat}</td>
+                                            <td className="border border-gray-300 px-1 py-1 text-right">{item?.sh_sumprice}</td>
+                                            <td className="border border-gray-300 px-1 py-1 text-left">{item?.emp_code_sale}</td>
+                                            <td className="border border-gray-300 px-1 py-1 text-left">{item?.sh_running}</td>
+                                            <td className="border border-gray-300 px-1 py-1 text-center">{formatDate(item?.whitePaper?.latestScan_timeW || "-")}</td>
+                                        </tr>
+                                    ))
                             ) : (
                                 <tr>
                                     <td colSpan={14} className="text-center py-2 text-gray-500">ไม่มีข้อมูล</td>

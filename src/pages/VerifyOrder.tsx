@@ -150,11 +150,10 @@ function VerifyOrder() {
   }, [enabled]);
 
   const parseWhitePaper = (value: string) => {
-    const [sh_running, mem_code, invoice_code, count_list, price] = value.split('/');
+    const [sh_running, mem_code, count_list, price] = value.split('/');
     return {
       sh_running,
       mem_code,
-      invoice_code,
       count_list: count_list,
       price,
       emp_code: userInfo?.emp_code,
@@ -359,7 +358,7 @@ function VerifyOrder() {
                       placeholder="ใบขาว"
                     />
                   </form>
-                  <p className="text-xs text-gray-400 text-center">SH_running / mem_code / invoice_code / count_list / price</p>
+                  <p className="text-xs text-gray-400 text-center">SH_running / mem_code / count_list / price</p>
                 </div>
               )}
               {enabled && (
