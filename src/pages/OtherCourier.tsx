@@ -42,20 +42,20 @@ const OtherCourier = () => {
   }
 
   return (
-    <div className="p-2"> 
+    <div className="p-2 mt-2"> 
       <div>
-        <p className="text-base font-bold">ชื่อผู้ส่ง</p>
-        <p className="text-base">บริษัท วังเภสัชฟาร์มาซูติคอล จำกัด</p>
-        <p className="text-base">141/3 ถ.รัถการ ต.หาดใหญ่ อ.หาดใหญ่ จ.สงขลา 90110</p>
-        <p className="text-base">โทร : 074-366681-5</p>
+        <p className="text-[12px] font-bold">ชื่อผู้ส่ง</p>
+        <p className="text-[12px]">บริษัท วังเภสัชฟาร์มาซูติคอล จำกัด</p>
+        <p className="text-[12px]">141/3 ถ.รัถการ ต.หาดใหญ่ อ.หาดใหญ่ จ.สงขลา 90110</p>
+        <p className="text-[12px]">โทร : 074-366681-5</p>
       </div>
-      <div className="w-full pl-72 mt-5">
+      <div className="w-full pl-35 mt-5">
         <div>
-          <p className="text-base font-bold">ชื่อผู้รับ</p>
-          <p className="text-base">{dataPrint?.mem_name}</p>
-          <p className="text-base">{`${dataPrint?.address_line1} ${dataPrint?.address_line2}`}</p>
-          <p className="text-base">{`ต.${dataPrint?.sub_district} อ.${dataPrint?.district} จ.${dataPrint?.province} ${dataPrint?.postal_code}`}</p>
-          <p className="text-base">{dataPrint?.mem_tel && `เบอร์ ${dataPrint?.mem_tel}`}</p>
+          <p className="text-[12px] font-bold">ชื่อผู้รับ</p>
+          <p className="text-[12px]">{dataPrint?.mem_name}</p>
+          <p className="text-[12px]">{`${dataPrint?.address_line1?.replace(/@|&nbsp;|&amp;/g, ' ')} ${dataPrint?.address_line2?.replace(/@|&nbsp;|&amp;/g, ' ')}`}</p>
+          <p className="text-[12px]">{`ต.${dataPrint?.sub_district?.replace(/@|&nbsp;|&amp;/g, ' ')}  อ.${dataPrint?.district?.replace(/@|&nbsp;|&amp;/g, ' ')} จ.${dataPrint?.province?.replace(/@|&nbsp;|&amp;/g, ' ')} ${dataPrint?.postal_code?.replace(/@|&nbsp;|&amp;/g, ' ')}`}</p>
+          <p className="text-[12px]">{dataPrint?.mem_tel?.replace(/@|&nbsp;|&amp;/g, ' ') && `เบอร์ ${dataPrint?.mem_tel?.replace(/@|&nbsp;|&amp;/g, ' ')}`}</p>
         </div>
       </div>
     </div>

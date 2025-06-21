@@ -12,17 +12,18 @@ const listMenu = [
   //   imageSrc: reciept,
   // },
   {
+    id: 1,
+    name: "ระบบตรวจสอบสินค้า (QC)",
+    href: "/dashboard-qc",
+    imageSrc: barcode,
+  },
+  {
     id: 2,
     name: "จัดออเดอร์",
     href: "/order-list",
     imageSrc: order,
   },
-  {
-    id: 3,
-    name: "ระบบตรวจสอบสินค้า (QC)",
-    href: "/dashboard-qc",
-    imageSrc: barcode,
-  },
+  
   // {
   //   id: 4,
   //   name: "สถิติการจัดออเดอร์",

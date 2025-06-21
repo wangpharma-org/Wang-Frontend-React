@@ -19,9 +19,6 @@ const SpecialExpressPrint: React.FC = () => {
 
   // รอโหลด DOM เสร็จแล้วค่อยสั่งพิมพ์
   useEffect(() => {
-    const handlePrint = () => {
-      window.print();
-    };
 
     const handleAfterPrint = () => {
       window.close(); // ปิดหน้าหลังพิมพ์เสร็จ
@@ -72,9 +69,9 @@ const SpecialExpressPrint: React.FC = () => {
           `}
         </style>
 
-        <div className="mt-8 w-full text-center">
+        <div className="h-full w-full text-center flex flex-col justify-center">
           <div className="doc-header">
-            <h1 className="doc-title text-4xl mt-3">Special Express</h1>
+            <h1 className="doc-title text-4xl">Special Express</h1>
             <h2 className="doc-subtitle text-4xl font-bold mt-3">รายการด่วนพิเศษ</h2>
             <p className="doc-datetime text-2xl mt-3">{getCurrentDateTime()}</p>
           </div>

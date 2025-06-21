@@ -59,9 +59,9 @@ export interface QuartarlyData {
 }
 
 const Dashboard: React.FC = () => {
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [, setSocket] = useState<Socket | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [, setLoading] = useState<boolean>(false);
   const [totalsOfQc, setTotalOfQC] = useState<number | null>(0);
   const [floorData, setFloorData] = useState<FloorData[] | null>(null);
   const [qcStationsData, setQcStationsData] = useState<QCStation[] | null>(

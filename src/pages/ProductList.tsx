@@ -585,7 +585,7 @@ function ProductList() {
                               <ProductBox
                                 orderItem={orderItem}
                                 key={Orderindex}
-                                headShRunning={head.sh_running}
+                                // headShRunning={head.sh_running}
                                 socket={socket}
                                 handleDoubleClick={handleDoubleClick}
                               />

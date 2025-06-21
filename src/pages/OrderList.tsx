@@ -1,5 +1,5 @@
 import Clock from "../components/Clock";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, ReactNode } from "react";
 import { Socket, io } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router";
@@ -11,8 +11,10 @@ import print from "../assets/printing_black.png";
 import box from "../assets/product-17.png"
 
 interface Product {
+  [x: string]: ReactNode;
   product_floor: string;
   product_unit: string;
+  product_product_image_url: string;
 }
 
 interface ShoppingOrder {
@@ -86,7 +88,7 @@ const OrderList = () => {
   const [openMenu, setOpenMenu] = useState(false);
   const [floorCounts, setFloorCounts] = useState<Record<string, number>>({});
   const handleDoubleClick = useDoubleClick();
-  const [requestProduct, setRequestProduct] = useState(null);
+  const [requestProduct, setRequestProduct] = useState<Product[] | null>(null);
   const [showRequestList, setShowRequestList] = useState(false);
   const [apiRoute, setAPIRoute] = useState<MemRoute[] | null>(null);
   const [routeButtons, setRouteButton] = useState<RouteButton[] | null>(null);
@@ -199,10 +201,10 @@ const OrderList = () => {
           if (order.picking_status === "pending") {
             const unit = order.so_unit || "";
             const hasBox = unit.includes("ลัง");
-            const floorKey = hasBox
+            const floorKey: string = hasBox
               ? "box"
               : order.product.product_floor || "1";
-            newFloorCounts[floorKey] = (newFloorCounts[floorKey] || 0) + 1;
+            newFloorCounts[Number(floorKey)] = (newFloorCounts[Number(floorKey)] || 0) + 1;
           }
         });
       });
@@ -558,7 +560,7 @@ const OrderList = () => {
             <div className="flex flex-col justify-center w-full bg-yellow-300 rounded mt-3 p-2">
             <p className="text-center text-xl mt-1 mb-1">รายการขอเพิ่ม</p>
             <div className="text-center grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2">
-              {requestProduct?.length > 0 ? (
+              {(requestProduct ?? []).length > 0 ? (
                 requestProduct?.map((item) => {
                   return (
                     <div className="w-full bg-white rounded grid grid-cols-13 p-2 drop-shadow-xl items-center">
@@ -597,16 +599,16 @@ const OrderList = () => {
                         <img
                           src={print}
                           className="w-10 mb-1"
-                          onClick={() => printSticker(item.member_mem_code , item.emp_code_request, item.head_sh_running)}
+                          onClick={() => printSticker(String(item.member_mem_code) , String(item.emp_code_request), String(item.head_sh_running))}
                         ></img>
                         <img
                           src={check}
                           className="w-10 mb-1"
                           onClick={() =>
                             submitCheck(
-                              item.order_so_running,
-                              item.head_sh_running,
-                              item.member_mem_code
+                              String(item.order_so_running),
+                              String(item.head_sh_running),
+                              String(item.member_mem_code)
                             )
                           }
                         ></img>
@@ -631,20 +633,20 @@ const OrderList = () => {
             >
               <div id="infomation" className="p-4">
                 <div className="py-5">
-                  <div className="bg-gray-100 p-1 rounded-full w-18 h-18 mx-auto">
+                  <div className="bg-gray-100 p-1 rounded-full w-18 h-18 mx-auto mt-3">
                     <img
                       className="rounded-full w-16 h-16 bg-white mx-auto"
                       src="https://as2.ftcdn.net/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg"
                     />
                   </div>
-                  <p className="flex justify-center mt-2 text-white">
+                  <p className="flex justify-center mt-2 text-white text-lg font-bold mt-3">
                     {userInfo?.emp_code}
                   </p>
-                  <p className="flex justify-center text-white">
-                    {userInfo?.username}
+                  <p className="flex justify-center text-white text-lg font-bold">
+                    {userInfo?.firstname || ''} {userInfo?.lastname || ''} ( {userInfo?.nickname} )
                   </p>
-                  <p className="flex justify-center text-white">
-                    {userInfo?.floor_picking || "-"}
+                  <p className="flex justify-center text-white text-base">
+                    ประจำอยู่ชั้นที่ {userInfo?.floor_picking || "-"}
                   </p>
                 </div>
                 <div className="flex justify-center px-3 text-white">

@@ -229,7 +229,7 @@ const PrintRT: React.FC = () => {
           <div className="flex justify-left overflow-hidden w-full">
             <div className="scale-100">
               <Barcode
-                value={data?.sh_running}
+                value={data?.sh_running || ""}
                 format="CODE128"
                 width={1.2}
                 height={20}
@@ -276,7 +276,7 @@ const PrintRT: React.FC = () => {
             <div className="flex justify-left overflow-hidden w-full">
               <div className="scale-100">
                 <Barcode
-                  value={data?.product?.product_code}
+                  value={data?.product?.product_code || ""}
                   format="CODE128"
                   width={1.2}
                   height={20}
@@ -302,7 +302,7 @@ const PrintRT: React.FC = () => {
               <div className="flex justify-left overflow-hidden w-full">
                 <div className="scale-100">
                   <Barcode
-                    value={Array.isArray(data?.product?.detail) && data?.product?.detail[0]?.creditor_code}
+                    value={Array.isArray(data?.product?.detail) && data?.product?.detail[0]?.creditor_code || ""}
                     format="CODE128"
                     width={1.2}
                     height={20}

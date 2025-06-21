@@ -81,6 +81,7 @@ const BoxSticker = () => {
   const [JSONQCEmpData, setJSONQCEmpData] = useState<dataForEmp>();
   const [JSONprepareEmpData, setJSONprepareEmpData] = useState<dataForEmp>();
   const [dataPrint, setDataPrint] = useState<Address | null>(null);
+  let sh_running = queryParams.get("sh_running");
 
   useEffect(() => {
     if (prepareEmpData && QCEmpData && packedEmpData) {
@@ -192,12 +193,14 @@ const BoxSticker = () => {
               </div>
               <div className="p-1 flex items-center text-center">
                 <p className="text-center">
-                  {`${dataPrint?.mem_shipping_note ?? 'ไม่มีหมายเหตุการส่งสินค้า'}`}
+                  {`${dataPrint?.mem_shipping_note ? dataPrint?.mem_shipping_note : dataPrint?.mem_shipping_note === '' && 'ไม่มีหมายเหตุการส่งสินค้า'}`}
                 </p>
               </div>
             </div>
           </div>
+          <p className="text-[8px]">{sh_running?.replace(/,/g," , ")}</p>
         </div>
+        
       </div>
       <div className="flex justify-center items-center border-b">
         <div className="w-[100%] flex flex-col justify-center items-center">

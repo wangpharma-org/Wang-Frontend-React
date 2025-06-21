@@ -103,12 +103,12 @@ const QCDashboard = () => {
   const [dataQC, setDataQC] = useState<ShoppingHead | ShoppingHeadOne | null>(
     null
   );
-  const [loading, setLoading] = useState<boolean>(false);
+  const [, setLoading] = useState<boolean>(false);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [wantConnect, setWantConnect] = useState<boolean>(false);
   const [mem_code, setMem_code] = useState<string | null>(null);
   const [sh_running, setSh_running] = useState<string | null>(null);
-  const [isInputLocked, setIsInputLocked] = useState(false);
+  const [, setIsInputLocked] = useState(false);
   const [InputValues, setInputValues] = useState<string[]>(Array(6).fill(""));
   const [countBox, setCountBox] = useState<number>(1);
   const [error, setError] = useState<boolean>(false);
@@ -123,7 +123,7 @@ const QCDashboard = () => {
   // Modal Request more product
   const [modalReqestOpen, setModalRequestOpen] = useState<boolean>(false);
   const [dataRequest, setDataRequest] = useState<ShoppingOrder | null>(null);
-  const [amountRequest, setAmountRequest] = useState<number>(1);
+  const [amountRequest, setAmountRequest] = useState<string>("1");
 
   // Modal Manage shopping head
   const [modalManageOpen, setModalManageOpen] = useState<boolean>(false);
@@ -159,7 +159,7 @@ const QCDashboard = () => {
 
   // State ของ Modal QC
   const [qcNote, setQCNote] = useState<string | null>(null);
-  const [qcAmount, setQCAmount] = useState<number>(0);
+  const [qcAmount, setQCAmount] = useState<string>("0");
   const [oldQCAmount, setOldQCAmount] = useState<number>(0);
 
   // State ของการยืนยัน Order
@@ -513,6 +513,8 @@ const QCDashboard = () => {
     setProductNotHaveBarcode(null);
     setSHRunningArray(null);
     setAddShRunningArray(null);
+    setErrMsgSubmit(null);
+    setErrMsgPrintBox(null);
   };
 
   // ดึงข้อมูลสำหรับแสดงในหน้าขอสินค้าเพิ่ม
@@ -540,11 +542,11 @@ const QCDashboard = () => {
       );
       if (response.status === 201) {
         setModalRequestOpen(false);
-        setAmountRequest(1);
+        setAmountRequest("1");
       }
-      setAmountRequest(1);
+      setAmountRequest("1");
     } else {
-      setAmountRequest(1);
+      setAmountRequest("1");
       return;
     }
   };
@@ -648,16 +650,22 @@ const QCDashboard = () => {
       emp_prepare_by: string;
       emp_qc_by: string;
       emp_packed_by: string;
-      sh_running: string | null;
+      // sh_running: string | null;
     }
   ) => {
     console.log(data);
+    console.log("QC Old Amount", oldQCAmount);
+    console.log("QC Old Amount", data.so_qc_amount);
+    console.log(
+      "so_qc_amount + QC Old Amount",
+      Number(data.so_qc_amount) + Number(oldQCAmount)
+    );
     const response = await axios.post(
       `${import.meta.env.VITE_API_URL_ORDER}/api/qc/update-qc`,
       {
         so_running: data.so_running,
         so_qc_note: data.so_qc_note,
-        so_qc_amount: data.so_qc_amount + oldQCAmount,
+        so_qc_amount: Number(data.so_qc_amount) + Number(oldQCAmount),
         so_amount: data.so_amount,
         emp_prepare_by: data.emp_prepare_by,
         emp_qc_by: data.emp_qc_by,
@@ -682,16 +690,14 @@ const QCDashboard = () => {
       mem_code: mem_code,
     });
     if (prepareEmp && QCEmp && packedEMP && dataQC && hasNotQC === 0) {
-      console.log(
-        {
-          amount: { sum: countBox },
-          sh_running: shRunningArray,
-          emp_qc: QCEmp?.dataEmp.emp_code,
-          emp_packed: packedEMP?.dataEmp.emp_code,
-          emp_prepare: prepareEmp?.dataEmp.emp_code,
-          mem_code: mem_code,
-        }
-      )
+      console.log({
+        amount: { sum: countBox },
+        sh_running: shRunningArray,
+        emp_qc: QCEmp?.dataEmp.emp_code,
+        emp_packed: packedEMP?.dataEmp.emp_code,
+        emp_prepare: prepareEmp?.dataEmp.emp_code,
+        mem_code: mem_code,
+      });
       const block_credit = await axios.post(
         `${import.meta.env.VITE_API_URL_ORDER}/api/picking/check-credit`,
         {
@@ -868,7 +874,7 @@ const QCDashboard = () => {
         );
         if (response.status === 201) {
           console.log("Update Success");
-          window.open(`/box-sticker?print=${countBox}&mem_code=${mem_code}`);
+          window.open(`/box-sticker?print=${countBox}&mem_code=${mem_code}&sh_running=${shRunningArray}`);
         }
       }
     }
@@ -918,7 +924,7 @@ const QCDashboard = () => {
         setInputShRunning("");
         setErrorMessageManage(null);
       }
-    } catch (error) {
+    } catch {
       setErrorMessageManage("มีบางอย่างผิดพลาด กรุณาตรวจสอบอีกครั้ง");
     }
   };
@@ -928,8 +934,17 @@ const QCDashboard = () => {
     if (orderForQC) {
       setModalOpen(true);
       setQCNote(orderForQC.so_qc_note);
-      console.log("so_qc_amount", orderForQC.so_qc_amount);
-      setQCAmount(orderForQC.so_amount - orderForQC.so_qc_amount);
+      console.log(
+        "Debug old amount : ",
+        (
+          Number(orderForQC.so_amount) - Number(orderForQC.so_qc_amount)
+        ).toString()
+      );
+      setQCAmount(
+        (
+          Number(orderForQC.so_amount) - Number(orderForQC.so_qc_amount)
+        ).toString()
+      );
       setOldQCAmount(orderForQC.so_qc_amount);
     }
   }, [orderForQC]);
@@ -1050,20 +1065,30 @@ const QCDashboard = () => {
                     <div className="flex items-center">
                       <input
                         className="border-3 text-4xl w-56 border-green-600 rounded-sm text-center text-green-800 font-bold"
+                        type="text"
+                        inputMode="decimal"
                         value={amountRequest}
                         onChange={(e) => {
-                          const rawValue = e.target.value;
-                          const numericValue = rawValue.replace(/\D/g, "");
-                          const numeric = Number(numericValue);
+                          let rawValue = e.target.value;
+                          rawValue = rawValue.replace(/[^0-9.]/g, "");
+                          const parts = rawValue.split(".");
+                          if (parts.length > 2) {
+                            rawValue = parts[0] + "." + parts.slice(1).join("");
+                          }
+                          if (!dataRequest?.amount_max) {
+                            setAmountRequest(rawValue);
+                            return;
+                          }
 
-                          if (!dataRequest?.amount_max) return;
-
-                          const valueToSet =
+                          const numeric = parseFloat(rawValue);
+                          if (
+                            !isNaN(numeric) &&
                             numeric > dataRequest.amount_max
-                              ? dataRequest.amount_max
-                              : numeric;
-
-                          setAmountRequest(valueToSet);
+                          ) {
+                            setAmountRequest(dataRequest.amount_max.toString());
+                          } else {
+                            setAmountRequest(rawValue);
+                          }
                         }}
                       />
                       <p className="text-xl font-bold ml-3">
@@ -1075,16 +1100,16 @@ const QCDashboard = () => {
 
                 <div className="flex gap-3 w-full justify-end">
                   <button
-                    disabled={amountRequest === 0}
+                    disabled={Number(amountRequest) === 0}
                     className={`text-center text-white text-lg p-2 rounded-lg px-8 cursor-pointer ${
-                      amountRequest > 0
+                      Number(amountRequest) > 0
                         ? "hover:bg-green-800 bg-green-700"
                         : "hover:bg-gray-600 bg-gray-500"
                     }`}
                     onClick={() =>
                       handleRequestMore(
                         dataRequest?.so_running ?? null,
-                        amountRequest
+                        Number(amountRequest)
                       )
                     }
                   >
@@ -1095,7 +1120,7 @@ const QCDashboard = () => {
                     onClick={() => {
                       setModalRequestOpen(false);
                       setDataRequest(null);
-                      setAmountRequest(1);
+                      setAmountRequest('1');
                     }}
                   >
                     ยกเลิก
@@ -1227,11 +1252,17 @@ const QCDashboard = () => {
                       <p className="text-xl">จำนวนสั่งซื้อ</p>
                       <input
                         className="border-3 text-4xl w-56 border-green-600 rounded-sm text-center text-green-800 font-bold"
+                        type="text"
+                        inputMode="decimal"
                         value={qcAmount}
                         onChange={(e) => {
-                          const rawValue = e.target.value;
-                          const numericValue = rawValue.replace(/\D/g, "");
-                          setQCAmount(Number(numericValue));
+                          let rawValue = e.target.value;
+                          rawValue = rawValue.replace(/[^0-9.]/g, "");
+                          const parts = rawValue.split(".");
+                          if (parts.length > 2) {
+                            rawValue = parts[0] + "." + parts.slice(1).join("");
+                          }
+                          setQCAmount(rawValue);
                         }}
                       ></input>
                       <p className="text-xl">{orderForQC?.so_unit}</p>
@@ -1278,7 +1309,13 @@ const QCDashboard = () => {
               {orderForQC?.product?.attribute?.slice(0, 4).map((url) => {
                 return (
                   <img
-                    src={url.product_img_url}
+                    src={
+                      url?.product_img_url?.startsWith("..")
+                        ? `https://www.wangpharma.com${url?.product_img_url?.slice(
+                            2
+                          )}`
+                        : url?.product_img_url || boxnotfound
+                    }
                     alt=""
                     className="h-50 drop-shadow-xl rounded-sm"
                   />
@@ -1293,13 +1330,13 @@ const QCDashboard = () => {
                     handleSubmitQC({
                       ...orderForQC,
                       so_qc_note: qcNote,
-                      so_qc_amount: qcAmount,
+                      so_qc_amount: Number(qcAmount),
                       emp_prepare_by: prepareEmp?.dataEmp?.emp_code,
                       emp_packed_by: packedEMP?.dataEmp?.emp_code,
                       emp_qc_by: QCEmp?.dataEmp?.emp_code,
-                      sh_running: Array.isArray(dataQC)
-                        ? null
-                        : dataQC?.sh_running,
+                      // sh_running: Array.isArray(dataQC)
+                      //   ? null
+                      //   : dataQC?.sh_running,
                     });
                   }
                 }}
@@ -1341,12 +1378,14 @@ const QCDashboard = () => {
                   >
                     ล้างข้อมูล
                   </button>
-                  {QCEmp?.dataEmp.manage_qc === "Yes" &&<button
-                    className="bg-yellow-500 text-white p-2 px-6 rounded-lg hover:bg-yellow-600 cursor-pointer ml-2"
-                    onClick={() => setModalManageOpen(true)}
-                  >
-                    จัดการใบเบิก
-                  </button>}
+                  {QCEmp?.dataEmp.manage_qc === "Yes" && (
+                    <button
+                      className="bg-yellow-500 text-white p-2 px-6 rounded-lg hover:bg-yellow-600 cursor-pointer ml-2"
+                      onClick={() => setModalManageOpen(true)}
+                    >
+                      จัดการใบเบิก
+                    </button>
+                  )}
                   {Array.from({ length: 6 }).map((_, index) => {
                     const bill = Array.isArray(dataQC)
                       ? dataQC[index]
@@ -1464,7 +1503,7 @@ const QCDashboard = () => {
                           เงื่อนไขการบรรจุสินค้า และการตรวจสอบ ของลูกค้านี้
                         </p>
                         <div className="bg-white  rounded-lg mt-2 items-start border-4 border-red-400 py-4.5 px-2 h-26">
-                          <p className="text-lg font-bold">
+                          <p className="text-3xl font-bold">
                             {Array.isArray(dataQC)
                               ? dataQC[0]?.members?.mem_note ??
                                 "ไม่ระบุเงื่อนไข"
@@ -1696,7 +1735,7 @@ const QCDashboard = () => {
                                           </p>
                                           <p className="text-base">
                                             {so.product.product_stock}
-                                          </p> 
+                                          </p>
                                         </div>
                                       </div>
                                       <div className="flex justify-between w-full px-10">
@@ -2034,6 +2073,9 @@ const QCDashboard = () => {
                       <div
                         className="w-full bg-blue-500 text-base text-white p-1 font-bold rounded-sm hover:bg-blue-600 select-none cursor-pointer"
                         onClick={() => {
+                          if (!dataQC || (Array.isArray(dataQC) && dataQC.length <= 0) || (!Array.isArray(dataQC) && !dataQC?.members?.mem_code)) {
+                            return
+                          }
                           const mem_code = Array.isArray(dataQC)
                             ? dataQC.length > 0
                               ? dataQC[0]?.members?.mem_code
