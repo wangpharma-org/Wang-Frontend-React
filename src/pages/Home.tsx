@@ -55,6 +55,7 @@ const Home = () => {
   }, [])
 
 
+  const hiddenIds = [3, 4];
 
   return (
     <div className="bg-white">
@@ -66,7 +67,7 @@ const Home = () => {
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           {listMenu
             .filter(menu => {
-              if (menu.id === 4 && !showButtonVerifyBill) return false;
+              if (hiddenIds.includes(menu.id) && !showButtonVerifyBill) return false;
               return true;
             })
             .map((menu) => (
