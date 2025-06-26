@@ -26,6 +26,7 @@ import Dashboard from "./pages/ReportQcKPI";
 import BoxSticker from "./pages/BoxSticker";
 import BoxStickerBlock from "./pages/BoxStickerBlock";
 import BoxStickerA from "./pages/BoxStickerA";
+import ProductManage from "./pages/ProductManage";
 
 function App() {
   return (
@@ -205,6 +206,17 @@ function App() {
               <div>
                 <RequireAuth>
                   <QCDashboard />
+                </RequireAuth>
+              </div>
+            }
+          />
+          <Route
+            path="/product-manage"
+            element={
+              <div>
+                <Navbar/>
+                <RequireAuth>
+                  <ProductManage />
                 </RequireAuth>
               </div>
             }

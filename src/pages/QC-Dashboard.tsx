@@ -47,8 +47,17 @@ export interface Product {
   product_stock: string;
   product_image_url: string;
   so_picking_time: string;
+  lot_priority: string;
+  lot_priority_amount: number;
   attribute: ProductAttr[];
   productDetail: ProductDetail;
+  unit: Unit[];
+}
+
+export interface Unit {
+  product_code: string;
+  quantity: number;
+  unit_name: string;
 }
 
 export interface ProductDetail {
@@ -187,6 +196,11 @@ const QCDashboard = () => {
   const [addShRunningArray, setAddShRunningArray] = useState<string[] | null>(
     null
   );
+
+  // State การตรวจสอบ Lot
+  const [inputLot, setInputLot] = useState<string | null>(null);
+
+  const [baseUnit, setBaseUnit] = useState<Unit | null>(null);
 
   // ทำให้รหัสพนักงานไม่หายเมื่อ Refresh
   useEffect(() => {
@@ -650,7 +664,8 @@ const QCDashboard = () => {
       emp_prepare_by: string;
       emp_qc_by: string;
       emp_packed_by: string;
-      // sh_running: string | null;
+      amount?: number | undefined;
+      product_code?: string | undefined;
     }
   ) => {
     console.log(data);
@@ -672,6 +687,8 @@ const QCDashboard = () => {
         emp_packed_by: data.emp_packed_by,
         sh_running: data.sh_running,
         room: myRoom,
+        amount: data.amount ?? null,
+        product_code: data.product_code ?? null,
       }
     );
     console.log(response.status);
@@ -874,7 +891,9 @@ const QCDashboard = () => {
         );
         if (response.status === 201) {
           console.log("Update Success");
-          window.open(`/box-sticker?print=${countBox}&mem_code=${mem_code}&sh_running=${shRunningArray}`);
+          window.open(
+            `/box-sticker?print=${countBox}&mem_code=${mem_code}&sh_running=${shRunningArray}`
+          );
         }
       }
     }
@@ -946,6 +965,13 @@ const QCDashboard = () => {
         ).toString()
       );
       setOldQCAmount(orderForQC.so_qc_amount);
+
+      const baseUnit = orderForQC?.product?.unit?.find(
+        (u) => u.unit_name === orderForQC?.so_unit
+      );
+      if (baseUnit) {
+        setBaseUnit(baseUnit);
+      }
     }
   }, [orderForQC]);
 
@@ -1120,7 +1146,7 @@ const QCDashboard = () => {
                     onClick={() => {
                       setModalRequestOpen(false);
                       setDataRequest(null);
-                      setAmountRequest('1');
+                      setAmountRequest("1");
                     }}
                   >
                     ยกเลิก
@@ -1268,11 +1294,26 @@ const QCDashboard = () => {
                       <p className="text-xl">{orderForQC?.so_unit}</p>
                     </div>
                   </div>
+                  <div className=" text-xl mt-2 font-bold flex items-center text-center justify-center">
+                    {orderForQC?.product?.unit?.map((unit) => {
+                      if (unit.unit_name !== orderForQC.so_unit && baseUnit) {
+                        const amount =
+                          orderForQC.so_amount *
+                          (baseUnit.quantity / unit.quantity);
+                        return (
+                          <p key={unit.unit_name} className="pl-2">
+                            <span className="text-red-500">หรือ</span> {amount} {unit.unit_name}
+                          </p>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-12 mt-5 border-b-2 pb-4 border-gray-200">
-              <div className="p-2 bg-blue-500 text-white font-bold text-base rounded-sm">
+              <div className="p-2 bg-blue-500 text-white font-bold text-lg rounded-sm flex items-center">
                 เช็ค Lot สินค้าให้เป็น Lot เดียวกันทุกตัว ลูกคืนคืนถ้า Lot
                 ไม่ต้องการ
               </div>
@@ -1305,6 +1346,28 @@ const QCDashboard = () => {
                 </div>
               </div>
             </div>
+            {orderForQC?.product?.lot_priority && (
+              <div className="grid grid-cols-2 gap-12 mt-5 border-b-2 pb-4 border-gray-200">
+                <div className="p-2 bg-red-500 text-white font-bold text-lg rounded-sm flex items-center select-none">
+                  สินค้ารายการนี้บังคับขาย lot :{" "}
+                  {orderForQC?.product?.lot_priority} คงเหลือ :{" "}
+                  {orderForQC?.product?.lot_priority_amount ?? ""}{" "}
+                  {orderForQC?.product?.product_unit ?? "หน่วย"}
+                </div>
+                <div className="flex w-full justify-center">
+                  <div className="flex gap-2 items-center">
+                    <p className="text-xl font-bold">ป้อน lot เพื่อยืนยัน</p>
+                    <input
+                      className="border-3 text-3xl w-72 border-red-600 rounded-sm text-center text-red-800 font-bold p-2"
+                      type="text"
+                      onChange={(e) => setInputLot(e.target.value)}
+                      placeholder="ป้อน lot ตรงนี้"
+                    ></input>
+                    <p className="text-lg">{orderForQC?.so_unit}</p>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="mt-4 flex justify-center gap-5">
               {orderForQC?.product?.attribute?.slice(0, 4).map((url) => {
                 return (
@@ -1334,13 +1397,28 @@ const QCDashboard = () => {
                       emp_prepare_by: prepareEmp?.dataEmp?.emp_code,
                       emp_packed_by: packedEMP?.dataEmp?.emp_code,
                       emp_qc_by: QCEmp?.dataEmp?.emp_code,
+                      amount: orderForQC?.product?.lot_priority
+                        ? Number(qcAmount)
+                        : undefined,
+                      product_code: orderForQC?.product?.lot_priority
+                        ? orderForQC?.product?.product_code
+                        : undefined,
                       // sh_running: Array.isArray(dataQC)
                       //   ? null
                       //   : dataQC?.sh_running,
                     });
                   }
                 }}
-                className="mt-4 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 cursor-pointer"
+                disabled={
+                  !!orderForQC?.product?.lot_priority &&
+                  inputLot !== orderForQC.product.lot_priority
+                }
+                className={`mt-4  text-white px-4 py-2 rounded-md cursor-pointer ${
+                  !!orderForQC?.product?.lot_priority &&
+                  inputLot !== orderForQC.product.lot_priority
+                    ? "bg-gray-500"
+                    : "bg-green-600 hover:bg-green-700"
+                }`}
               >
                 ตกลง
               </button>
@@ -2073,8 +2151,13 @@ const QCDashboard = () => {
                       <div
                         className="w-full bg-blue-500 text-base text-white p-1 font-bold rounded-sm hover:bg-blue-600 select-none cursor-pointer"
                         onClick={() => {
-                          if (!dataQC || (Array.isArray(dataQC) && dataQC.length <= 0) || (!Array.isArray(dataQC) && !dataQC?.members?.mem_code)) {
-                            return
+                          if (
+                            !dataQC ||
+                            (Array.isArray(dataQC) && dataQC.length <= 0) ||
+                            (!Array.isArray(dataQC) &&
+                              !dataQC?.members?.mem_code)
+                          ) {
+                            return;
                           }
                           const mem_code = Array.isArray(dataQC)
                             ? dataQC.length > 0

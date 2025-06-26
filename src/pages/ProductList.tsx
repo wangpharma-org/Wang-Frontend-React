@@ -18,6 +18,7 @@ interface Product {
   product_stock: number;
   product_unit: string;
   product_shelf: string;
+  lot_priority: string;
 }
 
 export interface ShoppingOrder {
