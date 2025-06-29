@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
 
-
 const Drungs = () => {
 
     const [resultMessage, setResultMessage] = useState('');
@@ -9,8 +8,6 @@ const Drungs = () => {
     const cc2Ref = useRef<HTMLInputElement>(null);
     const cc3Ref = useRef<HTMLInputElement>(null);
     const fileRef = useRef<HTMLInputElement>(null);
-
-
 
     const handleSubmit = async (e: any) => {
         e.preventDefault();
