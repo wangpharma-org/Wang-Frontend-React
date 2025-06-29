@@ -29,15 +29,6 @@ interface Route {
   name: string;
   value: string;
 }
-<<<<<<< HEAD
-
-interface Route {
-  id: number;
-  name: string;
-  value: string;
-}
-=======
->>>>>>> release-1.1.0
 const StickerPrint = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,11 +81,6 @@ const StickerPrint = () => {
     };
   }, []);
 
-<<<<<<< HEAD
-  
-
-=======
->>>>>>> release-1.1.0
   useEffect(()=>{
     if (routeAPI) {
       const route: Route[] = [

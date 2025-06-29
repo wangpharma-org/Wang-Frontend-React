@@ -49,6 +49,12 @@ interface orderList {
   picking_status: string;
   province: string;
   shoppingHeads: ShoppingHead[];
+  mem_route: MemRoute;
+}
+
+interface MemRoute {
+  route_code: string;
+  route_name: string;
 }
 
 type PickingTime = {
@@ -73,8 +79,8 @@ const OrderList = () => {
   const popupRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
-  const [selectroute, setSelectroute] = useState<string>(sessionStorage.getItem('route') ?? "เลือกเส้นทางขนส่ง");
-  const { userInfo } = useAuth();
+  const [selectroute, setSelectroute] = useState("เลือกเส้นทางขนส่ง");
+  const { userInfo, logout } = useAuth();
   const navigate = useNavigate();
   const [latestTimes, setLatestTimes] = useState<PickingTime[]>([]);
   const [search, setSearch] = useState("");
@@ -105,7 +111,7 @@ const OrderList = () => {
 
   const toggleSearch = () => {
     setShowInput((prev) => !prev);
-    setSelectroute("all")
+    setSelectroute("all");
     console.log("showInput " + showInput);
   };
 
@@ -135,7 +141,8 @@ const OrderList = () => {
       // console.log("Data " + JSON.stringify(data));
       setOrderList(data.memberOrderWithAllShRunning);
       setLatestTimes(data.lastestDate);
-      console.log('time', data.lastestDate);
+      setRequestProduct(data.requestProduct);
+      console.log("time", data.lastestDate);
       setLoading(false);
     });
 
@@ -152,13 +159,7 @@ const OrderList = () => {
   }, []);
 
   useEffect(() => {
-    if (selectroute) {
-      sessionStorage.setItem('route', selectroute)
-    }
-  }, [selectroute])
-
-  useEffect(() => {
-    const totalShoppingOrders = orderList.reduce(
+    const totalShoppingOrders = orderList?.reduce(
       (total, order) =>
         total +
         order.shoppingHeads.reduce(
@@ -168,9 +169,12 @@ const OrderList = () => {
       0
     );
     setTotalShoppingOrders(totalShoppingOrders);
-    localStorage.setItem("totalShoppingOrders", JSON.stringify(totalShoppingOrders));
+    localStorage.setItem(
+      "totalShoppingOrders",
+      JSON.stringify(totalShoppingOrders)
+    );
 
-    const totalStatusPicking = orderList.reduce(
+    const totalStatusPicking = orderList?.reduce(
       (total, order) =>
         total +
         order.shoppingHeads.reduce(
@@ -182,7 +186,10 @@ const OrderList = () => {
         ),
       0
     );
-    localStorage.setItem("totalStatusPicking", JSON.stringify(totalStatusPicking));
+    localStorage.setItem(
+      "totalStatusPicking",
+      JSON.stringify(totalStatusPicking)
+    );
     setTotalPicking(totalStatusPicking);
 
     console.log("requestProduct", requestProduct);
@@ -271,7 +278,7 @@ const OrderList = () => {
     }
   };
 
-  const filteredData = orderList.filter((order) => {
+  const filteredData = orderList?.filter((order) => {
     const matchSearch =
       !search ||
       order.mem_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -295,15 +302,13 @@ const OrderList = () => {
     const matchRoute =
       selectroute === "all" ||
       selectroute === "เลือกเส้นทางขนส่ง" ||
-      order.province === selectroute;
+      order.mem_route.route_code === selectroute;
 
     return matchSearch && matchFloor && matchRoute;
   });
 
   const isFiltered =
-    search ||
-    selectedFloor ||
-    (selectroute && selectroute !== "");
+    search || selectedFloor || (selectroute && selectroute !== "");
   console.log("search " + search);
   console.log("selectedFloor " + selectedFloor);
   console.log("selectroute " + selectroute);
@@ -371,11 +376,26 @@ const OrderList = () => {
     setSelectedFloor(null);
   };
 
+  const submitCheck = async (
+    so_running: string,
+    sh_running: string,
+    mem_code: string
+  ) => {
+    if (so_running && sh_running && mem_code) {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/qc/submit-req-qc`,
+        {
+          so_running,
+          sh_running,
+          mem_code,
+        }
+      );
+      console.log(response);
+    } else {
+      return;
+    }
+  };
 
-<<<<<<< HEAD
-
-=======
->>>>>>> release-1.1.0
 
   useEffect(() => {
     console.log("totalPicking", totalPicking);
@@ -447,7 +467,7 @@ const OrderList = () => {
             </div>
             <div className="flex justify-center text-sm">
               <p>
-                ทั้งหมด {orderList.length} ร้าน {totalProduct} รายการ
+                ทั้งหมด {orderList?.length} ร้าน {totalProduct} รายการ
               </p>
             </div>
             <div className="flex justify-center text-sm">
@@ -508,7 +528,10 @@ const OrderList = () => {
           >
             <select
               value={selectroute}
-              onChange={(e) => { setSelectroute(e.target.value); setSearch("") }}
+              onChange={(e) => {
+                setSelectroute(e.target.value);
+                setSearch("");
+              }}
               className="border border-gray-200 px-2 py-1 rounded text-black bg-white text-center flex justify-center w-full"
             >
               {routeButtons?.map((route) => (
@@ -518,7 +541,15 @@ const OrderList = () => {
               ))}
             </select>
           </div>
-          <div>&nbsp;</div>
+          <div
+            className="ml-2 mr-2 flex items-center space-x-1 cursor-pointer"
+            onClick={() => setShowRequestList(!showRequestList)}
+          >
+            <img src={flag} className="w-5" alt="flag" />
+            <p className="bg-red-600 text-white text-xs px-2 py-1 rounded-full flex items-center justify-center min-w-[20px] h-[20px]">
+              {requestProduct?.length}
+            </p>
+          </div>
         </div>
       </header>
 
@@ -608,7 +639,7 @@ const OrderList = () => {
                       src="https://as2.ftcdn.net/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg"
                     />
                   </div>
-                  <p className="flex justify-center mt-2 text-white text-lg font-bold mt-3">
+                  <p className="flex justify-center mt-2 text-white text-lg font-bold">
                     {userInfo?.emp_code}
                   </p>
                   <p className="flex justify-center text-white text-lg font-bold">
@@ -648,13 +679,13 @@ const OrderList = () => {
           <div className="flex justify-center font-bold text-2xl mt-10">
             <p>Loading...</p>
           </div>
-        ) : orderList.length === 0 ? (
+        ) : orderList?.length === 0 ? (
           <div className="flex justify-center font-bold text-2xl mt-10">
             <p>ไม่มีรายการสินค้า</p>
           </div>
         ) : (
           <div>
-            {filteredData.length > 0 ? (
+            {filteredData?.length > 0 ? (
               <div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2 w-full mb-36 mt-3">
                   {orderList
@@ -703,16 +734,18 @@ const OrderList = () => {
                         >
                           <div
                             onClick={() => togglePopup(order.mem_code)}
-                            className={`w-full p-2 rounded-sm shadow-xl text-[12px] text-[#444444] ${order.picking_status === "picking"
-                              ? "bg-green-400"
-                              : "bg-gray-400"
-                              }`}
+                            className={`w-full p-2 rounded-sm shadow-xl text-[12px] text-[#444444] ${
+                              order.picking_status === "picking"
+                                ? "bg-green-400"
+                                : "bg-gray-400"
+                            }`}
                           >
                             <div
-                              className={`p-1 rounded-sm ${order.picking_status === "picking"
-                                ? "bg-green-100"
-                                : "bg-white"
-                                }`}
+                              className={`p-1 rounded-sm ${
+                                order.picking_status === "picking"
+                                  ? "bg-green-100"
+                                  : "bg-white"
+                              }`}
                             >
                               <div className="flex justify-between">
                                 <div className="flex justify-start">
@@ -781,7 +814,8 @@ const OrderList = () => {
                                         (h) => h.shoppingOrders
                                       ).length
                                     }
-                                  </p>&nbsp;
+                                  </p>
+                                  &nbsp;
                                   <p>(เหลือ/All)</p>
                                   {/* <p>FLOOR</p> */}
                                 </div>
@@ -796,10 +830,11 @@ const OrderList = () => {
                                   return (
                                     <div
                                       key={floor}
-                                      className={`flex-none px-0.5 py-1.5 mx-0.5 rounded shadow-sm text-center w-14 ${data.remaining > 0
-                                        ? "bg-yellow-200"
-                                        : "bg-red-200"
-                                        }`}
+                                      className={`flex-none px-0.5 py-1.5 mx-0.5 rounded shadow-sm text-center w-14 ${
+                                        data.remaining > 0
+                                          ? "bg-yellow-200"
+                                          : "bg-red-200"
+                                      }`}
                                     >
                                       <div className="text-xs font-bold">
                                         F{floor}
@@ -830,7 +865,7 @@ const OrderList = () => {
                                 <div className="flex justify-center">
                                   {order?.picking_status === "picking" &&
                                     order?.emp_code_picking ===
-                                    userInfo?.emp_code && (
+                                      userInfo?.emp_code && (
                                       <div className="pr-1">
                                         <button
                                           disabled={
@@ -844,26 +879,27 @@ const OrderList = () => {
                                                     so.picking_status !==
                                                     "pending"
                                                 ).length -
-                                              order.shoppingHeads.flatMap(
-                                                (h) => h.shoppingOrders
-                                              ).length ===
+                                                order.shoppingHeads.flatMap(
+                                                  (h) => h.shoppingOrders
+                                                ).length ===
                                               0
                                             )
                                           }
-                                          className={`border rounded-sm px-2 py-1  text-white shadow-xl border-gray-300 ${order.shoppingHeads
-                                            .flatMap((h) => h.shoppingOrders)
-                                            .filter(
-                                              (so) =>
-                                                so.picking_status !==
-                                                "pending"
-                                            ).length -
-                                            order.shoppingHeads.flatMap(
-                                              (h) => h.shoppingOrders
-                                            ).length ===
+                                          className={`border rounded-sm px-2 py-1  text-white shadow-xl border-gray-300 ${
+                                            order.shoppingHeads
+                                              .flatMap((h) => h.shoppingOrders)
+                                              .filter(
+                                                (so) =>
+                                                  so.picking_status !==
+                                                  "pending"
+                                              ).length -
+                                              order.shoppingHeads.flatMap(
+                                                (h) => h.shoppingOrders
+                                              ).length ===
                                             0
-                                            ? "bg-green-600"
-                                            : "bg-gray-500"
-                                            }`}
+                                              ? "bg-green-600"
+                                              : "bg-gray-500"
+                                          }`}
                                           onClick={(e) => {
                                             e.stopPropagation();
 
@@ -871,9 +907,8 @@ const OrderList = () => {
                                               handleSubmit(
                                                 order?.mem_code,
                                                 order?.all_sh_running
-                                              )
-                                            }
-                                            );
+                                              );
+                                            });
                                           }}
                                         >
                                           ยืนยัน
@@ -882,7 +917,7 @@ const OrderList = () => {
                                     )}
                                   {order?.picking_status === "picking" &&
                                     order?.emp_code_picking ===
-                                    userInfo?.emp_code && (
+                                      userInfo?.emp_code && (
                                       <div className="pr-1">
                                         <button
                                           className="border rounded-sm px-2 py-1 bg-amber-400 text-white shadow-xl border-gray-300 cursor-pointer z-50"
@@ -890,7 +925,7 @@ const OrderList = () => {
                                             e.stopPropagation();
                                             handleDoubleClick(() => {
                                               changeToPending(order?.mem_code);
-                                            })
+                                            });
                                           }}
                                         >
                                           เปลี่ยน
@@ -905,7 +940,7 @@ const OrderList = () => {
                                           e.stopPropagation();
                                           handleDoubleClick(() => {
                                             changeToPicking(order?.mem_code);
-                                          })
+                                          });
                                         }}
                                       >
                                         เริ่มจัด
@@ -984,10 +1019,11 @@ const OrderList = () => {
                                     disabled={
                                       order?.picking_status !== "picking"
                                     }
-                                    className={`border rounded-sm px-3 py-2 text-xs w-full mb-2 text-white ${order?.picking_status === "picking"
+                                    className={`border rounded-sm px-3 py-2 text-xs w-full mb-2 text-white ${
+                                      order?.picking_status === "picking"
                                         ? "hover:bg-lime-700 bg-green-600"
                                         : "hover:bg-gray-600 bg-gray-500"
-                                      }`}
+                                    }`}
                                     // className={`border rounded-sm px-3 py-2 text-xs w-full mb-2 text-white hover:bg-lime-700 bg-green-600`}
                                     onClick={() => {
                                       handleDoubleClick(async () => {
@@ -1009,7 +1045,7 @@ const OrderList = () => {
                                             `/product-list?mem_code=${order?.mem_code}`
                                           );
                                         }
-                                      })
+                                      });
                                     }}
                                   >
                                     จัดแบบรวมบิล
@@ -1064,10 +1100,11 @@ const OrderList = () => {
                     }
                     className={` border border-gray-500 py-1 px-1 rounded-sm shadow-lg w-full flex justify-center mx-1 relative
                             ${btn.color} 
-                            ${selectedFloor === btn.value
-                        ? "ring-2 ring-yellow-300"
-                        : ""
-                      }
+                            ${
+                              selectedFloor === btn.value
+                                ? "ring-2 ring-yellow-300"
+                                : ""
+                            }
                             `}
                   >
                     <div className="flex text-center gap-2">
@@ -1083,24 +1120,31 @@ const OrderList = () => {
               </div>
 
               <div className="p-1 mt-1 flex justify-center">
-                {['1', '2', '3', '4', '5'].map((floor) => {
-                  const match = latestTimes.find((latestTime) => latestTime.floor === floor);
+                {["1", "2", "3", "4", "5"].map((floor) => {
+                  const match = latestTimes?.find(
+                    (latestTime) => latestTime.floor === floor
+                  );
                   return (
-                    <div key={floor} className="border px-1 py-1 rounded-sm w-full">
+                    <div
+                      key={floor}
+                      className="border px-1 py-1 rounded-sm w-full"
+                    >
                       <div className="flex justify-center">
                         <p className="font-bold text-sm">F{floor}</p>
                       </div>
                       <div className="text-[12px] flex justify-center">
                         <p className="flex text-center">
                           {match?.latest_picking_time
-                            ? new Date(match.latest_picking_time).toLocaleString("th-TH", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "2-digit",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                            : '-'}
+                            ? new Date(
+                                match.latest_picking_time
+                              ).toLocaleString("th-TH", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "-"}
                         </p>
                       </div>
                     </div>

@@ -13,7 +13,7 @@ import OrderList from "./pages/OrderList";
 import ProductList from "./pages/ProductList";
 import StickerPrint from "./pages/StickerPrint";
 import FormatSticker from "./pages/FormatSticker";
-// import EmployeeStatisticsPage from "./pages/EmployeeStatisticsPage";
+import EmployeeStatisticsPage from "./pages/EmployeeStatisticsPage";
 import VerifyOrder from "./pages/VerifyOrder";
 import ReportEmployee from "./pages/ReportEmployee";
 import FormatLogReport from "./pages/FormatLogReport";
@@ -186,10 +186,10 @@ function App() {
               </div>
             }
           />
-          {/* <Route
+          <Route
             path="/employee-statistics"
             element={<EmployeeStatisticsPage />}
-          /> */}
+          />
           <Route
             path="/verify-order"
             element={
