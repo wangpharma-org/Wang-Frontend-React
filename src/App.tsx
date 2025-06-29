@@ -18,6 +18,7 @@ import VerifyOrder from "./pages/VerifyOrder";
 import ReportEmployee from "./pages/ReportEmployee";
 import FormatLogReport from "./pages/FormatLogReport";
 import QCDashboard from "./pages/QC-Dashboard";
+import ExpireMedicine from "./pages/ExpireMedicine";
 
 function App() {
   return (
@@ -29,9 +30,9 @@ function App() {
             element={
               <div>
                 <Navbar />
-                <RequireAuth>
+                {/* <RequireAuth> */}
                   <Home />
-                </RequireAuth>
+                {/* </RequireAuth> */}
               </div>
             }
           />
@@ -97,7 +98,7 @@ function App() {
             path="/order-list"
             element={
               <RequireAuth>
-              <OrderList />
+                <OrderList />
               </RequireAuth>
             }
           />
@@ -105,7 +106,7 @@ function App() {
             path="/product-list"
             element={
               <RequireAuth>
-              <ProductList />
+                <ProductList />
               </RequireAuth>
             }
           />
@@ -115,7 +116,7 @@ function App() {
               <div>
                 <Navbar />
                 {/* <RequireAuth> */}
-                  <StickerPrint />
+                <StickerPrint />
                 {/* </RequireAuth> */}
               </div>
             }
@@ -125,7 +126,7 @@ function App() {
             element={
               <div>
                 {/* <RequireAuth> */}
-                  <FormatSticker />
+                <FormatSticker />
                 {/* </RequireAuth> */}
               </div>
             }
@@ -136,14 +137,14 @@ function App() {
               <div>
                 <RequireAuth>
                   <ReportEmployee />
-                  </RequireAuth>
+                </RequireAuth>
               </div>
             }
           />
           <Route
             path="/employee-statistics"
             element={<EmployeeStatisticsPage />}
-            />
+          />
           <Route
             path="/verify-order"
             element={
@@ -171,7 +172,18 @@ function App() {
               <div>
                 <RequireAuth>
                   <QCDashboard />
-                  </RequireAuth>
+                </RequireAuth>
+              </div>
+            }
+          />
+          <Route
+            path="/expire-medicine"
+            element={
+              <div>
+                <Navbar />
+                {/* <RequireAuth> */}
+                <ExpireMedicine />
+                {/* </RequireAuth> */}
               </div>
             }
           />

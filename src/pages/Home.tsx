@@ -33,27 +33,25 @@ const listMenu = [
 ];
 const Home = () => {
   const navigate = useNavigate()
-  const [showButtonVerifyBill, setShowButtonVerifyBill] = useState(true)
+  const [showButtonVerifyBill, setShowButtonVerifyBill] = useState(false);
   const handleNavigate = (link: string) => {
     navigate(link)
   }
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await axios.post(`${import.meta.env.VITE_API_URL_VERIFY_ORDER}/api/verify/hide-button`);
-        setShowButtonVerifyBill(res.data.value);
+    fetchButtonVisibility();
+  }, []);
+  const fetchButtonVisibility = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL_VERIFY_ORDER}/api/hide-button`);
+      const value = res.data.value;
+      setShowButtonVerifyBill(value);
 
-      } catch (error) {
-        console.error('Error fetching button visibility:', error);
-      }
-      if (!showButtonVerifyBill === false) console.log("Hided ButtonVerify")
-      else console.log("Unhided ButtonVerify")
-    };
-
-    fetchData();
-  }, [])
-
+      console.log(value ? "Unhided ButtonVerify" : "Hided ButtonVerify");
+    } catch (error) {
+      console.error("Error fetching button visibility:", error);
+    }
+  };
 
   const hiddenIds = [3, 4];
 
