@@ -372,7 +372,10 @@ const OrderList = () => {
   };
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> release-1.1.0
 
   useEffect(() => {
     console.log("totalPicking", totalPicking);
