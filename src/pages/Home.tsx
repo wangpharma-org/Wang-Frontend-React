@@ -33,27 +33,45 @@ const listMenu = [
 ];
 const Home = () => {
   const navigate = useNavigate()
-  const [showButtonVerifyBill, setShowButtonVerifyBill] = useState(false);
+  const defaultVisibility = listMenu.reduce((acc, menu) => {
+    acc[menu.id] = false; // เริ่มต้นเป็น false ทุกเมนู
+    return acc;
+  }, {} as Record<number, boolean>);
+
+  const [visibilityMap, setVisibilityMap] = useState<Record<number, boolean>>(defaultVisibility);
   const handleNavigate = (link: string) => {
     navigate(link)
   }
 
   useEffect(() => {
-    fetchButtonVisibility();
+    // โหลดสถานะของแต่ละปุ่ม (แมพจาก listMenu.id)
+    const fetchVisibility = async () => {
+      const results = await Promise.all(
+        listMenu.map(async (menu) => {
+          try {
+            const res = await axios.get(
+              `${import.meta.env.VITE_API_URL_VERIFY_ORDER}/api/hide-button/${menu.id}`
+            );
+            console.log(`Fetched visibility for id ${menu.id}:`, res.data.value);
+            return { id: menu.id, visible: res.data.value };
+          } catch (err) {
+            console.error(`Error fetching for id ${menu.id}`, err);
+            return { id: menu.id, visible: true }; // fallback ให้แสดงปุ่ม
+          }
+        })
+      );
+
+      const map: Record<number, boolean> = {};
+      results.forEach(({ id, visible }) => {
+        map[id] = visible;
+      });
+      setVisibilityMap(map);
+    };
+
+    fetchVisibility();
   }, []);
-  const fetchButtonVisibility = async () => {
-    try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL_VERIFY_ORDER}/api/hide-button`);
-      const value = res.data.value;
-      setShowButtonVerifyBill(value);
 
-      console.log(value ? "Unhided ButtonVerify" : "Hided ButtonVerify");
-    } catch (error) {
-      console.error("Error fetching button visibility:", error);
-    }
-  };
-
-  const hiddenIds = [3, 4];
+  // const hiddenIds = [3, 4];  
 
   return (
     <div className="bg-white">
@@ -64,10 +82,7 @@ const Home = () => {
 
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           {listMenu
-            .filter(menu => {
-              if (hiddenIds.includes(menu.id) && !showButtonVerifyBill) return false;
-              return true;
-            })
+            .filter((menu) => visibilityMap[menu.id] !== false) // ซ่อนเฉพาะที่ได้ false
             .map((menu) => (
               <a
                 key={menu.id}
