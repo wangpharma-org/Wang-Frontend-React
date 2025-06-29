@@ -4,8 +4,6 @@ import box from "../assets/product-17.png"
 
 interface ProductBoxProps {
     orderItem: ShoppingOrder;
-    // headShRunning: string;
-    //   handleOutofStock: (orderItem: ShoppingOrder, status: string,socket:Socket) => void;
     socket: Socket;
     handleDoubleClick: (orderItem: ShoppingOrder, status: string) => void;
     headShRunning: string;
@@ -68,6 +66,11 @@ export default function ProductBox({ orderItem, handleDoubleClick }: ProductBoxP
                                 {orderItem.product.product_unit}
                             </p>
                         </div>
+                        {orderItem?.product?.lot_priority && 
+                        <div className="mt-1 pl-1 text-sm font-bold text-red-600">
+                            <p className="">บังคับจัด lot : {orderItem?.product?.lot_priority}</p>
+                        </div>
+                        }
                         <div className="flex justify-between pt-1 px-1">
                             <div className="flex font-semibold text-violet-600 text-[13px]">
                                 <p>F{orderItem.product.product_floor || '1'}</p>&nbsp;

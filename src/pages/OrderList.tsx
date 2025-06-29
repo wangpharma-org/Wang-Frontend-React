@@ -1,16 +1,20 @@
 import Clock from "../components/Clock";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, ReactNode } from "react";
 import { Socket, io } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router";
 import axios from "axios";
 import { Bounce, ToastContainer, toast } from "react-toastify";
-import ButtonMenu from "../components/buttonMenu"
-
+import flag from "../assets/finish.png";
+import check from "../assets/accept.png";
+import print from "../assets/printing_black.png";
+import box from "../assets/product-17.png"
 
 interface Product {
+  [x: string]: ReactNode;
   product_floor: string;
   product_unit: string;
+  product_product_image_url: string;
 }
 
 interface ShoppingOrder {
@@ -50,6 +54,12 @@ interface orderList {
 type PickingTime = {
   floor: string;
   latest_picking_time: Date;
+};
+
+interface RouteButton {
+  id: number;
+  name: string;
+  value: string;
 }
 
 const OrderList = () => {
@@ -72,6 +82,17 @@ const OrderList = () => {
   const [openMenu, setOpenMenu] = useState(false);
   const [floorCounts, setFloorCounts] = useState<Record<string, number>>({});
   const handleDoubleClick = useDoubleClick();
+  const [requestProduct, setRequestProduct] = useState<Product[] | null>(null);
+  const [showRequestList, setShowRequestList] = useState(false);
+  const [apiRoute, setAPIRoute] = useState<MemRoute[] | null>(null);
+  const [routeButtons, setRouteButton] = useState<RouteButton[] | null>(null);
+
+  console.log("selectedFloor", selectedFloor);
+
+  useEffect(() => {
+    const totalOrders = orderList?.length;
+    localStorage.setItem("totalOrdersCount", JSON.stringify(totalOrders));
+  }, [orderList]);
 
   const togglePopup = (id: string) => {
     setOpenPopupId((prev) => (prev === id ? null : id));
@@ -103,10 +124,7 @@ const OrderList = () => {
     );
     setSocket(newSocket);
 
-    const routeSession = sessionStorage.getItem('route');
-    if (routeSession) {
-      setSelectroute(routeSession);
-    }
+    handleGetRoute();
 
     newSocket.on("connect", () => {
       console.log("✅ Connected to WebSocket");
@@ -167,36 +185,19 @@ const OrderList = () => {
     localStorage.setItem("totalStatusPicking", JSON.stringify(totalStatusPicking));
     setTotalPicking(totalStatusPicking);
 
-    // const latestByFloor: Record<string, Date> = {};
+    console.log("requestProduct", requestProduct);
 
-    // orderList.forEach((order) => {
-    //   order.shoppingHeads.forEach((sh) => {
-    //     sh.shoppingOrders.forEach((so) => {
-    //       const rawTime = so.so_picking_time;
-    //       if (rawTime && !isNaN(Date.parse(rawTime))) {
-    //         const soTime = new Date(rawTime);
-    //         const floor = so.product.product_floor;
-    //         if (!latestByFloor[floor] || soTime > latestByFloor[floor]) {
-    //           latestByFloor[floor] = soTime;
-    //         }
-    //       }
-    //     });
-    //   });
-    // });
-    // setLatestTimes(latestByFloor);
-
-    const newFloorCounts: Record<string, number> = {};
-
-    orderList.forEach((member) => {
+    const newFloorCounts: Record<number, number> = {};
+    orderList?.forEach((member) => {
       member.shoppingHeads.forEach((head) => {
         head.shoppingOrders.forEach((order) => {
           if (order.picking_status === "pending") {
             const unit = order.so_unit || "";
             const hasBox = unit.includes("ลัง");
-            const floorKey = hasBox
+            const floorKey: string = hasBox
               ? "box"
               : order.product.product_floor || "1";
-            newFloorCounts[floorKey] = (newFloorCounts[floorKey] || 0) + 1;
+            newFloorCounts[Number(floorKey)] = (newFloorCounts[Number(floorKey)] || 0) + 1;
           }
         });
       });
@@ -221,6 +222,25 @@ const OrderList = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showInput]);
+
+  useEffect(() => {
+      if (apiRoute) {
+        const mappedRoutes: RouteButton[] = [
+          { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
+          ...apiRoute.map((route, index) => ({
+            id: index + 2,
+            name: route.route_name,
+            value: route.route_code,
+          })),
+        ];
+        setRouteButton(mappedRoutes);
+      }
+    }, [apiRoute]);
+
+  const handleGetRoute = async() => {
+    const route = await axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/picking/get-route`)
+    setAPIRoute(route.data);
+  }
 
   const changeToPending = (mem_code: string) => {
     if (socket?.connected) {
@@ -297,13 +317,15 @@ const OrderList = () => {
     { label: "ยกลัง", value: "box", color: "bg-purple-500" },
   ];
 
-  const printSticker = async (mem_code: string) => {
+  const printSticker = async (mem_code: string, emp_code?: string, sh_running?: string) => {
     console.log("printSticker", mem_code);
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL_ORDER}/api/picking/createTicket`,
         {
           mem_code: mem_code,
+          emp_code_request: emp_code || null,
+          sh_running: sh_running || null,
         },
         {
           headers: {
@@ -351,35 +373,6 @@ const OrderList = () => {
 
 
 
-  const routeButtons = [
-    { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
-    { id: 2, name: "หาดใหญ่", value: "หาดใหญ่" },
-    { id: 3, name: "สงขลา", value: "สงขลา" },
-    { id: 4, name: "สะเดา", value: "สะเดา" },
-    { id: 5, name: "สทิงพระ", value: "สทิงพระ" },
-    { id: 6, name: "นครศรีธรรมราช", value: "นครศรีธรรมราช" },
-    { id: 7, name: "กระบี่", value: "กระบี่" },
-    { id: 8, name: "ภูเก็ต", value: "ภูเก็ต" },
-    { id: 9, name: "สุราษฎร์ธานี", value: "สุราษฎร์ธานี" },
-    { id: 10, name: "ยาแห้ง ส่งฟรี ทั่วไทย", value: "ยาแห้ง ส่งฟรี ทั่วไทย" },
-    { id: 11, name: "พังงา", value: "พังงา" },
-    { id: 12, name: "เกาะสมุย", value: "เกาะสมุย" },
-    { id: 13, name: "พัทลุง-นคร", value: "พัทลุง-นคร" },
-    { id: 14, name: "ปัตตานี", value: "ปัตตานี" },
-    { id: 15, name: "ชุมพร", value: "ชุมพร" },
-    { id: 16, name: "เกาะลันตา", value: "เกาะลันตา" },
-    { id: 17, name: "เกาะพะงัน", value: "เกาะพะงัน" },
-    { id: 18, name: "สตูล", value: "สตูล" },
-    { id: 19, name: "พัทลุง", value: "พัทลุง" },
-    { id: 20, name: "พัทลุง VIP", value: "พัทลุง VIP" },
-    { id: 21, name: "นราธิวาส", value: "นราธิวาส" },
-    { id: 22, name: "สุไหงโกลก", value: "สุไหงโกลก" },
-    { id: 23, name: "ยะลา", value: "ยะลา" },
-    { id: 24, name: "เบตง", value: "เบตง" },
-    { id: 25, name: "ตรัง", value: "ตรัง" },
-    { id: 26, name: "กระบี่-ตรัง", value: "กระบี่-ตรัง" },
-    { id: 27, name: "Office รับเอง", value: "Office รับเอง" },
-  ];
 
   useEffect(() => {
     console.log("totalPicking", totalPicking);
@@ -515,7 +508,7 @@ const OrderList = () => {
               onChange={(e) => { setSelectroute(e.target.value); setSearch("") }}
               className="border border-gray-200 px-2 py-1 rounded text-black bg-white text-center flex justify-center w-full"
             >
-              {routeButtons.map((route) => (
+              {routeButtons?.map((route) => (
                 <option key={route.id} value={route.value}>
                   {route.name}
                 </option>
@@ -527,10 +520,124 @@ const OrderList = () => {
       </header>
 
       <div className="relative flex-grow overflow-y-auto">
-        <div>
+        <div className="px-3">
+          
+          {showRequestList && (
+            <div className="flex flex-col justify-center w-full bg-yellow-300 rounded mt-3 p-2">
+            <p className="text-center text-xl mt-1 mb-1">รายการขอเพิ่ม</p>
+            <div className="text-center grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2">
+              {(requestProduct ?? []).length > 0 ? (
+                requestProduct?.map((item) => {
+                  return (
+                    <div className="w-full bg-white rounded grid grid-cols-13 p-2 drop-shadow-xl items-center">
+                      <div className="col-span-4">
+                        <div>
+                          <img
+                            src={
+                              item?.product_product_image_url.startsWith("..")
+                                ? `https://www.wangpharma.com${item?.product_product_image_url.slice(
+                                    2
+                                  )}`
+                                : item?.product_product_image_url || box
+                            }
+                            className="w-35 h-35 object-cover border"
+                          />
+                        </div>
+                      </div>
+                      <div className="col-span-7 text-left ml-2">
+                        <p className="text-sm truncate text-[13px]">{`${
+                          item.member_mem_code ?? "-"
+                        } ${item.member_mem_name ?? "-"}`}</p>
+                        <p className="text-sm font-bold truncate text-[13px]">
+                          {item.product_product_name ?? "-"}
+                        </p>
+                        <p className="text-sm text-[13px]">
+                          รหัสสินค้า : {item.order_so_procode ?? "-"}
+                        </p>
+                        <p className="text-sm text-[13px]">
+                          เลขบาร์โค้ด : {item.product_product_barcode ?? "-"}
+                        </p>
+                        <p className="text-sm font-bold text-green-700 text-[13px]">{`F${
+                          item.product_product_floor ?? "-"
+                        } ${item.product_product_addr ?? "-"}`}</p>
+                      </div>
+                      <div className="col-span-2 flex flex-col justify-left items-end">
+                        <img
+                          src={print}
+                          className="w-10 mb-1"
+                          onClick={() => printSticker(String(item.member_mem_code) , String(item.emp_code_request), String(item.head_sh_running))}
+                        ></img>
+                        <img
+                          src={check}
+                          className="w-10 mb-1"
+                          onClick={() =>
+                            submitCheck(
+                              String(item.order_so_running),
+                              String(item.head_sh_running),
+                              String(item.member_mem_code)
+                            )
+                          }
+                        ></img>
+                        <div className="bg-amber-300 w-13 py-1 rounded font-bold text-[13px]">
+                          <p className="text-sm">{item.order_so_qc_request}</p>
+                          <p>{item.order_so_unit}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-gray-500">ไม่มีรายการขอเพิ่ม</p>
+              )}
+            </div>
+            </div>
+          )}
           {openMenu && (
-            <div ref={popupRef}>
-              <ButtonMenu></ButtonMenu>
+            <div
+              ref={popupRef}
+              className="fixed top-0 left-0 h-full z-50 w-3/5 sm:w-1/2 md:w-1/4 bg-blue-900 transition-transform duration-2000 ease-in-out transform translate-x-0"
+            >
+              <div id="infomation" className="p-4">
+                <div className="py-5">
+                  <div className="bg-gray-100 p-1 rounded-full w-18 h-18 mx-auto mt-3">
+                    <img
+                      className="rounded-full w-16 h-16 bg-white mx-auto"
+                      src="https://as2.ftcdn.net/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg"
+                    />
+                  </div>
+                  <p className="flex justify-center mt-2 text-white text-lg font-bold mt-3">
+                    {userInfo?.emp_code}
+                  </p>
+                  <p className="flex justify-center text-white text-lg font-bold">
+                    {userInfo?.firstname || ''} {userInfo?.lastname || ''} ( {userInfo?.nickname} )
+                  </p>
+                  <p className="flex justify-center text-white text-base">
+                    ประจำอยู่ชั้นที่ {userInfo?.floor_picking || "-"}
+                  </p>
+                </div>
+                <div className="flex justify-center px-3 text-white">
+                  <button
+                    onClick={logout}
+                    className="w-full mx-auto flex py-2 active:bg-red-600 scale-95 transition cursor-pointer text-center items-center font-light rounded-sm"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.2}
+                      stroke="currentColor"
+                      className="size-9 rounded-full mr-1 ml-1 p-1 text-white"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15"
+                      />
+                    </svg>
+                    ออกจากระบบ
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -546,7 +653,7 @@ const OrderList = () => {
           <div>
             {filteredData.length > 0 ? (
               <div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 w-full mb-36 mt-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2 w-full mb-36 mt-3">
                   {orderList
                     .sort((a, b) => {
                       const maxA = Math.max(
@@ -638,12 +745,13 @@ const OrderList = () => {
                                   <p>{order?.emp?.emp_nickname}</p>
                                 </div>
                                 <div className="flex justify-center">
-                                  <p>({order.province})</p>
+                                  <p>({order?.mem_route?.route_name})</p>
                                 </div>
                                 <div className="flex justify-end pb-1">
                                   <p className="font-bold">
-                                    {order.shoppingHeads.length}
-                                  </p>&nbsp;
+                                    {order?.shoppingHeads?.length}
+                                  </p>
+                                  &nbsp;
                                   <p>บิล</p>&nbsp;
                                   <p className="text-red-500 font-bold">
                                     {order.shoppingHeads.flatMap(
@@ -659,7 +767,8 @@ const OrderList = () => {
                                             so.picking_status === "ไม่เจอ" ||
                                             so.picking_status === "เสีย" ||
                                             so.picking_status === "ด้านล่าง"
-                                        ).length}
+                                        ).length
+                                    }
                                   </p>
                                   &nbsp;
                                   <p>/</p>&nbsp;
@@ -855,15 +964,16 @@ const OrderList = () => {
                                           })}
                                         </p>
                                       </div>
-                                      <div className="flex justify-start">
+                                      {order?.emp_code_picking && <div className="flex justify-start">
                                         <p className="text-green-500 font-bold">
-                                          {order.emp_code_picking} {order.emp.emp_nickname}
+                                          {order?.emp_code_picking}{" "}
+                                          {order?.emp_picking?.emp_nickname}
                                         </p>
                                         &nbsp;
                                         <p className="text-red-500">
                                           กำลังทำงานอยู่
                                         </p>
-                                      </div>
+                                      </div>}
                                       <hr className="mt-2" />
                                     </li>
                                   ))}
@@ -905,6 +1015,7 @@ const OrderList = () => {
                               </div>
                             )}
                           </div>
+                          
                         </div>
                       );
                     })}

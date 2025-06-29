@@ -1,3 +1,4 @@
+import axios from "axios";
 import { useEffect, useState } from "react";
 import { Socket, io } from "socket.io-client";
 
@@ -18,6 +19,22 @@ interface TicketItem {
   [key: string]: any;
 }
 
+interface MemRoute {
+  route_code: string;
+  route_name: string;
+}
+
+interface Route {
+  id: number;
+  name: string;
+  value: string;
+}
+
+interface Route {
+  id: number;
+  name: string;
+  value: string;
+}
 const StickerPrint = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,9 +44,12 @@ const StickerPrint = () => {
   const [pendingTickets, setPendingTickets] = useState<FloorInfo[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedRoute, setSelectedRoute] = useState("all");
+  const [route, setRoute] = useState<Route[] | null>(null);
+  const [routeAPI, setRouteAPI] = useState<MemRoute[] | null>(null);
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
+    handleGetRoute();
     console.log(token);
     const newSocket = io(
       `${import.meta.env.VITE_API_URL_ORDER}/socket/picking/ticket`,
@@ -69,35 +89,24 @@ const StickerPrint = () => {
 
   
 
-  const route = [
-    { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
-    { id: 2, name: "หาดใหญ่", value: "L1-1" },
-    { id: 3, name: "สงขลา", value: "L1-2" },
-    { id: 4, name: "สะเดา", value: "L1-3" },
-    { id: 5, name: "สทิงพระ", value: "L1-5" },
-    { id: 6, name: "นครศรีธรรมราช", value: "L10" },
-    { id: 7, name: "กระบี่", value: "L11" },
-    { id: 8, name: "ภูเก็ต", value: "L12" },
-    { id: 9, name: "สุราษฎร์ธานี", value: "L13" },
-    { id: 10, name: "ยาแห้ง ส่งฟรี ทั่วไทย", value: "L16" },
-    { id: 11, name: "พังงา", value: "L17" },
-    { id: 12, name: "เกาะสมุย", value: "L18" },
-    { id: 13, name: "พัทลุง-นคร", value: "L19" },
-    { id: 14, name: "ปัตตานี", value: "L2" },
-    { id: 15, name: "ชุมพร", value: "L20" },
-    { id: 16, name: "เกาะลันตา", value: "L21" },
-    { id: 17, name: "เกาะพะงัน", value: "L22" },
-    { id: 18, name: "สตูล", value: "L3" },
-    { id: 19, name: "พัทลุง", value: "L4" },
-    { id: 20, name: "พัทลุง VIP", value: "L4-1" },
-    { id: 21, name: "นราธิวาส", value: "L5-1" },
-    { id: 22, name: "สุไหงโกลก", value: "L5-2" },
-    { id: 23, name: "ยะลา", value: "L6" },
-    { id: 24, name: "เบตง", value: "L7" },
-    { id: 25, name: "ตรัง", value: "L9" },
-    { id: 26, name: "กระบี่-ตรัง", value: "L9-11" },
-    { id: 27, name: "Office รับเอง", value: "Office" },
-  ];
+  useEffect(()=>{
+    if (routeAPI) {
+      const route: Route[] = [
+        { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
+        ...routeAPI.map((item, index) => ({
+          id: index + 2,
+          name: item.route_name,
+          value: item.route_code,
+        })),
+      ]
+      setRoute(route);
+    }
+  }, [routeAPI]);
+
+  const handleGetRoute = async () => {
+    const route = await axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/picking/get-route`)
+    setRouteAPI(route.data);
+  }
 
   const getCellClass = (status: string | undefined) => {
     console.log("Status:", status);
@@ -199,7 +208,7 @@ const StickerPrint = () => {
         </form>
       </div>
       <div className="flex flex-wrap justify-center mb-6 gap-2">
-        {route.map((route) => (
+        {route?.map((route) => (
           <button
             key={route.value}
             onClick={() => setSelectedRoute(route.value)}
@@ -250,7 +259,7 @@ const StickerPrint = () => {
                     <td className="px-6 py-4 text-center">{index + 1}</td>
                     <td className="px-6 py-4 text-center">{list.mem_code}</td>
                     <td className="px-6 py-4 text-center">{list.mem_name}</td>
-                    <td className="px-6 py-4 text-center">{list.province ? route.find(r => r.value === list.province)?.name : 'อื่นๆ'}</td>
+                    <td className="px-6 py-4 text-center">{list.mem_route?.route_name ? list.mem_route?.route_name : 'อื่นๆ'}</td>
 
                     {[2, 3, 4, 5].map((floor) => (
                       <td
