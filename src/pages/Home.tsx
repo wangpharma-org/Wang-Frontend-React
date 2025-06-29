@@ -1,47 +1,66 @@
-// import reciept from "../assets/receipt.png";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import reciept from "../assets/receipt.png";
 import order from "../assets/sent.png";
-// import statistics from "../assets/employees statistics.png";
-// import checklist from "../assets/checklist.png";
+import statistics from "../assets/employees statistics.png";
+import checklist from "../assets/checklist.png";
 import barcode from "../assets/barcode-scanner.png"
 import { useNavigate } from "react-router";
 const listMenu = [
-  // {
-  //   id: 1,
-  //   name: "ใบกำกับสินค้า",
-  //   href: "/invoice-all",
-  //   imageSrc: reciept,
-  // },
   {
     id: 1,
+    name: "ใบกำกับสินค้า",
+    href: "/invoice-all",
+    imageSrc: reciept,
+  },
+  {
+    id: 2,
     name: "ระบบตรวจสอบสินค้า (QC)",
     href: "/dashboard-qc",
     imageSrc: barcode,
   },
   {
-    id: 2,
+    id: 3,
     name: "จัดออเดอร์",
     href: "/order-list",
     imageSrc: order,
   },
   
-  // {
-  //   id: 4,
-  //   name: "สถิติการจัดออเดอร์",
-  //   href: "/employee-statistics",
-  //   imageSrc: statistics,
-  // },
-  // {
-  //   id: 4,
-  //   name: "ตรวจสอบบิล",
-  //   href: "/verify-order",
-  //   imageSrc: checklist,
-  // },
+  {
+    id: 4,
+    name: "สถิติการจัดออเดอร์",
+    href: "/employee-statistics",
+    imageSrc: statistics,
+  },
+  {
+    id: 5,
+    name: "ตรวจสอบบิล",
+    href: "/verify-order",
+    imageSrc: checklist,
+  },
 ];
 const Home = () => {
   const navigate = useNavigate()
   const handleNavigate = (link: string) => {
     navigate(link)
   }
+  const [showButtonVerifyBill, setShowButtonVerifyBill] = useState<boolean>(true);
+
+    useEffect(() => {
+    fetchButtonVisibility();
+  }, []);
+  const fetchButtonVisibility = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL_VERIFY_ORDER}/api/hide-button`);
+      const value = res.data.value;
+      setShowButtonVerifyBill(value);
+
+      console.log(value ? "Unhided ButtonVerify" : "Hided ButtonVerify");
+    } catch (error) {
+      console.error("Error fetching button visibility:", error);
+    }
+  };
+
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-2xl px-4 py-4 sm:px-6 sm:py-12 lg:max-w-7xl lg:px-8 cursor-pointer">
