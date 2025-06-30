@@ -6,7 +6,6 @@ interface ProductBoxProps {
     orderItem: ShoppingOrder;
     socket: Socket;
     handleDoubleClick: (orderItem: ShoppingOrder, status: string) => void;
-    headShRunning: string;
 }
 
 export default function ProductBox({ orderItem, handleDoubleClick }: ProductBoxProps) {

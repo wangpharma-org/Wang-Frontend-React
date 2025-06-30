@@ -147,7 +147,7 @@ const Report = () => {
       const reportData = response.data;
       console.log(reportData);
     } catch (error) {
-
+      console.log(error)
     }
   };
 
