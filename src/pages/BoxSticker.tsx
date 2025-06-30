@@ -3,8 +3,8 @@ import Barcode from "react-barcode";
 import triangle from "../assets/bleach.png";
 import dayjs from "dayjs";
 import axios from "axios";
-import clock from "../assets/clock.png"
-import calendar from "../assets/check-mark.png"
+import clock from "../assets/clock.png";
+import calendar from "../assets/check-mark.png";
 import correct from "../assets/correct.png";
 
 export interface Employees {
@@ -29,18 +29,18 @@ export interface dataForEmp {
 }
 
 export interface Address {
-    mem_name: string;
-    address_line1: string | null;
-    address_line2: string | null;
-    sub_district: string | null;
-    district: string | null;
-    postal_code: string | null;
-    province: string | null;
-    mem_tel: string | null;
-    route_code: string | null;
-    mem_shipping_note: string | null;
-    mem_route: MemRoute;
-    emp: Employees;
+  mem_name: string;
+  address_line1: string | null;
+  address_line2: string | null;
+  sub_district: string | null;
+  district: string | null;
+  postal_code: string | null;
+  province: string | null;
+  mem_tel: string | null;
+  route_code: string | null;
+  mem_shipping_note: string | null;
+  mem_route: MemRoute;
+  emp: Employees;
 }
 
 const styles = {
@@ -91,14 +91,14 @@ const BoxSticker = () => {
     }
   }, [prepareEmpData, QCEmpData, packedEmpData]);
 
-    useEffect(() => {
-      if (JSONQCEmpData && JSONpackedEmpData && JSONprepareEmpData && dataPrint) {
-        window.onafterprint = () => {
-          window.close();
-        };
-        window.print();
-      }
-    }, [JSONQCEmpData, JSONpackedEmpData, JSONprepareEmpData, dataPrint]);
+  useEffect(() => {
+    if (JSONQCEmpData && JSONpackedEmpData && JSONprepareEmpData && dataPrint) {
+      window.onafterprint = () => {
+        window.close();
+      };
+      window.print();
+    }
+  }, [JSONQCEmpData, JSONpackedEmpData, JSONprepareEmpData, dataPrint]);
 
   useEffect(() => {
     if (mem_code) {
@@ -106,19 +106,19 @@ const BoxSticker = () => {
     }
   }, []);
 
-  useEffect(()=>{
-    if(dataPrint) {
-      console.log('data print', dataPrint)
-    }  
-  },[dataPrint])
+  useEffect(() => {
+    if (dataPrint) {
+      console.log("data print", dataPrint);
+    }
+  }, [dataPrint]);
 
-  const handleGet = async() => {
+  const handleGet = async () => {
     const data = await axios.get(
       `${import.meta.env.VITE_API_URL_ORDER}/api/qc/get-address/${mem_code}`
     );
     console.log(data);
     setDataPrint(data.data);
-  }
+  };
 
   const renderSticker = (index: number) => (
     <div
@@ -132,8 +132,10 @@ const BoxSticker = () => {
           {index + 1} / {printCount}
         </p>
         <div className="flex flex-col justify-center items-center">
-          <p className="font-semibold text-[16px]">{dataPrint?.mem_route?.route_name ?? 'อื่นๆ'}</p>
-          <p className="text-[7px]">{dataPrint?.route_code ?? ''}</p>
+          <p className="font-semibold text-[16px]">
+            {dataPrint?.mem_route?.route_name ?? "อื่นๆ"}
+          </p>
+          <p className="text-[7px]">{dataPrint?.route_code ?? ""}</p>
         </div>
       </div>
       <div>
@@ -167,12 +169,22 @@ const BoxSticker = () => {
         </div>
         <div className="w-[100%] flex justify-between mt-1 pr-3">
           <div>
-            <p className="text-[8px]">{`${dataPrint?.address_line1 ?? ''} ${dataPrint?.address_line2 ?? ''} ต.${dataPrint?.sub_district ?? ''}`}</p>
-            <p className="text-[8px]">{`อ.${dataPrint?.district ?? ''} จ.${dataPrint?.province ?? ''} ${dataPrint?.postal_code ?? ''}`}</p>
+            <p className="text-[8px]">{`${dataPrint?.address_line1 ?? ""} ${
+              dataPrint?.address_line2 ?? ""
+            } ต.${dataPrint?.sub_district ?? ""}`}</p>
+            <p className="text-[8px]">{`อ.${dataPrint?.district ?? ""} จ.${
+              dataPrint?.province ?? ""
+            } ${dataPrint?.postal_code ?? ""}`}</p>
           </div>
           <div>
-            <p className="text-[8px]">เบอร์โทรลูกค้า : {dataPrint?.mem_tel ?? '-'}</p>
-            {dataPrint?.emp?.emp_tel && <p className="text-[8px]">ฝ่ายขาย : {dataPrint?.emp?.emp_tel ?? '-'}</p>}
+            <p className="text-[8px]">
+              เบอร์โทรลูกค้า : {dataPrint?.mem_tel ?? "-"}
+            </p>
+            {dataPrint?.emp?.emp_tel && (
+              <p className="text-[8px]">
+                ฝ่ายขาย : {dataPrint?.emp?.emp_tel ?? "-"}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex justify-between mt-1 border-t-1 border-b-1 py-1 px-26">
@@ -193,39 +205,54 @@ const BoxSticker = () => {
               </div>
               <div className="p-1 flex items-center text-center">
                 <p className="text-center">
-                  {`${dataPrint?.mem_shipping_note ? dataPrint?.mem_shipping_note : dataPrint?.mem_shipping_note === '' && 'ไม่มีหมายเหตุการส่งสินค้า'}`}
+                  {dataPrint?.mem_shipping_note !== "" &&
+                  dataPrint?.mem_shipping_note !== null
+                    ? dataPrint?.mem_shipping_note
+                    : "ไม่มีหมายเหตุการส่งสินค้า"}
                 </p>
               </div>
             </div>
           </div>
-          <p className="text-[8px]">{sh_running?.replace(/,/g," , ")}</p>
+          <p className="text-[8px]">{sh_running?.replace(/,/g, " , ")}</p>
         </div>
-        
       </div>
       <div className="flex justify-center items-center border-b">
         <div className="w-[100%] flex flex-col justify-center items-center">
           <div className="flex justify-between p-1 gap-15">
             <p className="text-[8px]">Ordering time line:</p>
           </div>
-          <p className="text-[8px]">พนักงานเตรียมสินค้า / พนักงานตรวจสอบ / พนักงานแพ็คสินค้าลงลัง</p>
-          <p className="text-[8px]">[{JSONprepareEmpData?.dataEmp.emp_code}] {JSONprepareEmpData?.dataEmp?.emp_nickname} / [{JSONprepareEmpData?.dataEmp?.emp_code}] / {JSONQCEmpData?.dataEmp?.emp_nickname}  [{JSONpackedEmpData?.dataEmp.emp_code}] {JSONpackedEmpData?.dataEmp.emp_nickname}</p>
-          <p className="text-[8px] pb-1">{`${dayjs().format('DD-MM')}-${dayjs().year() + 543} ${dayjs().format('HH:mm')}`}</p>
+          <p className="text-[8px]">
+            พนักงานเตรียมสินค้า / พนักงานตรวจสอบ / พนักงานแพ็คสินค้าลงลัง
+          </p>
+          <p className="text-[8px]">
+            [{JSONprepareEmpData?.dataEmp.emp_code}]{" "}
+            {JSONprepareEmpData?.dataEmp?.emp_nickname} / [
+            {JSONprepareEmpData?.dataEmp?.emp_code}] /{" "}
+            {JSONQCEmpData?.dataEmp?.emp_nickname} [
+            {JSONpackedEmpData?.dataEmp.emp_code}]{" "}
+            {JSONpackedEmpData?.dataEmp.emp_nickname}
+          </p>
+          <p className="text-[8px] pb-1">{`${dayjs().format("DD-MM")}-${
+            dayjs().year() + 543
+          } ${dayjs().format("HH:mm")}`}</p>
         </div>
       </div>
       <div className="flex justify-center items-center border-b">
         <div className="w-[33%] border-r h-10 ">
-          {index === 0 ? 
-          <div className="flex justify-center items-center">
-            <img src={correct} className="w-7"></img>
-            <p className="text-[16px] font-bold p-2">ลังนี้มีบิล</p>
-          </div>
-          :
-          <p className="text-[16px] p-2 text-center font-extrabold">-</p>
-          }
+          {index === 0 ? (
+            <div className="flex justify-center items-center">
+              <img src={correct} className="w-7"></img>
+              <p className="text-[16px] font-bold p-2">ลังนี้มีบิล</p>
+            </div>
+          ) : (
+            <p className="text-[16px] p-2 text-center font-extrabold">-</p>
+          )}
         </div>
         <div className="w-[33%] flex flex-col justify-center items-center border-r h-10">
           <p className="text-[8px]">สายรถ</p>
-          <p className="text-[10px]">หาดใหญ่ - {dataPrint?.mem_route?.route_name ?? 'อื่นๆ'}</p>
+          <p className="text-[10px]">
+            หาดใหญ่ - {dataPrint?.mem_route?.route_name ?? "อื่นๆ"}
+          </p>
         </div>
         <div className="w-[33%] flex flex-col justify-center items-center h-10">
           <p className="text-[8px]">จัดส่ง</p>
