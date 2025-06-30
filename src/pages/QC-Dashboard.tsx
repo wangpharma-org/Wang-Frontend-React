@@ -238,14 +238,16 @@ const QCDashboard = () => {
   }, [packedEMP]);
 
   const checkFlag = async () => {
-    const flag = await axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/qc`)
-    console.log('Flag : ',flag.data)
+    const flag = await axios.get(
+      `${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/qc`
+    );
+    console.log("Flag : ", flag.data);
     if (flag.data === true) {
-      setFeatureFlag(true)
+      setFeatureFlag(true);
     } else if (flag.data === false) {
-      setFeatureFlag(false)
+      setFeatureFlag(false);
     }
-  }
+  };
 
   // เริ่มต้นโปรแกรม
   useEffect(() => {
@@ -291,14 +293,14 @@ const QCDashboard = () => {
     });
 
     newSocket.on("feature_flag:true", () => {
-      console.log('feature_flag:true');
+      console.log("feature_flag:true");
       setFeatureFlag(true);
-    })
+    });
 
     newSocket.on("feature_flag:false", () => {
-      console.log('feature_flag:false');
+      console.log("feature_flag:false");
       setFeatureFlag(false);
-    })
+    });
 
     const prepareEmpData = sessionStorage.getItem("prepare-emp");
     const QCEmpData = sessionStorage.getItem("qc-emp");
@@ -481,9 +483,9 @@ const QCDashboard = () => {
   const handleAddSH = (some_value: string) => {
     console.log("handleAddSH : ", some_value);
     if (socket?.connected) {
-      console.log('เข้าเงื่อนไขที่สงสัย 1')
+      console.log("เข้าเงื่อนไขที่สงสัย 1");
       if (shRunningArray) {
-        console.log('เข้าเงื่อนไขที่สงสัย 2')
+        console.log("เข้าเงื่อนไขที่สงสัย 2");
         setAddShRunningArray([...shRunningArray, some_value]);
         setSh_running(null);
         setInputMemCode(null);
@@ -496,10 +498,10 @@ const QCDashboard = () => {
 
   // ตรวจสอบว่าเป็นรหัสลูกค้าหรือเลขบิล
   const handleConnect = (some_value: string) => {
-    const some_value_debug = some_value.trim().replace(/\r?\n|\r/g, '');
+    const some_value_debug = some_value.trim().replace(/\r?\n|\r/g, "");
 
-    console.log('some_value:', JSON.stringify(some_value));
-    console.log('cleaned:', JSON.stringify(some_value_debug));
+    console.log("some_value:", JSON.stringify(some_value));
+    console.log("cleaned:", JSON.stringify(some_value_debug));
     console.log(socket?.connected);
     if (socket?.connected) {
       if (some_value.includes(",")) {
@@ -507,7 +509,7 @@ const QCDashboard = () => {
         setSh_running_array(parts);
         setInputMemCode(null);
         setSh_running(null);
-        console.log('เข้าเงื่อนไขที่สงสัย 2');
+        console.log("เข้าเงื่อนไขที่สงสัย 2");
       } else if (some_value.includes("-")) {
         const parts = some_value.split("-");
         const lastPart = parts[parts.length - 1];
@@ -1018,6 +1020,32 @@ const QCDashboard = () => {
     }
   }, [modalOpen]);
 
+  const lastInputTimeRef = useRef<number | null>(null);
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    index: number
+  ) => {
+    const now = Date.now();
+  
+    if (lastInputTimeRef.current !== null) {
+      const timeDiff = now - lastInputTimeRef.current;
+      console.log(timeDiff);
+  
+      if (timeDiff > 100) {
+        alert("กรุณาใช้เครื่องสแกนบาร์โค้ด");
+        lastInputTimeRef.current = null;
+        // setInputValues([]);
+        return;
+      }
+    }
+  
+    lastInputTimeRef.current = now;
+  
+    const updated = [...InputValues];
+    updated[index] = e.target.value;
+    setInputValues(updated);
+  };
+
   if (error) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -1026,8 +1054,7 @@ const QCDashboard = () => {
         </p>
       </div>
     );
-  } 
-  else if (featureFlag === false) {
+  } else if (featureFlag === false) {
     return (
       <div className="flex flex-col min-h-screen text-center items-center justify-center">
         <p className="text-2xl font-bold text-red-700">
@@ -1035,8 +1062,7 @@ const QCDashboard = () => {
         </p>
       </div>
     );
-  }
-  else {
+  } else {
     return (
       <div>
         <div>
@@ -1343,7 +1369,8 @@ const QCDashboard = () => {
                           (baseUnit.quantity / unit.quantity);
                         return (
                           <p key={unit.unit_name} className="pl-2">
-                            <span className="text-red-500">หรือ</span> {amount} {unit.unit_name}
+                            <span className="text-red-500">หรือ</span> {amount}{" "}
+                            {unit.unit_name}
                           </p>
                         );
                       }
@@ -1529,20 +1556,21 @@ const QCDashboard = () => {
                             disabled={!isReady}
                             ref={index === 0 ? inputBill : null}
                             // readOnly={true}
-                            onChange={(e) => {
-                              const update = [...InputValues];
-                              update[index] = e.target.value;
-                              setInputValues(update);
-                            }}
+                            onChange={(e) => handleChange(e, index)}
                             onKeyDown={(e) => {
+                              
                               if (e.key === "Enter") {
-                                console.log("Scan value : ", e.currentTarget.value)
-                                if (!shRunningArray) {  
+                                lastInputTimeRef.current = null;
+                                console.log(
+                                  "Scan value : ",
+                                  e.currentTarget.value
+                                );
+                                if (!shRunningArray) {
                                   handleConnect(e.currentTarget.value);
                                 }
                                 {
                                   handleAddSH(e.currentTarget.value);
-                                  console.log('เข้าเงื่อนไข step 1')
+                                  console.log("เข้าเงื่อนไข step 1");
                                 }
                               }
                             }}

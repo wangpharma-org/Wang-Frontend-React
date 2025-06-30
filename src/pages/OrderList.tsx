@@ -691,7 +691,7 @@ const OrderList = () => {
                         src="https://as2.ftcdn.net/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg"
                       />
                     </div>
-                    <p className="flex justify-center mt-2 text-white text-lg font-bold ">
+                    <p className="flex justify-center mt-2 text-white text-lg font-bold">
                       {userInfo?.emp_code}
                     </p>
                     <p className="flex justify-center text-white text-lg font-bold">
