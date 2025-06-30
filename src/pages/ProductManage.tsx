@@ -22,7 +22,7 @@ const ProductManage = () => {
   const [offset, setOffset] = useState<number>(0);
   const [modalManageOpen, setModalManageOpen] = useState<boolean>(false);
   const [productManage, setProductManage] = useState<Product | null>(null);
-  const [errMsg, setErrMsg] = useState<string | null>(null);
+  const [, setErrMsg] = useState<string | null>(null);
   const [changeFloor, setChangeFloor] = useState<string | null>(null);
   const [changeLot, setChangeLot] = useState<string | null>(null);
   const [changeAmount, setChangeLotAmount] = useState<number | null>(null);
