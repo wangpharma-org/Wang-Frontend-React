@@ -202,6 +202,8 @@ const QCDashboard = () => {
 
   const [baseUnit, setBaseUnit] = useState<Unit | null>(null);
 
+  const [featureFlag, setFeatureFlag] = useState<boolean>(true);
+
   // ทำให้รหัสพนักงานไม่หายเมื่อ Refresh
   useEffect(() => {
     if (prepareEmp?.dataEmp?.emp_code) {
@@ -235,6 +237,16 @@ const QCDashboard = () => {
     }
   }, [packedEMP]);
 
+  const checkFlag = async () => {
+    const flag = await axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/qc`)
+    console.log('Flag : ',flag.data)
+    if (flag.data === true) {
+      setFeatureFlag(true)
+    } else if (flag.data === false) {
+      setFeatureFlag(false)
+    }
+  }
+
   // เริ่มต้นโปรแกรม
   useEffect(() => {
     console.log(`${import.meta.env.VITE_API_URL_ORDER}/socket/qc/dashboard`);
@@ -245,6 +257,8 @@ const QCDashboard = () => {
       }
     );
     setSocket(newSocket);
+
+    checkFlag();
 
     newSocket.on("connect", () => {
       setError(false);
@@ -275,6 +289,16 @@ const QCDashboard = () => {
       alert(msg);
       handleClear();
     });
+
+    newSocket.on("feature_flag:true", () => {
+      console.log('feature_flag:true');
+      setFeatureFlag(true);
+    })
+
+    newSocket.on("feature_flag:false", () => {
+      console.log('feature_flag:false');
+      setFeatureFlag(false);
+    })
 
     const prepareEmpData = sessionStorage.getItem("prepare-emp");
     const QCEmpData = sessionStorage.getItem("qc-emp");
@@ -995,7 +1019,17 @@ const QCDashboard = () => {
         </p>
       </div>
     );
-  } else {
+  } 
+  else if (featureFlag === false) {
+    return (
+      <div className="flex flex-col min-h-screen text-center items-center justify-center">
+        <p className="text-2xl font-bold text-red-700">
+          ระบบโดนสั่งระงับการใช้งาน
+        </p>
+      </div>
+    );
+  }
+  else {
     return (
       <div>
         <div>
