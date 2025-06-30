@@ -481,7 +481,9 @@ const QCDashboard = () => {
   const handleAddSH = (some_value: string) => {
     console.log("handleAddSH : ", some_value);
     if (socket?.connected) {
+      console.log('เข้าเงื่อนไขที่สงสัย 1')
       if (shRunningArray) {
+        console.log('เข้าเงื่อนไขที่สงสัย 2')
         setAddShRunningArray([...shRunningArray, some_value]);
         setSh_running(null);
         setInputMemCode(null);
@@ -494,6 +496,10 @@ const QCDashboard = () => {
 
   // ตรวจสอบว่าเป็นรหัสลูกค้าหรือเลขบิล
   const handleConnect = (some_value: string) => {
+    const some_value_debug = some_value.trim().replace(/\r?\n|\r/g, '');
+
+    console.log('some_value:', JSON.stringify(some_value));
+    console.log('cleaned:', JSON.stringify(some_value_debug));
     console.log(socket?.connected);
     if (socket?.connected) {
       if (some_value.includes(",")) {
@@ -501,6 +507,7 @@ const QCDashboard = () => {
         setSh_running_array(parts);
         setInputMemCode(null);
         setSh_running(null);
+        console.log('เข้าเงื่อนไขที่สงสัย 2');
       } else if (some_value.includes("-")) {
         const parts = some_value.split("-");
         const lastPart = parts[parts.length - 1];
@@ -1521,7 +1528,7 @@ const QCDashboard = () => {
                             placeholder="หมายเลขบิล"
                             disabled={!isReady}
                             ref={index === 0 ? inputBill : null}
-                            readOnly={!!InputValues[index]}
+                            // readOnly={true}
                             onChange={(e) => {
                               const update = [...InputValues];
                               update[index] = e.target.value;
@@ -1529,11 +1536,13 @@ const QCDashboard = () => {
                             }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
-                                if (!shRunningArray) {
+                                console.log("Scan value : ", e.currentTarget.value)
+                                if (!shRunningArray) {  
                                   handleConnect(e.currentTarget.value);
                                 }
                                 {
                                   handleAddSH(e.currentTarget.value);
+                                  console.log('เข้าเงื่อนไข step 1')
                                 }
                               }
                             }}
