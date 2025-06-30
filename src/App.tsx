@@ -18,6 +18,16 @@ import VerifyOrder from "./pages/VerifyOrder";
 import ReportEmployee from "./pages/ReportEmployee";
 import FormatLogReport from "./pages/FormatLogReport";
 import QCDashboard from "./pages/QC-Dashboard";
+import FragilePrint from "./components/FragilePrint";
+import SpecialExpressPrint from "./pages/SpecialExpress";
+import OtherCourier from "./pages/OtherCourier";
+import BasketSticker from "./pages/BasketSticker";
+import PrintRT from "./pages/RTPrint";
+import Dashboard from "./pages/ReportQcKPI";
+import BoxSticker from "./pages/BoxSticker";
+import BoxStickerBlock from "./pages/BoxStickerBlock";
+import BoxStickerA from "./pages/BoxStickerA";
+import ProductManage from "./pages/ProductManage";
 
 function App() {
   return (
@@ -29,9 +39,7 @@ function App() {
             element={
               <div>
                 <Navbar />
-                <RequireAuth>
-                  <Home />
-                </RequireAuth>
+                <Home />
               </div>
             }
           />
@@ -44,6 +52,44 @@ function App() {
               </div>
             }
           />
+          <Route
+            path="/box-sticker"
+            element={
+              <div>
+                <BoxSticker />
+              </div>
+            }
+          />
+          <Route
+            path="/box-sticker-a"
+            element={
+              <div>
+                <BoxStickerA />
+              </div>
+            }
+          />
+          <Route
+            path="/box-sticker-block"
+            element={
+              <div>
+                <BoxStickerBlock />
+              </div>
+            }
+          />
+          <Route
+            path="/dashboard-kpi"
+            element={
+              <div>
+                <Dashboard />
+              </div>
+            }
+          />
+          <Route path="/fragileprint" element={<FragilePrint />} />
+          <Route path="/othercourier" element={<OtherCourier />} />
+          <Route path="/basket-sticker" element={<BasketSticker />} />
+          <Route path="/print-rt" element={<PrintRT />} />
+          <Route path="/dashboard-qc" element={<QCDashboard />} />
+          <Route path="/special" element={<SpecialExpressPrint />} />
           <Route
             path="/invoice-all"
             element={
@@ -97,7 +143,7 @@ function App() {
             path="/order-list"
             element={
               <RequireAuth>
-              <OrderList />
+                <OrderList />
               </RequireAuth>
             }
           />
@@ -105,7 +151,7 @@ function App() {
             path="/product-list"
             element={
               <RequireAuth>
-              <ProductList />
+                <ProductList />
               </RequireAuth>
             }
           />
@@ -115,7 +161,7 @@ function App() {
               <div>
                 <Navbar />
                 {/* <RequireAuth> */}
-                  <StickerPrint />
+                <StickerPrint />
                 {/* </RequireAuth> */}
               </div>
             }
@@ -125,7 +171,7 @@ function App() {
             element={
               <div>
                 {/* <RequireAuth> */}
-                  <FormatSticker />
+                <FormatSticker />
                 {/* </RequireAuth> */}
               </div>
             }
@@ -136,14 +182,14 @@ function App() {
               <div>
                 <RequireAuth>
                   <ReportEmployee />
-                  </RequireAuth>
+                </RequireAuth>
               </div>
             }
           />
           <Route
             path="/employee-statistics"
             element={<EmployeeStatisticsPage />}
-            />
+          />
           <Route
             path="/verify-order"
             element={
@@ -171,7 +217,18 @@ function App() {
               <div>
                 <RequireAuth>
                   <QCDashboard />
-                  </RequireAuth>
+                </RequireAuth>
+              </div>
+            }
+          />
+          <Route
+            path="/product-manage"
+            element={
+              <div>
+                <Navbar/>
+                <RequireAuth>
+                  <ProductManage />
+                </RequireAuth>
               </div>
             }
           />
