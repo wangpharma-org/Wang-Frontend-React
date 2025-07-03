@@ -492,14 +492,14 @@ function VerifyOrder() {
                     <td className="px-6 py-4 text-center border-x-1 border-b-1">{item?.mem_name}</td>
                     <td className="px-6 py-4 text-center border-x-1 border-b-1">{item?.whitePaper?.count_list || "-"}</td>
                     <td className="px-6 py-4 text-center border-x-1 border-b-1">{item?.whitePaper?.price || "-"}</td>
-                    <td className="px-6 py-4 text-center border-x-1 border-b-1">{item?.dateInvoice ? dayjs(item?.dateInvoice).format("DD/MM/YYYY HH:mm:ss") : "-"}</td>
+                    <td className="px-6 py-4 text-center border-x-1 border-b-1">{item?.dateInvoice || "-"}</td>
                     <td className="px-6 py-4 text-center border-x-1 border-b-1">{item?.whitePaper?.whiteToEmployeeCount}</td>
-                    <td className="px-6 py-4 text-center border-x-1 border-b-1">{item?.whitePaper?.latestScan_timeW ? dayjs(item?.whitePaper?.latestScan_timeW).local().format("DD/MM/YYYY HH:mm:ss") : "-"}</td>
+                    <td className="px-6 py-4 text-center border-x-1 border-b-1">{item?.whitePaper?.latestScan_timeW || "-"}</td>
                     <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.invoice_code || "-"}</td>
                     <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.count_list || "-"}</td>
                     <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.price || "-"}</td>
                     <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.yellowToEmployeeCount || 0}</td>
-                    <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.latestScan_timeY ? dayjs(item?.yellowPaper?.latestScan_timeY).tz("Asia/Bangkok").format("DD/MM/YYYY HH:mm:ss") : "-"}</td>
+                    <td className="px-6 py-4 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.latestScan_timeY || "-"}</td>
                     <td className={`px-6 py-4 text-center border-x-1 border-b-1  border-black `}>{item.paperStatus === "Match" ? (
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-green-500">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
