@@ -2,10 +2,13 @@ import React from "react";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Socket, io } from "socket.io-client";
 import dayjs from "dayjs";
+import utc from 'dayjs/plugin/utc';
 import { toast } from 'react-toastify';
 // import { Fieldset } from "@headlessui/react";
 import { useAuth } from "../context/AuthContext";
 // import { Search } from "lucide-react";
+
+dayjs.extend(utc);
 
 export interface YellowPaper {
   id: number;
@@ -15,7 +18,7 @@ export interface YellowPaper {
   price: number;
   count_list: number;
   invoice_code: string;
-  latestScan_timeY: string;
+  latestScan_timeY: string; // หรือ Date
   yellowToEmployeeCount: number
   latestScan_timeW: string;
 }
@@ -38,7 +41,7 @@ export interface Invoice {
   sh_running: string;
   mem_code: string;
   mem_name: string;
-  dateInvoice: string;
+  dateInvoice: string; // หรือ Date
   paperStatus: string;
   yellowPaper: YellowPaper;
   whitePaper: WhitePaper;
@@ -527,14 +530,14 @@ function VerifyOrder() {
                   <td className="px-6 py-1 text-center border-x-1 border-b-1">{item?.mem_name}</td>
                   <td className="px-6 py-1 text-center border-x-1 border-b-1">{item?.whitePaper?.count_list || "-"}</td>
                   <td className="px-6 py-1 text-center border-x-1 border-b-1">{item?.whitePaper?.price || "-"}</td>
-                  <td className="px-6 py-1 text-center border-x-1 border-b-1">{item?.dateInvoice ? dayjs(item?.dateInvoice).format("DD/MM/YYYY HH:mm:ss") : "-"}</td>
+                  <td className="px-6 py-1 text-center border-x-1 border-b-1">{item?.dateInvoice ? dayjs.utc(item.dateInvoice).format("DD/MM/YYYY HH:mm:ss")  : "-"}</td>
                   <td className="px-6 py-1 text-center border-x-1 border-b-1">{item?.whitePaper?.whiteToEmployeeCount}</td>
-                  <td className="px-6 py-1 text-center border-x-1 border-b-1">{item?.whitePaper?.latestScan_timeW ? dayjs(item?.whitePaper?.latestScan_timeW).format("DD/MM/YYYY HH:mm:ss") : "-"}</td>
+                  <td className="px-6 py-1 text-center border-x-1 border-b-1">{item?.whitePaper?.latestScan_timeW ? dayjs.utc(item?.whitePaper?.latestScan_timeW).format("DD/MM/YYYY HH:mm:ss") : "-"}</td>
                   <td className="px-6 py-1 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.invoice_code || "-"}</td>
                   <td className="px-6 py-1 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.count_list || "-"}</td>
                   <td className="px-6 py-1 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.price || "-"}</td>
                   <td className="px-6 py-1 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.yellowToEmployeeCount || 0}</td>
-                  <td className="px-6 py-1 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.latestScan_timeY ? dayjs(item?.yellowPaper?.latestScan_timeY).format("DD/MM/YYYY HH:mm:ss") : "-"}</td>
+                  <td className="px-6 py-1 text-center bg-yellow-100 border-x-1 border-b-1">{item?.yellowPaper?.latestScan_timeY ? dayjs.utc(item?.yellowPaper?.latestScan_timeY).format("DD/MM/YYYY HH:mm:ss") : "-"}</td>
                   <td className={`px-6 py-1 text-center border-x-1 border-b-1  border-black `}>{item.paperStatus === "Match" ? (
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-12 text-green-500">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />

@@ -3,8 +3,9 @@ import { useLocation } from "react-router-dom";
 import axios from "axios";
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
+import utc from 'dayjs/plugin/utc';
 
-
+dayjs.extend(utc);
 dayjs.locale('th'); // ตั้ง locale ภาษาไทย
 
 interface ReportItem {
@@ -148,26 +149,12 @@ const FormatLogReport = () => {
     console.log("hasWhitePaper", hasWhitePaper);
 
     const formatDate = (dateString: string) => {
-        const date = dayjs(dateString);
+        const date = dayjs.utc(dateString);
         if (!date?.isValid()) {
             return '-';
         }
         return date?.format('DD/MM/YYYY HH:mm:ss');
     }
-
-    // const date1 = (dateString: string) => {
-    //     const date = dayjs(dateString);
-    //     if (!date?.isValid()) {
-    //         return '-';
-    //     }
-    //     return date?.format('DD/MM/YYYY');
-    // }
-    // const StringDate = String(logReport?.date);
-    // console.log("StringDate", StringDate);
-
-    // const lastScanWhite = String(logReport?.whitePaper?.latestScan_timeW);
-
-    // console.log("formatDate(logReport?.whitePaper?.latestScan_timeW)", date1(logReport?.whitePaper?.latestScan_timeW) == date1(StringDate));
 
     return (
         <div ref={pdfRef}>
