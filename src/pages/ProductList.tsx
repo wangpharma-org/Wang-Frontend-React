@@ -81,6 +81,8 @@ function ProductList() {
     sessionStorage.getItem("route") ?? "เลือกเส้นทางขนส่ง"
   );
   const [featureFlag, setFeatureFlag] = useState<boolean>(true);
+  const [msgFeatureFlag, setMsgFeatureFlag] = useState<string | null>(null);
+  const [changeRoute, setChangeRoute] = useState<boolean>(false);
   // const handleDoubleClick = useDoubleClick();
 
   const checkFlag = async () => {
@@ -88,12 +90,20 @@ function ProductList() {
       `${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/order`
     );
     console.log("Flag : ", flag.data);
-    if (flag.data === true) {
+    if (flag.data.status === true) {
       setFeatureFlag(true);
-    } else if (flag.data === false) {
+      // setMsgFeatureFlag(flag.data.msg);
+    } else if (flag.data.status === false) {
       setFeatureFlag(false);
+      setMsgFeatureFlag(flag.data.msg ?? 'ไม่มีหมายเหตุ');
     }
   };
+
+  useEffect(()=>{
+    if (changeRoute === true) {
+      navigate("/order-list")
+    }
+  }, [selectroute, changeRoute])
 
   useEffect(() => {
     handleGetRoute();
@@ -120,10 +130,11 @@ function ProductList() {
       setFeatureFlag(true);
     });
 
-    newSocket.on("feature_flag:false", () => {
-      console.log("feature_flag:false");
+    newSocket.on("feature_flag:false", (msg: string) => {
+      console.log('feature_flag:false');
+      setMsgFeatureFlag(msg ?? 'ไม่มีหมายเหตุ');
       setFeatureFlag(false);
-    });
+    })
 
     newSocket.on("connect", () => {
       console.log("✅ Connected to WebSocket");
@@ -374,6 +385,9 @@ function ProductList() {
         <p className="text-2xl font-bold text-red-700">
           ระบบโดนสั่งระงับการใช้งาน
         </p>
+        <p className="text-2xl font-bold text-red-700">
+          หมายเหตุ : { msgFeatureFlag }
+        </p>
       </div>
     );
   } else {
@@ -526,6 +540,7 @@ function ProductList() {
                 onChange={(e) => {
                   setSelectroute(e.target.value);
                   sessionStorage.setItem("route", e.target.value);
+                  setChangeRoute(true);
                   setSearch("");
                 }}
                 className="border border-gray-200 px-2 py-1 rounded text-black bg-white text-center flex justify-center w-full"

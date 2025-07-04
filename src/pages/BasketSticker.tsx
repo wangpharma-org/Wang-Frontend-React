@@ -11,6 +11,10 @@ export interface Employees {
   emp_floor: string | null;
 }
 
+export interface dataForEmp {
+  dataEmp: Employees;
+}
+
 const BasketSticker = () => {
   const queryParams = new URLSearchParams(location.search);
   const mem_code = queryParams.get("mem_code");
@@ -35,9 +39,9 @@ const BasketSticker = () => {
       .replace(",", "");
   };
 
-  const [JSONpackedEmpData, setJSONpackedEmpData] = useState<Employees>();
-  const [JSONQCEmpData, setJSONQCEmpData] = useState<Employees>();
-  const [JSONprepareEmpData, setJSONprepareEmpData] = useState<Employees>();
+  const [JSONpackedEmpData, setJSONpackedEmpData] = useState<dataForEmp>();
+  const [JSONQCEmpData, setJSONQCEmpData] = useState<dataForEmp>();
+  const [JSONprepareEmpData, setJSONprepareEmpData] = useState<dataForEmp>();
 
   useEffect(() => {
     if (prepareEmpData && QCEmpData && packedEmpData) {
@@ -72,7 +76,7 @@ const BasketSticker = () => {
         <p className="text-4xl font-bold">{mem_code}</p>
         <p className="text-2xl font-bold mt-2">{mem_name}</p>
         <p className="text-base font-bold mt-2">{getCurrentDateTime()}</p>
-        <p className="text-base font-bold mt-3">{`${JSONprepareEmpData?.emp_nickname} / ${JSONQCEmpData?.emp_name} / ${JSONpackedEmpData?.emp_name}`}</p>
+        <p className="text-base font-bold mt-3">{`${JSONprepareEmpData?.dataEmp.emp_nickname} / ${JSONQCEmpData?.dataEmp.emp_nickname} / ${JSONpackedEmpData?.dataEmp.emp_nickname}`}</p>
       </div>
 
       <div className="flex justify-between mt-2">

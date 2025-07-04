@@ -10,8 +10,8 @@ import { useNavigate } from "react-router";
 const listMenu = [
   {
     id: 1,
-    name: "ใบกำกับสินค้า",
-    href: "/invoice-all",
+    name: "จัดการสินค้า",
+    href: "/product-manage",
     imageSrc: reciept,
   },
   {

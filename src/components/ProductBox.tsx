@@ -67,7 +67,7 @@ export default function ProductBox({ orderItem, handleDoubleClick }: ProductBoxP
                         </div>
                         {orderItem?.product?.lot_priority && 
                         <div className="mt-1 pl-1 text-sm font-bold text-red-600">
-                            <p className="">บังคับจัด lot : {orderItem?.product?.lot_priority}</p>
+                            <p className="">เลือกสินค้า LOT : {orderItem?.product?.lot_priority} ก่อน</p>
                         </div>
                         }
                         <div className="flex justify-between pt-1 px-1">

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import product_icon from "../assets/product-17.png";
 import Modal from "../components/ModalQC";
+import { useAuth } from "../context/AuthContext";
 
 export interface Product {
   product_code: string;
@@ -26,6 +27,8 @@ const ProductManage = () => {
   const [changeFloor, setChangeFloor] = useState<string | null>(null);
   const [changeLot, setChangeLot] = useState<string | null>(null);
   const [changeAmount, setChangeLotAmount] = useState<number | null>(null);
+  const { userInfo } = useAuth();
+  const [barcode, setBarcode] = useState<string>("");
 
   const handleGetList = async () => {
     if (isSelect === 2) {
@@ -87,6 +90,8 @@ const ProductManage = () => {
     }
   };
 
+  console.log("manage product : ", userInfo?.manage_product);
+
   useEffect(() => {
     if (productManage) {
       console.log(productManage);
@@ -106,7 +111,7 @@ const ProductManage = () => {
           productManage?.product_barcode2 ??
           productManage?.product_barcode3,
         floor: changeFloor,
-        lot: changeLot ?? null ,
+        lot: changeLot ?? null,
         amount: changeAmount ?? null,
       }
     );
@@ -125,210 +130,249 @@ const ProductManage = () => {
   //   setModalManageOpen(false);
   // };
 
-  return (
-    <div className="flex flex-col justify-center items-left p-10">
-      <Modal isOpen={modalManageOpen} onClose={() => setModalManageOpen(false)}>
-        <div className="flex text-center justify-center">
-          <p className="text-3xl font-bold">ส่วนจัดการใบเบิก</p>
-        </div>
-        <div className="grid grid-cols-2">
-          <div className="col-span-1 mt-3">
-            <img
-              src={
-                productManage?.product_image_url?.startsWith("..")
-                  ? `https://www.wangpharma.com${productManage?.product_image_url?.slice(
-                      2
-                    )}`
-                  : productManage?.product_image_url || product_icon
-              }
-              className="w-lg rounded-lg drop-shadow-2xl"
-            ></img>
+  if (userInfo?.manage_product === "Yes") {
+    return (
+      <div className="flex flex-col justify-center items-left p-10">
+        <Modal
+          isOpen={modalManageOpen}
+          onClose={() => setModalManageOpen(false)}
+        >
+          <div className="flex text-center justify-center">
+            <p className="text-3xl font-bold">ส่วนจัดการใบเบิก</p>
           </div>
-          <div className="col-span-1 ml-3 flex flex-col justify-between">
-            <div>
-              <p className="text-4xl font-bold mt-6 line-clamp-2">
-                {productManage?.product_name}
-              </p>
-              <p className="text-xl mt-4">
-                รหัสสินค้า : {productManage?.product_barcode}
-              </p>
-
-              <div className="mt-4">
-                <p className="font-bold text-2xl mb-1">สินค้าอยู่ในชั้น</p>
-                <div className="flex items-center">
-                  <input
-                    className="border-3 text-4xl w-full border-green-600 rounded-sm text-center text-green-800 font-bold p-2"
-                    type="text"
-                    // value={productManage?.product_floor || ''}
-                    value={changeFloor ?? ""}
-                    onChange={(e) => {
-                      setChangeFloor(e.target.value);
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4">
-                <p className="font-bold text-2xl mb-1">จำกัดการขายเฉพาะ Lot</p>
-                <div className="flex items-center">
-                  <input
-                    className="border-3 text-4xl w-full border-red-600 rounded-sm text-center text-red-800 font-bold p-2"
-                    type="text"
-                    // value={productManage?.product_floor || ''}
-                    value={changeLot ?? ""}
-                    onChange={(e) => {
-                      setChangeLot(e.target.value);
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4">
-                <p className="font-bold text-2xl mb-1">จำนวน</p>
-                <div className="flex items-center">
-                  <input
-                    className="border-3 text-4xl w-full border-red-600 rounded-sm text-center text-red-800 font-bold p-2"
-                    type="text"
-                    // value={productManage?.product_floor || ''}
-                    value={changeAmount ?? ""}
-                    onChange={(e) => {
-                      setChangeLotAmount(Number(e.target.value));
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 w-full justify-end mt-4">
-              <button
-                disabled={
-                  changeFloor === null ||
-                  changeFloor === "" ||
-                  changeFloor === "-"
+          <div className="grid grid-cols-2">
+            <div className="col-span-1 mt-3">
+              <img
+                src={
+                  productManage?.product_image_url?.startsWith("..")
+                    ? `https://www.wangpharma.com${productManage?.product_image_url?.slice(
+                        2
+                      )}`
+                    : productManage?.product_image_url || product_icon
                 }
-                className={`text-center text-white text-lg p-2 rounded-lg px-8 cursor-pointer ${
-                  changeFloor !== null &&
-                  changeFloor !== "" &&
-                  changeFloor !== "-"
-                    ? "hover:bg-green-800 bg-green-700"
-                    : "hover:bg-gray-600 bg-gray-500"
-                }`}
-                onClick={() => handleSubmit()}
-              >
-                ยืนยัน
-              </button>
-              <div
-                className="text-center text-white bg-red-700 text-lg p-2 rounded-lg hover:bg-red-800 cursor-pointer px-5"
-                onClick={() => {
-                  setModalManageOpen(false);
-                  setProductManage(null);
-                  setChangeFloor(null);
-                }}
-              >
-                ยกเลิก
-              </div>
+                className="w-lg rounded-lg drop-shadow-2xl"
+              ></img>
             </div>
-          </div>
-        </div>
-      </Modal>
-      <p className="font-bold text-4xl">จัดการรายการสินค้า</p>
-      <div className="p-2 bg-gray-200 flex w-fit mt-4 gap-3 rounded-lg">
-        <div
-          className={`p-2 font-semibold text-lg rounded-sm ${
-            isSelect === 1 ? "bg-white text-black shadow-2xl" : "text-gray-600"
-          } cursor-pointer`}
-          onClick={() => {
-            setIsSelect(1);
-          }}
-        >
-          รายการสินค้า
-        </div>
-        <div
-          className={`p-2 font-semibold text-lg rounded-sm ${
-            isSelect === 2 ? "bg-white text-black shadow-2xl" : "text-gray-600"
-          } cursor-pointer`}
-          onClick={() => {
-            setIsSelect(2);
-          }}
-        >
-          รายการสินค้าจำกัด Lot
-        </div>
-      </div>
-
-      <div className="flex mt-10 gap-3">
-        {offset >= 18 && (
-          <p
-            className="text-lg bg-blue-500 cursor-pointer font-bold text-white p-2 rounded-sm select-none"
-            onClick={() => {
-              setOffset(offset - 18);
-            }}
-          >
-            ย้อนกลับ
-          </p>
-        )}
-        {productList && productList.length >= 18 && (
-          <p
-            className="text-lg bg-blue-500 cursor-pointer font-bold text-white p-2 rounded-sm select-none"
-            onClick={() => {
-              setOffset(offset + 18);
-            }}
-          >
-            หน้าถัดไป
-          </p>
-        )}
-      </div>
-      <p className="text-xl text-blue-500 mt-2">หน้าที่ {offset / 18 + 1}</p>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 mt-4">
-        {productList?.map((prod) => {
-          return (
-            <div className="bg-gray-100 drop-shadow-xl p-4 border-2 border-gray-200 rounded-lg">
-              <div className="w-full aspect-square overflow-hidden rounded-sm">
-                <img
-                  src={
-                    prod.product_image_url?.startsWith("..")
-                      ? `https://www.wangpharma.com${prod.product_image_url.slice(
-                          2
-                        )}`
-                      : prod.product_image_url || product_icon
-                  }
-                  className="w-full h-full object-cover"
-                  alt="Product"
-                />
-              </div>
-              <p className="text-2xl mt-3 font-bold truncate w-full">
-                {prod.product_name}
-              </p>
-              <p className="text-lg mt-1 text-blue-500">
-                รหัสสินค้า : {prod.product_code}
-              </p>
-              <p className="text-lg mt-1 text-green-600">
-                ประจำอยู่ชั้น : {prod.product_floor || "ไม่มีเลขชั้น"}
-              </p>
-              {prod.lot_priority && (
-                <p className="text-lg mt-0.5 text-red-600">
-                  จำกัด Lot : {prod.lot_priority}
+            <div className="col-span-1 ml-3 flex flex-col justify-between">
+              <div>
+                <p className="text-4xl font-bold mt-6 line-clamp-2">
+                  {productManage?.product_name}
                 </p>
-              )}
-              <div className="w-full flex items-center justify-end">
+                <p className="text-xl mt-4">
+                  รหัสสินค้า : {productManage?.product_barcode}
+                </p>
+
+                <div className="mt-4">
+                  <p className="font-bold text-2xl mb-1">สินค้าอยู่ในชั้น</p>
+                  <div className="flex items-center">
+                    <input
+                      className="border-3 text-4xl w-full border-green-600 rounded-sm text-center text-green-800 font-bold p-2"
+                      type="text"
+                      // value={productManage?.product_floor || ''}
+                      value={changeFloor ?? ""}
+                      onChange={(e) => {
+                        setChangeFloor(e.target.value);
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <p className="font-bold text-2xl mb-1">
+                    จำกัดการขายเฉพาะ Lot
+                  </p>
+                  <div className="flex items-center">
+                    <input
+                      readOnly={true}
+                      className="border-3 text-4xl w-full border-red-600 rounded-sm text-center text-red-800 font-bold p-2"
+                      type="text"
+                      // value={productManage?.product_floor || ''}
+                      value={changeLot ?? "ไม่มีการจำกัด LOT"}
+                      onChange={(e) => {
+                        setChangeLot(e.target.value);
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <p className="font-bold text-2xl mb-1">จำนวน</p>
+                  <div className="flex items-center">
+                    <input
+                      readOnly={true}
+                      className="border-3 text-4xl w-full border-red-600 rounded-sm text-center text-red-800 font-bold p-2"
+                      type="text"
+                      // value={productManage?.product_floor || ''}
+                      value={changeAmount ?? "ไม่มีการจำกัด LOT"}
+                      onChange={(e) => {
+                        setChangeLotAmount(Number(e.target.value));
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 w-full justify-end mt-4">
                 <button
-                  className="px-3 py-2 bg-blue-500 rounded-sm text-white mt-2 hover:bg-blue-600 cursor-pointer"
+                  disabled={
+                    changeFloor === null ||
+                    changeFloor === "" ||
+                    changeFloor === "-"
+                  }
+                  className={`text-center text-white text-lg p-2 rounded-lg px-8 cursor-pointer ${
+                    changeFloor !== null &&
+                    changeFloor !== "" &&
+                    changeFloor !== "-"
+                      ? "hover:bg-green-800 bg-green-700"
+                      : "hover:bg-gray-600 bg-gray-500"
+                  }`}
+                  onClick={() => handleSubmit()}
+                >
+                  ยืนยัน
+                </button>
+                <div
+                  className="text-center text-white bg-red-700 text-lg p-2 rounded-lg hover:bg-red-800 cursor-pointer px-5"
                   onClick={() => {
-                    handleGetProductDetail(
-                      prod.product_barcode ??
-                        prod.product_barcode2 ??
-                        prod.product_barcode3 ??
-                        null
-                    );
+                    setModalManageOpen(false);
+                    setProductManage(null);
+                    setChangeFloor(null);
                   }}
                 >
-                  จัดการสินค้า
-                </button>
+                  ยกเลิก
+                </div>
               </div>
             </div>
-          );
-        })}
+          </div>
+        </Modal>
+        <p className="font-bold text-4xl">จัดการรายการสินค้า</p>
+
+        <div className="flex">
+          <div className="p-2 bg-gray-200 flex w-fit mt-4 gap-3 rounded-lg">
+            <div
+              className={`p-2 font-semibold text-lg rounded-sm ${
+                isSelect === 1
+                  ? "bg-white text-black shadow-2xl"
+                  : "text-gray-600"
+              } cursor-pointer`}
+              onClick={() => {
+                setIsSelect(1);
+              }}
+            >
+              รายการสินค้า
+            </div>
+            <div
+              className={`p-2 font-semibold text-lg rounded-sm ${
+                isSelect === 2
+                  ? "bg-white text-black shadow-2xl"
+                  : "text-gray-600"
+              } cursor-pointer`}
+              onClick={() => {
+                setIsSelect(2);
+              }}
+            >
+              รายการสินค้าจำกัด Lot
+            </div>
+          </div>
+          <input
+            className="border-3 text-2xl w-200 border-gray-600 rounded-lg text-center text-gray-800 font-bold p-2 mt-4 ml-2"
+            type="text"
+            placeholder="สแกนบาร์โค้ดสินค้า"
+            onChange={(e)=>{setBarcode(e.target.value)}}
+            value={barcode || ''}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                if (!barcode) {
+                  return
+                } else {
+                  handleGetProductDetail(barcode);
+                }
+              }
+            }}
+          />
+        </div>
+
+        <div className="flex mt-10 gap-3">
+          {offset >= 18 && (
+            <p
+              className="text-lg bg-blue-500 cursor-pointer font-bold text-white p-2 rounded-sm select-none"
+              onClick={() => {
+                setOffset(offset - 18);
+              }}
+            >
+              ย้อนกลับ
+            </p>
+          )}
+          {productList && productList.length >= 18 && (
+            <p
+              className="text-lg bg-blue-500 cursor-pointer font-bold text-white p-2 rounded-sm select-none"
+              onClick={() => {
+                setOffset(offset + 18);
+              }}
+            >
+              หน้าถัดไป
+            </p>
+          )}
+        </div>
+        <p className="text-xl text-blue-500 mt-2">หน้าที่ {offset / 18 + 1}</p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 mt-4">
+          {productList?.map((prod) => {
+            return (
+              <div className="bg-gray-100 drop-shadow-xl p-4 border-2 border-gray-200 rounded-lg">
+                <div className="w-full aspect-square overflow-hidden rounded-sm">
+                  <img
+                    src={
+                      prod.product_image_url?.startsWith("..")
+                        ? `https://www.wangpharma.com${prod.product_image_url.slice(
+                            2
+                          )}`
+                        : prod.product_image_url || product_icon
+                    }
+                    className="w-full h-full object-cover"
+                    alt="Product"
+                  />
+                </div>
+                <p className="text-2xl mt-3 font-bold truncate w-full">
+                  {prod.product_name}
+                </p>
+                <p className="text-lg mt-1 text-blue-500">
+                  รหัสสินค้า : {prod.product_code}
+                </p>
+                <p className="text-lg mt-1 text-green-600">
+                  ประจำอยู่ชั้น : {prod.product_floor || "ไม่มีเลขชั้น"}
+                </p>
+                {prod.lot_priority && (
+                  <p className="text-lg mt-0.5 text-red-600">
+                    จำกัด Lot : {prod.lot_priority}
+                  </p>
+                )}
+                <div className="w-full flex items-center justify-end">
+                  <button
+                    className="px-3 py-2 bg-blue-500 rounded-sm text-white mt-2 hover:bg-blue-600 cursor-pointer"
+                    onClick={() => {
+                      handleGetProductDetail(
+                        prod.product_barcode ??
+                          prod.product_barcode2 ??
+                          prod.product_barcode3 ??
+                          null
+                      );
+                    }}
+                  >
+                    จัดการสินค้า
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
+    );
+  }
+  return (
+    <div className="flex flex-col min-h-screen text-center items-center justify-center">
+      <p className="text-2xl font-bold text-red-700">
+        คุณไม่มีสิทธิ์สำหรับการเข้าใช้หน้านี้
+      </p>
     </div>
   );
 };

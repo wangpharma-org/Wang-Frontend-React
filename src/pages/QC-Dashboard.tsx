@@ -12,6 +12,7 @@ import QCIcon from "../assets/quality-control.png";
 import PackingIcon from "../assets/package-delivered.png";
 import { QRCodeSVG } from "qrcode.react";
 import boxnotfound from "../assets/product-17.png";
+import dayjs from "dayjs";
 
 export interface Root {
   sh_running: string;
@@ -50,7 +51,7 @@ export interface Product {
   lot_priority: string;
   lot_priority_amount: number;
   attribute: ProductAttr[];
-  productDetail: ProductDetail;
+  detail: ProductDetail[];
   unit: Unit[];
 }
 
@@ -61,7 +62,7 @@ export interface Unit {
 }
 
 export interface ProductDetail {
-  created_at: number;
+  create_at: number;
   purchase_entry_no: string;
   quantity: number;
   unit: string;
@@ -204,6 +205,8 @@ const QCDashboard = () => {
 
   const [featureFlag, setFeatureFlag] = useState<boolean>(true);
 
+  const [msgFeatureFlag, setMsgFeatureFlag] = useState<string | null>(null);
+
   // ทำให้รหัสพนักงานไม่หายเมื่อ Refresh
   useEffect(() => {
     if (prepareEmp?.dataEmp?.emp_code) {
@@ -242,10 +245,12 @@ const QCDashboard = () => {
       `${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/qc`
     );
     console.log("Flag : ", flag.data);
-    if (flag.data === true) {
+    if (flag.data.status === true) {
       setFeatureFlag(true);
-    } else if (flag.data === false) {
+      // setMsgFeatureFlag(flag.data.msg);
+    } else if (flag.data.status === false) {
       setFeatureFlag(false);
+      setMsgFeatureFlag(flag.data.msg ?? 'ไม่มีหมายเหตุ');
     }
   };
 
@@ -297,10 +302,11 @@ const QCDashboard = () => {
       setFeatureFlag(true);
     });
 
-    newSocket.on("feature_flag:false", () => {
-      console.log("feature_flag:false");
+    newSocket.on("feature_flag:false", (msg: string) => {
+      console.log('feature_flag:false');
+      setMsgFeatureFlag(msg ?? 'ไม่มีหมายเหตุ');
       setFeatureFlag(false);
-    });
+    })
 
     const prepareEmpData = sessionStorage.getItem("prepare-emp");
     const QCEmpData = sessionStorage.getItem("qc-emp");
@@ -514,15 +520,18 @@ const QCDashboard = () => {
         const parts = some_value.split("-");
         const lastPart = parts[parts.length - 1];
         if (lastPart.length >= 6) {
+          console.log('เข้าเงื่อนไข sh_running')
           setSh_running(some_value);
           setInputMemCode(null);
           setSh_running_array(null);
         } else {
+          console.log('เข้าเงื่อนไข mem_code')
           setInputMemCode(some_value);
           setSh_running(null);
           setSh_running_array(null);
         }
       } else {
+        console.log('เข้าเงื่อนไข mem_code')
         setInputMemCode(some_value);
         setSh_running(null);
       }
@@ -1060,6 +1069,9 @@ const QCDashboard = () => {
         <p className="text-2xl font-bold text-red-700">
           ระบบโดนสั่งระงับการใช้งาน
         </p>
+        <p className="text-2xl font-bold text-red-700">
+          หมายเหตุ : { msgFeatureFlag }
+        </p>
       </div>
     );
   } else {
@@ -1342,9 +1354,9 @@ const QCDashboard = () => {
                   </div>
                   <div className="flex w-full justify-center mt-5">
                     <div className="flex gap-2 items-center">
-                      <p className="text-xl">จำนวนสั่งซื้อ</p>
+                      <p className="text-3xl">จำนวนสั่งซื้อ</p>
                       <input
-                        className="border-3 text-4xl w-56 border-green-600 rounded-sm text-center text-green-800 font-bold"
+                        className="border-3 text-7xl w-56 border-green-600 rounded-sm text-center text-green-800 font-bold"
                         type="text"
                         inputMode="decimal"
                         value={qcAmount}
@@ -1358,7 +1370,7 @@ const QCDashboard = () => {
                           setQCAmount(rawValue);
                         }}
                       ></input>
-                      <p className="text-xl">{orderForQC?.so_unit}</p>
+                      <p className="text-3xl">{orderForQC?.so_unit}</p>
                     </div>
                   </div>
                   <div className=" text-xl mt-2 font-bold flex items-center text-center justify-center">
@@ -1369,7 +1381,7 @@ const QCDashboard = () => {
                           (baseUnit.quantity / unit.quantity);
                         return (
                           <p key={unit.unit_name} className="pl-2">
-                            <span className="text-red-500">หรือ</span> {amount}{" "}
+                            <span className="text-red-500">หรือ</span> {amount.toFixed(2)}{" "}
                             {unit.unit_name}
                           </p>
                         );
@@ -1817,10 +1829,18 @@ const QCDashboard = () => {
                                   </td>
                                   <td className="py-4 text-lg border-r-2 border-blue-200 px-1">
                                     <div className="flex flex-col items-center justify-center text-center">
-                                      <p className="text-lg">
+                                      <p 
+                                        className="text-lg cursor-pointer select-none hover:underline"
+                                        onDoubleClick={() => {
+                                          setProductNotHaveBarcode(
+                                            so.product
+                                          );
+                                          inputBarcode.current?.focus();
+                                        }}
+                                      >
                                         {so?.product?.product_code}
                                       </p>
-
+                                        
                                       <p
                                         className={`text-base font-bold ${
                                           so?.picking_status === "picking"
@@ -1836,7 +1856,7 @@ const QCDashboard = () => {
                                           ? "กำลังขอเพิ่ม"
                                           : so?.picking_status}
                                       </p>
-                                      {!so.product.product_barcode &&
+                                      { !so.product.product_barcode &&
                                         !so.product.product_barcode2 &&
                                         !so.product.product_barcode3 && (
                                           <button
@@ -1876,26 +1896,23 @@ const QCDashboard = () => {
                                       </div>
                                       <div className="flex justify-between w-full px-10 ">
                                         <p className="text-base text-blue-500 font-bold">
-                                          รับเข้า {}
+                                          รับเข้า <span className="text-black">{ so?.product?.detail[0]?.create_at ? dayjs(so?.product?.detail[0]?.create_at).format('DD/MM/YYYY') : 'ไม่มีข้อมูล'}</span>
                                         </p>
                                         <div className="flex justify-center gap-1">
                                           <p className="text-base text-blue-500 font-bold">
-                                            คงเหลือ
-                                          </p>
-                                          <p className="text-base">
-                                            {so.product.product_stock}
+                                            คงเหลือ <span className="text-black">{so.product.product_stock ?? 'ไม่มีข้อมูล'}</span>
                                           </p>
                                         </div>
                                       </div>
                                       <div className="flex justify-between w-full px-10">
                                         <p className="text-base text-blue-500 font-bold">
-                                          จำนวน {}
+                                          จำนวน <span className="text-black">{so.product?.detail[0]?.quantity ?? 'ไม่มีข้อมูล'}</span>
                                         </p>
                                         {/* <p className="text-base">{15}</p> */}
                                       </div>
                                       <div className="flex justify-between w-full px-10">
                                         <p className="text-base text-blue-500 font-bold">
-                                          เลขคีย์ใบซื้อ {}
+                                          เลขคีย์ใบซื้อ <span className="text-black">{so.product?.detail[0]?.purchase_entry_no ?? 'ไม่มีข้อมูล'}</span>
                                         </p>
                                         {/* <p className="text-base">{15}</p> */}
                                       </div>

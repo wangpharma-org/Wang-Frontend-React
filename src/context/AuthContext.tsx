@@ -16,6 +16,7 @@ interface UserInfo {
   lastname?: string;
   nickname?: string;
   manage_qc?: string;
+  manage_product?: string;
 }
 
 interface AuthContextType {
@@ -81,6 +82,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         lastname: payload.lastname,
         nickname: payload.nickname,
         manage_qc: payload.manage_qc,
+        manage_product: payload.manage_product,
       };
 
       setAccessToken(access_token);

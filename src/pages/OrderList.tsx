@@ -95,6 +95,7 @@ const OrderList = () => {
   const [apiRoute, setAPIRoute] = useState<MemRoute[] | null>(null);
   const [routeButtons, setRouteButton] = useState<RouteButton[] | null>(null);
   const [featureFlag, setFeatureFlag] = useState<boolean>(true);
+  const [msgFeatureFlag, setMsgFeatureFlag] = useState<string | null>(null);
 
   console.log("selectedFloor", selectedFloor);
 
@@ -119,14 +120,18 @@ const OrderList = () => {
   };
 
   const checkFlag = async () => {
-    const flag = await axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/order`)
-    console.log('Flag : ',flag.data)
-    if (flag.data === true) {
-      setFeatureFlag(true)
-    } else if (flag.data === false) {
-      setFeatureFlag(false)
+    const flag = await axios.get(
+      `${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/order`
+    );
+    console.log("Flag : ", flag.data);
+    if (flag.data.status === true) {
+      setFeatureFlag(true);
+      // setMsgFeatureFlag(flag.data.msg);
+    } else if (flag.data.status === false) {
+      setFeatureFlag(false);
+      setMsgFeatureFlag(flag.data.msg ?? 'ไม่มีหมายเหตุ');
     }
-  }
+  };
 
   useEffect(() => {
     console.log(
@@ -152,8 +157,9 @@ const OrderList = () => {
       setFeatureFlag(true);
     })
 
-    newSocket.on("feature_flag:false", () => {
+    newSocket.on("feature_flag:false", (msg: string) => {
       console.log('feature_flag:false');
+      setMsgFeatureFlag(msg ?? 'ไม่มีหมายเหตุ');
       setFeatureFlag(false);
     })
 
@@ -463,6 +469,9 @@ const OrderList = () => {
       <div className="flex flex-col min-h-screen text-center items-center justify-center">
         <p className="text-2xl font-bold text-red-700">
           ระบบโดนสั่งระงับการใช้งาน
+        </p>
+        <p className="text-2xl font-bold text-red-700">
+          หมายเหตุ : { msgFeatureFlag }
         </p>
       </div>
     );

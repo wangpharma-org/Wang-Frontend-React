@@ -197,7 +197,7 @@ const BoxSticker = () => {
             <p className="text-[7px]">00.00 - 00.00</p>
           </div>
         </div>
-        <div className="flex border-b-1 py-1 justify-center px-1">
+        <div className="flex py-1 justify-center px-1">
           <div className="w-[90%] flex justify-center">
             <div className="flex border rounded-sm justify-center border-gray-800">
               <div className="w-10 border-r p-2 flex justify-center items-center mr-1 border-gray-800">
@@ -213,6 +213,8 @@ const BoxSticker = () => {
               </div>
             </div>
           </div>
+        </div>
+        <div className="flex justify-center items-center mt-1 border-b-1">
           <p className="text-[8px]">{sh_running?.replace(/,/g, " , ")}</p>
         </div>
       </div>
