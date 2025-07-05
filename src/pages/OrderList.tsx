@@ -96,6 +96,7 @@ const OrderList = () => {
   const [routeButtons, setRouteButton] = useState<RouteButton[] | null>(null);
   const [featureFlag, setFeatureFlag] = useState<boolean>(true);
   const [msgFeatureFlag, setMsgFeatureFlag] = useState<string | null>(null);
+  const [loadingOrder, setLoadingOrder] = useState<string | null>(null)
 
   console.log("selectedFloor", selectedFloor);
 
@@ -205,6 +206,14 @@ const OrderList = () => {
       JSON.stringify(totalShoppingOrders)
     );
 
+    orderList?.map((order) => {
+      const memCodeLoading = order.mem_code;
+      if (memCodeLoading === loadingOrder) {
+        setLoadingOrder(null);
+        return
+      }
+    })
+
     const totalStatusPicking = orderList?.reduce(
       (total, order) =>
         total +
@@ -311,6 +320,7 @@ const OrderList = () => {
       throw new Error("can not emit change to picking");
     }
   };
+
 
   const filteredData = orderList?.filter((order) => {
     const matchSearch =
@@ -1001,15 +1011,19 @@ const OrderList = () => {
                                     {order?.picking_status === "pending" && (
                                       <div className="pr-1">
                                         <button
-                                          className="border rounded-sm px-2 py-1 bg-green-500 text-white shadow-xl border-gray-300"
+                                          className="border rounded-sm px-2 py-1 bg-green-500 text-white shadow-xl border-gray-300 flex justify-center w-20"
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             handleDoubleClick(() => {
+                                              setLoadingOrder(order?.mem_code);
                                               changeToPicking(order?.mem_code);
                                             });
                                           }}
                                         >
-                                          เริ่มจัด
+                                          {order?.mem_code === loadingOrder ?
+                                            <div className="w-4.5 h-4.5 border-4 border-gray-200 border-t-white rounded-full animate-spin"></div>
+                                          : 'เริ่มจัด'
+                                          }
                                         </button>
                                       </div>
                                     )}
