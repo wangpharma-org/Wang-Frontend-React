@@ -42,11 +42,11 @@ export default function ProductBox({
     setIsFocused(false);
     setPrepareScan(null);
     console.log(
-        "Barcode All : ",
-        barcode === orderItem?.product?.product_barcode,
-        barcode === orderItem?.product?.product_barcode2,
-        barcode === orderItem?.product?.product_barcode3 
-    )
+      "Barcode All : ",
+      barcode === orderItem?.product?.product_barcode,
+      barcode === orderItem?.product?.product_barcode2,
+      barcode === orderItem?.product?.product_barcode3
+    );
     if (
       barcode === orderItem?.product?.product_barcode ||
       barcode === orderItem?.product?.product_barcode2 ||
@@ -117,18 +117,31 @@ export default function ProductBox({
             />
           </div>
           <div className="text-xs w-2/3 ml-1">
+            <button
+              className="text-white rounded-sm shadow-md bg-gray-500 py-2 px-3"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDoubleClick(orderItem, "picking");
+                setIsFocused(false);
+                setPrepareScan(null);
+              }}
+            >
+              ไม่มีบาร์โค้ด
+            </button>
             <div className="flex justify-between pt-1 px-1">
-              <p className="font-bold w-50 truncate ...   ">
+              <p className="font-bold w-50 truncate ...   select-none">
                 {orderItem.product.product_name}
               </p>
             </div>
             <div className="flex justify-between pt-1 px-1">
-              <p className="text-amber-500 font-bold">
+              <p className="text-amber-500 font-bold select-none">
                 {orderItem.product.product_code}
               </p>
               <input
                 className="opacity-0 h-0 w-0"
                 ref={inputRef}
+                inputMode="none"
+                // readOnly
                 onChange={(e) => {
                   setInputValue(e.currentTarget.value);
                 }}
@@ -139,22 +152,13 @@ export default function ProductBox({
                   }
                 }}
               ></input>
-              <button 
-                className="text-white rounded-sm shadow-md bg-gray-500 py-2 px-3"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    handleDoubleClick(orderItem, "picking");
-                    setIsFocused(false);
-                    setPrepareScan(null);
-                }}
-              >ไม่มีบาร์โค้ด</button>
-              <p className="px-2 py-2 rounded-sm bg-blue-800 text-white text-sm font-bold">
+              <p className="px-2 py-2 rounded-sm bg-blue-800 text-white text-sm font-bold select-none">
                 {orderItem.so_amount} {orderItem.so_unit}
               </p>
             </div>
-            <p className="pl-1 font-bold">เลขบาร์โค้ด</p>
+            <p className="pl-1 font-bold select-none">เลขบาร์โค้ด</p>
             <div className="flex justify-between pt-1 px-1">
-              <p className="text-amber-500 font-bold">
+              <p className="text-amber-500 font-bold select-none">
                 {orderItem.product.product_barcode}
               </p>
               <p>
@@ -163,14 +167,14 @@ export default function ProductBox({
               </p>
             </div>
             {orderItem?.product?.lot_priority && (
-              <div className="mt-1 pl-1 text-sm font-bold text-red-600">
+              <div className="mt-1 pl-1 text-sm font-bold text-red-600 select-none">
                 <p className="">
                   เลือกสินค้า LOT : {orderItem?.product?.lot_priority} ก่อน
                 </p>
               </div>
             )}
             <div className="flex justify-between pt-1 px-1">
-              <div className="flex font-semibold text-violet-600 text-[13px]">
+              <div className="flex font-semibold text-violet-600 text-[13px] select-none">
                 <p>F{orderItem.product.product_floor || "1"}</p>&nbsp;
                 <p>/</p>&nbsp;
                 <p>{orderItem.product.product_addr}</p>

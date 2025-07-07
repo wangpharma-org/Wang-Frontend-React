@@ -207,6 +207,10 @@ const QCDashboard = () => {
 
   const [msgFeatureFlag, setMsgFeatureFlag] = useState<string | null>(null);
 
+  const [loadingPrinting, setLoadingPrinting] = useState<boolean>(false);
+
+  const [loadingSubmit, setLoadingSubmit] = useState<boolean>(false);
+
   // ทำให้รหัสพนักงานไม่หายเมื่อ Refresh
   useEffect(() => {
     if (prepareEmp?.dataEmp?.emp_code) {
@@ -740,6 +744,7 @@ const QCDashboard = () => {
   };
 
   const SubmitShoppingHead = async () => {
+    setLoadingSubmit(true);
     console.log({
       amount: countBox,
       sh_running: shRunningArray,
@@ -787,11 +792,13 @@ const QCDashboard = () => {
         );
 
         if (response.status === 201) {
+          setLoadingSubmit(false);
           console.log("SubmitShoppingHead Success");
           handleClear();
           setSubmitFailed(false);
           setSubmitSucess(true);
         } else if (response.status === 500) {
+          setLoadingSubmit(false);
           console.log("SubmitShoppingHead Failed");
           setSubmitFailed(true);
         }
@@ -813,11 +820,13 @@ const QCDashboard = () => {
         );
 
         if (response.status === 201) {
+          setLoadingSubmit(false);
           console.log("SubmitShoppingHead Success");
           handleClear();
           setSubmitFailed(false);
           setSubmitSucess(true);
         } else if (response.status === 500) {
+          setLoadingSubmit(false);
           console.log("SubmitShoppingHead Failed");
           setSubmitFailed(true);
         }
@@ -825,6 +834,7 @@ const QCDashboard = () => {
         block_credit.data.status === false &&
         block_credit.data.message === "None"
       ) {
+        setLoadingSubmit(false);
         setErrMsgSubmit("ไม่เจอลูกค้ารายการนี้ในระบบกรุณาติดต่อพี่โต้");
         return;
       } else {
@@ -841,11 +851,13 @@ const QCDashboard = () => {
         );
 
         if (response.status === 201) {
+          setLoadingSubmit(false);
           console.log("SubmitShoppingHead Success");
           handleClear();
           setSubmitFailed(false);
           setSubmitSucess(true);
         } else if (response.status === 500) {
+          setLoadingSubmit(false);
           console.log("SubmitShoppingHead Failed");
           setSubmitFailed(true);
         }
@@ -871,6 +883,7 @@ const QCDashboard = () => {
 
   const handlePrintStickerBox = async () => {
     if (dataQC) {
+      setLoadingPrinting(true);
       const block_credit = await axios.post(
         `${import.meta.env.VITE_API_URL_ORDER}/api/picking/check-credit`,
         {
@@ -882,6 +895,9 @@ const QCDashboard = () => {
           mem_code: mem_code,
         }
       );
+      if (block_credit) {
+        setLoadingPrinting(false);
+      }
       console.log("block_credit", block_credit);
       if (
         block_credit.data.status === false &&
@@ -2276,12 +2292,15 @@ const QCDashboard = () => {
                       {hasNotQC === 0 && dataQC && (
                         <div>
                           <div
-                            className="w-full bg-green-500 text-base text-white p-1 font-bold rounded-sm hover:bg-green-600 select-none cursor-pointer mt-2"
+                            className="w-full bg-green-500 text-base text-white p-1 font-bold rounded-sm hover:bg-green-600 select-none cursor-pointer mt-2 flex justify-center items-center"
                             onClick={() => {
                               handlePrintStickerBox();
                             }}
                           >
-                            พิมพ์สติกเกอร์ติดลัง
+                            {loadingPrinting ?
+                              <div className="w-6 h-6 border-4 border-gray-200 border-t-white rounded-full animate-spin"></div>
+                              : 'พิมพ์สติกเกอร์ติดลัง'
+                            }
                           </div>
                           {errMessagePrintBox && (
                             <p className="mt-2 font-bold text-red-700">
@@ -2317,14 +2336,17 @@ const QCDashboard = () => {
                       )}
                       <button
                         disabled={hasNotQC !== 0}
-                        className={`w-full  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${
+                        className={`w-full flex justify-center items-center  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${
                           hasNotQC === 0
                             ? "bg-green-500 hover:bg-green-600"
                             : "bg-gray-500 hover:bg-gray-600"
                         }`}
                         onClick={() => SubmitShoppingHead()}
                       >
-                        เสร็จสิ้น
+                        {loadingSubmit ?
+                              <div className="w-6 h-6 border-4 border-gray-200 border-t-white rounded-full animate-spin"></div>
+                              : 'เสร็จสิ้น'
+                        }
                       </button>
                       <p className="mt-2 font-bold text-red-700">
                         {submitFailed ? `ยืนยันไม่สำเร็จ ลองอีกครั้ง` : ""}
