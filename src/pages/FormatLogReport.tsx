@@ -149,7 +149,7 @@ const FormatLogReport = () => {
     console.log("hasWhitePaper", hasWhitePaper);
 
     const formatDate = (dateString: string) => {
-        const date = dayjs.utc(dateString);
+        const date = dayjs(dateString);
         if (!date?.isValid()) {
             return '-';
         }
@@ -189,7 +189,7 @@ const FormatLogReport = () => {
                         <p>วันที่_{dateInfo?.day}_/_{dateInfo?.monthName}_/_{dateInfo?.year}_</p>
                     </div>
                     <div>
-                        <p>ลงชื่อ____________________ออกรายงาน</p>
+                        <p>ลงชื่อ____________________ผู้ตรวจสอบ</p>
                         <p>(________________________)</p>
                         <p>วันที่_{dateInfo?.day}_/_{dateInfo?.monthName}_/_{dateInfo?.year}_</p>
                     </div>
