@@ -58,7 +58,7 @@ export default function ProductBox({ orderItem, handleDoubleClick }: ProductBoxP
                         <p className="pl-1 font-bold">เลขบาร์โค้ด</p>
                         <div className="flex justify-between pt-1 px-1">
                             <p className="text-amber-500 font-bold">
-                                Bar : {orderItem.product.product_code}
+                                {orderItem.product.product_barcode ?? 'ไม่มีข้อมูล'}
                             </p>
                             <p>
                                 เหลือ {orderItem.product.product_stock}{" "}
