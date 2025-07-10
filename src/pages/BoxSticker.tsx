@@ -208,7 +208,7 @@ const BoxSticker = () => {
                   {dataPrint?.mem_shipping_note !== "" &&
                   dataPrint?.mem_shipping_note !== null
                     ? dataPrint?.mem_shipping_note
-                    : "ไม่มีหมายเหตุการส่งสินค้า"}
+                    : "-"}
                 </p>
               </div>
             </div>
