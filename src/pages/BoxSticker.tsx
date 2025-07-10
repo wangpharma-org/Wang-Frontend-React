@@ -6,6 +6,7 @@ import axios from "axios";
 import clock from "../assets/clock.png";
 import calendar from "../assets/check-mark.png";
 import correct from "../assets/correct.png";
+import "../css/print.css";
 
 export interface Employees {
   emp_id: number;
@@ -81,7 +82,7 @@ const BoxSticker = () => {
   const [JSONQCEmpData, setJSONQCEmpData] = useState<dataForEmp>();
   const [JSONprepareEmpData, setJSONprepareEmpData] = useState<dataForEmp>();
   const [dataPrint, setDataPrint] = useState<Address | null>(null);
-  let sh_running = queryParams.get("sh_running");
+  const sh_running = queryParams.get("sh_running");
 
   useEffect(() => {
     if (prepareEmpData && QCEmpData && packedEmpData) {

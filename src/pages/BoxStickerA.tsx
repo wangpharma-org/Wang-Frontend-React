@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import axios from "axios";
 import { QRCodeSVG } from "qrcode.react";
+import "../css/print.css";
 
 export interface Employees {
   emp_id: number;
