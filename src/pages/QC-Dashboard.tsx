@@ -569,6 +569,7 @@ const QCDashboard = () => {
     setSh_running(null);
     setIsInputLocked(false);
     setHasnotQC(0);
+    setCountBox(1);
     setInputValues(Array(6).fill(""));
     setProductNotHaveBarcode(null);
     setSHRunningArray(null);
@@ -2253,6 +2254,30 @@ const QCDashboard = () => {
                     </div>
 
                     <div className="mt-5 px-13">
+                    {
+                      hasNotQC === 0 && dataQC && 
+                      (
+                        <div>
+                          <div
+                            className="w-full bg-green-500 text-base text-white p-1 font-bold rounded-sm hover:bg-green-600 select-none cursor-pointer mb-2 flex justify-center items-center"
+                            onClick={() => {
+                              if (!loadingPrinting) {
+                                handlePrintStickerBox();
+                              } 
+                            }}
+                          >
+                            {loadingPrinting ?
+                              <div className="w-6 h-6 border-4 border-gray-200 border-t-white rounded-full animate-spin"></div>
+                              : 'พิมพ์สติกเกอร์ติดลัง'
+                            }
+                          </div>
+                          {errMessagePrintBox && (
+                            <p className="mt-2 font-bold text-red-700">
+                              {errMessagePrintBox}
+                            </p>
+                          )}
+                        </div>
+                      )}
                       <div
                         className="w-full bg-blue-500 text-base text-white p-1 font-bold rounded-sm hover:bg-blue-600 select-none cursor-pointer"
                         onClick={() => {
@@ -2290,28 +2315,7 @@ const QCDashboard = () => {
                       >
                         ระวังแตก
                       </div>
-                      {hasNotQC === 0 && dataQC && (
-                        <div>
-                          <div
-                            className="w-full bg-green-500 text-base text-white p-1 font-bold rounded-sm hover:bg-green-600 select-none cursor-pointer mt-2 flex justify-center items-center"
-                            onClick={() => {
-                              if (!loadingPrinting) {
-                                handlePrintStickerBox();
-                              } 
-                            }}
-                          >
-                            {loadingPrinting ?
-                              <div className="w-6 h-6 border-4 border-gray-200 border-t-white rounded-full animate-spin"></div>
-                              : 'พิมพ์สติกเกอร์ติดลัง'
-                            }
-                          </div>
-                          {errMessagePrintBox && (
-                            <p className="mt-2 font-bold text-red-700">
-                              {errMessagePrintBox}
-                            </p>
-                          )}
-                        </div>
-                      )}
+                      
 
                       {memRoute && memRoute === "L16" && (
                         <div
