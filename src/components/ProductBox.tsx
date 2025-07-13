@@ -38,7 +38,7 @@ export default function ProductBox({ orderItem, handleDoubleClick }: ProductBoxP
                                     ? `https://www.wangpharma.com${orderItem.product.product_image_url.slice(2)}`
                                     : orderItem.product.product_image_url || box
                             }
-                            className="w-25 h-25 object-cover"
+                            className="w-full h-full object-cover"
                         />
                     </div>
                     <div className="text-xs w-2/3 ml-1">

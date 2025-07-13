@@ -1,0 +1,1 @@
+export const SHIPPING_OTHER = [ "L20", "L17", "L16", "L7"];
