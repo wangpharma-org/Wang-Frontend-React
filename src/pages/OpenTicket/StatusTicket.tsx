@@ -13,8 +13,8 @@ interface EmpData {
 
 const StatusTicket = () => {
   const [empData, setEmpData] = useState<EmpData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [dataTicket, setDataTicket] = useState<any[]>([]);
+  const [, setLoading] = useState<boolean>(true);
+  const [, setDataTicket] = useState<any[]>([]);
 
   useEffect(() => {
     const storedEmpData = localStorage.getItem("emp_data");

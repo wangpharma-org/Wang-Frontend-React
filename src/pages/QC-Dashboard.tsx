@@ -215,6 +215,8 @@ const QCDashboard = () => {
 
   const [hasPrintSticker, setHasPrintSticker] = useState<boolean>(false);
 
+  const [cannotSubmit, setCannotSubmit] = useState<string | null>(null);
+
   // ทำให้รหัสพนักงานไม่หายเมื่อ Refresh
   useEffect(() => {
     if (prepareEmp?.dataEmp?.emp_code) {
@@ -561,6 +563,7 @@ const QCDashboard = () => {
 
   const handleClear = () => {
     inputBill.current?.focus();
+    setCannotSubmit(null);
     setSubmitFailed(false);
     setSubmitSucess(false);
     setHasQC(0);
@@ -891,6 +894,10 @@ const QCDashboard = () => {
     if (data.status === 201) {
       window.open(`/print-rt?so_running=${so_running}`);
     }
+  };
+
+  const handleRequestProduct = async (so_running: string) => {
+      window.open(`/print-request?so_running=${so_running}`);
   };
 
   const handlePrintStickerBox = async () => {
@@ -2162,6 +2169,15 @@ const QCDashboard = () => {
                                           ? "ส่ง RT แล้ว"
                                           : "ส่ง RT"}
                                       </button>
+
+                                      <button
+                                        className={`p-1 rounded-lg text-base text-white cursor-pointer bg-blue-500`}
+                                        onClick={() => {
+                                          handleRequestProduct(so.so_running);
+                                        }}
+                                      >
+                                        จัดชั้น 1
+                                      </button>
                                     </div>
                                   </td>
                                 </tr>
@@ -2364,7 +2380,7 @@ const QCDashboard = () => {
                         </div>
                       )}
                       <div
-                        className="w-full bg-blue-500 text-base text-white p-1 font-bold rounded-sm hover:bg-blue-600 select-none cursor-pointer"
+                        className="w-full bg-blue-500 text-base text-white p-1 font-bold rounded-sm hover:bg-blue-600 select-none cursor-pointer mt-4"
                         onClick={() => {
                           OtherShipping();
                         }}
@@ -2372,7 +2388,7 @@ const QCDashboard = () => {
                         ฝากขนส่งอื่น
                       </div>
                       <div
-                        className="w-full bg-amber-500 text-base text-white p-1 font-bold rounded-sm hover:bg-amber-600 select-none cursor-pointer mt-2"
+                        className="w-full bg-amber-500 text-base text-white p-1 font-bold rounded-sm hover:bg-amber-600 select-none cursor-pointer mt-4"
                         onClick={() => {
                           window.open("/special");
                         }}
@@ -2380,7 +2396,7 @@ const QCDashboard = () => {
                         กรณีด่วนพิเศษ
                       </div>
                       <div
-                        className="w-full bg-red-700 text-base text-white p-1 font-bold rounded-sm hover:bg-red-800 select-none cursor-pointer mt-2"
+                        className="w-full bg-red-700 text-base text-white p-1 font-bold rounded-sm hover:bg-red-800 select-none cursor-pointer mt-4"
                         onClick={() => {
                           window.open("/fragileprint");
                         }}
@@ -2390,7 +2406,7 @@ const QCDashboard = () => {
 
                       {memRoute && memRoute === "L16" && (
                         <div
-                          className="w-full bg-yellow-500 text-base text-white p-1 font-bold rounded-sm hover:bg-yellow-600 select-none cursor-pointer mt-2"
+                          className="w-full bg-yellow-500 text-base text-white p-1 font-bold rounded-sm hover:bg-yellow-600 select-none cursor-pointer mt-4"
                           onClick={() => {
                             const mem_code = Array.isArray(dataQC)
                               ? dataQC.length > 0
@@ -2412,13 +2428,20 @@ const QCDashboard = () => {
                         </div>
                       )}
                       <button
-                        disabled={hasNotQC !== 0 || loadingSubmit || !hasPrintSticker}
+                        // disabled={hasNotQC !== 0 || loadingSubmit || !hasPrintSticker}
                         className={`w-full flex justify-center items-center  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${
                           hasNotQC !== 0 || loadingSubmit || !hasPrintSticker
                             ? "bg-gray-500 hover:bg-gray-600"
                             : "bg-green-500 hover:bg-green-600"
                         }`}
-                        onClick={() => SubmitShoppingHead()}
+                        onClick={() => {
+                          if (hasNotQC !== 0 || loadingSubmit || !hasPrintSticker) {
+                            // setSubmitFailed(true);
+                            setCannotSubmit("ปริ้นสติกเกอร์ก่อนเสร็จสิ้น")
+                            return;
+                          }
+                          SubmitShoppingHead()
+                        }}
                       >
                         {loadingSubmit ? (
                           <div className="w-6 h-6 border-4 border-gray-200 border-t-white rounded-full animate-spin"></div>
@@ -2428,6 +2451,9 @@ const QCDashboard = () => {
                       </button>
                       <p className="mt-2 font-bold text-red-700">
                         {submitFailed ? `ยืนยันไม่สำเร็จ ลองอีกครั้ง` : ""}
+                      </p>
+                      <p className="mt-2 font-bold text-red-700">
+                        {cannotSubmit ? cannotSubmit : ""}
                       </p>
                       {errMessageSubmit && (
                         <p className="mt-2 font-bold text-red-700">

@@ -31,6 +31,7 @@ import ProductManage from "./pages/ProductManage";
 import Welcome from "./pages/OpenTicket/Welcome";
 import Ticket from "./pages/OpenTicket/Ticket";
 import StatusTicket from "./pages/OpenTicket/StatusTicket";
+import RequestProduct from "./pages/RequestProduct";
 
 function App() {
   return (
@@ -91,6 +92,7 @@ function App() {
           <Route path="/othercourier" element={<OtherCourier />} />
           <Route path="/basket-sticker" element={<BasketSticker />} />
           <Route path="/print-rt" element={<PrintRT />} />
+          <Route path="/print-request" element={<RequestProduct />} />
           <Route path="/dashboard-qc" element={<QCDashboard />} />
           <Route path="/special" element={<SpecialExpressPrint />} />
           <Route
