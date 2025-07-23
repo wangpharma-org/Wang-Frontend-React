@@ -149,7 +149,7 @@ const FormatLogReport = () => {
     console.log("hasWhitePaper", hasWhitePaper);
 
     const formatDate = (dateString: string) => {
-        const date = dayjs.utc(dateString);
+        const date = dayjs(dateString);
         if (!date?.isValid()) {
             return '-';
         }
@@ -189,7 +189,7 @@ const FormatLogReport = () => {
                         <p>วันที่_{dateInfo?.day}_/_{dateInfo?.monthName}_/_{dateInfo?.year}_</p>
                     </div>
                     <div>
-                        <p>ลงชื่อ____________________ออกรายงาน</p>
+                        <p>ลงชื่อ____________________ผู้ตรวจสอบ</p>
                         <p>(________________________)</p>
                         <p>วันที่_{dateInfo?.day}_/_{dateInfo?.monthName}_/_{dateInfo?.year}_</p>
                     </div>
@@ -208,7 +208,7 @@ const FormatLogReport = () => {
                                         <p className="">{Memitem?.memCode}</p>
                                     </div>
                                     <div>
-                                        <p className="">{Memitem?.totalAmount_mem}</p>
+                                        <p className="">{Memitem?.totalAmount_mem.toFixed(2)}</p>
                                     </div>
                                 </div>
                             ))}
@@ -233,7 +233,7 @@ const FormatLogReport = () => {
                                     <p className="">{item?.route_name}</p>
                                 </div>
                                 <div>
-                                    <p className="">{item?.totalAmount_route}</p>
+                                    <p className="">{item?.totalAmount_route.toFixed(2)}</p>
                                 </div>
                             </div>
                         ))}
@@ -286,7 +286,7 @@ const FormatLogReport = () => {
                                         <p>{employee?.countlistOrder}</p>
                                     </div>
                                     <div className="flex flex-col w-1/3">
-                                        <p>{employee?.totalAmount_emp}</p>
+                                        <p>{employee?.totalAmount_emp.toFixed(2)}</p>
                                     </div>
                                 </div>
                             </div>

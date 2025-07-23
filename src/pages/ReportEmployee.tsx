@@ -85,6 +85,7 @@ const Report = () => {
   const [report, setReport] = useState<EmployeeReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterData, setFilterData] = useState<EmployeeReport[]>([]);
+  const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
 
 
   const togglePopupMenu = () => {
@@ -240,6 +241,9 @@ const Report = () => {
     { label: "ชั้น 4", value: "4" },
     { label: "ชั้น 5", value: "5" },
   ]
+  const filteredData = filterData.filter(
+    emp => !selectedFloor || emp.emp_floor === selectedFloor
+  );
 
 
   return (
@@ -309,7 +313,16 @@ const Report = () => {
               className="flex justify-center text-white w-full"
             >
             </div>
-            <div>&nbsp;</div>
+            <div className="bg-white text-black rounded-sm py-1">
+              <select name="floor" id="floor" onChange={(e) => setSelectedFloor(e.target.value)} >
+                <option value="" className="text-black">ทั้งหมด</option>
+                {floor.map((item) => (
+                  <option key={item.value} value={item.value} className="text-black">
+                    ชั้น {item.value}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </header>
       </div>
@@ -319,119 +332,116 @@ const Report = () => {
             <ButtonMenu />
           </div>
         )}
-        {/* {report[0]?.productPerMinutes}
-        {report[1]?.productPerMinutes}
-        {report[2]?.productPerMinutes} */}
+
         {loading ? (
           <div className="flex justify-center font-bold text-2xl mt-10">
             <p>Loading...</p>
           </div>
-        ) : report.length === 0 ? (
+        ) : filteredData.length === 0 ? (
           <div className="flex justify-center font-bold text-2xl mt-10">
             ไม่มีข้อมูล
           </div>
-        ) :
-          (<div>
-            {filterData
-              .map((emp, index) => (
-                <div key={index} className="p-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-                  <div>
-                    <div className="bg-blue-900 text-white p-2 flex rounded-t-3xl">
-                      <div className="bg-white p-1 rounded-full flex justify-center">
-                        <img className="rounded-full w-20"
-                          src="https://as2.ftcdn.net/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg" />
-                      </div>
-                      <div className="w-6/8 ml-5">
-                        <div>
-                          <p className="flex justify-start font-bold text-lg">{emp?.emp_name}</p>
-                        </div>
-                        <div className=" text-sm">
-                          <div className="flex justify-between  pt-2">
-                            <div className="flex justify-start">
-                              <p>{emp?.emp_code}</p>&nbsp;
-                              <p>{emp?.emp_nickname}</p>
-                            </div>
-                            <div className="flex justify-end">
-                              <p className="">{emp.emp_workingPeriod_startTime} - {emp.emp_workingPeriod_endTime}</p>&nbsp;
-                            </div>
-                          </div>
-                          <div className="flex justify-between pt-2">
-                            <div>
-                              <p className="py-1">{emp?.emp_tel}</p>&nbsp;
-                            </div>
-                            <div className="">
-                              <p className="px-2 py-1 rounded-sm bg-gray-500">ชั้น {emp?.emp_floor}</p>&nbsp;
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+        ) : (
+          <div>
+            {filteredData.map((emp, index) => (
+              <div key={index} className="p-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+                <div>
+                  <div className="bg-blue-900 text-white p-2 flex rounded-t-3xl">
+                    <div className="bg-white p-1 rounded-full flex justify-center">
+                      <img className="rounded-full w-20"
+                        src="https://as2.ftcdn.net/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg" />
                     </div>
-                    <div className="px-3 bg-white text-sm">
-                      <div className="flex justify-between w-full pt-1">
-                        <div className="flex justify-start">
-                          <p>รายการจัดทั้งหมด</p>
-                        </div>
-                        <div className="flex justify-end">
-                          <p>{emp?.countPicking}</p>&nbsp;
-                          <p>รายการ</p>
-                        </div>
+                    <div className="w-6/8 ml-5">
+                      <div>
+                        <p className="flex justify-start font-bold text-lg">{emp?.emp_name}</p>
                       </div>
-                      <div className="flex justify-between w-full pt-2">
-                        <div className="flex justify-start">
-                          <p>ชิ้นแรก</p>
-                        </div>
-                        <div className="flex justify-end">
-                          <p>{formatDate(emp.dateStart)}</p>&nbsp;
-                          <p>{formatTime(emp.dateStart)}</p>&nbsp;
-                          <p>น.</p>
-                        </div>
-                      </div>
-                      <div className="flex justify-between w-full pt-2">
-                        <div className="flex justify-start">
-                          <p>ชิ้นล่าสุด</p>
-                        </div>
-                        <div className="flex justify-end">
-                          <p>{formatDate(emp.dateEnd)}</p>&nbsp;
-                          <p>{formatTime(emp.dateEnd)}</p>&nbsp;
-                          <p>น.</p>
-                        </div>
-                      </div>
-                      <div className="flex justify-between w-full py-2 ">
-                        <div className="flex justify-start">
-                          <p>ความเร็ว</p>
-                          <div className="flex">
-                            <p> (ชิ้น /</p>&nbsp;
-                            <p className="text-blue-500">นาที</p>
-                            <p>)</p>
+                      <div className=" text-sm">
+                        <div className="flex justify-between  pt-2">
+                          <div className="flex justify-start">
+                            <p>{emp?.emp_code}</p>&nbsp;
+                            <p>{emp?.emp_nickname}</p>
+                          </div>
+                          <div className="flex justify-end">
+                            <p className="">{emp.emp_workingPeriod_startTime} - {emp.emp_workingPeriod_endTime}</p>&nbsp;
                           </div>
                         </div>
-                        <div className="flex justify-end">
-                          <p>{(emp?.productPerMinute)?.toFixed(2)}</p>&nbsp;
-                          <div className="flex">
-                            <p>ชิ้น /</p>&nbsp;
-                            <p className="text-blue-500">นาที</p>
+                        <div className="flex justify-between pt-2">
+                          <div>
+                            <p className="py-1">{emp?.emp_tel}</p>&nbsp;
+                          </div>
+                          <div className="">
+                            <p className="px-2 py-1 rounded-sm bg-gray-500">ชั้น {emp?.emp_floor}</p>&nbsp;
                           </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex text-white justify-center shadow-2xl pb-2 rounded-b-3xl bg-white px-2">
-                      {floor.map((floor, floorIdx) => (
-                        <div key={floorIdx} className={`px-2.5 py-1 mb-1 mt-1 text-sm font-bold w-full ${floor.value === "1" ? "bg-gray-500 rounded-l-2xl" : floor.value === "2" ? "bg-yellow-500" : floor.value === "3" ? "bg-indigo-500" : floor.value === "4" ? "bg-red-500" : floor.value === "5" ? "bg-emerald-500 rounded-r-2xl" : "bg-white"}`}>
-                          <div className="flex justify-center pb-3">
-                            {floor.label}
-                          </div>
-                          <div className="flex justify-center">
-                            <p>รก.</p>&nbsp;
-                            <p>{floor.value === "1" ? emp?.floor1 : floor.value === "2" ? emp?.floor2 : floor.value === "3" ? emp?.floor3 : floor.value === "4" ? emp?.floor4 : floor.value === "5" ? emp?.floor5 : "0"}</p>&nbsp;
-                          </div>
-                        </div>
-                      ))}
                     </div>
                   </div>
+                  <div className="px-3 bg-white text-sm">
+                    <div className="flex justify-between w-full pt-1">
+                      <div className="flex justify-start">
+                        <p>รายการจัดทั้งหมด</p>
+                      </div>
+                      <div className="flex justify-end">
+                        <p>{emp?.countPicking}</p>&nbsp;
+                        <p>รายการ</p>
+                      </div>
+                    </div>
+                    <div className="flex justify-between w-full pt-2">
+                      <div className="flex justify-start">
+                        <p>ชิ้นแรก</p>
+                      </div>
+                      <div className="flex justify-end">
+                        <p>{formatDate(emp.dateStart)}</p>&nbsp;
+                        <p>{formatTime(emp.dateStart)}</p>&nbsp;
+                        <p>น.</p>
+                      </div>
+                    </div>
+                    <div className="flex justify-between w-full pt-2">
+                      <div className="flex justify-start">
+                        <p>ชิ้นล่าสุด</p>
+                      </div>
+                      <div className="flex justify-end">
+                        <p>{formatDate(emp.dateEnd)}</p>&nbsp;
+                        <p>{formatTime(emp.dateEnd)}</p>&nbsp;
+                        <p>น.</p>
+                      </div>
+                    </div>
+                    <div className="flex justify-between w-full py-2 ">
+                      <div className="flex justify-start">
+                        <p>ความเร็ว</p>
+                        <div className="flex">
+                          <p> (ชิ้น /</p>&nbsp;
+                          <p className="text-blue-500">นาที</p>
+                          <p>)</p>
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <p>{(emp?.productPerMinute)?.toFixed(2)}</p>&nbsp;
+                        <div className="flex">
+                          <p>ชิ้น /</p>&nbsp;
+                          <p className="text-blue-500">นาที</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex text-white justify-center shadow-2xl pb-2 rounded-b-3xl bg-white px-2">
+                    {floor.map((floor, floorIdx) => (
+                      <div key={floorIdx} className={`px-2.5 py-1 mb-1 mt-1 text-sm font-bold w-full ${floor.value === "1" ? "bg-gray-500 rounded-l-2xl" : floor.value === "2" ? "bg-yellow-500" : floor.value === "3" ? "bg-indigo-500" : floor.value === "4" ? "bg-red-500" : floor.value === "5" ? "bg-emerald-500 rounded-r-2xl" : "bg-white"}`}>
+                        <div className="flex justify-center pb-3">
+                          {floor.label}
+                        </div>
+                        <div className="flex justify-center">
+                          <p>รก.</p>&nbsp;
+                          <p>{floor.value === "1" ? emp?.floor1 : floor.value === "2" ? emp?.floor2 : floor.value === "3" ? emp?.floor3 : floor.value === "4" ? emp?.floor4 : floor.value === "5" ? emp?.floor5 : "0"}</p>&nbsp;
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              </div>
+            ))}
           </div>
-          )}
+        )}
       </div>
     </div>
   )

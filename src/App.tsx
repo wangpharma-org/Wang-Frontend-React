@@ -28,6 +28,10 @@ import BoxSticker from "./pages/BoxSticker";
 import BoxStickerBlock from "./pages/BoxStickerBlock";
 import BoxStickerA from "./pages/BoxStickerA";
 import ProductManage from "./pages/ProductManage";
+import Welcome from "./pages/OpenTicket/Welcome";
+import Ticket from "./pages/OpenTicket/Ticket";
+import StatusTicket from "./pages/OpenTicket/StatusTicket";
+import RequestProduct from "./pages/RequestProduct";
 
 function App() {
   return (
@@ -88,6 +92,7 @@ function App() {
           <Route path="/othercourier" element={<OtherCourier />} />
           <Route path="/basket-sticker" element={<BasketSticker />} />
           <Route path="/print-rt" element={<PrintRT />} />
+          <Route path="/print-request" element={<RequestProduct />} />
           <Route path="/dashboard-qc" element={<QCDashboard />} />
           <Route path="/special" element={<SpecialExpressPrint />} />
           <Route
@@ -225,10 +230,36 @@ function App() {
             path="/product-manage"
             element={
               <div>
-                <Navbar/>
+                <Navbar />
                 <RequireAuth>
                   <ProductManage />
                 </RequireAuth>
+              </div>
+            }
+          />
+          <Route
+            path="/ticket-welcome"
+            element={
+              <div>
+                <Welcome />
+              </div>
+            }
+          />
+
+          <Route
+            path="/open-ticket"
+            element={
+              <div>
+                <Ticket />
+              </div>
+            }
+          />
+
+          <Route
+            path="/status-ticket"
+            element={
+              <div>
+                <StatusTicket />
               </div>
             }
           />

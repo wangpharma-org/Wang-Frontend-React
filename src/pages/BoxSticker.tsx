@@ -6,6 +6,7 @@ import axios from "axios";
 import clock from "../assets/clock.png";
 import calendar from "../assets/check-mark.png";
 import correct from "../assets/correct.png";
+import "../css/print.css";
 
 export interface Employees {
   emp_id: number;
@@ -81,7 +82,7 @@ const BoxSticker = () => {
   const [JSONQCEmpData, setJSONQCEmpData] = useState<dataForEmp>();
   const [JSONprepareEmpData, setJSONprepareEmpData] = useState<dataForEmp>();
   const [dataPrint, setDataPrint] = useState<Address | null>(null);
-  let sh_running = queryParams.get("sh_running");
+  const sh_running = queryParams.get("sh_running");
 
   useEffect(() => {
     if (prepareEmpData && QCEmpData && packedEmpData) {
@@ -199,23 +200,25 @@ const BoxSticker = () => {
         </div>
         <div className="flex py-1 justify-center px-1">
           <div className="w-[90%] flex justify-center">
-            <div className="flex border rounded-sm justify-center border-gray-800">
-              <div className="w-10 border-r p-2 flex justify-center items-center mr-1 border-gray-800">
-                <img src={triangle} className="m-1"></img>
+            <div className="flex border rounded-sm justify-start border-gray-800 w-full">
+              <div className="border-r flex justify-center items-center mr-1 border-gray-800">
+                <div className="w-10 p-2 flex justify-center items-center">
+                  <img src={triangle} className="m-1"></img>
+                </div>
               </div>
-              <div className="p-1 flex items-center text-center">
+              <div className="p-1 flex items-center text-center justify-center w-full">
                 <p className="text-center">
                   {dataPrint?.mem_shipping_note !== "" &&
                   dataPrint?.mem_shipping_note !== null
                     ? dataPrint?.mem_shipping_note
-                    : "ไม่มีหมายเหตุการส่งสินค้า"}
+                    : "-"}
                 </p>
               </div>
             </div>
           </div>
         </div>
         <div className="flex justify-center items-center mt-1 border-b-1">
-          <p className="text-[8px]">{sh_running?.replace(/,/g, " , ")}</p>
+          <p className="text-[10px]">{sh_running?.replace(/,/g, " , ")}</p>
         </div>
       </div>
       <div className="flex justify-center items-center border-b">
@@ -244,7 +247,7 @@ const BoxSticker = () => {
           {index === 0 ? (
             <div className="flex justify-center items-center">
               <img src={correct} className="w-7"></img>
-              <p className="text-[16px] font-bold p-2">ลังนี้มีบิล</p>
+              <p className="text-[14px] p-2 mt-1">ลังนี้มีบิล</p>
             </div>
           ) : (
             <p className="text-[16px] p-2 text-center font-extrabold">-</p>

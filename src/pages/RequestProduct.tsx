@@ -163,7 +163,7 @@ const styles = {
   },
 };
 
-const PrintRT: React.FC = () => {
+const RequestProduct: React.FC = () => {
   const queryParams = new URLSearchParams(location.search);
   const so_running = queryParams.get("so_running");
   const [data, setData] = useState<ShoppingOrder | null>(null);
@@ -291,7 +291,7 @@ const PrintRT: React.FC = () => {
             <div className="w-full flex justify-between">
               <p className="text-[8px]">รหัสเจ้าหนี้</p>
               <p className="text-[8px]">
-                AP :{" "}
+                AR :{" "}
                 {Array.isArray(data?.product?.detail) &&
                 data.product.detail.length > 0
                   ? data.product.detail[0]?.creditor_code
@@ -352,7 +352,7 @@ const PrintRT: React.FC = () => {
         <div className="col-span-3 p-1">
           <div className="w-full flex justify-between">
             <p className="text-[8px]">รหัสลูกค้า</p>
-            <p className="text-[8px]">AR : {data?.shoppingHead?.mem_code}</p>
+            <p className="text-[8px]">AP : {data?.shoppingHead?.mem_code}</p>
           </div>
           {data?.shoppingHead?.mem_code && (
             <div className="flex justify-left overflow-hidden w-full">
@@ -399,12 +399,6 @@ const PrintRT: React.FC = () => {
         <div className="row-span-1 w-full flex justify-center gap-4">
           <div className="flex gap-1 items-center">
             <p className="text-[10px] font-semibold">สั่ง</p>
-            <p className="text-[12px] font-semibold">{data?.so_amount}</p>
-            <p className="text-[10px] font-semibold">หน่วย</p>
-            <p className="text-[10px] font-semibold">/ ได้</p>
-            <p className="text-[12px] font-semibold">0</p>
-            <p className="text-[10px] font-semibold">หน่วย</p>
-            <p className="text-[10px] font-semibold">/ RTIN</p>
             <p className="text-[12px] font-semibold">{data?.so_amount}</p>
             <p className="text-[10px] font-semibold">หน่วย</p>
           </div>
@@ -539,4 +533,4 @@ const PrintRT: React.FC = () => {
   );
 };
 
-export default PrintRT;
+export default RequestProduct;

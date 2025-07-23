@@ -80,7 +80,7 @@ function ProductList() {
   const [apiRoute, setAPIRoute] = useState<MemRoute[] | null>(null);
   const [routeButtons, setRouteButton] = useState<RouteButton[] | null>(null);
   const [selectroute, setSelectroute] = useState(
-    sessionStorage.getItem("route") ?? "เลือกเส้นทางขนส่ง"
+    sessionStorage.getItem("route") ?? "all"
   );
   const [featureFlag, setFeatureFlag] = useState<boolean>(true);
   const [msgFeatureFlag, setMsgFeatureFlag] = useState<string | null>(null);

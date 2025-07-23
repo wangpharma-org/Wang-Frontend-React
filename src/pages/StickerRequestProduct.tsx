@@ -51,7 +51,7 @@ const styles = {
   },
 };
 
-const BoxStickerA = () => {
+const SticketRequestProduct = () => {
   const queryParams = new URLSearchParams(location.search);
   const mem_code = queryParams.get("mem_code");
   const printCount = parseInt(queryParams.get("print") || "1");
@@ -119,73 +119,15 @@ const BoxStickerA = () => {
     setDataPrint(data.data);
   };
 
-  const renderSticker = (index: number) => (
+
+  return (
     <div
-      key={index}
       className="border-t-2 border-b-2 w-full p-2 text-sm break-after-page"
       style={styles.container}
     >
-      <div className="flex justify-between">
-        <div>
-          <p className="font-semibold text-[18px]">
-            {index + 1} / {printCount}
-          </p>
-          <p className="text-2xl font-bold">{mem_code}</p>
-        </div>
-        <div className="flex flex-col justify-left items-end">
-          <p className="font-semibold text-[11px]">{`${dayjs().format(
-            "DD-MM"
-          )}-${dayjs().year() + 543} ${dayjs().format("HH:mm")}`}</p>
-          <div className="flex">
-            <div className="flex flex-col justify-start items-end mr-1">
-              <p className="text-[11px]">สแกนบาร์โค้ดที่เครื่อง QC</p>
-              <p className="text-[11px]">เพื่อสั่งพิมพ์สติกเกอร์ติดลังใหม่</p>
-            </div>
-            <QRCodeSVG value={transformedShRunning || ""} size={60}></QRCodeSVG>
-          </div>
-        </div>
-      </div>
 
-      <div>
-        <div className="flex justify-center">
-          <div className="w-[80%] flex justify-center mt-2">
-            <p className="font-semibold text-[23px]">{dataPrint?.mem_name}</p>
-          </div>
-        </div>
-        <div className="w-[100%] flex justify-between mt-1 px-10">
-          <div>
-            <p className="text-[12px]">{`${dataPrint?.address_line1 ?? ""} ${
-              dataPrint?.address_line2 ?? ""
-            } ผู้ดูแล : ${dataPrint?.sub_district ?? ""}`}</p>
-          </div>
-          <div>
-            <p className="text-[12px]">
-              เบอร์โทรลูกค้า : {dataPrint?.mem_tel ?? "-"}
-            </p>
-          </div>
-        </div>
-        <div className="text-[12px] text-center mt-1">
-            <p>ลูกค้าจ่ายก่อนส่ง แจ้งฝ่ายขายวางบิลและแจ้งลูกค้าก่อน</p>
-            
-        </div>
-        <div className="w-[100%] flex justify-center mt-3">
-          <div className="grid grid-cols-2 gap-x-20 gap-y-2">
-            {sh_running_array.map((sh_running) => (
-              <div className="col-span-1">{sh_running}</div>
-            ))}
-          </div>
-        </div>
-      </div>
     </div>
-  );
-
-  return (
-    <>
-      {Array.from({ length: printCount }).map((_, index) =>
-        renderSticker(index)
-      )}
-    </>
   );
 };
 
-export default BoxStickerA;
+export default SticketRequestProduct;

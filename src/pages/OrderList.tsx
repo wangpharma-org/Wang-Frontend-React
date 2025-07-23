@@ -80,7 +80,7 @@ const OrderList = () => {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
   const [selectroute, setSelectroute] = useState(
-    sessionStorage.getItem("route") ?? "เลือกเส้นทางขนส่ง"
+    sessionStorage.getItem("route") ?? "all"
   );
   const { userInfo, logout } = useAuth();
   const navigate = useNavigate();
@@ -91,7 +91,7 @@ const OrderList = () => {
   const [floorCounts, setFloorCounts] = useState<Record<string, number>>({});
   const handleDoubleClick = useDoubleClick();
   const [requestProduct, setRequestProduct] = useState<Product[] | null>(null);
-  const [showRequestList, setShowRequestList] = useState(false);
+  const [showRequestList, setShowRequestList] = useState(true);
   const [apiRoute, setAPIRoute] = useState<MemRoute[] | null>(null);
   const [routeButtons, setRouteButton] = useState<RouteButton[] | null>(null);
   const [featureFlag, setFeatureFlag] = useState<boolean>(true);
@@ -345,7 +345,7 @@ const OrderList = () => {
 
     const matchRoute =
       selectroute === "all" ||
-      selectroute === "เลือกเส้นทางขนส่ง" ||
+      // selectroute === "เลือกเส้นทางขนส่ง" ||
       order?.mem_route?.route_code === selectroute;
 
     return matchSearch && matchFloor && matchRoute;
@@ -420,7 +420,7 @@ const OrderList = () => {
 
   const setButton = () => {
     setSearch("");
-    setSelectroute("เลือกเส้นทางขนส่ง");
+    setSelectroute("all");
     setSelectedFloor(null);
     sessionStorage.removeItem("route");
   };
