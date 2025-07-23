@@ -126,7 +126,7 @@ export default function ProductBox({
                 setPrepareScan(null);
               }}
             >
-              ไม่มีบาร์โค้ด
+              จัดแบบไม่สแกน
             </button>
             <div className="flex justify-between pt-1 px-1">
               <p className="font-bold w-50 truncate ...   select-none">

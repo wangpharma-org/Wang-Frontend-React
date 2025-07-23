@@ -1823,6 +1823,9 @@ const QCDashboard = () => {
                       placeholder="รหัสสินค้า / Barcode"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
+                          if (e.currentTarget.value === '') {
+                            return
+                          }
                           handleScan(e.currentTarget.value);
                         }
                       }}
