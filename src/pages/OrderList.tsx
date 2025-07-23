@@ -91,7 +91,7 @@ const OrderList = () => {
   const [floorCounts, setFloorCounts] = useState<Record<string, number>>({});
   const handleDoubleClick = useDoubleClick();
   const [requestProduct, setRequestProduct] = useState<Product[] | null>(null);
-  const [showRequestList, setShowRequestList] = useState(false);
+  const [showRequestList, setShowRequestList] = useState(true);
   const [apiRoute, setAPIRoute] = useState<MemRoute[] | null>(null);
   const [routeButtons, setRouteButton] = useState<RouteButton[] | null>(null);
   const [featureFlag, setFeatureFlag] = useState<boolean>(true);
