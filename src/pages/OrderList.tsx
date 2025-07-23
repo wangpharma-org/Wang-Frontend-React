@@ -1208,7 +1208,7 @@ const OrderList = () => {
                     return (
                       <div
                         key={floor}
-                        className="border px-1 py-1 rounded-sm w-full"
+                        className={`${['1', '2', '3', '4'].includes(floor) && `border-t border-l border-b`}  px-1 py-1 w-full ${floor === "1" && `rounded-l-sm`} ${floor === "5" && `rounded-r-sm border`}`}
                       >
                         <div className="flex justify-center">
                           <p className="font-bold text-sm">F{floor}</p>

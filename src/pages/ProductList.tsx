@@ -12,7 +12,9 @@ interface Product {
   product_code: string;
   product_name: string;
   product_image_url: string;
-  product_barcode: string;
+  product_barcode: string | null;
+  product_barcode2: string | null;
+  product_barcode3: string | null;
   product_floor: string | null;
   product_addr: string;
   product_stock: number;
@@ -84,6 +86,8 @@ function ProductList() {
   const [msgFeatureFlag, setMsgFeatureFlag] = useState<string | null>(null);
   const [changeRoute, setChangeRoute] = useState<boolean>(false);
   // const handleDoubleClick = useDoubleClick();
+
+  const [prepareScan, setPrepareScan] = useState<string | null>(null);
 
   const checkFlag = async () => {
     const flag = await axios.get(
@@ -232,6 +236,28 @@ function ProductList() {
     );
     setAPIRoute(route.data);
   };
+
+  const handleClick = (orderItem: ShoppingOrder, status: string) => {
+    if (orderItem.picking_status !== "pending") {
+      if (socket?.connected) {
+        console.log("orderItem to unpick : ", orderItem);
+        socket.emit("listproduct:unpicked", {
+          so_running: orderItem.so_running,
+          mem_code: mem_code,
+          sh_running: orderItem.sh_running,
+        });
+      }
+    } else {
+      if (socket?.connected) {
+        socket?.emit("listproduct:picked", {
+          so_running: orderItem.so_running,
+          mem_code: mem_code,
+          status: status,
+          sh_running: orderItem.sh_running,
+        });
+      }
+    }
+  }
 
   const handleDoubleClick = (orderItem: ShoppingOrder, status: string) => {
     clickCountRef.current++;
@@ -701,10 +727,13 @@ function ProductList() {
                               console.log("orderItem2", orderItem);
                               return (
                                 <ProductBox
+                                  prepareScan={prepareScan}
+                                  setPrepareScan={setPrepareScan}
                                   orderItem={orderItem}
                                   key={Orderindex}
                                   socket={socket}
                                   handleDoubleClick={handleDoubleClick}
+                                  handleClick={handleClick}
                                 />
                               );
                             }

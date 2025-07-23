@@ -2403,7 +2403,6 @@ const QCDashboard = () => {
                       >
                         ระวังแตก
                       </div>
-
                       {memRoute && memRoute === "L16" && (
                         <div
                           className="w-full bg-yellow-500 text-base text-white p-1 font-bold rounded-sm hover:bg-yellow-600 select-none cursor-pointer mt-4"
