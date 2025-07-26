@@ -427,7 +427,7 @@ const QCDashboard = () => {
       socket?.emit("get_my_room");
     }
     if (dataQC) {
-      console.log("Data QC : ",dataQC);
+      console.log("Data QC : ", dataQC);
       const mem_code = Array.isArray(dataQC)
         ? dataQC[0]?.members?.mem_code
         : dataQC.members?.mem_code;
@@ -447,7 +447,7 @@ const QCDashboard = () => {
         (so) => so.so_already_qc === "Yes"
       ).length;
       const inComplete = shoppingOrder?.filter(
-        (so) => so.so_already_qc === "Yes" && Number(so.so_qc_amount) !== Number(so.so_amount)
+        (so) => so.so_already_qc === "notComplete"
       ).length;
       const rt = shoppingOrder?.filter(
         (so) => so.so_already_qc === "RT"
@@ -460,8 +460,8 @@ const QCDashboard = () => {
       ).length;
 
       const hasPrintSticker = Array.isArray(dataQC)
-      ? dataQC.every((item) => item.shipping_id != null)
-      : dataQC.shipping_id != null;
+        ? dataQC.every((item) => item.shipping_id != null)
+        : dataQC.shipping_id != null;
 
       setHasPrintSticker(hasPrintSticker);
       setOrder(shoppingOrder);
@@ -562,7 +562,6 @@ const QCDashboard = () => {
   // เคลียร์ข้อมูล
 
   const handleClear = () => {
-    inputBill.current?.focus();
     setCannotSubmit(null);
     setSubmitFailed(false);
     setSubmitSucess(false);
@@ -590,6 +589,7 @@ const QCDashboard = () => {
     setAddShRunningArray(null);
     setErrMsgSubmit(null);
     setErrMsgPrintBox(null);
+    inputBill.current?.focus();
   };
 
   // ดึงข้อมูลสำหรับแสดงในหน้าขอสินค้าเพิ่ม
@@ -729,154 +729,170 @@ const QCDashboard = () => {
       product_code?: string | undefined;
     }
   ) => {
-    console.log(data);
-    console.log("QC Old Amount", oldQCAmount);
-    console.log("QC Old Amount", data.so_qc_amount);
-    console.log(
-      "so_qc_amount + QC Old Amount",
-      Number(data.so_qc_amount) + Number(oldQCAmount)
-    );
-    const response = await axios.post(
-      `${import.meta.env.VITE_API_URL_ORDER}/api/qc/update-qc`,
-      {
-        so_running: data.so_running,
-        so_qc_note: data.so_qc_note,
-        so_qc_amount: Number(data.so_qc_amount) + Number(oldQCAmount),
-        so_amount: data.so_amount,
-        emp_prepare_by: data.emp_prepare_by,
-        emp_qc_by: data.emp_qc_by,
-        emp_packed_by: data.emp_packed_by,
-        sh_running: data.sh_running,
-        room: myRoom,
-        amount: data.amount ?? null,
-        product_code: data.product_code ?? null,
+    try {
+      console.log(data);
+      console.log("QC Old Amount", oldQCAmount);
+      console.log("QC Old Amount", data.so_qc_amount);
+      console.log(
+        "so_qc_amount + QC Old Amount",
+        Number(data.so_qc_amount) + Number(oldQCAmount)
+      );
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/qc/update-qc`,
+        {
+          so_running: data.so_running,
+          so_qc_note: data.so_qc_note,
+          so_qc_amount: Number(data.so_qc_amount) + Number(oldQCAmount),
+          so_amount: data.so_amount,
+          emp_prepare_by: data.emp_prepare_by,
+          emp_qc_by: data.emp_qc_by,
+          emp_packed_by: data.emp_packed_by,
+          sh_running: data.sh_running,
+          room: myRoom,
+          amount: data.amount ?? null,
+          product_code: data.product_code ?? null,
+        }
+      );
+      console.log(response.status);
+      if (response.status === 201) {
+        setModalOpen(false);
       }
-    );
-    console.log(response.status);
-    if (response.status === 201) {
-      setModalOpen(false);
+    } catch {
+      alert(
+        "มีบางอย่างผิดพลาด กรุณาสแกน QC Code ลูกค้าเจ้าเดิมอีกครั้งเพื่อทำงานต่อ"
+      );
+      setModalOpen(false)
+      handleClear();
+      inputBill.current?.focus();
     }
   };
 
   const SubmitShoppingHead = async () => {
-    setLoadingSubmit(true);
-    console.log({
-      amount: countBox,
-      sh_running: shRunningArray,
-      emp_qc: QCEmp?.dataEmp?.emp_code,
-      emp_packed: packedEMP?.dataEmp?.emp_code,
-      emp_prepare: prepareEmp?.dataEmp?.emp_code,
-      mem_code: mem_code,
-    });
-    if (prepareEmp && QCEmp && packedEMP && dataQC && hasNotQC === 0) {
+    try {
+      setLoadingSubmit(true);
       console.log({
-        amount: { sum: countBox },
+        amount: countBox,
         sh_running: shRunningArray,
-        emp_qc: QCEmp?.dataEmp.emp_code,
-        emp_packed: packedEMP?.dataEmp.emp_code,
-        emp_prepare: prepareEmp?.dataEmp.emp_code,
+        emp_qc: QCEmp?.dataEmp?.emp_code,
+        emp_packed: packedEMP?.dataEmp?.emp_code,
+        emp_prepare: prepareEmp?.dataEmp?.emp_code,
         mem_code: mem_code,
       });
-      const block_credit = await axios.post(
-        `${import.meta.env.VITE_API_URL_ORDER}/api/picking/check-credit`,
-        {
+      if (prepareEmp && QCEmp && packedEMP && dataQC && hasNotQC === 0) {
+        console.log({
           amount: { sum: countBox },
           sh_running: shRunningArray,
           emp_qc: QCEmp?.dataEmp.emp_code,
           emp_packed: packedEMP?.dataEmp.emp_code,
           emp_prepare: prepareEmp?.dataEmp.emp_code,
           mem_code: mem_code,
-        }
-      );
-      console.log("block_credit", block_credit);
-      if (
-        block_credit.data.status === false &&
-        block_credit.data.message === "Block"
-      ) {
-        const response = await axios.post(
-          `${import.meta.env.VITE_API_URL_ORDER}/api/qc/submit-qc`,
+        });
+        const block_credit = await axios.post(
+          `${import.meta.env.VITE_API_URL_ORDER}/api/picking/check-credit`,
           {
+            amount: { sum: countBox },
             sh_running: shRunningArray,
-            emp_prepare: prepareEmp.dataEmp.emp_code,
-            emp_qc: QCEmp.dataEmp.emp_code,
-            emp_packed: packedEMP.dataEmp.emp_code,
+            emp_qc: QCEmp?.dataEmp.emp_code,
+            emp_packed: packedEMP?.dataEmp.emp_code,
+            emp_prepare: prepareEmp?.dataEmp.emp_code,
             mem_code: mem_code,
-            block_credit: true,
-            block_type: "Block",
           }
         );
+        console.log("block_credit", block_credit);
+        if (
+          block_credit.data.status === false &&
+          block_credit.data.message === "Block"
+        ) {
+          const response = await axios.post(
+            `${import.meta.env.VITE_API_URL_ORDER}/api/qc/submit-qc`,
+            {
+              sh_running: shRunningArray,
+              emp_prepare: prepareEmp.dataEmp.emp_code,
+              emp_qc: QCEmp.dataEmp.emp_code,
+              emp_packed: packedEMP.dataEmp.emp_code,
+              mem_code: mem_code,
+              block_credit: true,
+              block_type: "Block",
+            }
+          );
 
-        if (response.status === 201) {
-          setLoadingSubmit(false);
-          console.log("SubmitShoppingHead Success");
-          handleClear();
-          setSubmitFailed(false);
-          setSubmitSucess(true);
-        } else if (response.status === 500) {
-          setLoadingSubmit(false);
-          console.log("SubmitShoppingHead Failed");
-          setSubmitFailed(true);
-        }
-      } else if (
-        block_credit.data.status === false &&
-        block_credit.data.message === "A"
-      ) {
-        const response = await axios.post(
-          `${import.meta.env.VITE_API_URL_ORDER}/api/qc/submit-qc`,
-          {
-            sh_running: shRunningArray,
-            emp_prepare: prepareEmp.dataEmp.emp_code,
-            emp_qc: QCEmp.dataEmp.emp_code,
-            emp_packed: packedEMP.dataEmp.emp_code,
-            mem_code: mem_code,
-            block_credit: true,
-            block_type: "Customer-A",
+          if (response.status === 201) {
+            setLoadingSubmit(false);
+            console.log("SubmitShoppingHead Success");
+            handleClear();
+            setSubmitFailed(false);
+            setSubmitSucess(true);
+          } else if (response.status === 500) {
+            setLoadingSubmit(false);
+            console.log("SubmitShoppingHead Failed");
+            setSubmitFailed(true);
           }
-        );
+        } else if (
+          block_credit.data.status === false &&
+          block_credit.data.message === "A"
+        ) {
+          const response = await axios.post(
+            `${import.meta.env.VITE_API_URL_ORDER}/api/qc/submit-qc`,
+            {
+              sh_running: shRunningArray,
+              emp_prepare: prepareEmp.dataEmp.emp_code,
+              emp_qc: QCEmp.dataEmp.emp_code,
+              emp_packed: packedEMP.dataEmp.emp_code,
+              mem_code: mem_code,
+              block_credit: true,
+              block_type: "Customer-A",
+            }
+          );
 
-        if (response.status === 201) {
-          setLoadingSubmit(false);
-          console.log("SubmitShoppingHead Success");
-          handleClear();
-          setSubmitFailed(false);
-          setSubmitSucess(true);
-        } else if (response.status === 500) {
-          setLoadingSubmit(false);
-          console.log("SubmitShoppingHead Failed");
-          setSubmitFailed(true);
-        }
-      } else if (
-        block_credit.data.status === false &&
-        block_credit.data.message === "None"
-      ) {
-        setLoadingSubmit(false);
-        setErrMsgSubmit("ไม่เจอลูกค้ารายการนี้ในระบบกรุณาติดต่อพี่โต้");
-        return;
-      } else {
-        const response = await axios.post(
-          `${import.meta.env.VITE_API_URL_ORDER}/api/qc/submit-qc`,
-          {
-            sh_running: shRunningArray,
-            emp_prepare: prepareEmp.dataEmp.emp_code,
-            emp_qc: QCEmp.dataEmp.emp_code,
-            emp_packed: packedEMP.dataEmp.emp_code,
-            mem_code: mem_code,
-            block_credit: false,
+          if (response.status === 201) {
+            setLoadingSubmit(false);
+            console.log("SubmitShoppingHead Success");
+            handleClear();
+            setSubmitFailed(false);
+            setSubmitSucess(true);
+          } else if (response.status === 500) {
+            setLoadingSubmit(false);
+            console.log("SubmitShoppingHead Failed");
+            setSubmitFailed(true);
           }
-        );
+        } else if (
+          block_credit.data.status === false &&
+          block_credit.data.message === "None"
+        ) {
+          setLoadingSubmit(false);
+          setErrMsgSubmit("ไม่เจอลูกค้ารายการนี้ในระบบกรุณาติดต่อพี่โต้");
+          return;
+        } else {
+          const response = await axios.post(
+            `${import.meta.env.VITE_API_URL_ORDER}/api/qc/submit-qc`,
+            {
+              sh_running: shRunningArray,
+              emp_prepare: prepareEmp.dataEmp.emp_code,
+              emp_qc: QCEmp.dataEmp.emp_code,
+              emp_packed: packedEMP.dataEmp.emp_code,
+              mem_code: mem_code,
+              block_credit: false,
+            }
+          );
 
-        if (response.status === 201) {
-          setLoadingSubmit(false);
-          console.log("SubmitShoppingHead Success");
-          handleClear();
-          setSubmitFailed(false);
-          setSubmitSucess(true);
-        } else if (response.status === 500) {
-          setLoadingSubmit(false);
-          console.log("SubmitShoppingHead Failed");
-          setSubmitFailed(true);
+          if (response.status === 201) {
+            setLoadingSubmit(false);
+            console.log("SubmitShoppingHead Success");
+            handleClear();
+            setSubmitFailed(false);
+            setSubmitSucess(true);
+          } else if (response.status === 500) {
+            setLoadingSubmit(false);
+            console.log("SubmitShoppingHead Failed");
+            setSubmitFailed(true);
+          }
         }
       }
+    } catch {
+      alert(
+        "มีบางอย่างผิดพลาด กรุณาสแกน QC Code ลูกค้าเจ้าเดิมอีกครั้งเพื่อทำงานต่อ"
+      );
+      handleClear();
     }
   };
 
@@ -897,7 +913,7 @@ const QCDashboard = () => {
   };
 
   const handleRequestProduct = async (so_running: string) => {
-      window.open(`/print-request?so_running=${so_running}`);
+    window.open(`/print-request?so_running=${so_running}`);
   };
 
   const handlePrintStickerBox = async () => {
@@ -976,7 +992,7 @@ const QCDashboard = () => {
           );
         }
       }
-      if ( memRoute &&  SHIPPING_OTHER.includes(memRoute)) {
+      if (memRoute && SHIPPING_OTHER.includes(memRoute)) {
         console.log("memRoute : ", memRoute);
         OtherShipping();
       }
@@ -1101,8 +1117,7 @@ const QCDashboard = () => {
     if (
       !dataQC ||
       (Array.isArray(dataQC) && dataQC.length <= 0) ||
-      (!Array.isArray(dataQC) &&
-        !dataQC?.members?.mem_code)
+      (!Array.isArray(dataQC) && !dataQC?.members?.mem_code)
     ) {
       return;
     }
@@ -1112,7 +1127,7 @@ const QCDashboard = () => {
         : null
       : dataQC?.members?.mem_code ?? null;
     window.open(`/othercourier?mem_code=${mem_code}`);
-  }
+  };
 
   if (error) {
     return (
@@ -1372,16 +1387,6 @@ const QCDashboard = () => {
                       </p>
                     </div>
                   </div>
-                  {/* <div className="flex justify-between px-30 mt-2">
-                <div className="flex gap-2">
-                  <p className="text-xl">ซื้อล่าสุด</p>
-                  <p className="text-xl">วันที่</p>
-                </div>
-                <div className="flex gap-2">
-                  <p className="text-xl">30.00</p>
-                  <p className="text-xl">ขวด</p>
-                </div>
-              </div> */}
                   <div className="flex w-full justify-center mt-5">
                     {orderForQC?.picking_status === "picking" ? (
                       <div className="flex gap-2 text-5xl">
@@ -1460,24 +1465,29 @@ const QCDashboard = () => {
               </div>
               <div className="flex space-y-1 gap-4 items-center">
                 <div className="flex space-y-1 gap-4 items-center">
-                  {["ขาด", "ไม่ครบ", "หยิบผิด", "หยิบเกิน", "ไม่มีของ", "สติกเกอร์ผิดตะกร้า"].map(
-                    (label) => (
-                      <label
-                        key={label}
-                        className="inline-flex items-center space-x-2"
-                      >
-                        <input
-                          type="radio"
-                          name={`qc_status_${orderForQC?.so_running}`}
-                          value={label}
-                          className="text-blue-600"
-                          checked={qcNote === label}
-                          onChange={(e) => setQCNote(e.target.value)}
-                        />
-                        <span className="text-base font-bold">{label}</span>
-                      </label>
-                    )
-                  )}
+                  {[
+                    "ขาด",
+                    "ไม่ครบ",
+                    "หยิบผิด",
+                    "หยิบเกิน",
+                    "ไม่มีของ",
+                    "สติกเกอร์ผิดตะกร้า",
+                  ].map((label) => (
+                    <label
+                      key={label}
+                      className="inline-flex items-center space-x-2"
+                    >
+                      <input
+                        type="radio"
+                        name={`qc_status_${orderForQC?.so_running}`}
+                        value={label}
+                        className="text-blue-600"
+                        checked={qcNote === label}
+                        onChange={(e) => setQCNote(e.target.value)}
+                      />
+                      <span className="text-base font-bold">{label}</span>
+                    </label>
+                  ))}
                   <button
                     className="px-2 bg-blue-500 py-1 rounded-lg text-white font-bold hover:bg-blue-600 cursor-pointer"
                     onClick={() => setQCNote(null)}
@@ -1544,9 +1554,6 @@ const QCDashboard = () => {
                       product_code: orderForQC?.product?.lot_priority
                         ? orderForQC?.product?.product_code
                         : undefined,
-                      // sh_running: Array.isArray(dataQC)
-                      //   ? null
-                      //   : dataQC?.sh_running,
                     });
                   }
                 }}
@@ -1662,10 +1669,16 @@ const QCDashboard = () => {
                       </div>
                     );
                   })}
-                  <p 
+                  <p
                     className="text-red-600 font-bold underline mt-3 cursor-pointer"
-                    onClick={() => {window.open('https://www.wangpharma.com/wang/check-qc-old.php')}}
-                  >คลิกเพื่อตรวจสอบรายการย้อนหลัง</p>
+                    onClick={() => {
+                      window.open(
+                        "https://www.wangpharma.com/wang/check-qc-old.php"
+                      );
+                    }}
+                  >
+                    คลิกเพื่อตรวจสอบรายการย้อนหลัง
+                  </p>
                 </div>
                 <div className="col-span-4 bg-blue-50 rounded-xl self-start pb-5 mb-10">
                   <div>
@@ -1823,8 +1836,8 @@ const QCDashboard = () => {
                       placeholder="รหัสสินค้า / Barcode"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                          if (e.currentTarget.value === '') {
-                            return
+                          if (e.currentTarget.value === "") {
+                            return;
                           }
                           handleScan(e.currentTarget.value);
                         }
@@ -1868,6 +1881,8 @@ const QCDashboard = () => {
                                       ? "bg-green-100 hover:bg-green-100"
                                       : so.so_already_qc === "RT"
                                       ? "bg-red-100 hover:bg-red-100"
+                                      : so.so_already_qc === "notComplete"
+                                      ? "bg-yellow-50 hover:bg-yellow-50"
                                       : "bg-white hover:bg-gray-50"
                                   }`}
                                 >
@@ -1953,14 +1968,22 @@ const QCDashboard = () => {
                                     </div>
                                   </td>
                                   <td className="py-4 text-lg border-r-2 border-blue-200">
+                                    {so.so_already_qc === "notComplete" && (
+                                      <div className="mb-2">
+                                        <p className="text-red-700 font-bold">
+                                          รายการนี้ลูกค้าได้ของไม่ครบ (ขาด{" "}
+                                          {so.so_amount - so.so_qc_amount}{" "}
+                                          {so.so_unit})
+                                        </p>
+                                      </div>
+                                    )}
                                     <div className="flex flex-col items-center justify-center text-center">
-                                    <p className="text-base text-blue-500 font-bold">
-                                            เลขบิล{" "}
-                                            <span className="text-black">
-                                              {so.sh_running ??
-                                                "ไม่มีข้อมูล"}
-                                            </span>
-                                          </p>
+                                      <p className="text-base text-blue-500 font-bold">
+                                        เลขบิล{" "}
+                                        <span className="text-black">
+                                          {so.sh_running ?? "ไม่มีข้อมูล"}
+                                        </span>
+                                      </p>
                                       <div className="w-full px-3.5">
                                         <div className="border-t-2 border-blue-200 w-full mb-1.5"></div>
                                       </div>
@@ -2042,8 +2065,7 @@ const QCDashboard = () => {
                                     <div className="flex items-center justify-center">
                                       <img
                                         src={
-                                          so.so_already_qc === "Yes"
-                                          && Number(so.so_qc_amount) !== Number(so.so_amount)
+                                          so.so_already_qc === "notComplete"
                                             ? warning
                                             : so.so_already_qc === "Yes"
                                             ? accept
@@ -2057,12 +2079,14 @@ const QCDashboard = () => {
                                   </td>
                                   <td className="py-4 text-sm border-r-2 border-blue-200">
                                     <div className="flex flex-col space-y-1 px-2">
-
-                                    <label className="inline-flex items-center space-x-2">
+                                      <label className="inline-flex items-center space-x-2">
                                         <input
                                           type="radio"
                                           name={`qc_status_${so.so_running}`}
-                                          checked={so.so_qc_note === "สติกเกอร์ผิดตะกร้า"}
+                                          checked={
+                                            so.so_qc_note ===
+                                            "สติกเกอร์ผิดตะกร้า"
+                                          }
                                           value="สติกเกอร์ผิดตะกร้า"
                                           className="text-blue-600"
                                         />
@@ -2437,12 +2461,16 @@ const QCDashboard = () => {
                             : "bg-green-500 hover:bg-green-600"
                         }`}
                         onClick={() => {
-                          if (hasNotQC !== 0 || loadingSubmit || !hasPrintSticker) {
+                          if (
+                            hasNotQC !== 0 ||
+                            loadingSubmit ||
+                            !hasPrintSticker
+                          ) {
                             // setSubmitFailed(true);
-                            setCannotSubmit("ปริ้นสติกเกอร์ก่อนเสร็จสิ้น")
+                            setCannotSubmit("ปริ้นสติกเกอร์ก่อนเสร็จสิ้น");
                             return;
                           }
-                          SubmitShoppingHead()
+                          SubmitShoppingHead();
                         }}
                       >
                         {loadingSubmit ? (
