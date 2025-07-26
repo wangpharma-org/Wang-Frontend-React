@@ -400,7 +400,7 @@ const RequestProduct: React.FC = () => {
           <div className="flex gap-1 items-center">
             <p className="text-[10px] font-semibold">สั่ง</p>
             <p className="text-[12px] font-semibold">{data?.so_amount}</p>
-            <p className="text-[10px] font-semibold">หน่วย</p>
+            <p className="text-[10px] font-semibold">{data?.so_unit}</p>
           </div>
           <div className="flex gap-1 items-center">
             <p className="text-[10px] font-semibold">คนจัด : </p>

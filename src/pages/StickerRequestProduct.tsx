@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-import dayjs from "dayjs";
 import axios from "axios";
-import { QRCodeSVG } from "qrcode.react";
 import "../css/print.css";
 
 export interface Employees {
@@ -54,11 +52,8 @@ const styles = {
 const SticketRequestProduct = () => {
   const queryParams = new URLSearchParams(location.search);
   const mem_code = queryParams.get("mem_code");
-  const printCount = parseInt(queryParams.get("print") || "1");
 
   let sh_running = queryParams.get("sh_running");
-
-  const [sh_running_array, setSh_running_array] = useState<string[]>([]);
 
   const prepareEmpData = sessionStorage.getItem("prepare-emp");
   const QCEmpData = sessionStorage.getItem("qc-emp");
@@ -83,10 +78,6 @@ const SticketRequestProduct = () => {
       setJSONQCEmpData(JSON.parse(QCEmpData));
       setJSONpackedEmpData(JSON.parse(packedEmpData));
       setJSONprepareEmpData(JSON.parse(prepareEmpData));
-    }
-    if (transformedShRunning) {
-      const shRunningArray = transformedShRunning.split(",");
-      setSh_running_array(shRunningArray);
     }
   }, [prepareEmpData, QCEmpData, packedEmpData, transformedShRunning]);
 
