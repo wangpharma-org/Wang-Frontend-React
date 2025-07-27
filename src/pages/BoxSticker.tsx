@@ -7,6 +7,9 @@ import clock from "../assets/clock.png";
 import calendar from "../assets/check-mark.png";
 import correct from "../assets/correct.png";
 import "../css/print.css";
+import phone from "../assets/phone-call.png";
+import "dayjs/locale/th";
+dayjs.locale("th");
 
 export interface Employees {
   emp_id: number;
@@ -48,7 +51,6 @@ const styles = {
   container: {
     width: "98mm",
     height: "98mm",
-    border: "1px solid #333",
     margin: "auto",
     fontFamily: '"Fahkwang", sans-serif',
     pageBreakInside: "avoid" as const,
@@ -63,20 +65,6 @@ const BoxSticker = () => {
   const prepareEmpData = sessionStorage.getItem("prepare-emp");
   const QCEmpData = sessionStorage.getItem("qc-emp");
   const packedEmpData = sessionStorage.getItem("packed-emp");
-
-  //   const getCurrentDateTime = () => {
-  //     return new Date()
-  //       .toLocaleString("en-GB", {
-  //         year: "numeric",
-  //         month: "2-digit",
-  //         day: "2-digit",
-  //         hour: "2-digit",
-  //         minute: "2-digit",
-  //         second: "2-digit",
-  //         hour12: false,
-  //       })
-  //       .replace(",", "");
-  //   };
 
   const [JSONpackedEmpData, setJSONpackedEmpData] = useState<dataForEmp>();
   const [JSONQCEmpData, setJSONQCEmpData] = useState<dataForEmp>();
@@ -121,46 +109,51 @@ const BoxSticker = () => {
     setDataPrint(data.data);
   };
 
+  const cleanText = (text?: string | null) =>
+    (text ?? "").replace(/&nbsp;/g, "").trim();
+
   const renderSticker = (index: number) => (
     <div
       key={index}
-      className="border-t-2 border-b-2 w-full p-2 text-sm break-after-page"
+      className="w-full p-2 text-sm break-after-page"
       style={styles.container}
     >
-      <div className="flex justify-between mt-2">
-        <p className="font-semibold">Wangpharma</p>
+      <div className="flex justify-between">
+        <p className="font-bold text-[20px]">Wangpharma</p>
         <p className="font-semibold text-[18px]">
           {index + 1} / {printCount}
         </p>
         <div className="flex flex-col justify-center items-center">
-          <p className="font-semibold text-[16px]">
+          <p className="font-bold text-[17px]">
             {dataPrint?.mem_route?.route_name ?? "อื่นๆ"}
           </p>
-          <p className="text-[7px]">{dataPrint?.route_code ?? ""}</p>
+          <p className="font-bold text-[16px]">
+            <span className="text-[12px] font-bold">รหัสลูกค้า </span>{" "}
+            {mem_code ?? ""}
+          </p>
         </div>
       </div>
       <div>
-        <p className="text-[7px]">
+        <p className="text-[10px]">
           23 ซ.พัฒโน ถ.อนุสรณ์อาจารย์ทอง ต.หาดใหญ่ อ.หาดใหญ่ จ.สงขลา 90110{" "}
         </p>
-        <p className="text-[7px]">
+        <p className="text-[10px]">
           074-366681-5 wwww.wangpharma.com Line ID : orderwangpharma
         </p>
       </div>
-      <div className="border-t mt-1">
+      <div className="border-t">
         <div className="flex justify-between ">
-          <div className="w-[70%] flex justify-center mt-5">
+          <div className="w-[65%] flex justify-center mt-5">
             <p className="font-semibold text-[18px]">{dataPrint?.mem_name}</p>
           </div>
-          <div className="w-[30%] flex flex-col justify-center items-center mt-1">
-            <p className="text-[7px]">Customer Code</p>
+          <div className="w-[35%] flex flex-col justify-center items-center mt-1">
             <div className="scale-100">
               <Barcode
                 value={mem_code || ""}
                 format="CODE128"
-                width={0.8}
-                height={23}
-                displayValue={true}
+                width={1.4}
+                height={25}
+                displayValue={false}
                 background="transparent"
                 fontSize={7}
                 margin={0}
@@ -168,23 +161,32 @@ const BoxSticker = () => {
             </div>
           </div>
         </div>
-        <div className="w-[100%] flex justify-between mt-1 pr-3">
-          <div>
-            <p className="text-[8px]">{`${dataPrint?.address_line1 ?? ""} ${
-              dataPrint?.address_line2 ?? ""
-            } ต.${dataPrint?.sub_district ?? ""}`}</p>
-            <p className="text-[8px]">{`อ.${dataPrint?.district ?? ""} จ.${
-              dataPrint?.province ?? ""
-            } ${dataPrint?.postal_code ?? ""}`}</p>
-          </div>
-          <div>
-            <p className="text-[8px]">
-              เบอร์โทรลูกค้า : {dataPrint?.mem_tel ?? "-"}
+        <div className="w-[100%] flex justify-between mt-1 pr-1">
+          <div className="w-[65%]">
+            <p className="text-[12px] line-clamp-2">
+              {`${cleanText(dataPrint?.address_line1)} ${cleanText(
+                dataPrint?.address_line2
+              )} ต.${cleanText(dataPrint?.sub_district)}`}{" "}
+              อ.{cleanText(dataPrint?.district)} จ.
+              {cleanText(dataPrint?.province)}{" "}
+              {cleanText(dataPrint?.postal_code)}
             </p>
-            {dataPrint?.emp?.emp_tel && (
-              <p className="text-[8px]">
-                ฝ่ายขาย : {dataPrint?.emp?.emp_tel ?? "-"}
+          </div>
+          <div className="ml-1 w-[35%]">
+            <div className="flex items-center justify-center">
+              <img src={phone} className="w-2.5 h-2.5"></img>
+              <p className="text-[9px] ml-0.5">
+                {dataPrint?.mem_tel ?? "-"} <span>(ลูกค้า)</span>
               </p>
+            </div>
+            {dataPrint?.emp?.emp_tel && (
+            <div className="flex items-center justify-center mt-0.5">
+              <img src={phone} className="w-2.5 h-2.5"></img>
+              <p className="text-[10px] ml-0.5">{dataPrint?.emp?.emp_tel ?? "-"} <span>(ฝ่ายขาย)</span></p>
+              {/* <p className="text-[9px] ml-0.5">
+                0863249595 <span>(ฝ่ายขาย)</span>
+              </p> */}
+            </div>
             )}
           </div>
         </div>
@@ -217,29 +219,45 @@ const BoxSticker = () => {
             </div>
           </div>
         </div>
-        <div className="flex justify-center items-center mt-1 border-b-1">
-          <p className="text-[10px]">{sh_running?.replace(/,/g, " , ")}</p>
+        <div className="flex justify-center items-center border-b-1">
+          <p className="text-[12px]">{sh_running?.replace(/,/g, " , ")}</p>
         </div>
       </div>
       <div className="flex justify-center items-center border-b">
-        <div className="w-[100%] flex flex-col justify-center items-center">
-          <div className="flex justify-between p-1 gap-15">
-            <p className="text-[8px]">Ordering time line:</p>
+        <div className="w-[100%] grid grid-cols-3 justify-center items-center">
+          <div className="col-span-2 grid grid-cols-3 grid-rows-2">
+            <p className="col-span-1">
+              <p className="text-[12px] mt-1">เตรียม</p>
+            </p>
+            <p className="col-span-1">
+              <p className="text-[12px] mt-1">ตรวจ</p>
+            </p>
+            <p className="col-span-1">
+              <p className="text-[12px] mt-1">แพ็ค</p>
+            </p>
+
+            <p className="text-[12px] col-span-1">
+              [{JSONprepareEmpData?.dataEmp.emp_code}]{" "}
+              {JSONprepareEmpData?.dataEmp?.emp_nickname}
+            </p>
+            <p className="text-[12px] col-span-1">
+              [{JSONprepareEmpData?.dataEmp?.emp_code}] /{" "}
+              {JSONQCEmpData?.dataEmp?.emp_nickname}
+            </p>
+            <p className="text-[12px] col-span-1">
+              [{JSONpackedEmpData?.dataEmp.emp_code}]{" "}
+              {JSONpackedEmpData?.dataEmp.emp_nickname}
+            </p>
           </div>
-          <p className="text-[8px]">
-            พนักงานเตรียมสินค้า / พนักงานตรวจสอบ / พนักงานแพ็คสินค้าลงลัง
-          </p>
-          <p className="text-[8px]">
-            [{JSONprepareEmpData?.dataEmp.emp_code}]{" "}
-            {JSONprepareEmpData?.dataEmp?.emp_nickname} / [
-            {JSONprepareEmpData?.dataEmp?.emp_code}] /{" "}
-            {JSONQCEmpData?.dataEmp?.emp_nickname} [
-            {JSONpackedEmpData?.dataEmp.emp_code}]{" "}
-            {JSONpackedEmpData?.dataEmp.emp_nickname}
-          </p>
-          <p className="text-[8px] pb-1">{`${dayjs().format("DD-MM")}-${
-            dayjs().year() + 543
-          } ${dayjs().format("HH:mm")}`}</p>
+          <div className="col-span-1">
+            <p className="text-[12px] pb-1 mt-1 font-bold">
+              {`${dayjs().locale("th").format("dddd D/MMM")}/${(
+                dayjs().year() + 543
+              )
+                .toString()
+                .slice(-2)} ${dayjs().format("HH:mm")} น.`}
+            </p>
+          </div>
         </div>
       </div>
       <div className="flex justify-center items-center border-b">
@@ -254,14 +272,14 @@ const BoxSticker = () => {
           )}
         </div>
         <div className="w-[33%] flex flex-col justify-center items-center border-r h-10">
-          <p className="text-[8px]">สายรถ</p>
-          <p className="text-[10px]">
+          <p className="text-[12px]">สายรถ</p>
+          <p className="text-[12px]">
             หาดใหญ่ - {dataPrint?.mem_route?.route_name ?? "อื่นๆ"}
           </p>
         </div>
         <div className="w-[33%] flex flex-col justify-center items-center h-10">
-          <p className="text-[8px]">จัดส่ง</p>
-          <p className="text-[10px]">ขนส่งวังเภสัช</p>
+          <p className="text-[12px]">จัดส่ง</p>
+          <p className="text-[12px]">ขนส่งวังเภสัช</p>
         </div>
       </div>
     </div>
