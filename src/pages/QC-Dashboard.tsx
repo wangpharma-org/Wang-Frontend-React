@@ -1633,7 +1633,7 @@ const QCDashboard = () => {
                         <div className="flex items-center gap-1.5 justify-center mt-1">
                           <input
                             className="bg-white w-5/6 h-12 text-center placeholder-gray-500 rounded-sm text-xl"
-                            placeholder="หมายเลขบิล"
+                            placeholder={`หมายเลขบิลที่ ${index + 1}`}
                             disabled={!isReady}
                             ref={index === 0 ? inputBill : null}
                             // readOnly={true}
