@@ -1157,7 +1157,7 @@ const QCDashboard = () => {
             onClose={() => setModalManageOpen(false)}
           >
             <div className="flex text-center justify-center">
-              <p className="text-3xl font-bold">ส่วนจัดการใบเบิก</p>
+              <p className="text-3xl font-bold">ส่วนจัดการใบเบิก</p>หมายเลขบิลที่ 1
             </div>
             <div className="mt-4 flex justify-center items-center gap-4 my-2">
               <input
@@ -1912,7 +1912,7 @@ const QCDashboard = () => {
                                   </td>
                                   <td className="py-4 text-lg border-r-2 border-blue-200 px-1">
                                     <div className="flex flex-col items-center justify-center text-center">
-                                      <p
+                                      <p id= {`pro_code ${index + 1}`}
                                         className="text-lg cursor-pointer select-none hover:underline"
                                         onDoubleClick={() => {
                                           setProductNotHaveBarcode(so.product);
@@ -1954,9 +1954,9 @@ const QCDashboard = () => {
                                         )}
                                     </div>
                                   </td>
-                                  <td className="py-4 text-lg border-r-2 border-blue-200">
+                                  <td  className="py-4 text-lg border-r-2 border-blue-200">
                                     <div className="flex flex-col items-center justify-center text-center px-2">
-                                      <p className="text-base pb-1 mb-1 border-b-2 border-blue-200">
+                                      <p id={`barcode${index + 1}dashboard-qc`} className="text-base pb-1 mb-1 border-b-2 border-blue-200">
                                         {so?.product?.product_barcode}
                                       </p>
                                       <p className="text-base pb-1 mb-1 border-b-2 border-blue-200">
