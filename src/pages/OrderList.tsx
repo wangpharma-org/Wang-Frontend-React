@@ -843,6 +843,7 @@ const OrderList = () => {
                             className="mt-2 px-3 w-full grid grid-cols-1 md:grid-cols-1 gap-3"
                           >
                             <div
+                              id = {`orderlist${order.mem_code}`}
                               onClick={() => togglePopup(order.mem_code)}
                               className={`w-full p-2 rounded-sm shadow-xl text-[12px] text-[#444444] ${
                                 order.picking_status === "picking"
@@ -851,7 +852,7 @@ const OrderList = () => {
                               }`}
                             >
                               <div
-                                className={`p-1 rounded-sm ${
+                                className={`p-1 rounded-sm ${ 
                                   order.picking_status === "picking"
                                     ? "bg-green-100"
                                     : "bg-white"
@@ -1069,6 +1070,7 @@ const OrderList = () => {
                                     <div>
                                       {userInfo?.floor_picking && (
                                         <button
+                                        id = {`printSticker${order.mem_code}`}
                                           className="border rounded-sm px-2 py-1 bg-blue-400 text-white shadow-xl border-gray-300"
                                           onClick={(e) => {
                                             e.stopPropagation();
@@ -1144,6 +1146,7 @@ const OrderList = () => {
                                       </li>
                                     ))}
                                     <button
+                                      id = {`buttonStartPicking${order.mem_id}`}
                                       disabled={
                                         order?.picking_status !== "picking"
                                       }

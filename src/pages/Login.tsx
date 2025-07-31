@@ -69,6 +69,7 @@ const Login = () => {
                 </label>
                 <div className="mt-2">
                   <input
+                    id = "username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required
@@ -85,6 +86,7 @@ const Login = () => {
                 </div>
                 <div className="mt-2">
                   <input
+                  id = "password"
                     required
                     type="password"
                     value={password}

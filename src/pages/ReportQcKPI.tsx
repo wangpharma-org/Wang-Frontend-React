@@ -494,7 +494,7 @@ const Dashboard: React.FC = () => {
               <div className="text-2xl text-gray-600 font-bold">
                 เหลือ QC ทั้งหมด
               </div>
-              <div className="text-8xl font-bold text-blue-600 mb-2">
+              <div id ='OrderList' className="text-8xl font-bold text-blue-600 mb-2">
                 {data?.AllQC}
               </div>
               <div className="text-2xl text-gray-600 font-bold">รายการ</div>
