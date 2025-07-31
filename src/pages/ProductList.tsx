@@ -69,6 +69,8 @@ function ProductList() {
   const [selectedFloor, setSelectedFloor] = useState<string | null>(null);
   const navigate = useNavigate();
   const mem_code = new URLSearchParams(window.location.search).get("mem_code");
+  const route_code = new URLSearchParams(window.location.search).get("route_code");
+  const route_name = new URLSearchParams(window.location.search).get("route_name");
   const { userInfo, logout } = useAuth();
   const [floorCounts, setFloorCounts] = useState<Record<string, number>>({});
   const popupRef = useRef<HTMLDivElement | null>(null);
@@ -359,13 +361,23 @@ function ProductList() {
     logout();
   };
 
-  const printSticker = async (mem_code: string) => {
+  const printSticker = async (
+    mem_code: string,
+  ) => {
     console.log("printSticker", mem_code);
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL_ORDER}/api/picking/createTicket`,
         {
           mem_code: mem_code,
+          emp_code: userInfo?.emp_code,
+          emp_name: userInfo?.nickname,
+          floor: userInfo?.floor_picking,
+          route_code: route_code ?? null,
+          route_name: route_name ?? null,
+          mem_name: listproduct?.mem_name,
+          emp_name_request: null,
+          emp_code_request: null,
         },
         {
           headers: {

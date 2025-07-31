@@ -119,9 +119,10 @@ const BoxSticker = () => {
       style={styles.container}
     >
       <div className="flex justify-between">
-        <p className="font-bold text-[20px]">Wangpharma</p>
-        <p className="font-semibold text-[18px]">
+        <p className="font-bold text-[18px] rotate-[-12deg] mt-2">Wangpharma</p>
+        <p className="font-semibold text-[22px] mt-3">
           {index + 1} / {printCount}
+          {/* 999 / 999 */}
         </p>
         <div className="flex flex-col justify-center items-center">
           <p className="font-bold text-[17px]">
@@ -241,7 +242,7 @@ const BoxSticker = () => {
               {JSONprepareEmpData?.dataEmp?.emp_nickname}
             </p>
             <p className="text-[12px] col-span-1">
-              [{JSONprepareEmpData?.dataEmp?.emp_code}] /{" "}
+              [{JSONprepareEmpData?.dataEmp?.emp_code}] {" "}
               {JSONQCEmpData?.dataEmp?.emp_nickname}
             </p>
             <p className="text-[12px] col-span-1">
