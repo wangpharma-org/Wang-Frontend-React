@@ -117,7 +117,7 @@ export default function ProductBox({
             />
           </div>
           <div className="text-xs w-2/3 ml-1">
-            <button
+            <button id = {`buttonpicking`}
               className="text-white rounded-sm shadow-md bg-gray-500 py-2 px-3"
               onClick={(e) => {
                 e.stopPropagation();

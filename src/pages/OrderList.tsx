@@ -1146,7 +1146,7 @@ const OrderList = () => {
                                       </li>
                                     ))}
                                     <button
-                                      id = {`buttonStartPicking${order.mem_id}`}
+                                      id = {`buttonStartPicking${order.mem_code}`}
                                       disabled={
                                         order?.picking_status !== "picking"
                                       }
