@@ -1295,7 +1295,7 @@ const QCDashboard = () => {
             onClose={() => setModalManageOpen(false)}
           >
             <div className="flex text-center justify-center">
-              <p className="text-3xl font-bold">ส่วนจัดการใบเบิก</p>หมายเลขบิลที่ 1
+              <p className="text-3xl font-bold">ส่วนจัดการใบเบิก</p>
             </div>
             <div className="mt-4 flex justify-center items-center gap-4 my-2">
               <input
