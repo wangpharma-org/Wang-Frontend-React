@@ -1,54 +1,40 @@
-import axios from "axios";
 import { useEffect, useState } from "react";
 import { Socket, io } from "socket.io-client";
 
-interface FloorInfo {
+export interface TicketItem {
   ticket_id: number;
-  print_status: string;
-}
-
-interface TicketItem {
   mem_code: string;
-  picking_status: string;
-  mem_name: string;
-  province: string;
-  F2: FloorInfo | null;
-  F3: FloorInfo | null;
-  F4: FloorInfo | null;
-  F5: FloorInfo | null;
-  [key: string]: any;
-}
-
-interface MemRoute {
+  emp_code: string;
+  emp_name: string;
+  emp_code_request: string;
+  emp_name_request: string;
+  floor: number;
+  sh_running: string;
   route_code: string;
   route_name: string;
+  mem_name: string;
+  floor_count2: number;
+  floor_count3: number;
+  floor_count4: number;
+  floor_count5: number;
 }
 
-interface Route {
-  id: number;
-  name: string;
-  value: string;
-}
 const StickerPrint = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectFloor, setSelectFloor] = useState("");
+  const [data, setData] = useState<TicketItem[]>([]);
   const [listPrintTicket, setListPrint] = useState<TicketItem[]>([]);
-  const [isOpen, setIsOpen] = useState<number[]>([]);
-  const [pendingTickets, setPendingTickets] = useState<FloorInfo[]>([]);
+  // const [isOpen, setIsOpen] = useState<number[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedRoute, setSelectedRoute] = useState("all");
-  const [route, setRoute] = useState<Route[] | null>(null);
-  const [routeAPI, setRouteAPI] = useState<MemRoute[] | null>(null);
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
-    handleGetRoute();
     console.log(token);
     const newSocket = io(
       `${import.meta.env.VITE_API_URL_ORDER}/socket/picking/ticket`,
       {
-        path: '/socket/picking',
+        path: "/socket/picking",
         extraHeaders: {
           Authorization: `Bearer ${token}`,
         },
@@ -62,7 +48,7 @@ const StickerPrint = () => {
     });
 
     newSocket.on("ticket:get", (data) => {
-      setListPrint(data);
+      setData(data);
       setLoading(false);
       console.log("Received ticket data:", data);
     });
@@ -71,9 +57,7 @@ const StickerPrint = () => {
       console.error("❌ Failed to connect to server:", error.message);
       setLoading(true);
       setListPrint([]);
-      setPendingTickets([]);
       setCurrentIndex(0);
-      setIsOpen([]);
     });
 
     return () => {
@@ -81,94 +65,73 @@ const StickerPrint = () => {
     };
   }, []);
 
-  useEffect(()=>{
-    if (routeAPI) {
-      const route: Route[] = [
-        { id: 1, name: "เส้นทางการขนส่ง", value: "all" },
-        ...routeAPI.map((item, index) => ({
-          id: index + 2,
-          name: item.route_name,
-          value: item.route_code,
-        })),
-      ]
-      setRoute(route);
-    }
-  }, [routeAPI]);
-
-  const handleGetRoute = async () => {
-    const route = await axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/picking/get-route`)
-    setRouteAPI(route.data);
-  }
-
-  const getCellClass = (status: string | undefined) => {
-    console.log("Status:", status);
-    if (status === undefined) {
-      return "text-gray-500";
-    }
-    if (status === "pending") {
-      return "text-red-500";
-    }
-    if (status === "printed") {
-      return "text-green-500";
-    }
-  };
+  useEffect(() => {
+    const listByFloor = data.filter(
+      (item) => item.floor === Number(selectFloor)
+    );
+    setListPrint(listByFloor);
+  }, [selectFloor, data]);
 
   useEffect(() => {
-    if (selectFloor && listPrintTicket) {
-      const floorKey = `F${selectFloor}`;
-
-      const filtered = listPrintTicket
-        .map((item) => item[floorKey] || [])
-        .flat()
-        .filter((floorData) => floorData.print_status === "pending");
-
-      console.log("✅ Received ticket data:", filtered);
-
-      setPendingTickets(filtered);
-      setCurrentIndex(0);
-    }
-  }, [selectFloor, listPrintTicket]);
-
-  useEffect(() => {
-    if (pendingTickets.length > 0 && currentIndex < pendingTickets.length) {
-      const currentTicket = pendingTickets[currentIndex];
-      console.log(`Printing ticket ID: ${currentTicket.ticket_id}`);
-
+    if (listPrintTicket.length > 0 && currentIndex < listPrintTicket.length) {
+      const currentTicket = listPrintTicket[currentIndex];
+      console.log(`Current Index: ${currentIndex}`);
       localStorage.removeItem("print_status");
 
-      if (!isOpen.find((current) => current === currentTicket.ticket_id)) {
-        console.log(isOpen);
-        console.log(
-          "Opening new window for ticket ID:",
-          currentTicket.ticket_id
-        );
-        window.open(
-          `/format-sticker?ticketId=${currentTicket.ticket_id}`,
-          "_blank"
-        );
-        setIsOpen((prev) => [...prev, currentTicket.ticket_id]);
+      window.open(
+        `/format-sticker?ticketId=${currentTicket.ticket_id}&sh_running=${
+          currentTicket.sh_running
+        }&mem_code=${currentTicket.mem_code}&mem_name=${
+          currentTicket.mem_name
+        }&route_code=${currentTicket.route_code}&route_name=${
+          currentTicket.route_name
+        }&emp_code=${currentTicket.emp_code}&emp_name=${
+          currentTicket.emp_name
+        }${
+          currentTicket.emp_code_request
+            ? `&emp_code_request=${currentTicket.emp_code_request}`
+            : ""
+        }${
+          currentTicket.emp_name_request
+            ? `&emp_name_request=${currentTicket.emp_name_request}`
+            : ""
+        }${
+          currentTicket.floor_count2
+            ? `&floor_count2=${currentTicket.floor_count2}`
+            : ""
+        }${
+          currentTicket.floor_count3
+            ? `&floor_count3=${currentTicket.floor_count3}`
+            : ""
+        }${
+          currentTicket.floor_count4
+            ? `&floor_count4=${currentTicket.floor_count4}`
+            : ""
+        }${
+          currentTicket.floor_count5
+            ? `&floor_count5=${currentTicket.floor_count5}`
+            : ""
+        }${currentTicket.floor ? `&floor=${currentTicket.floor}` : ""}`,
+        "_blank"
+      );
+      if (
+        listPrintTicket.length > 0 &&
+        currentIndex >= listPrintTicket.length
+      ) {
+        setCurrentIndex(0);
       }
-    } else if (
-      pendingTickets.length > 0 &&
-      currentIndex >= pendingTickets.length
-    ) {
-      console.log(`✅ All pending tickets for floor ${selectFloor} printed.`);
-      setPendingTickets([]);
-      setCurrentIndex(0);
-      setIsOpen([]);
     }
-  }, [pendingTickets, currentIndex]);
+  }, [listPrintTicket, selectFloor]);
 
   useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
       if (event.key === "print_status" && event.newValue === "done") {
-        const printedTicket = pendingTickets[currentIndex];
+        const printedTicket = listPrintTicket[currentIndex];
         if (printedTicket) {
           if (socket?.connected) {
             socket.emit("ticket:put", {
               ticketId: printedTicket.ticket_id,
             });
-            console.log("📤 Emit ticket:printed", printedTicket.ticket_id);
           } else {
             console.warn("❌ Socket not connected");
           }
@@ -176,9 +139,10 @@ const StickerPrint = () => {
         }
       }
     };
+    setCurrentIndex(0);
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
-  }, [pendingTickets, currentIndex, socket]);
+  }, [listPrintTicket, currentIndex, socket]);
 
   return (
     <div className="min-h-screen bg-gray-50 text-black p-4 pt-10">
@@ -199,21 +163,9 @@ const StickerPrint = () => {
           </select>
         </form>
       </div>
-      <div className="flex flex-wrap justify-center mb-6 gap-2">
-        {route?.map((route) => (
-          <button
-            key={route.value}
-            onClick={() => setSelectedRoute(route.value)}
-            className={`border-2 cursor-pointer border-blue-500 px-2 py-1 rounded-lg hover:bg-blue-500 hover:text-white transition ${
-              route.value === selectedRoute ? "bg-blue-500 text-white" : ""
-            }`}
-          >
-            {route.name}
-          </button>
-        ))}
-      </div>
+
       <h1 className="text-3xl font-bold mb-4 text-center mt-10">
-        พื้นหลังสีเขียว คือ ชั้นอื่นๆ กำลังจัดสินค้าร้านนั้นอยู่
+        รายการรอพิมพ์สติกเกอร์
       </h1>
 
       <div className="inline-block min-w-full overflow-hidden rounded-lg shadow-md bg-white mt-4">
@@ -221,78 +173,43 @@ const StickerPrint = () => {
           <thead className="bg-gray-100 uppercase text-gray-700 text-sm font-semibold">
             <tr>
               <th className="px-6 py-3 text-center ">ลำดับที่</th>
-              <th className="px-6 py-3 text-center ">รหัส</th>
-              <th className="px-6 py-3 text-center ">ชื่อร้าน</th>
+              <th className="px-6 py-3 text-center ">ผู้สั่งพิมพ์</th>
+              <th className="px-6 py-3 text-center ">ชั้น</th>
+              <th className="px-6 py-3 text-center ">ลูกค้า</th>
               <th className="px-6 py-3 text-center ">เส้นทาง</th>
-              <th className="px-6 py-3 text-center ">F2</th>
-              <th className="px-6 py-3 text-center ">F3</th>
-              <th className="px-6 py-3 text-center ">F4</th>
-              <th className="px-6 py-3 text-center ">F5</th>
+              <th className="px-6 py-3 text-center ">ผู้ขอสินค้าเพิ่ม</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {(listPrintTicket || !loading) &&
-              listPrintTicket
-                .filter(
-                  (list) =>
-                    selectedRoute === "all" ||
-                    selectedRoute === "" ||
-                    list.province === selectedRoute
-                )
-                .map((list, index) => (
-                  <tr
-                    key={index}
-                    className={`${
-                      list.picking_status === "picking"
-                        ? "bg-green-100 hover:bg-green-200"
-                        : "bg-white hover:bg-gray-50"
-                    }`}
-                  >
-                    <td className="px-6 py-4 text-center">{index + 1}</td>
-                    <td className="px-6 py-4 text-center">{list.mem_code}</td>
-                    <td className="px-6 py-4 text-center">{list.mem_name}</td>
-                    <td className="px-6 py-4 text-center">{list.mem_route?.route_name ? list.mem_route?.route_name : 'อื่นๆ'}</td>
-
-                    {[2, 3, 4, 5].map((floor) => (
-                      <td
-                        key={floor}
-                        className={`px-6 py-4 ${getCellClass(
-                          list[`F${floor}`]?.some(
-                            (t: any) => t.print_status === "pending"
-                          )
-                            ? "pending"
-                            : list[`F${floor}`]?.some(
-                                (t: any) => t.print_status === "printed"
-                              )
-                            ? "printed"
-                            : undefined
-                        )}`}
-                      >
-                        <div className="flex justify-center items-center">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth="1.5"
-                            stroke="currentColor"
-                            className="w-9 h-9 cursor-pointer"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z"
-                            />
-                          </svg>
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
-                ))}
+              listPrintTicket.map((list, index) => (
+                <tr key={index} className="bg-white hover:bg-gray-50">
+                  <td className="px-6 py-4 text-center">{index + 1}</td>
+                  <td className="px-6 py-4 text-center">{`${list.emp_code} ${list.emp_name}`}</td>
+                  <td className="px-6 py-4 text-center">{list.floor}</td>
+                  <td className="px-6 py-4 text-center">{`${list.mem_code} ${list.mem_name}`}</td>
+                  <td className="px-6 py-4 text-center">
+                    {list.route_name ?? "อื่นๆ"}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    {list.emp_code_request
+                      ? `${list.emp_code_request} ${list.emp_name_request}`
+                      : "ไม่ใช่รายการขอเพิ่ม"}
+                  </td>
+                </tr>
+              ))}
           </tbody>
         </table>
-        { loading && <div className="w-full flex justify-center h-56 items-center">
-              <p className="text-xl font-medium text-black">Loading ...</p>
-        </div>}
+        {loading && (
+          <div className="w-full flex justify-center h-56 items-center">
+            <p className="text-xl font-medium text-black">Loading ...</p>
+          </div>
+        )}
+        {listPrintTicket?.length === 0 && !loading && (
+          <div className="w-full flex justify-center h-56 items-center">
+            <p className="text-xl font-medium text-black">ไม่มีรายการรอพิมพ์</p>
+          </div>
+        )}
       </div>
     </div>
   );

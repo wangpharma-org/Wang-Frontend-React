@@ -17,6 +17,27 @@ interface Product {
   product_product_image_url: string;
 }
 
+
+export interface ProductRequest {
+  order_so_running: string
+  order_so_procode: string
+  order_so_amount: number
+  order_so_qc_request: string
+  order_so_unit: string | null
+  product_product_name: string
+  product_product_image_url: string | null
+  product_product_barcode: string | null
+  product_product_floor: string | null
+  product_product_addr: string | null
+  head_sh_running: string
+  member_mem_code: string
+  member_mem_name: string
+  route_route_code: string | null
+  route_route_name: string | null
+  emp_code_request: string
+  emp_code_request_emp_nickname: string
+}
+
 interface ShoppingOrder {
   picking_status: string;
   product: Product;
@@ -90,13 +111,13 @@ const OrderList = () => {
   const [openMenu, setOpenMenu] = useState(false);
   const [floorCounts, setFloorCounts] = useState<Record<string, number>>({});
   const handleDoubleClick = useDoubleClick();
-  const [requestProduct, setRequestProduct] = useState<Product[] | null>(null);
+  const [requestProduct, setRequestProduct] = useState<ProductRequest[] | null>(null);
   const [showRequestList, setShowRequestList] = useState(true);
   const [apiRoute, setAPIRoute] = useState<MemRoute[] | null>(null);
   const [routeButtons, setRouteButton] = useState<RouteButton[] | null>(null);
   const [featureFlag, setFeatureFlag] = useState<boolean>(true);
   const [msgFeatureFlag, setMsgFeatureFlag] = useState<string | null>(null);
-  const [loadingOrder, setLoadingOrder] = useState<string | null>(null)
+  const [loadingOrder, setLoadingOrder] = useState<string | null>(null);
 
   console.log("selectedFloor", selectedFloor);
 
@@ -130,7 +151,7 @@ const OrderList = () => {
       // setMsgFeatureFlag(flag.data.msg);
     } else if (flag.data.status === false) {
       setFeatureFlag(false);
-      setMsgFeatureFlag(flag.data.msg ?? 'ไม่มีหมายเหตุ');
+      setMsgFeatureFlag(flag.data.msg ?? "ไม่มีหมายเหตุ");
     }
   };
 
@@ -151,18 +172,18 @@ const OrderList = () => {
 
     handleGetRoute();
 
-    checkFlag()
+    checkFlag();
 
     newSocket.on("feature_flag:true", () => {
-      console.log('feature_flag:true');
+      console.log("feature_flag:true");
       setFeatureFlag(true);
-    })
+    });
 
     newSocket.on("feature_flag:false", (msg: string) => {
-      console.log('feature_flag:false');
-      setMsgFeatureFlag(msg ?? 'ไม่มีหมายเหตุ');
+      console.log("feature_flag:false");
+      setMsgFeatureFlag(msg ?? "ไม่มีหมายเหตุ");
       setFeatureFlag(false);
-    })
+    });
 
     newSocket.on("connect", () => {
       console.log("✅ Connected to WebSocket");
@@ -210,9 +231,9 @@ const OrderList = () => {
       const memCodeLoading = order.mem_code;
       if (memCodeLoading === loadingOrder) {
         setLoadingOrder(null);
-        return
+        return;
       }
-    })
+    });
 
     const totalStatusPicking = orderList?.reduce(
       (total, order) =>
@@ -321,7 +342,6 @@ const OrderList = () => {
     }
   };
 
-
   const filteredData = orderList?.filter((order) => {
     const matchSearch =
       !search ||
@@ -368,17 +388,26 @@ const OrderList = () => {
 
   const printSticker = async (
     mem_code: string,
-    emp_code?: string,
-    sh_running?: string
+    route_code: string | null,
+    route_name: string | null,
+    mem_name: string,
+    emp_code_request: string | null,
+    emp_name_request: string | null
   ) => {
-    console.log("printSticker", mem_code);
+    console.log("printSticker", route_code);
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL_ORDER}/api/picking/createTicket`,
         {
           mem_code: mem_code,
-          emp_code_request: emp_code || null,
-          sh_running: sh_running || null,
+          emp_code: userInfo?.emp_code,
+          emp_name: userInfo?.nickname,
+          floor: userInfo?.floor_picking,
+          route_code: route_code,
+          route_name: route_name,
+          mem_name: mem_name,
+          emp_name_request: emp_code_request,
+          emp_code_request: emp_name_request,
         },
         {
           headers: {
@@ -481,7 +510,7 @@ const OrderList = () => {
           ระบบโดนสั่งระงับการใช้งาน
         </p>
         <p className="text-2xl font-bold text-red-700">
-          หมายเหตุ : { msgFeatureFlag }
+          หมายเหตุ : {msgFeatureFlag}
         </p>
       </div>
     );
@@ -628,7 +657,7 @@ const OrderList = () => {
                             <div>
                               <img
                                 src={
-                                  item?.product_product_image_url.startsWith(
+                                  item?.product_product_image_url?.startsWith(
                                     ".."
                                   )
                                     ? `https://www.wangpharma.com${item?.product_product_image_url.slice(
@@ -665,11 +694,20 @@ const OrderList = () => {
                               className="w-10 mb-1"
                               onClick={() =>
                                 printSticker(
-                                  String(item.member_mem_code),
-                                  String(item.emp_code_request),
-                                  String(item.head_sh_running)
+                                  item.member_mem_code,
+                                  item.route_route_code ?? null,
+                                  item.route_route_name ?? null,
+                                  item.member_mem_name,
+                                  item.emp_code_request,
+                                  item.emp_code_request_emp_nickname,
                                 )
                               }
+                              //   // printSticker(
+                              //   //   String(item.member_mem_code),
+                              //   //   String(item.emp_code_request),
+                              //   //   String(item.head_sh_running)
+                              //   // )
+                              // }
                             ></img>
                             <img
                               id={'acceptOrder'}
@@ -807,7 +845,7 @@ const OrderList = () => {
                             className="mt-2 px-3 w-full grid grid-cols-1 md:grid-cols-1 gap-3"
                           >
                             <div
-                            id = {`orderlist${order.mem_code}`}
+                              id = {`orderlist${order.mem_code}`}
                               onClick={() => togglePopup(order.mem_code)}
                               className={`w-full p-2 rounded-sm shadow-xl text-[12px] text-[#444444] ${
                                 order.picking_status === "picking"
@@ -816,7 +854,7 @@ const OrderList = () => {
                               }`}
                             >
                               <div
-                                className={`p-1 rounded-sm ${
+                                className={`p-1 rounded-sm ${ 
                                   order.picking_status === "picking"
                                     ? "bg-green-100"
                                     : "bg-white"
@@ -1023,10 +1061,11 @@ const OrderList = () => {
                                             });
                                           }}
                                         >
-                                          {order?.mem_code === loadingOrder ?
+                                          {order?.mem_code === loadingOrder ? (
                                             <div className="w-4.5 h-4.5 border-4 border-gray-200 border-t-white rounded-full animate-spin"></div>
-                                          : 'เริ่มจัด'
-                                          }
+                                          ) : (
+                                            "เริ่มจัด"
+                                          )}
                                         </button>
                                       </div>
                                     )}
@@ -1037,7 +1076,14 @@ const OrderList = () => {
                                           className="border rounded-sm px-2 py-1 bg-blue-400 text-white shadow-xl border-gray-300"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            printSticker(order?.mem_code);
+                                            printSticker(
+                                              order?.mem_code,
+                                              order?.mem_route?.route_code,
+                                              order?.mem_route?.route_name,
+                                              order?.mem_name,
+                                              null,
+                                              null
+                                            );
                                           }}
                                         >
                                           พิมพ์สติกเกอร์
@@ -1121,7 +1167,7 @@ const OrderList = () => {
                                               'if order?.picking_status === "picking"'
                                             );
                                             navigate(
-                                              `/product-list?mem_code=${order?.mem_code}`
+                                              `/product-list?mem_code=${order?.mem_code}${order.mem_route.route_code && `&route_code=${order.mem_route.route_code}&route_name=${order.mem_route.route_name}`}`
                                             );
                                           } else {
                                             console.log("else");

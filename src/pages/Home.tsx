@@ -98,7 +98,7 @@ const Home = () => {
             .filter((menu) => visibilityMap[menu.id] !== false) // ซ่อนเฉพาะที่ได้ false
             .map((menu) => (
               <a
-              id={`${menu.name}`} 
+                id={`${menu.name}`}
                 key={menu.id}
                 onClick={() => handleNavigate(menu.href)}
                 className="group flex flex-col items-center rounded-lg bg-white p-4 shadow hover:shadow-lg hover:scale-105 transition"
