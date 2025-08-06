@@ -660,6 +660,7 @@ const OrderList = () => {
                           </div>
                           <div className="col-span-2 flex flex-col justify-left items-end">
                             <img
+                            id={'acceptOrderPrint'}
                               src={print}
                               className="w-10 mb-1"
                               onClick={() =>
@@ -671,6 +672,7 @@ const OrderList = () => {
                               }
                             ></img>
                             <img
+                              id={'acceptOrder'}
                               src={check}
                               className="w-10 mb-1"
                               onClick={() =>
@@ -805,6 +807,7 @@ const OrderList = () => {
                             className="mt-2 px-3 w-full grid grid-cols-1 md:grid-cols-1 gap-3"
                           >
                             <div
+                            id = {`orderlist${order.mem_code}`}
                               onClick={() => togglePopup(order.mem_code)}
                               className={`w-full p-2 rounded-sm shadow-xl text-[12px] text-[#444444] ${
                                 order.picking_status === "picking"
@@ -934,7 +937,7 @@ const OrderList = () => {
                                       </div>
                                     )}
                                   </div>
-                                  <div className="flex justify-center">
+                                  <div id = {``} className="flex justify-center">
                                     {order?.picking_status === "picking" &&
                                       order?.emp_code_picking ===
                                         userInfo?.emp_code && (
@@ -1030,6 +1033,7 @@ const OrderList = () => {
                                     <div>
                                       {userInfo?.floor_picking && (
                                         <button
+                                          id = {`printSticker${order.mem_code}`}
                                           className="border rounded-sm px-2 py-1 bg-blue-400 text-white shadow-xl border-gray-300"
                                           onClick={(e) => {
                                             e.stopPropagation();
@@ -1098,6 +1102,7 @@ const OrderList = () => {
                                       </li>
                                     ))}
                                     <button
+                                      id = {`buttonStartPicking${order.mem_code}`}
                                       disabled={
                                         order?.picking_status !== "picking"
                                       }

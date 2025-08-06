@@ -85,7 +85,7 @@ const Home = () => {
     fetchVisibility();
   }, []);
 
-  
+
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-2xl px-4 py-4 sm:px-6 sm:py-12 lg:max-w-7xl lg:px-8 cursor-pointer">
@@ -97,22 +97,23 @@ const Home = () => {
           {listMenu
             .filter((menu) => visibilityMap[menu.id] !== false) // ซ่อนเฉพาะที่ได้ false
             .map((menu) => (
-            <a
-              key={menu.id}
-              onClick={() => handleNavigate(menu.href)}
-              className="group flex flex-col items-center rounded-lg bg-white p-4 shadow hover:shadow-lg hover:scale-105 transition"
-            >
-              <div className="w-20 h-20 mb-2">
-                <img
-                  src={menu.imageSrc}
-                  className="w-full h-full rounded-md object-cover"
-                />
-              </div>
-              <h3 className="text-sm font-medium text-gray-800 group-hover:text-blue-500 text-center">
-                {menu.name}
-              </h3>
-            </a>
-          ))}
+              <a
+              id={`${menu.name}`} 
+                key={menu.id}
+                onClick={() => handleNavigate(menu.href)}
+                className="group flex flex-col items-center rounded-lg bg-white p-4 shadow hover:shadow-lg hover:scale-105 transition"
+              >
+                <div className="w-20 h-20 mb-2">
+                  <img
+                    src={menu.imageSrc}
+                    className="w-full h-full rounded-md object-cover"
+                  />
+                </div>
+                <h3 className="text-sm font-medium text-gray-800 group-hover:text-blue-500 text-center">
+                  {menu.name}
+                </h3>
+              </a>
+            ))}
         </div>
       </div>
     </div>
