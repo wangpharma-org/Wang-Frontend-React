@@ -26,24 +26,24 @@ const listMenu = [
     href: "/order-list",
     imageSrc: order,
   },
-  {
-    id: 4,
-    name: "สถิติการจัดออเดอร์",
-    href: "/employee-statistics",
-    imageSrc: statistics,
-  },
+  // {
+  //   id: 4,
+  //   name: "สถิติการจัดออเดอร์",
+  //   href: "/employee-statistics",
+  //   imageSrc: statistics,
+  // },
   {
     id: 5,
     name: "สถิติการจัดออเดอร์ (พนักงาน)",
     href: "/report",
     imageSrc: reportPicking,
   },
-  {
-    id: 6,
-    name: "ตรวจสอบบิล",
-    href: "/verify-order",
-    imageSrc: checklist,
-  },
+  // {
+  //   id: 6,
+  //   name: "ตรวจสอบบิล",
+  //   href: "/verify-order",
+  //   imageSrc: checklist,
+  // },
 ];
 const Home = () => {
   const navigate = useNavigate()

@@ -1420,6 +1420,7 @@ const SubmitShoppingHead = async () => {
 
                 <div className="flex gap-3 w-full justify-end">
                   <button
+                  id = {`OrderConfirmationPopUp`}
                     disabled={Number(amountRequest) === 0}
                     className={`text-center text-white text-lg p-2 rounded-lg px-8 cursor-pointer ${Number(amountRequest) > 0
                       ? "hover:bg-green-800 bg-green-700"
@@ -1745,7 +1746,7 @@ const SubmitShoppingHead = async () => {
                   >
                     ล้างข้อมูล
                   </button>
-                  {QCEmp?.dataEmp.manage_qc === "Yes" && (
+                  {QCEmp?.dataEmp?.manage_qc === "Yes" && (
                     <button
                       className="bg-yellow-500 text-white p-2 px-6 rounded-lg hover:bg-yellow-600 cursor-pointer ml-2"
                       onClick={() => setModalManageOpen(true)}
@@ -2299,6 +2300,7 @@ const SubmitShoppingHead = async () => {
                                     <div className="flex flex-col space-y-2 px-3">
                                       {requestProductFlag && (
                                         <button
+                                        id={`reqItem`}
                                           disabled={
                                             so.picking_status !== "picking"
                                           }
