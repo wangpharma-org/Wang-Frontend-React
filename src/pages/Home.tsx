@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import reciept from "../assets/receipt.png";
 import order from "../assets/sent.png";
-import statistics from "../assets/employees statistics.png";
-import checklist from "../assets/checklist.png";
+// import statistics from "../assets/employees statistics.png";
+// import checklist from "../assets/checklist.png";
 import barcode from "../assets/barcode-scanner.png"
 import reportPicking from "../assets/report-picking.png";
 import { useNavigate } from "react-router";
