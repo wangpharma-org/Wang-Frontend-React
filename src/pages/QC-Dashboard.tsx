@@ -2321,8 +2321,8 @@ const SubmitShoppingHead = async () => {
                                       )}
                                       <button
                                         id={`RTItem`}
-                                        // disabled={so.so_already_qc === 'RT'}
-                                        className={` p-1 rounded-lg text-base text-white cursor-pointer ${so.so_already_qc === "RT"
+                                        disabled={so.so_already_qc === 'RT' || so.so_already_qc === "Yes"}
+                                        className={` p-1 rounded-lg text-base text-white cursor-pointer ${(so.so_already_qc === "RT" || so.so_already_qc === "Yes")
                                           ? "hover:bg-gray-600 bg-gray-500"
                                           : "hover:bg-red-600 bg-red-500"
                                           }`}
@@ -2331,7 +2331,9 @@ const SubmitShoppingHead = async () => {
                                         }}
                                       >
                                         {so.so_already_qc === "RT"
-                                          ? "ส่ง RT แล้ว"
+                                          ? "ส่ง RT แล้ว" : 
+                                          so.so_already_qc === "Yes" ?
+                                          "Qc แล้ว"
                                           : "ส่ง RT"}
                                       </button>
 
