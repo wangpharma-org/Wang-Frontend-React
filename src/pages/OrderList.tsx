@@ -17,25 +17,24 @@ interface Product {
   product_product_image_url: string;
 }
 
-
 export interface ProductRequest {
-  order_so_running: string
-  order_so_procode: string
-  order_so_amount: number
-  order_so_qc_request: string
-  order_so_unit: string | null
-  product_product_name: string
-  product_product_image_url: string | null
-  product_product_barcode: string | null
-  product_product_floor: string | null
-  product_product_addr: string | null
-  head_sh_running: string
-  member_mem_code: string
-  member_mem_name: string
-  route_route_code: string | null
-  route_route_name: string | null
-  emp_code_request: string
-  emp_code_request_emp_nickname: string
+  order_so_running: string;
+  order_so_procode: string;
+  order_so_amount: number;
+  order_so_qc_request: string;
+  order_so_unit: string | null;
+  product_product_name: string;
+  product_product_image_url: string | null;
+  product_product_barcode: string | null;
+  product_product_floor: string | null;
+  product_product_addr: string | null;
+  head_sh_running: string;
+  member_mem_code: string;
+  member_mem_name: string;
+  route_route_code: string | null;
+  route_route_name: string | null;
+  emp_code_request: string;
+  emp_code_request_emp_nickname: string;
 }
 
 interface ShoppingOrder {
@@ -111,7 +110,9 @@ const OrderList = () => {
   const [openMenu, setOpenMenu] = useState(false);
   const [floorCounts, setFloorCounts] = useState<Record<string, number>>({});
   const handleDoubleClick = useDoubleClick();
-  const [requestProduct, setRequestProduct] = useState<ProductRequest[] | null>(null);
+  const [requestProduct, setRequestProduct] = useState<ProductRequest[] | null>(
+    null
+  );
   const [showRequestList, setShowRequestList] = useState(true);
   const [apiRoute, setAPIRoute] = useState<MemRoute[] | null>(null);
   const [routeButtons, setRouteButton] = useState<RouteButton[] | null>(null);
@@ -689,7 +690,7 @@ const OrderList = () => {
                           </div>
                           <div className="col-span-2 flex flex-col justify-left items-end">
                             <img
-                            id={'acceptOrderPrint'}
+                              id={"acceptOrderPrint"}
                               src={print}
                               className="w-10 mb-1"
                               onClick={() =>
@@ -699,7 +700,7 @@ const OrderList = () => {
                                   item.route_route_name ?? null,
                                   item.member_mem_name,
                                   item.emp_code_request,
-                                  item.emp_code_request_emp_nickname,
+                                  item.emp_code_request_emp_nickname
                                 )
                               }
                               //   // printSticker(
@@ -710,7 +711,7 @@ const OrderList = () => {
                               // }
                             ></img>
                             <img
-                              id={'acceptOrder'}
+                              id={"acceptOrder"}
                               src={check}
                               className="w-10 mb-1"
                               onClick={() =>
@@ -845,7 +846,7 @@ const OrderList = () => {
                             className="mt-2 px-3 w-full grid grid-cols-1 md:grid-cols-1 gap-3"
                           >
                             <div
-                              id = {`orderlist${order.mem_code}`}
+                              id={`orderlist${order.mem_code}`}
                               onClick={() => togglePopup(order.mem_code)}
                               className={`w-full p-2 rounded-sm shadow-xl text-[12px] text-[#444444] ${
                                 order.picking_status === "picking"
@@ -854,7 +855,7 @@ const OrderList = () => {
                               }`}
                             >
                               <div
-                                className={`p-1 rounded-sm ${ 
+                                className={`p-1 rounded-sm ${
                                   order.picking_status === "picking"
                                     ? "bg-green-100"
                                     : "bg-white"
@@ -975,7 +976,7 @@ const OrderList = () => {
                                       </div>
                                     )}
                                   </div>
-                                  <div id = {``} className="flex justify-center">
+                                  <div id={``} className="flex justify-center">
                                     {order?.picking_status === "picking" &&
                                       order?.emp_code_picking ===
                                         userInfo?.emp_code && (
@@ -1072,7 +1073,7 @@ const OrderList = () => {
                                     <div>
                                       {userInfo?.floor_picking && (
                                         <button
-                                          id = {`printSticker${order.mem_code}`}
+                                          id={`printSticker${order.mem_code}`}
                                           className="border rounded-sm px-2 py-1 bg-blue-400 text-white shadow-xl border-gray-300"
                                           onClick={(e) => {
                                             e.stopPropagation();
@@ -1148,7 +1149,7 @@ const OrderList = () => {
                                       </li>
                                     ))}
                                     <button
-                                      id = {`buttonStartPicking${order.mem_code}`}
+                                      id={`buttonStartPicking${order.mem_code}`}
                                       disabled={
                                         order?.picking_status !== "picking"
                                       }
@@ -1167,7 +1168,19 @@ const OrderList = () => {
                                               'if order?.picking_status === "picking"'
                                             );
                                             navigate(
-                                              `/product-list?mem_code=${order?.mem_code}${order.mem_route.route_code && `&route_code=${order.mem_route.route_code}&route_name=${order.mem_route.route_name}`}`
+                                              `/product-list?mem_code=${
+                                                order?.mem_code
+                                              }${
+                                                order?.mem_route &&
+                                                order?.mem_route?.route_code
+                                                  ? `&route_code=${
+                                                      order.mem_route.route_code
+                                                    }&route_name=${
+                                                      order.mem_route
+                                                        .route_name ?? ""
+                                                    }`
+                                                  : ""
+                                              }`
                                             );
                                           } else {
                                             console.log("else");
