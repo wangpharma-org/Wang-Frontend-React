@@ -25,8 +25,8 @@ const StickerPrint = () => {
   const [selectFloor, setSelectFloor] = useState("");
   const [data, setData] = useState<TicketItem[]>([]);
   const [listPrintTicket, setListPrint] = useState<TicketItem[]>([]);
-  // const [isOpen, setIsOpen] = useState<number[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [latestTicket, setLatestTicket] = useState<string | null>(null);
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
@@ -73,7 +73,8 @@ const StickerPrint = () => {
   }, [selectFloor, data]);
 
   useEffect(() => {
-    if (listPrintTicket.length > 0 && currentIndex < listPrintTicket.length) {
+    if (listPrintTicket.length > 0 && currentIndex < listPrintTicket.length && (listPrintTicket[currentIndex].ticket_id.toString() !== latestTicket)) {
+      setLatestTicket(listPrintTicket[currentIndex].ticket_id.toString())
       const currentTicket = listPrintTicket[currentIndex];
       console.log(`Current Index: ${currentIndex}`);
       localStorage.removeItem("print_status");
