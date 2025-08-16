@@ -7,6 +7,7 @@ import ProductBox from "../components/ProductBox";
 import { Bounce, toast, ToastContainer } from "react-toastify";
 import axios from "axios";
 import print from "../assets/printing.png";
+import Swal from "sweetalert2";
 
 interface Product {
   product_code: string;
@@ -105,7 +106,7 @@ function ProductList() {
     }
   };
 
-  useEffect(()=>{
+  useEffect(() => {
     if (changeRoute === true) {
       navigate("/order-list")
     }
@@ -417,6 +418,39 @@ function ProductList() {
     }
   };
 
+  const SaveBox = () => {
+    Swal.fire({
+      title: "กรุณาระบุจำนวนลัง",
+      input: "text",
+      inputAttributes: {
+        autocapitalize: "off"
+      },
+      showCancelButton: true,
+      confirmButtonText: "บันทึก",
+      cancelButtonText: "ยกเลิก",
+      showLoaderOnConfirm: true,
+      preConfirm: async (count_save: number) => {
+        try {
+          const githubUrl = `${import.meta.env.VITE_API_URL_ORDER}/api/picking/savebox`;
+
+          const response = await axios.post(githubUrl,
+            {
+              emp_code: userInfo?.emp_code,
+              count_save: count_save
+            });
+          console.log(response.data)
+
+          return response.data;
+        } catch (error) {
+          Swal.showValidationMessage(`
+            กรุณาใส่เฉพาะตัวเลข
+        `);
+        }
+      },
+      allowOutsideClick: () => !Swal.isLoading()
+    })
+  }
+
   if (featureFlag === false) {
     return (
       <div className="flex flex-col min-h-screen text-center items-center justify-center">
@@ -424,7 +458,7 @@ function ProductList() {
           ระบบโดนสั่งระงับการใช้งาน
         </p>
         <p className="text-2xl font-bold text-red-700">
-          หมายเหตุ : { msgFeatureFlag }
+          หมายเหตุ : {msgFeatureFlag}
         </p>
       </div>
     );
@@ -445,26 +479,25 @@ function ProductList() {
           transition={Bounce}
         />
         <header
-          className={`p-2 sticky top-0 bg-blue-400 z-40 text-white font-medium ${
-            selectedFloor === "1"
+          className={`p-2 sticky top-0 bg-blue-400 z-40 text-white font-medium ${selectedFloor === "1"
               ? "bg-gray-500"
               : selectedFloor === "2"
-              ? "bg-yellow-500"
-              : selectedFloor === "3"
-              ? "bg-blue-500"
-              : selectedFloor === "4"
-              ? "bg-red-500"
-              : selectedFloor === "5"
-              ? "bg-emerald-500"
-              : selectedFloor === "box"
-              ? "bg-purple-500"
-              : "bg-blue-400"
-          } `}
+                ? "bg-yellow-500"
+                : selectedFloor === "3"
+                  ? "bg-blue-500"
+                  : selectedFloor === "4"
+                    ? "bg-red-500"
+                    : selectedFloor === "5"
+                      ? "bg-emerald-500"
+                      : selectedFloor === "box"
+                        ? "bg-purple-500"
+                        : "bg-blue-400"
+            } `}
         >
           <div>
             <div className="flex justify-between">
               <div>
-                <button className="bg-white rounded-sm px-3 py-1 text-black drop-shadow-xs ">
+                <button className="bg-white rounded-sm px-3 py-1 text-black drop-shadow-xs " onClick={SaveBox}>
                   ลัง
                 </button>
               </div>
@@ -786,21 +819,20 @@ function ProductList() {
         </div>
         <div>
           <footer
-            className={`p-3 fixed bottom-0 left-0 right-0 z-40  text-white font-medium ${
-              selectedFloor === "1"
+            className={`p-3 fixed bottom-0 left-0 right-0 z-40  text-white font-medium ${selectedFloor === "1"
                 ? "bg-gray-500"
                 : selectedFloor === "2"
-                ? "bg-yellow-500"
-                : selectedFloor === "3"
-                ? "bg-blue-500"
-                : selectedFloor === "4"
-                ? "bg-red-500"
-                : selectedFloor === "5"
-                ? "bg-emerald-500"
-                : selectedFloor === "box"
-                ? "bg-purple-500"
-                : "bg-blue-400"
-            }`}
+                  ? "bg-yellow-500"
+                  : selectedFloor === "3"
+                    ? "bg-blue-500"
+                    : selectedFloor === "4"
+                      ? "bg-red-500"
+                      : selectedFloor === "5"
+                        ? "bg-emerald-500"
+                        : selectedFloor === "box"
+                          ? "bg-purple-500"
+                          : "bg-blue-400"
+              }`}
           >
             <div className="flex">
               {floorButtons.map((btn) => (
@@ -813,11 +845,10 @@ function ProductList() {
                   }
                   className={`border border-gray-500 py-1 px-1 rounded-sm shadow-lg w-full flex justify-center mx-1 relative
                             ${btn.color} 
-                            ${
-                              selectedFloor === btn.value
-                                ? "ring-2 ring-yellow-300"
-                                : ""
-                            }`}
+                            ${selectedFloor === btn.value
+                      ? "ring-2 ring-yellow-300"
+                      : ""
+                    }`}
                 >
                   <div className="flex text-center gap-2">
                     <span className="text-white font-medium ">{btn.label}</span>
@@ -839,21 +870,20 @@ function ProductList() {
                   !listproduct ||
                   userInfo?.emp_code !== listproduct.emp_code_picking
                 }
-                className={`w-full px-3 py-1 shadow-md text-lg rounded-sm font-semibold  text-white mt-3 ${
-                  CanSubmit &&
-                  listproduct &&
-                  userInfo?.emp_code === listproduct.emp_code_picking
+                className={`w-full px-3 py-1 shadow-md text-lg rounded-sm font-semibold  text-white mt-3 ${CanSubmit &&
+                    listproduct &&
+                    userInfo?.emp_code === listproduct.emp_code_picking
                     ? "bg-green-400"
                     : "bg-gray-400"
-                }`}
+                  }`}
               >
                 {!CanSubmit ||
-                !listproduct ||
-                userInfo?.emp_code !== listproduct.emp_code_picking
+                  !listproduct ||
+                  userInfo?.emp_code !== listproduct.emp_code_picking
                   ? `คุณไม่มีสิทธิ์ในการยืนยัน`
                   : !CanSubmit
-                  ? `กรุณาจัดสินค้าให้ครบ`
-                  : `ยืนยันการจัดสินค้า`}
+                    ? `กรุณาจัดสินค้าให้ครบ`
+                    : `ยืนยันการจัดสินค้า`}
               </button>
             </div>
           </footer>
