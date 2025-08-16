@@ -3,6 +3,7 @@ import { ShoppingOrder } from "../pages/ProductList";
 import box from "../assets/product-17.png";
 import { Dispatch, SetStateAction, useState } from "react";
 import { useRef, useEffect } from "react";
+import Swal from 'sweetalert2'
 
 interface ProductBoxProps {
   orderItem: ShoppingOrder;
@@ -73,17 +74,22 @@ export default function ProductBox({
     }
   }, [prepareScan, orderItem.so_running]);
 
+  const popUpName = () => {
+    Swal.fire({
+      text: `${orderItem.product.product_name}` ,
+    });
+  }
+
   return (
     <div
-      className={`p-2 rounded-sm mb-1 mt-1 ${
-        isFocused
-          ? "bg-yellow-400"
-          : orderItem.picking_status === "pending"
+      className={`p-2 rounded-sm mb-1 mt-1 ${isFocused
+        ? "bg-yellow-400"
+        : orderItem.picking_status === "pending"
           ? "bg-gray-400"
           : orderItem.picking_status === "picking"
-          ? "bg-green-400"
-          : "bg-red-400"
-      }`}
+            ? "bg-green-400"
+            : "bg-red-400"
+        }`}
     >
       <div
         //   onDoubleClick={(event) => doubleClick(event)}
@@ -95,13 +101,12 @@ export default function ProductBox({
           }
           //   handleDoubleClick(orderItem, "picking");
         }}
-        className={`py-2 px-1 rounded-smm-1 cursor-pointer ${
-          orderItem.picking_status === "pending"
-            ? "bg-white"
-            : orderItem.picking_status === "picking"
+        className={`py-2 px-1 rounded-smm-1 cursor-pointer ${orderItem.picking_status === "pending"
+          ? "bg-white"
+          : orderItem.picking_status === "picking"
             ? "bg-green-100"
             : "bg-red-100"
-        }`}
+          }`}
       >
         <div className="flex justify-stretch p-1">
           <div className="w-1/3 border border-gray-500 flex justify-center ">
@@ -109,16 +114,17 @@ export default function ProductBox({
               src={
                 orderItem.product.product_image_url.startsWith("..")
                   ? `https://www.wangpharma.com${orderItem.product.product_image_url.slice(
-                      2
-                    )}`
+                    2
+                  )}`
                   : orderItem.product.product_image_url || box
               }
               className="object-contain"
+              onClick={popUpName}
             />
           </div>
           <div className="text-xs w-2/3 ml-1">
             <button
-            id = {`buttonpicking`}
+              id={`buttonpicking`}
               className="text-white rounded-sm shadow-md bg-gray-500 py-2 px-3"
               onClick={(e) => {
                 e.stopPropagation();
@@ -195,9 +201,8 @@ export default function ProductBox({
                   e.stopPropagation();
                   handleDoubleClick(orderItem, label);
                 }}
-                className={`text-white rounded-sm shadow-md bg-amber-500 py-2 px-3 ${
-                  orderItem.picking_status === label ? "bg-red-500" : ""
-                }`}
+                className={`text-white rounded-sm shadow-md bg-amber-500 py-2 px-3 ${orderItem.picking_status === label ? "bg-red-500" : ""
+                  }`}
               >
                 {label}
               </button>
@@ -232,6 +237,9 @@ export default function ProductBox({
             )}
           </div>
         </div>
+      </div>
+      <div>
+
       </div>
     </div>
   );

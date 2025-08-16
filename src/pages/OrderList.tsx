@@ -9,6 +9,7 @@ import flag from "../assets/finish.png";
 import check from "../assets/accept.png";
 import print from "../assets/printing_black.png";
 import box from "../assets/product-17.png";
+import Swal from "sweetalert2";
 
 interface Product {
   [x: string]: ReactNode;
@@ -475,6 +476,39 @@ const OrderList = () => {
     }
   };
 
+  const SaveBox = () => {
+    Swal.fire({
+      title: "กรุณาระบุจำนวนลัง",
+      input: "text",
+      inputAttributes: {
+        autocapitalize: "off"
+      },
+      showCancelButton: true,
+      confirmButtonText: "บันทึก",
+      cancelButtonText: "ยกเลิก",
+      showLoaderOnConfirm: true,
+      preConfirm: async (count_save: number) => {
+        try {
+          const githubUrl = `${import.meta.env.VITE_API_URL_ORDER}/api/picking/savebox`;
+
+          const response = await axios.post(githubUrl,
+            {
+              emp_code: userInfo?.emp_code,
+              count_save: count_save
+            });
+          console.log(response.data)
+
+          return response.data;
+        } catch (error) {
+          Swal.showValidationMessage(`
+          กรุณาใส่เฉพาะตัวเลข
+      `);
+        }
+      },
+      allowOutsideClick: () => !Swal.isLoading()
+    })
+  }
+
   useEffect(() => {
     console.log("totalPicking", totalPicking);
   }, [totalPicking]);
@@ -536,7 +570,7 @@ const OrderList = () => {
         <header className="p-2 bg-blue-400 text-white font-medium sticky top-0 z-40">
           <div className="flex justify-between">
             <div>
-              <button className="bg-white rounded-sm px-3 py-1 text-black drop-shadow-xs">
+              <button className="bg-white rounded-sm px-3 py-1 text-black drop-shadow-xs" onClick={SaveBox}>
                 ลัง
               </button>
             </div>
@@ -662,18 +696,22 @@ const OrderList = () => {
                                     ".."
                                   )
                                     ? `https://www.wangpharma.com${item?.product_product_image_url.slice(
-                                        2
-                                      )}`
+                                      2
+                                    )}`
                                     : item?.product_product_image_url || box
                                 }
                                 className="w-35 h-35 object-cover border"
+                                onClick={() => {
+                                  Swal.fire({
+                                    text: `${item.product_product_name}`,
+                                  });
+                                }}
                               />
                             </div>
                           </div>
                           <div className="col-span-7 text-left ml-2">
-                            <p className="text-sm truncate text-[13px]">{`${
-                              item.member_mem_code ?? "-"
-                            } ${item.member_mem_name ?? "-"}`}</p>
+                            <p className="text-sm truncate text-[13px]">{`${item.member_mem_code ?? "-"
+                              } ${item.member_mem_name ?? "-"}`}</p>
                             <p className="text-sm font-bold truncate text-[13px]">
                               {item.product_product_name ?? "-"}
                             </p>
@@ -684,9 +722,8 @@ const OrderList = () => {
                               เลขบาร์โค้ด :{" "}
                               {item.product_product_barcode ?? "-"}
                             </p>
-                            <p className="text-sm font-bold text-green-700 text-[13px]">{`F${
-                              item.product_product_floor ?? "-"
-                            } ${item.product_product_addr ?? "-"}`}</p>
+                            <p className="text-sm font-bold text-green-700 text-[13px]">{`F${item.product_product_floor ?? "-"
+                              } ${item.product_product_addr ?? "-"}`}</p>
                           </div>
                           <div className="col-span-2 flex flex-col justify-left items-end">
                             <img
@@ -703,12 +740,12 @@ const OrderList = () => {
                                   item.emp_code_request_emp_nickname
                                 )
                               }
-                              //   // printSticker(
-                              //   //   String(item.member_mem_code),
-                              //   //   String(item.emp_code_request),
-                              //   //   String(item.head_sh_running)
-                              //   // )
-                              // }
+                            //   // printSticker(
+                            //   //   String(item.member_mem_code),
+                            //   //   String(item.emp_code_request),
+                            //   //   String(item.head_sh_running)
+                            //   // )
+                            // }
                             ></img>
                             <img
                               id={"acceptOrder"}
@@ -848,18 +885,16 @@ const OrderList = () => {
                             <div
                               id={`orderlist${order.mem_code}`}
                               onClick={() => togglePopup(order.mem_code)}
-                              className={`w-full p-2 rounded-sm shadow-xl text-[12px] text-[#444444] ${
-                                order.picking_status === "picking"
-                                  ? "bg-green-400"
-                                  : "bg-gray-400"
-                              }`}
+                              className={`w-full p-2 rounded-sm shadow-xl text-[12px] text-[#444444] ${order.picking_status === "picking"
+                                ? "bg-green-400"
+                                : "bg-gray-400"
+                                }`}
                             >
                               <div
-                                className={`p-1 rounded-sm ${
-                                  order.picking_status === "picking"
-                                    ? "bg-green-100"
-                                    : "bg-white"
-                                }`}
+                                className={`p-1 rounded-sm ${order.picking_status === "picking"
+                                  ? "bg-green-100"
+                                  : "bg-white"
+                                  }`}
                               >
                                 <div className="flex justify-between">
                                   <div className="flex justify-start">
@@ -944,11 +979,10 @@ const OrderList = () => {
                                     return (
                                       <div
                                         key={floor}
-                                        className={`flex-none px-0.5 py-1.5 mx-0.5 rounded shadow-sm text-center w-14 ${
-                                          data.remaining > 0
-                                            ? "bg-yellow-200"
-                                            : "bg-red-200"
-                                        }`}
+                                        className={`flex-none px-0.5 py-1.5 mx-0.5 rounded shadow-sm text-center w-14 ${data.remaining > 0
+                                          ? "bg-yellow-200"
+                                          : "bg-red-200"
+                                          }`}
                                       >
                                         <div className="text-xs font-bold">
                                           F{floor}
@@ -979,7 +1013,7 @@ const OrderList = () => {
                                   <div id={``} className="flex justify-center">
                                     {order?.picking_status === "picking" &&
                                       order?.emp_code_picking ===
-                                        userInfo?.emp_code && (
+                                      userInfo?.emp_code && (
                                         <div className="pr-1">
                                           <button
                                             disabled={
@@ -993,29 +1027,28 @@ const OrderList = () => {
                                                       so.picking_status !==
                                                       "pending"
                                                   ).length -
-                                                  order.shoppingHeads.flatMap(
-                                                    (h) => h.shoppingOrders
-                                                  ).length ===
-                                                0
-                                              )
-                                            }
-                                            className={`border rounded-sm px-2 py-1  text-white shadow-xl border-gray-300 ${
-                                              order.shoppingHeads
-                                                .flatMap(
-                                                  (h) => h.shoppingOrders
-                                                )
-                                                .filter(
-                                                  (so) =>
-                                                    so.picking_status !==
-                                                    "pending"
-                                                ).length -
                                                 order.shoppingHeads.flatMap(
                                                   (h) => h.shoppingOrders
                                                 ).length ===
+                                                0
+                                              )
+                                            }
+                                            className={`border rounded-sm px-2 py-1  text-white shadow-xl border-gray-300 ${order.shoppingHeads
+                                              .flatMap(
+                                                (h) => h.shoppingOrders
+                                              )
+                                              .filter(
+                                                (so) =>
+                                                  so.picking_status !==
+                                                  "pending"
+                                              ).length -
+                                              order.shoppingHeads.flatMap(
+                                                (h) => h.shoppingOrders
+                                              ).length ===
                                               0
-                                                ? "bg-green-600"
-                                                : "bg-gray-500"
-                                            }`}
+                                              ? "bg-green-600"
+                                              : "bg-gray-500"
+                                              }`}
                                             onClick={(e) => {
                                               e.stopPropagation();
 
@@ -1033,7 +1066,7 @@ const OrderList = () => {
                                       )}
                                     {order?.picking_status === "picking" &&
                                       order?.emp_code_picking ===
-                                        userInfo?.emp_code && (
+                                      userInfo?.emp_code && (
                                         <div className="pr-1">
                                           <button
                                             className="border rounded-sm px-2 py-1 bg-amber-400 text-white shadow-xl border-gray-300 cursor-pointer z-50"
@@ -1153,11 +1186,10 @@ const OrderList = () => {
                                       disabled={
                                         order?.picking_status !== "picking"
                                       }
-                                      className={`border rounded-sm px-3 py-2 text-xs w-full mb-2 text-white ${
-                                        order?.picking_status === "picking"
-                                          ? "hover:bg-lime-700 bg-green-600"
-                                          : "hover:bg-gray-600 bg-gray-500"
-                                      }`}
+                                      className={`border rounded-sm px-3 py-2 text-xs w-full mb-2 text-white ${order?.picking_status === "picking"
+                                        ? "hover:bg-lime-700 bg-green-600"
+                                        : "hover:bg-gray-600 bg-gray-500"
+                                        }`}
                                       // className={`border rounded-sm px-3 py-2 text-xs w-full mb-2 text-white hover:bg-lime-700 bg-green-600`}
                                       onClick={() => {
                                         handleDoubleClick(async () => {
@@ -1168,18 +1200,14 @@ const OrderList = () => {
                                               'if order?.picking_status === "picking"'
                                             );
                                             navigate(
-                                              `/product-list?mem_code=${
-                                                order?.mem_code
-                                              }${
-                                                order?.mem_route &&
+                                              `/product-list?mem_code=${order?.mem_code
+                                              }${order?.mem_route &&
                                                 order?.mem_route?.route_code
-                                                  ? `&route_code=${
-                                                      order.mem_route.route_code
-                                                    }&route_name=${
-                                                      order.mem_route
-                                                        .route_name ?? ""
-                                                    }`
-                                                  : ""
+                                                ? `&route_code=${order.mem_route.route_code
+                                                }&route_name=${order.mem_route
+                                                  .route_name ?? ""
+                                                }`
+                                                : ""
                                               }`
                                             );
                                           } else {
@@ -1245,11 +1273,10 @@ const OrderList = () => {
                       }
                       className={` border border-gray-500 py-1 px-1 rounded-sm shadow-lg w-full flex justify-center mx-1 relative
                               ${btn.color} 
-                              ${
-                                selectedFloor === btn.value
-                                  ? "ring-2 ring-yellow-300"
-                                  : ""
-                              }
+                              ${selectedFloor === btn.value
+                          ? "ring-2 ring-yellow-300"
+                          : ""
+                        }
                               `}
                     >
                       <div className="flex text-center gap-2">
@@ -1281,14 +1308,14 @@ const OrderList = () => {
                           <p className="flex text-center">
                             {match?.latest_picking_time
                               ? new Date(
-                                  match.latest_picking_time
-                                ).toLocaleString("th-TH", {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  year: "2-digit",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })
+                                match.latest_picking_time
+                              ).toLocaleString("th-TH", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
                               : "-"}
                           </p>
                         </div>
