@@ -15,6 +15,7 @@ import boxnotfound from "../assets/product-17.png";
 import dayjs from "dayjs";
 import { SHIPPING_OTHER } from "../const/Constant";
 import { useNavigate } from "react-router";
+import Swal from "sweetalert2";
 
 const TAB_KEY = "qc-dashboard";
 
@@ -799,7 +800,7 @@ const QCDashboard = () => {
     }
   };
 
-const handleSubmitQC = async (
+  const handleSubmitQC = async (
     data: ShoppingOrder & {
       emp_prepare_by: string;
       emp_qc_by: string;
@@ -875,7 +876,26 @@ const handleSubmitQC = async (
           }
         });
       }
-    } catch {
+      else if (response.status !== 200) {
+        throw new Error(response.data.msg)
+      }
+    } catch (error: any) {
+      console.log("1", error);
+      if (error.response && error.response.data) {
+        console.error("Error Response Data:", error.response.data);
+        if (error.response.data.message === "DataError") {
+          Swal.fire({
+            icon: "error",
+            title: `ร้านนี้มีพนักงานรหัส ${error.response.data.cause} ทำงานอยู่`,  
+          });
+        }
+        else if (error.response.data.message === "DataErrorEmpCode") {
+          Swal.fire({
+            icon: "error",
+            title: `กรุณากลับไปกดเสร็จสิ้นรหัสลูกค้า : ${error.response.data.cause} ก่อน`,
+          });
+        }
+      }
       alert(
         "มีบางอย่างผิดพลาด กรุณาสแกน QC Code ลูกค้าเจ้าเดิมอีกครั้งเพื่อทำงานต่อ"
       );
@@ -885,7 +905,7 @@ const handleSubmitQC = async (
     }
   };
 
-const SubmitShoppingHead = async () => {
+  const SubmitShoppingHead = async () => {
     try {
       setLoadingSubmit(true);
       console.log({
@@ -1420,7 +1440,7 @@ const SubmitShoppingHead = async () => {
 
                 <div className="flex gap-3 w-full justify-end">
                   <button
-                  id = {`OrderConfirmationPopUp`}
+                    id={`OrderConfirmationPopUp`}
                     disabled={Number(amountRequest) === 0}
                     className={`text-center text-white text-lg p-2 rounded-lg px-8 cursor-pointer ${Number(amountRequest) > 0
                       ? "hover:bg-green-800 bg-green-700"
@@ -2300,15 +2320,14 @@ const SubmitShoppingHead = async () => {
                                     <div className="flex flex-col space-y-2 px-3">
                                       {requestProductFlag && (
                                         <button
-                                        id={`reqItem`}
+                                          id={`reqItem`}
                                           disabled={
                                             so.picking_status !== "picking"
                                           }
-                                          className={` p-1 rounded-lg text-base text-white cursor-pointer ${
-                                            so.picking_status !== "picking"
-                                              ? "bg-gray-500 hover:bg-gray-600"
-                                              : "bg-blue-500 hover:bg-blue-600"
-                                          } `}
+                                          className={` p-1 rounded-lg text-base text-white cursor-pointer ${so.picking_status !== "picking"
+                                            ? "bg-gray-500 hover:bg-gray-600"
+                                            : "bg-blue-500 hover:bg-blue-600"
+                                            } `}
                                           onClick={() =>
                                             handleFetchData(
                                               so.so_running,
@@ -2331,10 +2350,10 @@ const SubmitShoppingHead = async () => {
                                         }}
                                       >
                                         {so.so_already_qc === "RT"
-                                          ? "ส่ง RT แล้ว" : 
+                                          ? "ส่ง RT แล้ว" :
                                           so.so_already_qc === "Yes" ?
-                                          "Qc แล้ว"
-                                          : "ส่ง RT"}
+                                            "Qc แล้ว"
+                                            : "ส่ง RT"}
                                       </button>
 
                                       <button
