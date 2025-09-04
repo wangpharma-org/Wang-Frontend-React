@@ -883,7 +883,7 @@ const QCDashboard = () => {
       console.log("1", error);
       if (error.response && error.response.data) {
         console.error("Error Response Data:", error.response.data);
-        if (error.response.data.message === "DataError") {
+        if (error.response.data.message === "DataErrorMemCode") {
           Swal.fire({
             icon: "error",
             title: `ร้านนี้มีพนักงานรหัส ${error.response.data.cause} ทำงานอยู่`,  
