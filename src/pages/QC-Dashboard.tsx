@@ -886,7 +886,7 @@ const QCDashboard = () => {
         if (error.response.data.message === "DataErrorMemCode") {
           Swal.fire({
             icon: "error",
-            title: `ร้านนี้มีพนักงานรหัส ${error.response.data.cause} ทำงานอยู่`,  
+            title: `ร้านนี้มีพนักงานรหัส ${error.response.data.cause} ทำงานอยู่`,
           });
         }
         else if (error.response.data.message === "DataErrorEmpCode") {
@@ -2614,6 +2614,7 @@ const QCDashboard = () => {
                           ติดตะกร้า รอลงลัง ส่งฟรี
                         </div>
                       )}
+                      <p className="text-red-500 font-bold mt-2 text-[18px]">หลังจากพิมพ์สติ๊กเกอร์ติดลังกรุณากดเสร็จสิ้นทุกครั้ง</p>
                       <button
                         // disabled={hasNotQC !== 0 || loadingSubmit || !hasPrintSticker}
                         className={`w-full flex justify-center items-center  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${hasNotQC !== 0 || loadingSubmit || !hasPrintSticker
