@@ -310,8 +310,11 @@ const QCDashboard = () => {
     }
   };
 
+  
+
   // เริ่มต้นโปรแกรม
   useEffect(() => {
+    checkFlagDeleteBill();
     handleCheckFlagRequest();
     console.log(`${import.meta.env.VITE_API_URL_ORDER}/socket/qc/dashboard`);
     const newSocket = io(
@@ -1291,10 +1294,29 @@ const QCDashboard = () => {
     window.open(`/othercourier?mem_code=${mem_code}`);
   };
 
+  const [flagDeleteBill, setFlagDeleteBill] = useState<boolean>(false);
+
+  const checkFlagDeleteBill = async () => {
+    const res = await axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/delete-bill`);
+    console.log("Res setFlagDeleteBill",res.data.status);
+    setFlagDeleteBill(res.data.status);
+  }
+
   const removeBill = async (index: number) => {
-    
     const billToRemove = InputValues[index];
     if (!billToRemove) return;
+
+    const response = await axios.post(`${import.meta.env.VITE_API_URL_ORDER}/api/qc/check-sh-running-today`, {
+      sh_running: billToRemove
+    })
+
+    if (response.data === false) {
+      Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถลบเลขบิลได้ เนื่องจากไม่ใช่ออเดอร์ที่เพิ่งเข้าระหว่างที่ QC",
+      });
+      return;
+    }
   
     const newInputs = [...InputValues];
     newInputs[index] = "";
@@ -1836,10 +1858,10 @@ const QCDashboard = () => {
                           <p className="text-lg text-white font-bold">
                             หมายเลขบิลที่ {index + 1}
                           </p>
-                          <p 
+                          {flagDeleteBill && <p 
                             className="bg-red-500 hover:bg-red-600 text-white p-1 rounded-sm px-3 cursor-pointer"
                             onClick={() => removeBill(index)}
-                          >ลบ</p>
+                          >ลบ</p>}
                         </div>
                         <div className="flex items-center gap-1.5 justify-center mt-1">
                           <input
