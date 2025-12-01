@@ -1291,6 +1291,51 @@ const QCDashboard = () => {
     window.open(`/othercourier?mem_code=${mem_code}`);
   };
 
+  const removeBill = async (index: number) => {
+    
+    const billToRemove = InputValues[index];
+    if (!billToRemove) return;
+  
+    const newInputs = [...InputValues];
+    newInputs[index] = "";
+    setInputValues(newInputs);
+  
+    if (shRunningArray) {
+      const updatedArray = shRunningArray.filter(
+        (sh) => sh !== billToRemove
+      );
+  
+      if (updatedArray.length === 0) {
+        handleClear();
+        return;
+      }
+  
+      setSHRunningArray(updatedArray);
+
+      try {
+        await axios.post(`${import.meta.env.VITE_API_URL_ORDER}/api/qc/change-room`, {
+          emp_code: QCEmp?.dataEmp?.emp_code,
+          new_room: updatedArray.join(","),
+        })
+      } catch {
+        Swal.fire({
+          icon: "error",
+          title: "ไม่สามารถลบเลขบิลได้",
+        });
+      }
+  
+      socket?.emit("join_room", {
+        mem_code: null,
+        sh_running: null,
+        sh_running_array: null,
+        addShRunningArray: updatedArray,
+      });
+    }
+  
+    if (modalOpen) setModalOpen(false);
+  };
+  
+
   if (error) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -1787,9 +1832,15 @@ const QCDashboard = () => {
                         className={` p-2 rounded-lg mt-3 ${isReady ? "bg-blue-400" : "bg-gray-500"
                           }`}
                       >
-                        <p className="text-lg text-white font-bold">
-                          หมายเลขบิลที่ {index + 1}
-                        </p>
+                        <div className="flex justify-between items-center p-1">
+                          <p className="text-lg text-white font-bold">
+                            หมายเลขบิลที่ {index + 1}
+                          </p>
+                          <p 
+                            className="bg-red-500 hover:bg-red-600 text-white p-1 rounded-sm px-3 cursor-pointer"
+                            onClick={() => removeBill(index)}
+                          >ลบ</p>
+                        </div>
                         <div className="flex items-center gap-1.5 justify-center mt-1">
                           <input
                             className="bg-white w-5/6 h-12 text-center placeholder-gray-500 rounded-sm text-xl"
@@ -1806,8 +1857,9 @@ const QCDashboard = () => {
                                   e.currentTarget.value
                                 );
                                 if (!shRunningArray) {
+                                  console.log("ไม่มี shRunningArray");
                                   handleConnect(e.currentTarget.value);
-                                }
+                                } else
                                 {
                                   handleAddSH(e.currentTarget.value);
                                   console.log("เข้าเงื่อนไข step 1");
