@@ -917,11 +917,18 @@ const QCDashboard = () => {
             icon: "error",
             title: `กรุณากลับไปกดเสร็จสิ้นรหัสลูกค้า : ${error.response.data.cause} ก่อน`,
           });
+        } else {
+          Swal.fire({
+            icon: "error",
+            title: `ข้อผิดพลาด ${error.response.data.message}`,
+          });
         }
+      } else {
+        alert(
+          "มีบางอย่างผิดพลาด กรุณาสแกน QC Code ลูกค้าเจ้าเดิมอีกครั้งเพื่อทำงานต่อ"
+        );
       }
-      alert(
-        "มีบางอย่างผิดพลาด กรุณาสแกน QC Code ลูกค้าเจ้าเดิมอีกครั้งเพื่อทำงานต่อ"
-      );
+      
       setModalOpen(false);
       handleClear();
       inputBill.current?.focus();
