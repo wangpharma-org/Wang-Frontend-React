@@ -125,7 +125,7 @@ const QCDashboard = () => {
   const [mem_code, setMem_code] = useState<string | null>(null);
   const [sh_running, setSh_running] = useState<string | null>(null);
   const [, setIsInputLocked] = useState(false);
-  const [InputValues, setInputValues] = useState<string[]>(Array(6).fill(""));
+  const [InputValues, setInputValues] = useState<string[]>(Array(10).fill(""));
   const [countBox, setCountBox] = useState<number>(1);
   const [error, setError] = useState<boolean>(false);
 
@@ -268,7 +268,8 @@ const QCDashboard = () => {
   useEffect(() => {
     if (prepareEmp?.dataEmp?.emp_code) {
       setInputPrepare(
-        `${prepareEmp.dataEmp.emp_code} ${prepareEmp.dataEmp.emp_nickname || ""
+        `${prepareEmp.dataEmp.emp_code} ${
+          prepareEmp.dataEmp.emp_nickname || ""
         }`
       );
     }
@@ -309,8 +310,6 @@ const QCDashboard = () => {
       setMsgFeatureFlag(flag.data.msg ?? "ไม่มีหมายเหตุ");
     }
   };
-
-  
 
   // เริ่มต้นโปรแกรม
   useEffect(() => {
@@ -397,7 +396,7 @@ const QCDashboard = () => {
 
   // auto focus
 
-  console.log("wantConnect", wantConnect)
+  console.log("wantConnect", wantConnect);
   useEffect(() => {
     if (packedEMP && prepareEmp && QCEmp) {
       console.log("เข้าเงื่อนไข");
@@ -417,11 +416,19 @@ const QCDashboard = () => {
   // เริ่มต่อ web socket
 
   useEffect(() => {
-    console.log("socket", socket, wantConnect, inputMemCode, sh_running, sh_running_array, addShRunningArray)
+    console.log(
+      "socket",
+      socket,
+      wantConnect,
+      inputMemCode,
+      sh_running,
+      sh_running_array,
+      addShRunningArray
+    );
     if (socket && wantConnect) {
       if (inputMemCode) {
         console.log("เข้าเงื่อนไขใน use Effect");
-        console.log("1")
+        console.log("1");
         socket.emit("join_room", {
           mem_code: inputMemCode,
           sh_running: null,
@@ -430,7 +437,7 @@ const QCDashboard = () => {
         });
         setLoading(true);
       } else if (sh_running) {
-        console.log("else if")
+        console.log("else if");
         socket.emit("join_room", {
           mem_code: null,
           sh_running,
@@ -439,7 +446,7 @@ const QCDashboard = () => {
         });
         setLoading(true);
       } else if (sh_running_array) {
-        console.log("2")
+        console.log("2");
         socket.emit("join_room", {
           mem_code: null,
           sh_running: null,
@@ -468,19 +475,34 @@ const QCDashboard = () => {
 
   useEffect(() => {
     if (dataQC) {
-      const values = Array(6).fill("");
+      let sortedData = [];
+
       if (Array.isArray(dataQC)) {
-        dataQC.forEach((bill, index) => {
-          if (index < 6) {
-            values[index] = bill.sh_running;
-          }
+        // 🔥 เรียงตาม sh_datetime
+        sortedData = [...dataQC].sort((a, b) => {
+          return (
+            new Date(a.sh_datetime).getTime() -
+            new Date(b.sh_datetime).getTime()
+          );
         });
       } else {
-        values[0] = dataQC.sh_running;
+        sortedData = [dataQC];
       }
+
+      const values = Array(10).fill("");
+      sortedData.forEach((bill, index) => {
+        if (index < 10) {
+          values[index] = bill.sh_running;
+        }
+      });
+
       setInputValues(values);
+
+      setSHRunningArray(sortedData.map((bill) => bill.sh_running));
+
       socket?.emit("get_my_room");
     }
+
     if (dataQC) {
       console.log("Data QC : ", dataQC);
       const mem_code = Array.isArray(dataQC)
@@ -638,7 +660,7 @@ const QCDashboard = () => {
     setIsInputLocked(false);
     setHasnotQC(0);
     setCountBox(1);
-    setInputValues(Array(6).fill(""));
+    setInputValues(Array(10).fill(""));
     setProductNotHaveBarcode(null);
     setSHRunningArray(null);
     setAddShRunningArray(null);
@@ -878,9 +900,8 @@ const QCDashboard = () => {
             };
           }
         });
-      }
-      else if (response.status !== 200) {
-        throw new Error(response.data.msg)
+      } else if (response.status !== 200) {
+        throw new Error(response.data.msg);
       }
     } catch (error: any) {
       console.log("1", error);
@@ -891,8 +912,7 @@ const QCDashboard = () => {
             icon: "error",
             title: `ร้านนี้มีพนักงานรหัส ${error.response.data.cause} ทำงานอยู่`,
           });
-        }
-        else if (error.response.data.message === "DataErrorEmpCode") {
+        } else if (error.response.data.message === "DataErrorEmpCode") {
           Swal.fire({
             icon: "error",
             title: `กรุณากลับไปกดเสร็จสิ้นรหัสลูกค้า : ${error.response.data.cause} ก่อน`,
@@ -1297,55 +1317,62 @@ const QCDashboard = () => {
   const [flagDeleteBill, setFlagDeleteBill] = useState<boolean>(false);
 
   const checkFlagDeleteBill = async () => {
-    const res = await axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/delete-bill`);
-    console.log("Res setFlagDeleteBill",res.data.status);
+    const res = await axios.get(
+      `${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/delete-bill`
+    );
+    console.log("Res setFlagDeleteBill", res.data.status);
     setFlagDeleteBill(res.data.status);
-  }
+  };
 
   const removeBill = async (index: number) => {
     const billToRemove = InputValues[index];
     if (!billToRemove) return;
 
-    const response = await axios.post(`${import.meta.env.VITE_API_URL_ORDER}/api/qc/check-sh-running-today`, {
-      sh_running: billToRemove
-    })
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_URL_ORDER}/api/qc/check-sh-running-today`,
+      {
+        sh_running: billToRemove,
+      }
+    );
 
     if (response.data === false) {
       Swal.fire({
         icon: "error",
-        title: "ไม่สามารถลบเลขบิลได้ เนื่องจากไม่ใช่ออเดอร์ที่เพิ่งเข้าระหว่างที่ QC",
+        title:
+          "ไม่สามารถลบเลขบิลได้ เนื่องจากไม่ใช่ออเดอร์ที่เพิ่งเข้าระหว่างที่ QC",
       });
       return;
     }
-  
+
     const newInputs = [...InputValues];
     newInputs[index] = "";
     setInputValues(newInputs);
-  
+
     if (shRunningArray) {
-      const updatedArray = shRunningArray.filter(
-        (sh) => sh !== billToRemove
-      );
-  
+      const updatedArray = shRunningArray.filter((sh) => sh !== billToRemove);
+
       if (updatedArray.length === 0) {
         handleClear();
         return;
       }
-  
+
       setSHRunningArray(updatedArray);
 
       try {
-        await axios.post(`${import.meta.env.VITE_API_URL_ORDER}/api/qc/change-room`, {
-          emp_code: QCEmp?.dataEmp?.emp_code,
-          new_room: updatedArray.join(","),
-        })
+        await axios.post(
+          `${import.meta.env.VITE_API_URL_ORDER}/api/qc/change-room`,
+          {
+            emp_code: QCEmp?.dataEmp?.emp_code,
+            new_room: updatedArray.join(","),
+          }
+        );
       } catch {
         Swal.fire({
           icon: "error",
           title: "ไม่สามารถลบเลขบิลได้",
         });
       }
-  
+
       socket?.emit("join_room", {
         mem_code: null,
         sh_running: null,
@@ -1353,10 +1380,9 @@ const QCDashboard = () => {
         addShRunningArray: updatedArray,
       });
     }
-  
+
     if (modalOpen) setModalOpen(false);
   };
-  
 
   if (error) {
     return (
@@ -1440,8 +1466,8 @@ const QCDashboard = () => {
                   src={
                     dataRequest?.product?.product_image_url.startsWith("..")
                       ? `https://www.wangpharma.com${dataRequest?.product?.product_image_url.slice(
-                        2
-                      )}`
+                          2
+                        )}`
                       : dataRequest?.product?.product_image_url
                   }
                   className="w-lg rounded-lg drop-shadow-2xl"
@@ -1451,14 +1477,15 @@ const QCDashboard = () => {
                 <div>
                   <p className="text-3xl font-bold">
                     {`
-                ${Array.isArray(dataQC)
-                        ? dataQC.length > 0
-                          ? dataQC[0]?.members?.mem_name
-                          : "ไม่มีเลขบิล"
-                        : dataQC
-                          ? dataQC?.members?.mem_name
-                          : "-"
-                      }`}
+                ${
+                  Array.isArray(dataQC)
+                    ? dataQC.length > 0
+                      ? dataQC[0]?.members?.mem_name
+                      : "ไม่มีเลขบิล"
+                    : dataQC
+                    ? dataQC?.members?.mem_name
+                    : "-"
+                }`}
                   </p>
                   <p className="text-4xl font-bold mt-6 line-clamp-2">
                     {dataRequest?.product.product_name}
@@ -1509,10 +1536,11 @@ const QCDashboard = () => {
                   <button
                     id={`OrderConfirmationPopUp`}
                     disabled={Number(amountRequest) === 0}
-                    className={`text-center text-white text-lg p-2 rounded-lg px-8 cursor-pointer ${Number(amountRequest) > 0
-                      ? "hover:bg-green-800 bg-green-700"
-                      : "hover:bg-gray-600 bg-gray-500"
-                      }`}
+                    className={`text-center text-white text-lg p-2 rounded-lg px-8 cursor-pointer ${
+                      Number(amountRequest) > 0
+                        ? "hover:bg-green-800 bg-green-700"
+                        : "hover:bg-gray-600 bg-gray-500"
+                    }`}
                     onClick={() =>
                       handleRequestMore(
                         dataRequest?.so_running ?? null,
@@ -1549,8 +1577,8 @@ const QCDashboard = () => {
                       ? dataQC[0]?.members?.mem_name
                       : "ไม่มีเลขบิล"
                     : dataQC
-                      ? dataQC?.members?.mem_name
-                      : "-"}
+                    ? dataQC?.members?.mem_name
+                    : "-"}
                 </p>
                 <p className="text-lg">
                   {Array.isArray(dataQC)
@@ -1558,8 +1586,8 @@ const QCDashboard = () => {
                       ? dataQC[0]?.members?.mem_code
                       : "ไม่มีเลขบิล"
                     : dataQC
-                      ? dataQC?.members?.mem_code
-                      : "-"}
+                    ? dataQC?.members?.mem_code
+                    : "-"}
                 </p>
               </div>
             </div>
@@ -1569,8 +1597,8 @@ const QCDashboard = () => {
                   src={
                     orderForQC?.product?.product_image_url.startsWith("..")
                       ? `https://www.wangpharma.com${orderForQC?.product?.product_image_url.slice(
-                        2
-                      )}`
+                          2
+                        )}`
                       : orderForQC?.product?.product_image_url || boxnotfound
                   }
                   className="w-sm h-sm drop-shadow-xl rounded-lg"
@@ -1687,7 +1715,10 @@ const QCDashboard = () => {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-12 mt-5 border-b-2 pb-4 border-gray-200">
-              <div id={`OrderConfirmationPopUp`} className="p-2 bg-blue-500 text-white font-bold text-lg rounded-sm flex items-center">
+              <div
+                id={`OrderConfirmationPopUp`}
+                className="p-2 bg-blue-500 text-white font-bold text-lg rounded-sm flex items-center"
+              >
                 เช็ค Lot สินค้าให้เป็น Lot เดียวกันทุกตัว ลูกคืนคืนถ้า Lot
                 ไม่ต้องการ
               </div>
@@ -1754,8 +1785,8 @@ const QCDashboard = () => {
                     src={
                       url?.product_img_url?.startsWith("..")
                         ? `https://www.wangpharma.com${url?.product_img_url?.slice(
-                          2
-                        )}`
+                            2
+                          )}`
                         : url?.product_img_url || boxnotfound
                     }
                     alt=""
@@ -1789,11 +1820,12 @@ const QCDashboard = () => {
                   !!orderForQC?.product?.lot_priority &&
                   inputLot !== orderForQC.product.lot_priority
                 }
-                className={`mt-4  text-white px-4 py-2 rounded-md cursor-pointer ${!!orderForQC?.product?.lot_priority &&
+                className={`mt-4  text-white px-4 py-2 rounded-md cursor-pointer ${
+                  !!orderForQC?.product?.lot_priority &&
                   inputLot !== orderForQC.product.lot_priority
-                  ? "bg-gray-500"
-                  : "bg-green-600 hover:bg-green-700"
-                  }`}
+                    ? "bg-gray-500"
+                    : "bg-green-600 hover:bg-green-700"
+                }`}
               >
                 ตกลง
               </button>
@@ -1813,14 +1845,14 @@ const QCDashboard = () => {
             <p className="mt-2 px-10 text-lg">
               {route
                 ? route
-                  ?.filter((r) => !restrictedQC?.includes(r.route_code))
-                  ?.filter((r) => r.route_name !== "อื่นๆ")
-                  .map((r, index, arr) => (
-                    <span key={r.route_code}>
-                      {r.route_name}
-                      {index < arr.length - 1 ? " , " : ""}
-                    </span>
-                  ))
+                    ?.filter((r) => !restrictedQC?.includes(r.route_code))
+                    ?.filter((r) => r.route_name !== "อื่นๆ")
+                    .map((r, index, arr) => (
+                      <span key={r.route_code}>
+                        {r.route_name}
+                        {index < arr.length - 1 ? " , " : ""}
+                      </span>
+                    ))
                 : "กรุณาป้อนรหัสพนักงาน QC เพื่อแสดงเส้นทางที่ทำงานได้"}
             </p>
             <div className="w-full mt-5 h-8 px-6">
@@ -1841,27 +1873,32 @@ const QCDashboard = () => {
                       จัดการใบเบิก
                     </button>
                   )}
-                  {Array.from({ length: 6 }).map((_, index) => {
+                  {Array.from({ length: 10 }).map((_, index) => {
                     const bill = Array.isArray(dataQC)
                       ? dataQC[index]
                       : index === 0
-                        ? dataQC
-                        : null;
+                      ? dataQC
+                      : null;
 
                     return (
                       <div
                         key={index}
-                        className={` p-2 rounded-lg mt-3 ${isReady ? "bg-blue-400" : "bg-gray-500"
-                          }`}
+                        className={` p-2 rounded-lg mt-3 ${
+                          isReady ? "bg-blue-400" : "bg-gray-500"
+                        }`}
                       >
                         <div className="flex justify-between items-center p-1">
                           <p className="text-lg text-white font-bold">
                             หมายเลขบิลที่ {index + 1}
                           </p>
-                          {flagDeleteBill && <p 
-                            className="bg-red-500 hover:bg-red-600 text-white p-1 rounded-sm px-3 cursor-pointer"
-                            onClick={() => removeBill(index)}
-                          >ลบ</p>}
+                          {flagDeleteBill && (
+                            <p
+                              className="bg-red-500 hover:bg-red-600 text-white p-1 rounded-sm px-3 cursor-pointer"
+                              onClick={() => removeBill(index)}
+                            >
+                              ลบ
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-center gap-1.5 justify-center mt-1">
                           <input
@@ -1881,8 +1918,7 @@ const QCDashboard = () => {
                                 if (!shRunningArray) {
                                   console.log("ไม่มี shRunningArray");
                                   handleConnect(e.currentTarget.value);
-                                } else
-                                {
+                                } else {
                                   handleAddSH(e.currentTarget.value);
                                   console.log("เข้าเงื่อนไข step 1");
                                 }
@@ -1890,15 +1926,23 @@ const QCDashboard = () => {
                             }}
                             value={InputValues[index]}
                           ></input>
+                    
                           <div className="px-4 py-2 bg-white rounded-sm">
                             <p
-                              className={`font-bold text-2xl ${isReady ? "text-green-600" : "text-black"
-                                }`}
+                              className={`font-bold text-2xl ${
+                                isReady ? "text-green-600" : "text-black"
+                              }`}
                             >
                               {bill ? bill?.shoppingOrders?.length : "-"}
                             </p>
                           </div>
+                          
                         </div>
+                        {bill && (
+                            <p className="text-sm text-white mt-1 font-semibold">
+                              {new Date(bill.sh_datetime).toISOString().slice(0, 16).replace("T", " ")}
+                            </p>
+                          )}
                       </div>
                     );
                   })}
@@ -1926,7 +1970,7 @@ const QCDashboard = () => {
                               if (Array.isArray(dataQC)) {
                                 return dataQC.length > 0
                                   ? dataQC[0]?.members?.mem_code ||
-                                  "ไม่มีเลขบิล"
+                                      "ไม่มีเลขบิล"
                                   : "ไม่มีเลขบิล";
                               } else if (dataQC) {
                                 return dataQC?.members?.mem_code || "-";
@@ -1941,7 +1985,7 @@ const QCDashboard = () => {
                                 if (Array.isArray(dataQC)) {
                                   return dataQC.length > 0
                                     ? dataQC[0]?.members?.mem_name ||
-                                    "ไม่มีเลขบิล"
+                                        "ไม่มีเลขบิล"
                                     : "ไม่มีเลขบิล";
                                 } else if (dataQC) {
                                   return dataQC?.members?.mem_name || "-";
@@ -1955,7 +1999,7 @@ const QCDashboard = () => {
                                 if (Array.isArray(dataQC)) {
                                   return dataQC.length > 0
                                     ? dataQC[0]?.members?.mem_route
-                                      ?.route_name || "เส้นทาง : อื่นๆ"
+                                        ?.route_name || "เส้นทาง : อื่นๆ"
                                     : "-";
                                 } else if (dataQC) {
                                   return (
@@ -1978,7 +2022,7 @@ const QCDashboard = () => {
                           <p className="text-3xl font-bold">
                             {Array.isArray(dataQC)
                               ? dataQC[0]?.members?.mem_note ??
-                              "ไม่ระบุเงื่อนไข"
+                                "ไม่ระบุเงื่อนไข"
                               : dataQC?.members?.mem_note ?? "ไม่ระบุเงื่อนไข"}
                           </p>
                         </div>
@@ -2061,10 +2105,11 @@ const QCDashboard = () => {
                     <input
                       disabled={!isReady}
                       ref={inputBarcode}
-                      className={`col-span-6  border-4 p-2 px-5 rounded-lg text-4xl text-center ${isReady
-                        ? `bg-orange-100 border-orange-500`
-                        : `border-gray-500 bg-gray-200 `
-                        }`}
+                      className={`col-span-6  border-4 p-2 px-5 rounded-lg text-4xl text-center ${
+                        isReady
+                          ? `bg-orange-100 border-orange-500`
+                          : `border-gray-500 bg-gray-200 `
+                      }`}
                       placeholder="รหัสสินค้า / Barcode"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
@@ -2108,14 +2153,15 @@ const QCDashboard = () => {
                             .map((so, index) => {
                               return (
                                 <tr
-                                  className={`  border-b-2 border-blue-200 ${so.so_already_qc === "Yes"
-                                    ? "bg-green-100 hover:bg-green-100"
-                                    : so.so_already_qc === "RT"
+                                  className={`  border-b-2 border-blue-200 ${
+                                    so.so_already_qc === "Yes"
+                                      ? "bg-green-100 hover:bg-green-100"
+                                      : so.so_already_qc === "RT"
                                       ? "bg-red-100 hover:bg-red-100"
                                       : so.so_already_qc === "notComplete"
-                                        ? "bg-yellow-50 hover:bg-yellow-50"
-                                        : "bg-white hover:bg-gray-50"
-                                    }`}
+                                      ? "bg-yellow-50 hover:bg-yellow-50"
+                                      : "bg-white hover:bg-gray-50"
+                                  }`}
                                 >
                                   <td className="py-4 text-lg border-r-2 border-blue-200 font-semibold px-2">
                                     {index + 1}
@@ -2127,22 +2173,24 @@ const QCDashboard = () => {
                                         {so?.product?.product_floor || "ชั้น 1"}
                                       </p>
                                       <div
-                                        className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full mt-1 ${so.product.product_floor === "5"
-                                          ? "bg-green-500"
-                                          : so.product.product_floor === "4"
+                                        className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full mt-1 ${
+                                          so.product.product_floor === "5"
+                                            ? "bg-green-500"
+                                            : so.product.product_floor === "4"
                                             ? "bg-red-500"
                                             : so.product.product_floor === "3"
-                                              ? "bg-blue-500"
-                                              : so.product.product_floor === "2"
-                                                ? "bg-yellow-500"
-                                                : "bg-gray-400"
-                                          } `}
+                                            ? "bg-blue-500"
+                                            : so.product.product_floor === "2"
+                                            ? "bg-yellow-500"
+                                            : "bg-gray-400"
+                                        } `}
                                       ></div>
                                     </div>
                                   </td>
                                   <td className="py-4 text-lg border-r-2 border-blue-200 px-1">
                                     <div className="flex flex-col items-center justify-center text-center">
-                                      <p id={`pro_code ${index + 1}`}
+                                      <p
+                                        id={`pro_code ${index + 1}`}
                                         className="text-lg cursor-pointer select-none hover:underline"
                                         onDoubleClick={() => {
                                           setProductNotHaveBarcode(so.product);
@@ -2153,18 +2201,19 @@ const QCDashboard = () => {
                                       </p>
 
                                       <p
-                                        className={`text-base font-bold ${so?.picking_status === "picking"
-                                          ? "text-green-600"
-                                          : "text-red-600"
-                                          }`}
+                                        className={`text-base font-bold ${
+                                          so?.picking_status === "picking"
+                                            ? "text-green-600"
+                                            : "text-red-600"
+                                        }`}
                                       >
                                         {so?.picking_status === "pending"
                                           ? "ยังไม่จัด"
                                           : so?.picking_status === "picking"
-                                            ? "จัดแล้ว"
-                                            : so?.picking_status === "request"
-                                              ? "กำลังขอเพิ่ม"
-                                              : so?.picking_status}
+                                          ? "จัดแล้ว"
+                                          : so?.picking_status === "request"
+                                          ? "กำลังขอเพิ่ม"
+                                          : so?.picking_status}
                                       </p>
                                       {!so.product.product_barcode &&
                                         !so.product.product_barcode2 &&
@@ -2185,7 +2234,10 @@ const QCDashboard = () => {
                                   </td>
                                   <td className="py-4 text-lg border-r-2 border-blue-200">
                                     <div className="flex flex-col items-center justify-center text-center px-2">
-                                      <p id={`barcode${index + 1}dashboard-qc`} className="text-base pb-1 mb-1 border-b-2 border-blue-200">
+                                      <p
+                                        id={`barcode${index + 1}dashboard-qc`}
+                                        className="text-base pb-1 mb-1 border-b-2 border-blue-200"
+                                      >
                                         {so?.product?.product_barcode}
                                       </p>
                                       <p className="text-base pb-1 mb-1 border-b-2 border-blue-200">
@@ -2228,9 +2280,9 @@ const QCDashboard = () => {
                                           <span className="text-black">
                                             {so?.product?.detail[0]?.create_at
                                               ? dayjs(
-                                                so?.product?.detail[0]
-                                                  ?.create_at
-                                              ).format("DD/MM/YYYY")
+                                                  so?.product?.detail[0]
+                                                    ?.create_at
+                                                ).format("DD/MM/YYYY")
                                               : "ไม่มีข้อมูล"}
                                           </span>
                                         </p>
@@ -2297,10 +2349,10 @@ const QCDashboard = () => {
                                           so.so_already_qc === "notComplete"
                                             ? warning
                                             : so.so_already_qc === "Yes"
-                                              ? accept
-                                              : so.so_already_qc === "RT"
-                                                ? box
-                                                : incorect
+                                            ? accept
+                                            : so.so_already_qc === "RT"
+                                            ? box
+                                            : incorect
                                         }
                                         className="w-10"
                                       ></img>
@@ -2398,10 +2450,11 @@ const QCDashboard = () => {
                                           disabled={
                                             so.picking_status !== "picking"
                                           }
-                                          className={` p-1 rounded-lg text-base text-white cursor-pointer ${so.picking_status !== "picking"
-                                            ? "bg-gray-500 hover:bg-gray-600"
-                                            : "bg-blue-500 hover:bg-blue-600"
-                                            } `}
+                                          className={` p-1 rounded-lg text-base text-white cursor-pointer ${
+                                            so.picking_status !== "picking"
+                                              ? "bg-gray-500 hover:bg-gray-600"
+                                              : "bg-blue-500 hover:bg-blue-600"
+                                          } `}
                                           onClick={() =>
                                             handleFetchData(
                                               so.so_running,
@@ -2414,20 +2467,25 @@ const QCDashboard = () => {
                                       )}
                                       <button
                                         id={`RTItem`}
-                                        disabled={so.so_already_qc === 'RT' || so.so_already_qc === "Yes"}
-                                        className={` p-1 rounded-lg text-base text-white cursor-pointer ${(so.so_already_qc === "RT" || so.so_already_qc === "Yes")
-                                          ? "hover:bg-gray-600 bg-gray-500"
-                                          : "hover:bg-red-600 bg-red-500"
-                                          }`}
+                                        disabled={
+                                          so.so_already_qc === "RT" ||
+                                          so.so_already_qc === "Yes"
+                                        }
+                                        className={` p-1 rounded-lg text-base text-white cursor-pointer ${
+                                          so.so_already_qc === "RT" ||
+                                          so.so_already_qc === "Yes"
+                                            ? "hover:bg-gray-600 bg-gray-500"
+                                            : "hover:bg-red-600 bg-red-500"
+                                        }`}
                                         onClick={() => {
                                           handleRT(so.so_running);
                                         }}
                                       >
                                         {so.so_already_qc === "RT"
-                                          ? "ส่ง RT แล้ว" :
-                                          so.so_already_qc === "Yes" ?
-                                            "Qc แล้ว"
-                                            : "ส่ง RT"}
+                                          ? "ส่ง RT แล้ว"
+                                          : so.so_already_qc === "Yes"
+                                          ? "Qc แล้ว"
+                                          : "ส่ง RT"}
                                       </button>
 
                                       <button
@@ -2484,8 +2542,8 @@ const QCDashboard = () => {
                                 ".."
                               )
                                 ? `https://www.wangpharma.com${productNotHaveBarcode?.product_image_url.slice(
-                                  2
-                                )}`
+                                    2
+                                  )}`
                                 : productNotHaveBarcode?.product_image_url
                             }
                             className="w-50 rounded-lg drop-shadow-sm"
@@ -2688,13 +2746,16 @@ const QCDashboard = () => {
                           ติดตะกร้า รอลงลัง ส่งฟรี
                         </div>
                       )}
-                      <p className="text-red-500 font-bold mt-2 text-[18px]">หลังจากพิมพ์สติ๊กเกอร์ติดลังกรุณากดเสร็จสิ้นทุกครั้ง</p>
+                      <p className="text-red-500 font-bold mt-2 text-[18px]">
+                        หลังจากพิมพ์สติ๊กเกอร์ติดลังกรุณากดเสร็จสิ้นทุกครั้ง
+                      </p>
                       <button
                         // disabled={hasNotQC !== 0 || loadingSubmit || !hasPrintSticker}
-                        className={`w-full flex justify-center items-center  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${hasNotQC !== 0 || loadingSubmit || !hasPrintSticker
-                          ? "bg-gray-500 hover:bg-gray-600"
-                          : "bg-green-500 hover:bg-green-600"
-                          }`}
+                        className={`w-full flex justify-center items-center  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${
+                          hasNotQC !== 0 || loadingSubmit || !hasPrintSticker
+                            ? "bg-gray-500 hover:bg-gray-600"
+                            : "bg-green-500 hover:bg-green-600"
+                        }`}
                         onClick={() => {
                           if (
                             hasNotQC !== 0 ||
