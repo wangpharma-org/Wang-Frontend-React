@@ -273,8 +273,10 @@ function App() {
                 {/* <RequireAuth> */}
                   <RouteManage />
                 {/* </RequireAuth> */}
-              </div>}
+                 </div>
+            }
           />
+
           <Route
             path="/dashboard-route"
             element={
