@@ -112,10 +112,17 @@ export interface dataForEmp {
   mem_route: MemRoute[];
 }
 
+export interface urgent {
+  mem_code: string,
+  mem_name: string,
+  amount: string,
+}
+
 export type ShoppingHead = Root[];
 export type ShoppingHeadOne = Root;
 
 const QCDashboard = () => {
+  const [urgent, setUrgent] = useState<urgent[]| null>(null);
   const [dataQC, setDataQC] = useState<ShoppingHead | ShoppingHeadOne | null>(
     null
   );
@@ -330,6 +337,11 @@ const QCDashboard = () => {
       setError(false);
       console.log("✅ Connected to WebSocket");
     });
+
+    newSocket.on("urgent", (data) => {
+      console.log('urgent', data);
+      setUrgent(data);
+    })
 
     newSocket.on("qcdata", (data) => {
       console.log("Received data:", data);
@@ -1862,6 +1874,16 @@ const QCDashboard = () => {
                     ))
                 : "กรุณาป้อนรหัสพนักงาน QC เพื่อแสดงเส้นทางที่ทำงานได้"}
             </p>
+            {urgent && <div className="bg-red-800 text-white my-1 py-0.5">
+              <p className=" text-2xl font-bold">รายการด่วน</p>
+              <div className="">
+              {urgent.map((u) => {
+                return (
+                    <p className="font-bold">{u.mem_code} {u.mem_name} [ รายการทั้งหมด {u.amount} บิล ] </p>
+                )
+              })}
+              </div>
+            </div>}
             <div className="w-full mt-5 h-8 px-6">
               <div className="grid grid-cols-6 gap-3">
                 <div className="col-span-1 bg-blue-50 p-4 rounded-xl self-start">

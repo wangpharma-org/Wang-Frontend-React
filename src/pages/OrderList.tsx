@@ -67,6 +67,7 @@ interface orderList {
   mem_code: string;
   mem_id: number;
   mem_name: string;
+  urgent: boolean;
   picking_status: string;
   province: string;
   shoppingHeads: ShoppingHead[];
@@ -855,6 +856,8 @@ const OrderList = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2 w-full mb-36 mt-3">
                     {orderList
                       .sort((a, b) => {
+                        if (a.urgent && !b.urgent) return -1;
+                        if (!a.urgent && b.urgent) return 1;
                         const maxA = Math.max(
                           ...a.shoppingHeads.map((sh) =>
                             new Date(sh.sh_datetime).getTime()
@@ -920,6 +923,10 @@ const OrderList = () => {
                                     </div>
                                   )}
                                 </div>
+                                {order.urgent && 
+                                <p className="bg-red-600 text-white rounded-sm text-center py-0.5 mb-0.5 font-bold">ด่วน</p>
+                                }
+                              
                                 <div className="flex justify-between">
                                   <div className="flex justify-start">
                                     <p>{order.mem_code}</p>&nbsp;
