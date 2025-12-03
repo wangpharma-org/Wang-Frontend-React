@@ -76,6 +76,7 @@ interface orderList {
 interface MemRoute {
   route_code: string;
   route_name: string;
+  is_active: boolean;
 }
 
 type PickingTime = {
@@ -121,14 +122,30 @@ const OrderList = () => {
   const [msgFeatureFlag, setMsgFeatureFlag] = useState<string | null>(null);
   const [loadingOrder, setLoadingOrder] = useState<string | null>(null);
 
-  console.log("selectedFloor", selectedFloor);
-
   useEffect(() => {
     const totalOrders = orderList?.length;
     localStorage.setItem("totalOrdersCount", JSON.stringify(totalOrders));
   }, [orderList]);
 
   const togglePopup = (id: string) => {
+    if (orderList.find((order) => order.mem_code === id)?.mem_route?.is_active === false) {
+      // คำนวณ active routes แบบ real-time แทนการใช้ state routeName
+      const activeRoutes = [
+        ...new Set(
+          orderList
+            .filter((order) => order.mem_route?.is_active === true)
+            .map((order) => order.mem_route?.route_name || "")
+            .filter((routeName) => routeName !== "")
+        )
+      ];
+      
+      Swal.fire({
+        icon: "warning",
+        title: "เส้นทางนี้ถูกระงับ",
+        text: `ให้ไปทำเส้นทาง ${activeRoutes.length > 0 ? activeRoutes.join(", ") : "อื่น"}`,
+      });
+      return;
+    }
     setOpenPopupId((prev) => (prev === id ? null : id));
   };
 
@@ -274,7 +291,6 @@ const OrderList = () => {
       });
     });
     setFloorCounts(newFloorCounts);
-    console.log("order List " + JSON.stringify(orderList));
   }, [orderList]);
 
   useEffect(() => {
@@ -375,9 +391,6 @@ const OrderList = () => {
 
   const isFiltered =
     search || selectedFloor || (selectroute && selectroute !== "");
-  console.log("search " + search);
-  console.log("selectedFloor " + selectedFloor);
-  console.log("selectroute " + selectroute);
 
   const floorButtons = [
     { label: "1", value: "1", color: "bg-gray-500" },
@@ -517,7 +530,7 @@ const OrderList = () => {
     const clickCountRef = useRef(0);
     const clickTimerRef = useRef<number | null>(null);
 
-    const handleClick = (callback: Function) => {
+    const handleClick = (callback: () => void) => {
       clickCountRef.current++;
       if (clickCountRef.current === 1) {
         return setOpenPopupId(null);
@@ -537,6 +550,8 @@ const OrderList = () => {
 
     return handleClick;
   }
+
+
 
   if (featureFlag === false) {
     return (
@@ -876,7 +891,6 @@ const OrderList = () => {
                             // console.log("order.product.product_floor", order.product.product_floor);
                             return acc;
                           }, {} as Record<string, { total: number; remaining: number }>);
-                        console.log("floorSummary", floorSummary);
                         return (
                           <div
                             key={order.mem_id}
@@ -888,7 +902,10 @@ const OrderList = () => {
                               className={`w-full p-2 rounded-sm shadow-xl text-[12px] text-[#444444] ${order.picking_status === "picking"
                                 ? "bg-green-400"
                                 : "bg-gray-400"
-                                }`}
+                                } ${order.mem_route?.is_active === false
+                                  ? "opacity-50 "
+                                  : ""
+                                } cursor-pointer hover:scale-[1.02] transition-transform duration-100 ease-in-out`}
                             >
                               <div
                                 className={`p-1 rounded-sm ${order.picking_status === "picking"
@@ -896,6 +913,13 @@ const OrderList = () => {
                                   : "bg-white"
                                   }`}
                               >
+                                <div>
+                                  {order?.mem_route?.is_active === false && (
+                                    <div>
+                                      <p className="text-red-600 font-bold text-center">เส้นทางนี้ถูกระงับ</p>
+                                    </div>
+                                  )}
+                                </div>
                                 <div className="flex justify-between">
                                   <div className="flex justify-start">
                                     <p>{order.mem_code}</p>&nbsp;
