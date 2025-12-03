@@ -32,6 +32,7 @@ import Welcome from "./pages/OpenTicket/Welcome";
 import Ticket from "./pages/OpenTicket/Ticket";
 import StatusTicket from "./pages/OpenTicket/StatusTicket";
 import RequestProduct from "./pages/RequestProduct";
+import DashboardRoute from "./pages/DashboardRoute";
 
 function App() {
   return (
@@ -260,6 +261,15 @@ function App() {
             element={
               <div>
                 <StatusTicket />
+              </div>
+            }
+          />
+
+          <Route
+            path="/dashboard-route"
+            element={
+              <div>
+                <DashboardRoute />
               </div>
             }
           />
