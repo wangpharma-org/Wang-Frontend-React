@@ -271,9 +271,9 @@ function App() {
               <div>
                 <Navbar />
                 {/* <RequireAuth> */}
-                  <RouteManage />
+                <RouteManage />
                 {/* </RequireAuth> */}
-                 </div>
+              </div>
             }
           />
 
