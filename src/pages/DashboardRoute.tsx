@@ -239,7 +239,7 @@ const DashboardRoute = () => {
                                 {urgentOrders.map((order, index) => (
                                     <div
                                         key={`duplicate-end-${index}`}
-                                        className="relative bg-white border border-red-300 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow duration-200 min-h-32 mx-1"
+                                        className="relative bg-white border w-xs border-red-300 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow duration-200 min-h-32 mx-1"
                                     >
                                         <div className="flex justify-between items-center mb-2">
                                             <span className="text-sm font-medium text-red-600">
