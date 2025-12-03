@@ -252,7 +252,7 @@ const DashboardRoute = () => {
                                                 {parseInt(order.count_bill)} บิล
                                             </span>
                                         </div>
-                                        <p className="text-gray-800 font-medium text-sm">
+                                        <p className="text-gray-800 font-medium text-sm truncate">
                                             {order.mem_name}
                                         </p>
                                     </div>
