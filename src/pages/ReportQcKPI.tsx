@@ -272,6 +272,14 @@ const Dashboard: React.FC = () => {
       : "__:__ น.";
   };
 
+  // ฟังก์ชันคำนวณสีตามความเร็ว
+  const getSpeedColorClass = (speedPerHour: number): string => {
+    if (speedPerHour >= 350) return "bg-blue-500";
+    if (speedPerHour >= 251 && speedPerHour <= 349) return "bg-green-500";
+    if (speedPerHour >= 151 && speedPerHour <= 249) return "bg-yellow-500";
+    return "bg-red-500";
+  };
+
   const calculateActualCompletionTime = () => {
     const speedValues = quartarlyData.map((q) => q.speed);
     const sumSpeed = speedValues.reduce((sum, speed) => sum + speed, 0);
@@ -548,11 +556,10 @@ const Dashboard: React.FC = () => {
               ?.slice()
               .sort((a, b) => a.product_floor.localeCompare(b.product_floor))
               .map((floor) => {
-                const color = colorConfig[floor.product_floor];
                 return (
                   <div key={floor.product_floor} className="text-center">
                     <div
-                      className={`${color.primary} text-white h-16 border-b ${color.border} flex flex-col justify-center`}
+                      className={`${floor.product_floor === '2' ? 'text-yellow-600' : floor.product_floor === '3' ? 'text-blue-600': floor.product_floor === '4' ? 'text-red-700': floor.product_floor === '5' ?'text-green-700' : 'text-gray-600'} h-16 flex flex-col border-gray-300 border-t border-r border-b justify-center`}
                     >
                       <div className="text-lg font-bold">
                         F{floor.product_floor}
@@ -562,28 +569,23 @@ const Dashboard: React.FC = () => {
                       </div>
                     </div>
                     <div
-                      className={`${color.primary} text-white h-20 border-b ${color.border} flex items-center justify-center`}
+                      className={`text-white h-20 border-b flex items-center justify-center border-r border-gray-300`}
                     >
-                      <div className="text-5xl font-bold">
+                      <div className={`${floor.product_floor === '2' ? 'text-yellow-600' : floor.product_floor === '3' ? 'text-blue-600': floor.product_floor === '4' ? 'text-red-700': floor.product_floor === '5' ?'text-green-700' : 'text-gray-600'} text-5xl font-bold`}>
                         {floor.remainingItem}
                       </div>
                     </div>
                     <div
-                      className={`${
-                        color.secondary
-                      } text-white h-12 border-b ${color.border
-                        .replace("border-", "border-")
-                        .replace(
-                          "500",
-                          "400"
-                        )} flex items-center justify-center`}
+                      className={`
+                        ${floor.product_floor === '2' ? 'text-yellow-600' : floor.product_floor === '3' ? 'text-blue-600': floor.product_floor === '4' ? 'text-red-700': floor.product_floor === '5' ?'text-green-700' : 'text-gray-600'}
+                        h-12 border-b flex items-center justify-center border-r border-gray-300`}
                     >
-                      <div className="text-sm font-bold">
+                      <div className={`text-sm font-bold`}>
                         {displayTime(floor.lastPickingTime)}
                       </div>
                     </div>
                     <div
-                      className={`${(calculateAverageSpeed(floor) * 60) >= 350 ? "bg-blue-500" : (calculateAverageSpeed(floor) * 60) < 349 && (calculateAverageSpeed(floor) * 60) > 250 ? "bg-green-500" : (calculateAverageSpeed(floor) * 60) < 249 && (calculateAverageSpeed(floor) * 60) > 150 ? "bg-yellow-500"  : "bg-red-500"} text-white h-16 flex flex-col justify-center border-r border-gray-300`}
+                      className={`${getSpeedColorClass(calculateAverageSpeed(floor) * 60)} text-white h-16 flex flex-col justify-center border-r border-gray-300`}
                     >
                       <p className="text-lg font-bold">
                         {(calculateAverageSpeed(floor) * 60).toFixed(2)}
@@ -611,7 +613,7 @@ const Dashboard: React.FC = () => {
 
               return (
                 <div key={station.stationId} className="border border-gray-300">
-                  <div className={`${speed >= 200 ? 'bg-green-600': speed >= 150 ? 'bg-yellow-500': speed >= 1 && 'bg-red-600'} text-white p-3 text-center font-bold text-lg`}>
+                  <div className={`${speed >= 300 ? 'bg-blue-500': speed >= 200 ? 'bg-green-600': speed >= 150 ? 'bg-yellow-500': speed >= 0 && 'bg-red-600'} text-white p-3 text-center font-bold text-lg`}>
                     Q{station.stationId}
                   </div>
                   <div className="bg-gray-100 p-2 flex justify-center items-center text-xs">
@@ -647,7 +649,7 @@ const Dashboard: React.FC = () => {
                       ? `${dayjs(station.lastQcTime).format("HH:mm")} น.`
                       : "__:__"}
                   </div>
-                  <div className={`${speed >= 200 ? 'bg-green-600': speed >= 150 ? 'bg-yellow-500': speed >= 1 && 'bg-red-600'} text-white p-3 text-center font-bold text-xs`}>
+                  <div className={`${speed >= 300 ? 'bg-blue-500': speed >= 200 ? 'bg-green-600': speed >= 150 ? 'bg-yellow-500': speed >= 0 && 'bg-red-600'} text-white p-3 text-center font-bold text-xs`}>
                     speed <span className="text-xl">{speed}</span> รก./ชม.
                   </div>
                 </div>

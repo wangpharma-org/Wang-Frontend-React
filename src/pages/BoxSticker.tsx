@@ -181,13 +181,13 @@ const BoxSticker = () => {
               </p>
             </div>
             {dataPrint?.emp?.emp_tel && (
-            <div className="flex items-center justify-center mt-0.5">
-              <img src={phone} className="w-2.5 h-2.5"></img>
-              <p className="text-[10px] ml-0.5">{dataPrint?.emp?.emp_tel ?? "-"} <span>(ฝ่ายขาย)</span></p>
-              {/* <p className="text-[9px] ml-0.5">
+              <div className="flex items-center justify-center mt-0.5">
+                <img src={phone} className="w-2.5 h-2.5"></img>
+                <p className="text-[10px] ml-0.5">{dataPrint?.emp?.emp_tel ?? "-"} <span>(ฝ่ายขาย)</span></p>
+                {/* <p className="text-[9px] ml-0.5">
                 0863249595 <span>(ฝ่ายขาย)</span>
               </p> */}
-            </div>
+              </div>
             )}
           </div>
         </div>
@@ -212,7 +212,7 @@ const BoxSticker = () => {
               <div className="p-1 flex items-center text-center justify-center w-full">
                 <p className="text-center">
                   {dataPrint?.mem_shipping_note !== "" &&
-                  dataPrint?.mem_shipping_note !== null
+                    dataPrint?.mem_shipping_note !== null
                     ? dataPrint?.mem_shipping_note
                     : "-"}
                 </p>
@@ -221,7 +221,12 @@ const BoxSticker = () => {
           </div>
         </div>
         <div className="flex justify-center items-center border-b-1">
-          <p className="text-[12px]">{sh_running?.replace(/,/g, " , ")}</p>
+          <p
+            className={`${sh_running && sh_running?.length > 66 ? "text-[9px]" : "text-[12px]"
+              }`}
+          >
+            {sh_running?.replace(/,/g, " , ")}
+          </p>
         </div>
       </div>
       <div className="flex justify-center items-center border-b">
