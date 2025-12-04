@@ -34,6 +34,7 @@ import StatusTicket from "./pages/OpenTicket/StatusTicket";
 import RequestProduct from "./pages/RequestProduct";
 import RouteManage from "./pages/RouteManage";
 import DashboardRoute from "./pages/DashboardRoute";
+import LoopDashBoard from "./pages/LoopDashboard";
 
 function App() {
   return (
@@ -273,6 +274,14 @@ function App() {
                 {/* <RequireAuth> */}
                 <RouteManage />
                 {/* </RequireAuth> */}
+              </div>
+            }
+          />
+          <Route
+            path="/loop-dashboard"
+            element={
+              <div>
+                <LoopDashBoard />
               </div>
             }
           />
