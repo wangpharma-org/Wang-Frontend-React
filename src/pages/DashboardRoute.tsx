@@ -1,11 +1,18 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
+import Marquee from 'react-fast-marquee';
 
 interface DashboardRouteProps { route_code: string, route_name: string, Success: number, NotSuccess: number, order_count: number }
 
 interface RouteStatusData {
     Active: string[];
     Inactive: string[];
+}
+
+interface UrgentOrder {
+    mem_code: string;
+    mem_name: string;
+    count_bill: string;
 }
 
 
@@ -18,17 +25,34 @@ const DashboardRoute = () => {
     const [lastFetchTime, setLastFetchTime] = useState<string>('');
     const [routeStatusData, setRouteStatusData] = useState<RouteStatusData | null>(null);
     const [showRouteStatus, setShowRouteStatus] = useState<boolean>(true);
+    const [urgentOrders, setUrgentOrders] = useState<UrgentOrder[]>([]);
+    const [isMounted, setIsMounted] = useState<boolean>(true);
 
     useEffect(() => {
+        // โหลดข้อมูลครั้งแรก
         handleData();
-
-        const interval = setInterval(() => {
-            handleData();
+        urgentOrderData();
+        
+        // ตั้ง interval แยกกันเพื่อป้องกัน race condition
+        const intervalData = setInterval(() => {
+            if (isMounted) {
+                handleData();
+            }
         }, 180000); // 3 นาที
 
-        return () => clearInterval(interval);
-    }, []);
+        const intervalUrgent = setInterval(() => {
+            if (isMounted) {
+                urgentOrderData();
+            }
+        }, 90000); // เปลี่ยนเป็น 1.5 นาทีเพื่อลดความขัดแย้ง
 
+        return () => {
+            setIsMounted(false);
+            clearInterval(intervalData);
+            clearInterval(intervalUrgent);
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     useEffect(() => {
         if (startDate && endDate) {
             handleData(startDate, endDate);
@@ -39,9 +63,12 @@ const DashboardRoute = () => {
         else {
             handleData(undefined, endDate);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [startDate, endDate]);
 
     const handleData = async (start?: string, end?: string) => {
+        if (!isMounted) return;
+        
         try {
             setLoading(true);
             let params: { date?: string; startDate?: string; endDate?: string } = {};
@@ -55,8 +82,10 @@ const DashboardRoute = () => {
             const res = await axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/picking/filter-count-order`, {
                 params
             })
-            setData(res.data.detailRoute);
-            setRouteStatusData(res.data.orderRouteName);
+            if (isMounted) {
+                setData(res.data.detailRoute || []);
+                setRouteStatusData(res.data.orderRouteName);
+            }
             // อัปเดตเวลา fetch ล่าสุดเป็นเวลาไทย
             const thaiTime = new Date().toLocaleString('th-TH', {
                 timeZone: 'Asia/Bangkok',
@@ -67,12 +96,34 @@ const DashboardRoute = () => {
                 minute: '2-digit',
                 second: '2-digit'
             });
-            setLastFetchTime(thaiTime);
+            if (isMounted) {
+                setLastFetchTime(thaiTime);
+            }
             console.log('API Response for params:', params, res.data);
         } catch (error) {
             console.error('Error fetching data:', error);
         } finally {
-            setLoading(false);
+            if (isMounted) {
+                setLoading(false);
+            }
+        }
+    };
+
+    const urgentOrderData = async () => {
+        if (!isMounted) return; // ป้องกันการเรียก API หลัง unmount
+        
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/member/urgent-count`);
+            
+            if (isMounted) { // ตรวจสอบอีกครั้งก่อน update state
+                setUrgentOrders(res.data || []);
+            }
+        } catch (error) {
+            console.error('Error fetching urgent orders:', error);
+            if (isMounted) {
+                // อาจแสดง error state หรือใช้ข้อมูลเก่า
+                setUrgentOrders([]);
+            }
         }
     };
 
@@ -122,6 +173,8 @@ const DashboardRoute = () => {
         return aParts.subNum - bParts.subNum;
     });
 
+
+
     return (
         <div className="p-4 bg-white min-h-screen">
             <div className="max-w-8xl mx-auto">
@@ -145,35 +198,70 @@ const DashboardRoute = () => {
                     </div>
                 )}
 
-                {/* แสดงรายชื่อเส้นทางทั้งหมด */}
-                {routeStatusData && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                        <h3 className="text-xl font-semibold text-blue-800 mb-3 text-center">
-                            สถานะเส้นทางการจัดส่ง
-                            (เปิดใช้งาน: {routeStatusData.Active?.length || 0} | ปิดใช้งาน: {routeStatusData.Inactive?.length || 0})
-                        </h3>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-12 gap-2">
-                            {/* แสดงเส้นทางที่ Active ก่อน */}
-                            {routeStatusData.Active?.map((route, index) => (
-                                <span
-                                    key={`active-${index}`}
-                                    className="bg-white border border-green-400 rounded px-3 py-2 text-sm text-green-700 font-medium text-center shadow-sm"
-                                >
-                                    ✓ {route}
-                                </span>
-                            ))}
-                            {/* แสดงเส้นทางที่ Inactive */}
-                            {routeStatusData.Inactive?.map((route, index) => (
-                                <span
-                                    key={`inactive-${index}`}
-                                    className="bg-white border border-red-400 rounded px-3 py-2 text-sm text-red-700 font-medium text-center shadow-sm opacity-60"
-                                >
-                                    ✗ {route}
-                                </span>
-                            ))}
+                <div className="flex gap-4">
+                    {/* แสดงรายชื่อเส้นทางทั้งหมด */}
+                    {routeStatusData && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                            <h3 className="text-xl font-semibold text-blue-800 mb-3 text-center">
+                                สถานะเส้นทางการจัดส่ง
+                                (เปิดใช้งาน: {routeStatusData.Active?.length || 0} | ปิดใช้งาน: {routeStatusData.Inactive?.length || 0})
+                            </h3>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-12 gap-2">
+                                {/* แสดงเส้นทางที่ Active ก่อน */}
+                                {routeStatusData.Active?.map((route, index) => (
+                                    <span
+                                        key={`active-${index}`}
+                                        className="bg-white border border-green-400 rounded px-2 py-2 text-base text-green-700 font-bold text-center shadow-sm"
+                                    >
+                                        {route}
+                                    </span>
+                                ))}
+                                {/* แสดงเส้นทางที่ Inactive */}
+                                {routeStatusData.Inactive?.map((route, index) => (
+                                    <span
+                                        key={`inactive-${index}`}
+                                        className="bg-white border border-red-400 rounded px-2 py-2 text-base text-red-700 font-bold text-center shadow-sm opacity-60"
+                                    >
+                                        {route}
+                                    </span>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
+
+                    {urgentOrders.length > 0 && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 w-1/3">
+                            <h3 className="text-4xl font-semibold text-red-800 mb-3 text-center">
+                                🚨 ออเดอร์ด่วน
+                                <p className="text-5xl">({urgentOrders.length} ร้าน)</p>
+                            </h3>
+                            <Marquee speed={25} gradient={false}>
+                                {urgentOrders.map((order, index) => (
+                                    <div
+                                        key={`duplicate-end-${index}`}
+                                        className="relative bg-white border w-xs border-red-300 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow duration-200 min-h-32 mx-1"
+                                    >
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-sm font-medium text-red-600">
+                                                รหัส:
+                                                <p className="text-xl font-bold">
+                                                    {order.mem_code}
+                                                </p>
+                                            </span>
+                                            <span className="absolute top-1 right-0 bg-red-100/90 text-red-700 p-3 rounded-full text-base font-bold">
+                                                {parseInt(order.count_bill)} บิล
+                                            </span>
+                                        </div>
+                                        <p className="text-gray-800 font-medium text-sm truncate">
+                                            {order.mem_name}
+                                        </p>
+                                    </div>
+                                ))}
+                            </Marquee>
+                        </div>
+                    )}
+                </div>
+
                 {showRouteStatus && (
                     <div className="mb-6 text-center space-y-4 flex items-center gap-6 justify-center flex-wrap">
                         <div>
@@ -280,7 +368,7 @@ const DashboardRoute = () => {
                     </div>
                 )}
 
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-7 gap-2">
                     {sortedData.length > 0 ? (
                         sortedData.map((route, index) => (
                             <div
