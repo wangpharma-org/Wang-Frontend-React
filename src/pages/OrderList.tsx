@@ -9,6 +9,7 @@ import flag from "../assets/finish.png";
 import check from "../assets/accept.png";
 import print from "../assets/printing_black.png";
 import box from "../assets/product-17.png";
+import Swal from "sweetalert2";
 
 interface Product {
   [x: string]: ReactNode;
@@ -17,25 +18,24 @@ interface Product {
   product_product_image_url: string;
 }
 
-
 export interface ProductRequest {
-  order_so_running: string
-  order_so_procode: string
-  order_so_amount: number
-  order_so_qc_request: string
-  order_so_unit: string | null
-  product_product_name: string
-  product_product_image_url: string | null
-  product_product_barcode: string | null
-  product_product_floor: string | null
-  product_product_addr: string | null
-  head_sh_running: string
-  member_mem_code: string
-  member_mem_name: string
-  route_route_code: string | null
-  route_route_name: string | null
-  emp_code_request: string
-  emp_code_request_emp_nickname: string
+  order_so_running: string;
+  order_so_procode: string;
+  order_so_amount: number;
+  order_so_qc_request: string;
+  order_so_unit: string | null;
+  product_product_name: string;
+  product_product_image_url: string | null;
+  product_product_barcode: string | null;
+  product_product_floor: string | null;
+  product_product_addr: string | null;
+  head_sh_running: string;
+  member_mem_code: string;
+  member_mem_name: string;
+  route_route_code: string | null;
+  route_route_name: string | null;
+  emp_code_request: string;
+  emp_code_request_emp_nickname: string;
 }
 
 interface ShoppingOrder {
@@ -76,6 +76,7 @@ interface orderList {
 interface MemRoute {
   route_code: string;
   route_name: string;
+  is_active: boolean;
 }
 
 type PickingTime = {
@@ -111,7 +112,9 @@ const OrderList = () => {
   const [openMenu, setOpenMenu] = useState(false);
   const [floorCounts, setFloorCounts] = useState<Record<string, number>>({});
   const handleDoubleClick = useDoubleClick();
-  const [requestProduct, setRequestProduct] = useState<ProductRequest[] | null>(null);
+  const [requestProduct, setRequestProduct] = useState<ProductRequest[] | null>(
+    null
+  );
   const [showRequestList, setShowRequestList] = useState(true);
   const [apiRoute, setAPIRoute] = useState<MemRoute[] | null>(null);
   const [routeButtons, setRouteButton] = useState<RouteButton[] | null>(null);
@@ -119,14 +122,30 @@ const OrderList = () => {
   const [msgFeatureFlag, setMsgFeatureFlag] = useState<string | null>(null);
   const [loadingOrder, setLoadingOrder] = useState<string | null>(null);
 
-  console.log("selectedFloor", selectedFloor);
-
   useEffect(() => {
     const totalOrders = orderList?.length;
     localStorage.setItem("totalOrdersCount", JSON.stringify(totalOrders));
   }, [orderList]);
 
   const togglePopup = (id: string) => {
+    if (orderList.find((order) => order.mem_code === id)?.mem_route?.is_active === false) {
+      // คำนวณ active routes แบบ real-time แทนการใช้ state routeName
+      const activeRoutes = [
+        ...new Set(
+          orderList
+            .filter((order) => order.mem_route?.is_active === true)
+            .map((order) => order.mem_route?.route_name || "")
+            .filter((routeName) => routeName !== "")
+        )
+      ];
+      
+      Swal.fire({
+        icon: "warning",
+        title: "เส้นทางนี้ถูกระงับ",
+        text: `ให้ไปทำเส้นทาง ${activeRoutes.length > 0 ? activeRoutes.join(", ") : "อื่น"}`,
+      });
+      return;
+    }
     setOpenPopupId((prev) => (prev === id ? null : id));
   };
 
@@ -272,7 +291,6 @@ const OrderList = () => {
       });
     });
     setFloorCounts(newFloorCounts);
-    console.log("order List " + JSON.stringify(orderList));
   }, [orderList]);
 
   useEffect(() => {
@@ -373,9 +391,6 @@ const OrderList = () => {
 
   const isFiltered =
     search || selectedFloor || (selectroute && selectroute !== "");
-  console.log("search " + search);
-  console.log("selectedFloor " + selectedFloor);
-  console.log("selectroute " + selectroute);
 
   const floorButtons = [
     { label: "1", value: "1", color: "bg-gray-500" },
@@ -474,6 +489,39 @@ const OrderList = () => {
     }
   };
 
+  const SaveBox = () => {
+    Swal.fire({
+      title: "กรุณาระบุจำนวนลัง",
+      input: "text",
+      inputAttributes: {
+        autocapitalize: "off"
+      },
+      showCancelButton: true,
+      confirmButtonText: "บันทึก",
+      cancelButtonText: "ยกเลิก",
+      showLoaderOnConfirm: true,
+      preConfirm: async (count_save: number) => {
+        try {
+          const githubUrl = `${import.meta.env.VITE_API_URL_ORDER}/api/picking/savebox`;
+
+          const response = await axios.post(githubUrl,
+            {
+              emp_code: userInfo?.emp_code,
+              count_save: count_save
+            });
+          console.log(response.data)
+
+          return response.data;
+        } catch (error) {
+          Swal.showValidationMessage(`
+          กรุณาใส่เฉพาะตัวเลข
+      `);
+        }
+      },
+      allowOutsideClick: () => !Swal.isLoading()
+    })
+  }
+
   useEffect(() => {
     console.log("totalPicking", totalPicking);
   }, [totalPicking]);
@@ -482,7 +530,7 @@ const OrderList = () => {
     const clickCountRef = useRef(0);
     const clickTimerRef = useRef<number | null>(null);
 
-    const handleClick = (callback: Function) => {
+    const handleClick = (callback: () => void) => {
       clickCountRef.current++;
       if (clickCountRef.current === 1) {
         return setOpenPopupId(null);
@@ -502,6 +550,8 @@ const OrderList = () => {
 
     return handleClick;
   }
+
+
 
   if (featureFlag === false) {
     return (
@@ -535,7 +585,7 @@ const OrderList = () => {
         <header className="p-2 bg-blue-400 text-white font-medium sticky top-0 z-40">
           <div className="flex justify-between">
             <div>
-              <button className="bg-white rounded-sm px-3 py-1 text-black drop-shadow-xs">
+              <button className="bg-white rounded-sm px-3 py-1 text-black drop-shadow-xs" onClick={SaveBox}>
                 ลัง
               </button>
             </div>
@@ -661,18 +711,22 @@ const OrderList = () => {
                                     ".."
                                   )
                                     ? `https://www.wangpharma.com${item?.product_product_image_url.slice(
-                                        2
-                                      )}`
+                                      2
+                                    )}`
                                     : item?.product_product_image_url || box
                                 }
                                 className="w-35 h-35 object-cover border"
+                                onClick={() => {
+                                  Swal.fire({
+                                    text: `${item.product_product_name}`,
+                                  });
+                                }}
                               />
                             </div>
                           </div>
                           <div className="col-span-7 text-left ml-2">
-                            <p className="text-sm truncate text-[13px]">{`${
-                              item.member_mem_code ?? "-"
-                            } ${item.member_mem_name ?? "-"}`}</p>
+                            <p className="text-sm truncate text-[13px]">{`${item.member_mem_code ?? "-"
+                              } ${item.member_mem_name ?? "-"}`}</p>
                             <p className="text-sm font-bold truncate text-[13px]">
                               {item.product_product_name ?? "-"}
                             </p>
@@ -683,13 +737,12 @@ const OrderList = () => {
                               เลขบาร์โค้ด :{" "}
                               {item.product_product_barcode ?? "-"}
                             </p>
-                            <p className="text-sm font-bold text-green-700 text-[13px]">{`F${
-                              item.product_product_floor ?? "-"
-                            } ${item.product_product_addr ?? "-"}`}</p>
+                            <p className="text-sm font-bold text-green-700 text-[13px]">{`F${item.product_product_floor ?? "-"
+                              } ${item.product_product_addr ?? "-"}`}</p>
                           </div>
                           <div className="col-span-2 flex flex-col justify-left items-end">
                             <img
-                            id={'acceptOrderPrint'}
+                              id={"acceptOrderPrint"}
                               src={print}
                               className="w-10 mb-1"
                               onClick={() =>
@@ -699,18 +752,18 @@ const OrderList = () => {
                                   item.route_route_name ?? null,
                                   item.member_mem_name,
                                   item.emp_code_request,
-                                  item.emp_code_request_emp_nickname,
+                                  item.emp_code_request_emp_nickname
                                 )
                               }
-                              //   // printSticker(
-                              //   //   String(item.member_mem_code),
-                              //   //   String(item.emp_code_request),
-                              //   //   String(item.head_sh_running)
-                              //   // )
-                              // }
+                            //   // printSticker(
+                            //   //   String(item.member_mem_code),
+                            //   //   String(item.emp_code_request),
+                            //   //   String(item.head_sh_running)
+                            //   // )
+                            // }
                             ></img>
                             <img
-                              id={'acceptOrder'}
+                              id={"acceptOrder"}
                               src={check}
                               className="w-10 mb-1"
                               onClick={() =>
@@ -838,28 +891,35 @@ const OrderList = () => {
                             // console.log("order.product.product_floor", order.product.product_floor);
                             return acc;
                           }, {} as Record<string, { total: number; remaining: number }>);
-                        console.log("floorSummary", floorSummary);
                         return (
                           <div
                             key={order.mem_id}
                             className="mt-2 px-3 w-full grid grid-cols-1 md:grid-cols-1 gap-3"
                           >
                             <div
-                              id = {`orderlist${order.mem_code}`}
+                              id={`orderlist${order.mem_code}`}
                               onClick={() => togglePopup(order.mem_code)}
-                              className={`w-full p-2 rounded-sm shadow-xl text-[12px] text-[#444444] ${
-                                order.picking_status === "picking"
-                                  ? "bg-green-400"
-                                  : "bg-gray-400"
-                              }`}
+                              className={`w-full p-2 rounded-sm shadow-xl text-[12px] text-[#444444] ${order.picking_status === "picking"
+                                ? "bg-green-400"
+                                : "bg-gray-400"
+                                } ${order.mem_route?.is_active === false
+                                  ? "opacity-50 "
+                                  : ""
+                                } cursor-pointer hover:scale-[1.02] transition-transform duration-100 ease-in-out`}
                             >
                               <div
-                                className={`p-1 rounded-sm ${ 
-                                  order.picking_status === "picking"
-                                    ? "bg-green-100"
-                                    : "bg-white"
-                                }`}
+                                className={`p-1 rounded-sm ${order.picking_status === "picking"
+                                  ? "bg-green-100"
+                                  : "bg-white"
+                                  }`}
                               >
+                                <div>
+                                  {order?.mem_route?.is_active === false && (
+                                    <div>
+                                      <p className="text-red-600 font-bold text-center">เส้นทางนี้ถูกระงับ</p>
+                                    </div>
+                                  )}
+                                </div>
                                 <div className="flex justify-between">
                                   <div className="flex justify-start">
                                     <p>{order.mem_code}</p>&nbsp;
@@ -943,11 +1003,10 @@ const OrderList = () => {
                                     return (
                                       <div
                                         key={floor}
-                                        className={`flex-none px-0.5 py-1.5 mx-0.5 rounded shadow-sm text-center w-14 ${
-                                          data.remaining > 0
-                                            ? "bg-yellow-200"
-                                            : "bg-red-200"
-                                        }`}
+                                        className={`flex-none px-0.5 py-1.5 mx-0.5 rounded shadow-sm text-center w-14 ${data.remaining > 0
+                                          ? "bg-yellow-200"
+                                          : "bg-red-200"
+                                          }`}
                                       >
                                         <div className="text-xs font-bold">
                                           F{floor}
@@ -975,10 +1034,10 @@ const OrderList = () => {
                                       </div>
                                     )}
                                   </div>
-                                  <div id = {``} className="flex justify-center">
+                                  <div id={``} className="flex justify-center">
                                     {order?.picking_status === "picking" &&
                                       order?.emp_code_picking ===
-                                        userInfo?.emp_code && (
+                                      userInfo?.emp_code && (
                                         <div className="pr-1">
                                           <button
                                             disabled={
@@ -992,29 +1051,28 @@ const OrderList = () => {
                                                       so.picking_status !==
                                                       "pending"
                                                   ).length -
-                                                  order.shoppingHeads.flatMap(
-                                                    (h) => h.shoppingOrders
-                                                  ).length ===
-                                                0
-                                              )
-                                            }
-                                            className={`border rounded-sm px-2 py-1  text-white shadow-xl border-gray-300 ${
-                                              order.shoppingHeads
-                                                .flatMap(
-                                                  (h) => h.shoppingOrders
-                                                )
-                                                .filter(
-                                                  (so) =>
-                                                    so.picking_status !==
-                                                    "pending"
-                                                ).length -
                                                 order.shoppingHeads.flatMap(
                                                   (h) => h.shoppingOrders
                                                 ).length ===
+                                                0
+                                              )
+                                            }
+                                            className={`border rounded-sm px-2 py-1  text-white shadow-xl border-gray-300 ${order.shoppingHeads
+                                              .flatMap(
+                                                (h) => h.shoppingOrders
+                                              )
+                                              .filter(
+                                                (so) =>
+                                                  so.picking_status !==
+                                                  "pending"
+                                              ).length -
+                                              order.shoppingHeads.flatMap(
+                                                (h) => h.shoppingOrders
+                                              ).length ===
                                               0
-                                                ? "bg-green-600"
-                                                : "bg-gray-500"
-                                            }`}
+                                              ? "bg-green-600"
+                                              : "bg-gray-500"
+                                              }`}
                                             onClick={(e) => {
                                               e.stopPropagation();
 
@@ -1032,7 +1090,7 @@ const OrderList = () => {
                                       )}
                                     {order?.picking_status === "picking" &&
                                       order?.emp_code_picking ===
-                                        userInfo?.emp_code && (
+                                      userInfo?.emp_code && (
                                         <div className="pr-1">
                                           <button
                                             className="border rounded-sm px-2 py-1 bg-amber-400 text-white shadow-xl border-gray-300 cursor-pointer z-50"
@@ -1072,7 +1130,7 @@ const OrderList = () => {
                                     <div>
                                       {userInfo?.floor_picking && (
                                         <button
-                                          id = {`printSticker${order.mem_code}`}
+                                          id={`printSticker${order.mem_code}`}
                                           className="border rounded-sm px-2 py-1 bg-blue-400 text-white shadow-xl border-gray-300"
                                           onClick={(e) => {
                                             e.stopPropagation();
@@ -1148,15 +1206,14 @@ const OrderList = () => {
                                       </li>
                                     ))}
                                     <button
-                                      id = {`buttonStartPicking${order.mem_code}`}
+                                      id={`buttonStartPicking${order.mem_code}`}
                                       disabled={
                                         order?.picking_status !== "picking"
                                       }
-                                      className={`border rounded-sm px-3 py-2 text-xs w-full mb-2 text-white ${
-                                        order?.picking_status === "picking"
-                                          ? "hover:bg-lime-700 bg-green-600"
-                                          : "hover:bg-gray-600 bg-gray-500"
-                                      }`}
+                                      className={`border rounded-sm px-3 py-2 text-xs w-full mb-2 text-white ${order?.picking_status === "picking"
+                                        ? "hover:bg-lime-700 bg-green-600"
+                                        : "hover:bg-gray-600 bg-gray-500"
+                                        }`}
                                       // className={`border rounded-sm px-3 py-2 text-xs w-full mb-2 text-white hover:bg-lime-700 bg-green-600`}
                                       onClick={() => {
                                         handleDoubleClick(async () => {
@@ -1167,7 +1224,15 @@ const OrderList = () => {
                                               'if order?.picking_status === "picking"'
                                             );
                                             navigate(
-                                              `/product-list?mem_code=${order?.mem_code}${order.mem_route.route_code && `&route_code=${order.mem_route.route_code}&route_name=${order.mem_route.route_name}`}`
+                                              `/product-list?mem_code=${order?.mem_code
+                                              }${order?.mem_route &&
+                                                order?.mem_route?.route_code
+                                                ? `&route_code=${order.mem_route.route_code
+                                                }&route_name=${order.mem_route
+                                                  .route_name ?? ""
+                                                }`
+                                                : ""
+                                              }`
                                             );
                                           } else {
                                             console.log("else");
@@ -1232,11 +1297,10 @@ const OrderList = () => {
                       }
                       className={` border border-gray-500 py-1 px-1 rounded-sm shadow-lg w-full flex justify-center mx-1 relative
                               ${btn.color} 
-                              ${
-                                selectedFloor === btn.value
-                                  ? "ring-2 ring-yellow-300"
-                                  : ""
-                              }
+                              ${selectedFloor === btn.value
+                          ? "ring-2 ring-yellow-300"
+                          : ""
+                        }
                               `}
                     >
                       <div className="flex text-center gap-2">
@@ -1268,14 +1332,14 @@ const OrderList = () => {
                           <p className="flex text-center">
                             {match?.latest_picking_time
                               ? new Date(
-                                  match.latest_picking_time
-                                ).toLocaleString("th-TH", {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  year: "2-digit",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })
+                                match.latest_picking_time
+                              ).toLocaleString("th-TH", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
                               : "-"}
                           </p>
                         </div>
