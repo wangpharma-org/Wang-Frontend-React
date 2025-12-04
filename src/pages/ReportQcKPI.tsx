@@ -70,6 +70,7 @@ const Dashboard: React.FC = () => {
   const [dataOnTop, setDataOnTop] = useState<QCdatum[] | null>(null);
   const [quartarlyData, setQuartarlyData] = useState<QuartarlyData[]>([]);
 
+
   useEffect(() => {
     console.log(`${import.meta.env.VITE_API_URL_ORDER}/socket/kpi/dashboard`);
     const newSocket = io(
@@ -582,12 +583,12 @@ const Dashboard: React.FC = () => {
                       </div>
                     </div>
                     <div
-                      className={`${color.secondary} text-white h-16 flex flex-col justify-center`}
+                      className={`${(calculateAverageSpeed(floor) * 60) >= 350 ? "bg-blue-500" : (calculateAverageSpeed(floor) * 60) < 349 && (calculateAverageSpeed(floor) * 60) > 250 ? "bg-green-500" : (calculateAverageSpeed(floor) * 60) < 249 && (calculateAverageSpeed(floor) * 60) > 150 ? "bg-yellow-500"  : "bg-red-500"} text-white h-16 flex flex-col justify-center border-r border-gray-300`}
                     >
-                      <div className="text-lg font-bold">
-                        {calculateAverageSpeed(floor).toFixed(2)}
-                      </div>
-                      <div className="text-xs">รก./นาที</div>
+                      <p className="text-lg font-bold">
+                        {(calculateAverageSpeed(floor) * 60).toFixed(2)}
+                      </p>
+                      <p className="text-xs">รก./ชม.</p>
                     </div>
                   </div>
                 );
