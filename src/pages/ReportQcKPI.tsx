@@ -272,6 +272,14 @@ const Dashboard: React.FC = () => {
       : "__:__ น.";
   };
 
+  // ฟังก์ชันคำนวณสีตามความเร็ว
+  const getSpeedColorClass = (speedPerHour: number): string => {
+    if (speedPerHour >= 350) return "bg-blue-500";
+    if (speedPerHour >= 251 && speedPerHour <= 349) return "bg-green-500";
+    if (speedPerHour >= 151 && speedPerHour <= 249) return "bg-yellow-500";
+    return "bg-red-500";
+  };
+
   const calculateActualCompletionTime = () => {
     const speedValues = quartarlyData.map((q) => q.speed);
     const sumSpeed = speedValues.reduce((sum, speed) => sum + speed, 0);
@@ -562,28 +570,27 @@ const Dashboard: React.FC = () => {
                       </div>
                     </div>
                     <div
-                      className={`${color.primary} text-white h-20 border-b ${color.border} flex items-center justify-center`}
+                      className={`${getSpeedColorClass(calculateAverageSpeed(floor) * 60)} text-white h-20 border-b ${color.border} flex items-center justify-center border-r border-gray-300`}
                     >
                       <div className="text-5xl font-bold">
                         {floor.remainingItem}
                       </div>
                     </div>
                     <div
-                      className={`${
-                        color.secondary
-                      } text-white h-12 border-b ${color.border
+                      className={`${getSpeedColorClass(calculateAverageSpeed(floor) * 60)}
+                         text-white h-12 border-b ${color.border
                         .replace("border-", "border-")
                         .replace(
                           "500",
                           "400"
-                        )} flex items-center justify-center`}
+                        )} flex items-center justify-center border-r border-gray-300`}
                     >
                       <div className="text-sm font-bold">
                         {displayTime(floor.lastPickingTime)}
                       </div>
                     </div>
                     <div
-                      className={`${(calculateAverageSpeed(floor) * 60) >= 350 ? "bg-blue-500" : (calculateAverageSpeed(floor) * 60) < 349 && (calculateAverageSpeed(floor) * 60) > 250 ? "bg-green-500" : (calculateAverageSpeed(floor) * 60) < 249 && (calculateAverageSpeed(floor) * 60) > 150 ? "bg-yellow-500"  : "bg-red-500"} text-white h-16 flex flex-col justify-center border-r border-gray-300`}
+                      className={`${getSpeedColorClass(calculateAverageSpeed(floor) * 60)} text-white h-16 flex flex-col justify-center border-r border-gray-300`}
                     >
                       <p className="text-lg font-bold">
                         {(calculateAverageSpeed(floor) * 60).toFixed(2)}
