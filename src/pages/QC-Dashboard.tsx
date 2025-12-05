@@ -1874,7 +1874,7 @@ const QCDashboard = () => {
                     ))
                 : "กรุณาป้อนรหัสพนักงาน QC เพื่อแสดงเส้นทางที่ทำงานได้"}
             </p>
-            {urgent && <div className="bg-red-800 text-white my-1 py-0.5">
+            {urgent && urgent.length > 0 && <div className="bg-red-800 text-white my-1 py-0.5">
               <p className=" text-2xl font-bold">รายการด่วน</p>
               <div className="">
               {urgent.map((u) => {

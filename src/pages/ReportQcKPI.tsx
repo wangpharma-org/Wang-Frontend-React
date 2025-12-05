@@ -332,34 +332,6 @@ const Dashboard: React.FC = () => {
   const { thaiDate, thaiTime, timeReduced, timeAdd } =
     calculateActualCompletionTime();
 
-  const colorConfig: Record<string, Color> = {
-    "4": {
-      primary: "bg-red-700",
-      secondary: "bg-red-700",
-      border: "border-white",
-    },
-    "3": {
-      primary: "bg-blue-500",
-      secondary: "bg-blue-500",
-      border: "border-white",
-    },
-    "5": {
-      primary: "bg-green-500",
-      secondary: "bg-green-500",
-      border: "border-white",
-    },
-    "1": {
-      primary: "bg-gray-500",
-      secondary: "bg-gray-500",
-      border: "border-white",
-    },
-    "2": {
-      primary: "bg-yellow-500",
-      secondary: "bg-yellow-500",
-      border: "border-white",
-    },
-  };
-
   return (
     <>
       <Navbar />
