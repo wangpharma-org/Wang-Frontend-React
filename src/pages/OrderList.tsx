@@ -1011,8 +1011,8 @@ const OrderList = () => {
                                       <div
                                         key={floor}
                                         className={`flex-none px-0.5 py-1.5 mx-0.5 rounded shadow-sm text-center w-14 ${data.remaining > 0
-                                          ? "bg-yellow-200"
-                                          : "bg-red-200"
+                                          ? "bg-red-200"
+                                          : "bg-green-300"
                                           }`}
                                       >
                                         <div className="text-xs font-bold">
