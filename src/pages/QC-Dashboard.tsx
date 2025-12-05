@@ -169,6 +169,7 @@ const QCDashboard = () => {
   const inputRefEmpPrepare = useRef<HTMLInputElement>(null);
   const inputRefEmpQC = useRef<HTMLInputElement>(null);
   const inputRefEmpPacked = useRef<HTMLInputElement>(null);
+  const inputRefEmpStrapping = useRef<HTMLInputElement>(null);
   const [isReady, setIsReady] = useState<boolean>(false);
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -176,9 +177,11 @@ const QCDashboard = () => {
   const [prepareEmp, setPrepareEmp] = useState<dataForEmp>();
   const [QCEmp, setQCEmp] = useState<dataForEmp>();
   const [packedEMP, setPackedEmp] = useState<dataForEmp>();
+  const [strappingEMP, setStrappingEMP] = useState<dataForEmp>();
   const [inputPrepare, setInputPrepare] = useState<string>("");
   const [inputQC, setInputQC] = useState<string>("");
   const [inputPacked, setInputPacked] = useState<string>("");
+  const [inputStrapping, setInputStrapping] = useState<string>("");
 
   // State ของ Modal QC
   const [qcNote, setQCNote] = useState<string | null>(null);
@@ -303,6 +306,14 @@ const QCDashboard = () => {
       );
     }
   }, [packedEMP]);
+
+  useEffect(() => {
+    if (strappingEMP?.dataEmp?.emp_code) {
+      setInputStrapping(
+        `${strappingEMP.dataEmp.emp_code} ${strappingEMP.dataEmp.emp_nickname || ""}`
+      );
+    }
+  }, [strappingEMP]);
 
   const checkFlag = async () => {
     const flag = await axios.get(
@@ -807,7 +818,12 @@ const QCDashboard = () => {
     } else if (type_emp === "packed-emp" && data) {
       sessionStorage.setItem("packed-emp", JSON.stringify(data.data));
       setPackedEmp(data.data);
-    } else {
+    } else if (type_emp === "strapping-emp" && data) {
+      console.log("Strapping EMP", data.data)
+      sessionStorage.setItem("strapping-emp", JSON.stringify(data.data));
+      setStrappingEMP(data.data);
+    }
+      else {
       return;
     }
   };
@@ -832,7 +848,13 @@ const QCDashboard = () => {
       setInputPacked("");
       inputRefEmpPacked.current?.focus();
       // setDataQC(null);
-    } else {
+    } else if (type_emp === "strapping-emp") {
+      sessionStorage.removeItem("strapping-emp");
+      setStrappingEMP(undefined);
+      setInputStrapping("");
+      inputRefEmpStrapping.current?.focus();
+    }
+      else {
       return;
     }
   };
@@ -990,6 +1012,7 @@ const QCDashboard = () => {
               emp_prepare: prepareEmp.dataEmp.emp_code,
               emp_qc: QCEmp.dataEmp.emp_code,
               emp_packed: packedEMP.dataEmp.emp_code,
+              emp_strapping: strappingEMP?.dataEmp.emp_code ?? undefined,
               mem_code: mem_code,
               block_credit: true,
               block_type: "Block",
@@ -1018,6 +1041,7 @@ const QCDashboard = () => {
               emp_prepare: prepareEmp.dataEmp.emp_code,
               emp_qc: QCEmp.dataEmp.emp_code,
               emp_packed: packedEMP.dataEmp.emp_code,
+              emp_strapping: strappingEMP?.dataEmp.emp_code ?? undefined,
               mem_code: mem_code,
               block_credit: true,
               block_type: "Customer-A",
@@ -1050,6 +1074,7 @@ const QCDashboard = () => {
               emp_prepare: prepareEmp.dataEmp.emp_code,
               emp_qc: QCEmp.dataEmp.emp_code,
               emp_packed: packedEMP.dataEmp.emp_code,
+              emp_strapping: strappingEMP?.dataEmp.emp_code ?? undefined,
               mem_code: mem_code,
               block_credit: false,
             }
@@ -2666,6 +2691,34 @@ const QCDashboard = () => {
                               handleGetDataEmp(
                                 e.currentTarget.value,
                                 "packed-emp"
+                              );
+                            }
+                          }}
+                        ></input>
+                      </div>
+                    </div>
+
+                    <div className="w-full mt-2">
+                      <p>พนักงานมัดลังสินค้า</p>
+                      <div className="grid grid-cols-4 px-3 gap-2 mt-2">
+                        <div
+                          className="col-span-1 bg-green-600 rounded-sm flex justify-center p-2 hover:bg-green-700 cursor-pointer"
+                          onClick={() => handleClearEmpData("strapping-emp")}
+                        >
+                          <img src={PackingIcon} className="w-6"></img>
+                        </div>
+                        <input
+                          className="col-span-3 bg-white text-lg justify-center text-center rounded-sm p-1 drop-shadow-sm"
+                          placeholder="พนักงานมัดลังสินค้า"
+                          ref={inputRefEmpStrapping}
+                          value={inputStrapping}
+                          readOnly={!!strappingEMP?.dataEmp?.emp_code}
+                          onChange={(e) => setInputStrapping(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleGetDataEmp(
+                                e.currentTarget.value,
+                                "strapping-emp"
                               );
                             }
                           }}
