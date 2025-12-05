@@ -1012,6 +1012,7 @@ const QCDashboard = () => {
               emp_prepare: prepareEmp.dataEmp.emp_code,
               emp_qc: QCEmp.dataEmp.emp_code,
               emp_packed: packedEMP.dataEmp.emp_code,
+              emp_strapping: strappingEMP?.dataEmp.emp_code ?? undefined,
               mem_code: mem_code,
               block_credit: true,
               block_type: "Block",
@@ -1040,6 +1041,7 @@ const QCDashboard = () => {
               emp_prepare: prepareEmp.dataEmp.emp_code,
               emp_qc: QCEmp.dataEmp.emp_code,
               emp_packed: packedEMP.dataEmp.emp_code,
+              emp_strapping: strappingEMP?.dataEmp.emp_code ?? undefined,
               mem_code: mem_code,
               block_credit: true,
               block_type: "Customer-A",
@@ -1072,6 +1074,7 @@ const QCDashboard = () => {
               emp_prepare: prepareEmp.dataEmp.emp_code,
               emp_qc: QCEmp.dataEmp.emp_code,
               emp_packed: packedEMP.dataEmp.emp_code,
+              emp_strapping: strappingEMP?.dataEmp.emp_code ?? undefined,
               mem_code: mem_code,
               block_credit: false,
             }
