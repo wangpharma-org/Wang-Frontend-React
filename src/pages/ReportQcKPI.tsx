@@ -17,6 +17,7 @@ export interface QCdatum {
   hatyai: number;
   country: number;
   local: number;
+  allOrdersNotQC: number;
 }
 
 export interface SummaryPicking {
@@ -87,6 +88,7 @@ const Dashboard: React.FC = () => {
     });
 
     newSocket.on("dashboard:get", (data) => {
+      console.log("Received dashboard data:", data);
       setData(data);
       setLoading(false);
     });
@@ -304,15 +306,15 @@ const Dashboard: React.FC = () => {
       .getDate()
       .toString()
       .padStart(2, "0")}/${(completionTime.getMonth() + 1)
-      .toString()
-      .padStart(2, "0")}/${thaiYear}`;
+        .toString()
+        .padStart(2, "0")}/${thaiYear}`;
     const thaiTime = `${completionTime
       .getHours()
       .toString()
       .padStart(2, "0")}:${completionTime
-      .getMinutes()
-      .toString()
-      .padStart(2, "0")}`;
+        .getMinutes()
+        .toString()
+        .padStart(2, "0")}`;
     console.log("=== การคำนวณเวลาเสร็จ ===");
     console.log("ผลรวมความเร็ว:", sumSpeed, "ต่อชั่วโมง");
     console.log("เวลาที่ต้องใช้:", minutesNeeded, "นาที");
@@ -332,302 +334,246 @@ const Dashboard: React.FC = () => {
   const { thaiDate, thaiTime, timeReduced, timeAdd } =
     calculateActualCompletionTime();
 
+  const colCount = (dataOnTop?.length ?? 0) + 1;
+  const gridStyle = {
+    gridTemplateColumns: `repeat(${colCount}, minmax(0, 1fr))`,
+  };
+
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gray-100 p-4 font-sans">
+      <div className="bg-gray-100 p-4 font-sans">
         <div className="bg-white rounded-lg shadow-lg p-6 mb-4">
-          <div className="grid grid-cols-4 gap-6">
-            <div className="font-semibold text-gray-700"></div>
+          {/* วันที่ Row */}
+          <div className="grid gap-6" style={gridStyle}>
+            <div className="font-semibold text-center px-3 text-2xl text-gray-700">
+              วันที่
+            </div>
+            {dataOnTop?.map((item, i) => (
+              <div key={i} className="text-center text-2xl">
+                <div className="text-red-500 px-3 py-1 rounded font-bold">
+                  {dayjs(item?.date).format("DD / MM / YY")}
+                </div>
+              </div>
+            ))}
 
-            <div className="text-center text-2xl">
-              {dataOnTop && (
-                <div className=" text-red-500 px-3 py-1 rounded font-bold">
-                  {dayjs(dataOnTop[0]?.date).format("DD / MM / YY")}
-                </div>
-              )}
-            </div>
-            <div className="text-center text-2xl">
-              {dataOnTop && (
-                <div className=" text-yellow-500 px-3 py-1 rounded font-bold">
-                  {dayjs(dataOnTop[1]?.date).format("DD / MM / YY")}
-                </div>
-              )}
-            </div>
-            <div className="text-center text-2xl">
-              {dataOnTop && (
-                <div className=" text-green-500 px-3 py-1 rounded font-bold">
-                  {dayjs(dataOnTop[2]?.date).format("DD / MM / YY")}
-                </div>
-              )}
-            </div>
-
-            {/* SO_IN Row */}
+            {/* SO IN */}
             <div className="font-semibold text-gray-700 text-3xl text-center">
               SO <span className="text-sm">IN</span>
             </div>
-            {dataOnTop && (
-              <div className="text-center text-2xl font-bold">
-                {dataOnTop[0]?.allOrders}
+            {dataOnTop?.map((item, i) => (
+              <div key={i} className="text-center text-2xl font-bold">
+                {item?.allOrders}
               </div>
-            )}
-            {dataOnTop && (
-              <div className="text-center text-2xl font-bold">
-                {dataOnTop[1]?.allOrders}
-              </div>
-            )}
-            {dataOnTop && (
-              <div className="text-center text-2xl font-bold">
-                {dataOnTop[2]?.allOrders}
-              </div>
-            )}
+            ))}
 
-            {/* ทั่วดิน Row */}
+            {/* ทั่วถิ่น */}
             <div className="font-semibold text-red-600 text-4xl text-center">
               ทั่วถิ่น
             </div>
-            {dataOnTop && (
-              <div className="text-center text-2xl font-bold">
-                {dataOnTop[0]?.local}
+            {dataOnTop?.map((item, i) => (
+              <div key={i} className="text-center text-2xl font-bold">
+                {item?.local}
               </div>
-            )}
-            {dataOnTop && (
-              <div className="text-center text-2xl font-bold">
-                {dataOnTop[1]?.local}
-              </div>
-            )}
-            {dataOnTop && (
-              <div className="text-center text-2xl font-bold">
-                {dataOnTop[2]?.local}
-              </div>
-            )}
+            ))}
 
-            {/* หาดใหญ่ Row */}
+            {/* หาดใหญ่ */}
             <div className="font-semibold text-blue-500 text-4xl text-center">
               หาดใหญ่
             </div>
-            {dataOnTop && (
-              <div className="text-center text-2xl font-bold">
-                {dataOnTop[0]?.hatyai}
+            {dataOnTop?.map((item, i) => (
+              <div key={i} className="text-center text-2xl font-bold">
+                {item?.hatyai}
               </div>
-            )}
-            {dataOnTop && (
-              <div className="text-center text-2xl font-bold">
-                {dataOnTop[1]?.hatyai}
-              </div>
-            )}
-            {dataOnTop && (
-              <div className="text-center text-2xl font-bold">
-                {dataOnTop[2]?.hatyai}
-              </div>
-            )}
+            ))}
 
-            {/* ทั่วไทย Row */}
+            {/* ทั่วไทย */}
             <div className="font-semibold text-orange-500 text-4xl text-center">
               ทั่วไทย
             </div>
-            {dataOnTop && (
-              <div className="text-center text-2xl font-bold">
-                {dataOnTop[0]?.country}
+            {dataOnTop?.map((item, i) => (
+              <div key={i} className="text-center text-2xl font-bold">
+                {item?.country}
               </div>
-            )}
-            {dataOnTop && (
-              <div className="text-center text-2xl font-bold">
-                {dataOnTop[1]?.country}
-              </div>
-            )}
-            {dataOnTop && (
-              <div className="text-center text-2xl font-bold">
-                {dataOnTop[2]?.country}
-              </div>
-            )}
-            {/* รวม Row */}
+            ))}
+
+            {/* รวม */}
             <div className="font-semibold text-green-600 text-4xl text-center">
               รวม
             </div>
-            <div className="text-center text-2xl font-bold">
-              {(dataOnTop?.[0]?.local ?? 0) +
-                (dataOnTop?.[0]?.hatyai ?? 0) +
-                (dataOnTop?.[0]?.country ?? 0)}
-            </div>
-            <div className="text-center text-2xl font-bold">
-              {(dataOnTop?.[1]?.local ?? 0) +
-                (dataOnTop?.[1]?.hatyai ?? 0) +
-                (dataOnTop?.[1]?.country ?? 0)}
-            </div>
-            <div className="text-center text-2xl font-bold">
-              {(dataOnTop?.[2]?.local ?? 0) +
-                (dataOnTop?.[2]?.hatyai ?? 0) +
-                (dataOnTop?.[2]?.country ?? 0)}
-            </div>
+            {dataOnTop?.map((item, i) => (
+              <div key={i} className="text-center text-2xl font-bold">
+                {item?.allOrdersNotQC}
+              </div>
+            ))}
           </div>
         </div>
+      </div>
 
-        {/* Middle Section with Large Number */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <div className="flex justify-center gap-20 items-center text-center">
-              <div className="text-2xl text-gray-600 font-bold">
-                เหลือ QC ทั้งหมด
-              </div>
-              <div
-                id="OrderList"
-                className="text-8xl font-bold text-blue-600 mb-2"
-              >
-                {data?.AllQC}
-              </div>
-              <div className="text-2xl text-gray-600 font-bold">รายการ</div>
+      {/* Middle Section with Large Number */}
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="flex justify-center gap-20 items-center text-center">
+            <div className="text-2xl text-gray-600 font-bold">
+              เหลือ QC ทั้งหมด
             </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <div className="flex justify-center gap-1">
-              <p className="text-lg text-green-700 font-bold">
-                ทุกการเพิ่ม Qc 1 Stations จะช่วยลดเวลาได้ {timeAdd} น.
-              </p>
-              <p className="text-lg">-</p>
-              <p className="text-lg text-red-700 font-bold">
-                ทุกการ หายไปของ Qc 1 Stations จะเพิ่มเวลาการทำงาน {timeReduced}{" "}
-                น.
-              </p>
+            <div
+              id="OrderList"
+              className="text-8xl font-bold text-blue-600 mb-2"
+            >
+              {data?.AllQC}
             </div>
-            <div className="flex justify-center items-center mt-3">
-              <div className="text-2xl font-semibold">
-                เสร็จใน{" "}
-                <span className="text-blue-600 text-5xl font-bold">
-                  {thaiDate}
-                </span>{" "}
-                <span className="text-blue-600 text-5xl font-bold">
-                  {thaiTime}
-                </span>{" "}
-                น.
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Weekly Analysis Section */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-4">
-          <div className="grid grid-cols-6 gap-0 mb-4">
-            {/* Labels Column */}
-            <div className="text-left bg-gray-100 border-r">
-              <div className="h-16 p-3 border-b text-black font-semibold text-lg flex items-center">
-                ชิ้นแรก วันนี้
-              </div>
-              <div className="h-20 p-3 border-b text-black font-semibold text-lg flex items-center">
-                เหลือ ทั้งหมด
-              </div>
-              <div className="h-12 p-3 border-b text-black font-semibold text-lg flex items-center">
-                ล่าสุด วันนี้
-              </div>
-              <div className="h-16 p-3 text-black font-semibold text-lg flex items-center">
-                ความเร็วเฉลี่ย
-              </div>
-            </div>
-            {floorData
-              ?.slice()
-              .sort((a, b) => a.product_floor.localeCompare(b.product_floor))
-              .map((floor) => {
-                return (
-                  <div key={floor.product_floor} className="text-center">
-                    <div
-                      className={`${floor.product_floor === '2' ? 'text-yellow-600' : floor.product_floor === '3' ? 'text-blue-600': floor.product_floor === '4' ? 'text-red-700': floor.product_floor === '5' ?'text-green-700' : 'text-gray-600'} h-16 flex flex-col border-gray-300 border-t border-r border-b justify-center`}
-                    >
-                      <div className="text-lg font-bold">
-                        F{floor.product_floor}
-                      </div>
-                      <div className="text-sm font-bold">
-                        {displayTime(floor.firstPickingTime)}
-                      </div>
-                    </div>
-                    <div
-                      className={`text-white h-20 border-b flex items-center justify-center border-r border-gray-300`}
-                    >
-                      <div className={`${floor.product_floor === '2' ? 'text-yellow-600' : floor.product_floor === '3' ? 'text-blue-600': floor.product_floor === '4' ? 'text-red-700': floor.product_floor === '5' ?'text-green-700' : 'text-gray-600'} text-5xl font-bold`}>
-                        {floor.remainingItem}
-                      </div>
-                    </div>
-                    <div
-                      className={`
-                        ${floor.product_floor === '2' ? 'text-yellow-600' : floor.product_floor === '3' ? 'text-blue-600': floor.product_floor === '4' ? 'text-red-700': floor.product_floor === '5' ?'text-green-700' : 'text-gray-600'}
-                        h-12 border-b flex items-center justify-center border-r border-gray-300`}
-                    >
-                      <div className={`text-sm font-bold`}>
-                        {displayTime(floor.lastPickingTime)}
-                      </div>
-                    </div>
-                    <div
-                      className={`${getSpeedColorClass(calculateAverageSpeed(floor) * 60)} text-white h-16 flex flex-col justify-center border-r border-gray-300`}
-                    >
-                      <p className="text-lg font-bold">
-                        {(calculateAverageSpeed(floor) * 60).toFixed(2)}
-                      </p>
-                      <p className="text-xs">รก./ชม.</p>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="text-2xl text-gray-600 font-bold">รายการ</div>
           </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="grid grid-cols-5 gap-0">
-            {qcStationsData?.map((station) => {
-              const workingHours = calculateWorkingHours(
-                station.firstQcTime,
-                station.lastQcTime
-              );
-              const itemsPerBox = calculateItemsPerBox(
-                station.qc_count,
-                station.box_amount
-              );
-              const speed = getStationSpeed(station);
+          <div className="flex justify-center gap-1">
+            <p className="text-lg text-green-700 font-bold">
+              ทุกการเพิ่ม Qc 1 Stations จะช่วยลดเวลาได้ {timeAdd} น.
+            </p>
+            <p className="text-lg">-</p>
+            <p className="text-lg text-red-700 font-bold">
+              ทุกการ หายไปของ Qc 1 Stations จะเพิ่มเวลาการทำงาน {timeReduced}{" "}
+              น.
+            </p>
+          </div>
+          <div className="flex justify-center items-center mt-3">
+            <div className="text-2xl font-semibold">
+              เสร็จใน{" "}
+              <span className="text-blue-600 text-5xl font-bold">
+                {thaiDate}
+              </span>{" "}
+              <span className="text-blue-600 text-5xl font-bold">
+                {thaiTime}
+              </span>{" "}
+              น.
+            </div>
+          </div>
+        </div>
+      </div>
 
+      {/* Weekly Analysis Section */}
+      <div className="bg-white rounded-lg shadow-lg p-6 mb-4">
+        <div className="grid grid-cols-6 gap-0 mb-4">
+          {/* Labels Column */}
+          <div className="text-left bg-gray-100 border-r">
+            <div className="h-16 p-3 border-b text-black font-semibold text-lg flex items-center">
+              ชิ้นแรก วันนี้
+            </div>
+            <div className="h-20 p-3 border-b text-black font-semibold text-lg flex items-center">
+              เหลือ ทั้งหมด
+            </div>
+            <div className="h-12 p-3 border-b text-black font-semibold text-lg flex items-center">
+              ล่าสุด วันนี้
+            </div>
+            <div className="h-16 p-3 text-black font-semibold text-lg flex items-center">
+              ความเร็วเฉลี่ย
+            </div>
+          </div>
+          {floorData
+            ?.slice()
+            .sort((a, b) => a.product_floor.localeCompare(b.product_floor))
+            .map((floor) => {
               return (
-                <div key={station.stationId} className="border border-gray-300">
-                  <div className={`${speed >= 300 ? 'bg-blue-500': speed >= 200 ? 'bg-green-600': speed >= 150 ? 'bg-yellow-500': speed >= 0 && 'bg-red-600'} text-white p-3 text-center font-bold text-lg`}>
-                    Q{station.stationId}
-                  </div>
-                  <div className="bg-gray-100 p-2 flex justify-center items-center text-xs">
-                    <span className="font-semibold text-base">
-                      {station.prepare_nickname} หัวโต๊ะ + {station.qc_nickname}{" "}
-                      คิว + {station.packed_nickname} แพ็ค
-                    </span>
-                  </div>
-                  <div className="bg-white flex">
-                    <div className="flex-1 p-4 text-center border-r border-gray-300">
-                      <div className="text-3xl font-bold">
-                        {station.qc_count}
-                      </div>
-                      <div className="text-xs text-gray-600">รก.</div>
+                <div key={floor.product_floor} className="text-center">
+                  <div
+                    className={`${floor.product_floor === '2' ? 'text-yellow-600' : floor.product_floor === '3' ? 'text-blue-600' : floor.product_floor === '4' ? 'text-red-700' : floor.product_floor === '5' ? 'text-green-700' : 'text-gray-600'} h-16 flex flex-col border-gray-300 border-t border-r border-b justify-center`}
+                  >
+                    <div className="text-lg font-bold">
+                      F{floor.product_floor}
                     </div>
-                    <div className="flex-1 p-4 text-center border-r border-gray-500">
-                      <div className="text-3xl font-bold">{itemsPerBox}</div>
-                      <div className="text-xs text-gray-600">รก / ลัง</div>
-                    </div>
-                    <div className="flex-1 p-4 text-center">
-                      <div className="text-3xl font-bold">
-                        {station.box_amount ?? 0}
-                      </div>
-                      <div className="text-xs text-gray-600">ลัง</div>
+                    <div className="text-sm font-bold">
+                      {displayTime(floor.firstPickingTime)}
                     </div>
                   </div>
-                  <div className="bg-white p-2 text-center text-base text-gray-500 border-t border-gray-300">
-                    {station.firstQcTime
-                      ? `${dayjs(station.firstQcTime).format("HH:mm")} น.`
-                      : "__:__"}{" "}
-                    ชิ้นแรก &lt;== | {workingHours.toFixed(2)} | ==&gt; ล่าสุด{" "}
-                    {station.lastQcTime
-                      ? `${dayjs(station.lastQcTime).format("HH:mm")} น.`
-                      : "__:__"}
+                  <div
+                    className={`text-white h-20 border-b flex items-center justify-center border-r border-gray-300`}
+                  >
+                    <div className={`${floor.product_floor === '2' ? 'text-yellow-600' : floor.product_floor === '3' ? 'text-blue-600' : floor.product_floor === '4' ? 'text-red-700' : floor.product_floor === '5' ? 'text-green-700' : 'text-gray-600'} text-5xl font-bold`}>
+                      {floor.remainingItem}
+                    </div>
                   </div>
-                  <div className={`${speed >= 300 ? 'bg-blue-500': speed >= 200 ? 'bg-green-600': speed >= 150 ? 'bg-yellow-500': speed >= 0 && 'bg-red-600'} text-white p-3 text-center font-bold text-xs`}>
-                    speed <span className="text-xl">{speed}</span> รก./ชม.
+                  <div
+                    className={`
+                        ${floor.product_floor === '2' ? 'text-yellow-600' : floor.product_floor === '3' ? 'text-blue-600' : floor.product_floor === '4' ? 'text-red-700' : floor.product_floor === '5' ? 'text-green-700' : 'text-gray-600'}
+                        h-12 border-b flex items-center justify-center border-r border-gray-300`}
+                  >
+                    <div className={`text-sm font-bold`}>
+                      {displayTime(floor.lastPickingTime)}
+                    </div>
+                  </div>
+                  <div
+                    className={`${getSpeedColorClass(calculateAverageSpeed(floor) * 60)} text-white h-16 flex flex-col justify-center border-r border-gray-300`}
+                  >
+                    <p className="text-lg font-bold">
+                      {(calculateAverageSpeed(floor) * 60).toFixed(2)}
+                    </p>
+                    <p className="text-xs">รก./ชม.</p>
                   </div>
                 </div>
               );
             })}
-          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="grid grid-cols-5 gap-0">
+          {qcStationsData?.map((station) => {
+            const workingHours = calculateWorkingHours(
+              station.firstQcTime,
+              station.lastQcTime
+            );
+            const itemsPerBox = calculateItemsPerBox(
+              station.qc_count,
+              station.box_amount
+            );
+            const speed = getStationSpeed(station);
+
+            return (
+              <div key={station.stationId} className="border border-gray-300">
+                <div className={`${speed >= 300 ? 'bg-blue-500' : speed >= 200 ? 'bg-green-600' : speed >= 150 ? 'bg-yellow-500' : speed >= 0 && 'bg-red-600'} text-white p-3 text-center font-bold text-lg`}>
+                  Q{station.stationId}
+                </div>
+                <div className="bg-gray-100 p-2 flex justify-center items-center text-xs">
+                  <span className="font-semibold text-base">
+                    {station.prepare_nickname} หัวโต๊ะ + {station.qc_nickname}{" "}
+                    คิว + {station.packed_nickname} แพ็ค
+                  </span>
+                </div>
+                <div className="bg-white flex">
+                  <div className="flex-1 p-4 text-center border-r border-gray-300">
+                    <div className="text-3xl font-bold">
+                      {station.qc_count}
+                    </div>
+                    <div className="text-xs text-gray-600">รก.</div>
+                  </div>
+                  <div className="flex-1 p-4 text-center border-r border-gray-500">
+                    <div className="text-3xl font-bold">{itemsPerBox}</div>
+                    <div className="text-xs text-gray-600">รก / ลัง</div>
+                  </div>
+                  <div className="flex-1 p-4 text-center">
+                    <div className="text-3xl font-bold">
+                      {station.box_amount ?? 0}
+                    </div>
+                    <div className="text-xs text-gray-600">ลัง</div>
+                  </div>
+                </div>
+                <div className="bg-white p-2 text-center text-base text-gray-500 border-t border-gray-300">
+                  {station.firstQcTime
+                    ? `${dayjs(station.firstQcTime).format("HH:mm")} น.`
+                    : "__:__"}{" "}
+                  ชิ้นแรก &lt;== | {workingHours.toFixed(2)} | ==&gt; ล่าสุด{" "}
+                  {station.lastQcTime
+                    ? `${dayjs(station.lastQcTime).format("HH:mm")} น.`
+                    : "__:__"}
+                </div>
+                <div className={`${speed >= 300 ? 'bg-blue-500' : speed >= 200 ? 'bg-green-600' : speed >= 150 ? 'bg-yellow-500' : speed >= 0 && 'bg-red-600'} text-white p-3 text-center font-bold text-xs`}>
+                  speed <span className="text-xl">{speed}</span> รก./ชม.
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </>
