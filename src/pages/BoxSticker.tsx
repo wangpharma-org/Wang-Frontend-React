@@ -201,26 +201,7 @@ const BoxSticker = () => {
             <p className="text-[7px]">00.00 - 00.00</p>
           </div>
         </div>
-        <div className="flex py-1 justify-center px-1">
-          <div className="w-[90%] flex justify-center">
-            <div className="flex border rounded-sm justify-start border-gray-800 w-full">
-              <div className="border-r flex justify-center items-center mr-1 border-gray-800">
-                <div className="w-10 p-2 flex justify-center items-center">
-                  <img src={triangle} className="m-1"></img>
-                </div>
-              </div>
-              <div className="p-1 flex items-center text-center justify-center w-full">
-                <p className="text-center">
-                  {dataPrint?.mem_shipping_note !== "" &&
-                    dataPrint?.mem_shipping_note !== null
-                    ? dataPrint?.mem_shipping_note
-                    : "-"}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="flex justify-center items-center border-b-1">
+        <div className="flex justify-center items-center border-b-1 mt-0.5">
           <p
             className={`${sh_running && sh_running?.length > 66 ? "text-[9px]" : "text-[12px]"
               }`}
@@ -247,7 +228,7 @@ const BoxSticker = () => {
               {JSONprepareEmpData?.dataEmp?.emp_nickname}
             </p>
             <p className="text-[12px] col-span-1">
-              [{JSONprepareEmpData?.dataEmp?.emp_code}] {" "}
+              [{JSONQCEmpData?.dataEmp?.emp_code}] {" "}
               {JSONQCEmpData?.dataEmp?.emp_nickname}
             </p>
             <p className="text-[12px] col-span-1">
@@ -286,6 +267,25 @@ const BoxSticker = () => {
         <div className="w-[33%] flex flex-col justify-center items-center h-10">
           <p className="text-[12px]">จัดส่ง</p>
           <p className="text-[12px]">ขนส่งวังเภสัช</p>
+        </div>
+      </div>
+      <div className="flex py-1 justify-center px-1">
+        <div className="w-[90%] flex justify-center">
+          <div className="flex border rounded-sm justify-start border-gray-800 w-full">
+            <div className="border-r flex justify-center items-center mr-1 border-gray-800">
+              <div className="w-10 p-2 flex justify-center items-center">
+                <img src={triangle} className="m-1"></img>
+              </div>
+            </div>
+            <div className="p-1 flex items-center text-center justify-center w-full">
+              <p className="text-center">
+                {dataPrint?.mem_shipping_note !== "" &&
+                  dataPrint?.mem_shipping_note !== null
+                  ? dataPrint?.mem_shipping_note
+                  : "-"}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
