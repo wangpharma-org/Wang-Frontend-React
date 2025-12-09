@@ -35,6 +35,7 @@ import RequestProduct from "./pages/RequestProduct";
 import RouteManage from "./pages/RouteManage";
 import DashboardRoute from "./pages/DashboardRoute";
 import LoopDashBoard from "./pages/LoopDashboard";
+import StackedAreaChart from "./pages/Charts";
 import { io } from "socket.io-client";
 import { useEffect } from "react";
 
@@ -320,6 +321,14 @@ function App() {
             element={
               <div>
                 <DashboardRoute />
+              </div>
+            }
+          />
+          <Route
+            path="/charts"
+            element={
+              <div>
+                <StackedAreaChart />
               </div>
             }
           />
