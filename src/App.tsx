@@ -36,8 +36,37 @@ import RouteManage from "./pages/RouteManage";
 import DashboardRoute from "./pages/DashboardRoute";
 import LoopDashBoard from "./pages/LoopDashboard";
 import StackedAreaChart from "./pages/Charts";
+import { io } from "socket.io-client";
+import { useEffect } from "react";
 
 function App() {
+  useEffect(() => {
+    console.log("Connecting to reload socket...");
+
+    const newSocket = io(
+      `${import.meta.env.VITE_API_URL_ORDER}/socket/reload-page`,
+      {
+        path: "/socket/reload-page",
+      }
+    );
+
+    newSocket.on("connect", () => {
+      console.log("Connected to reload socket");
+    });
+
+    newSocket.on("reloadPage", () => {
+      console.log("Reload event received — refreshing...");
+      window.location.reload();
+    });
+
+    newSocket.on("disconnect", () => {
+      console.log("Disconnected from reload socket");
+    });
+
+    return () => {
+      newSocket.close();
+    };
+  }, []);
   return (
     <>
       <Router>
