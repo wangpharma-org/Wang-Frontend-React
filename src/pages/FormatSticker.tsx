@@ -169,16 +169,16 @@ const FormatSticker = () => {
               </td>
             </tr>
             <tr>
-              <td className="border text-[14px] pt-0.5 font-bold w-[25%]">
+              <td className="border text-[16px] pt-0.5 font-bold w-[25%]">
                 {printData.floor_count2}
               </td>
-              <td className="border text-[14px] pt-0.5 font-bold w-[25%]">
+              <td className="border text-[16px] pt-0.5 font-bold w-[25%]">
                 {printData.floor_count3}
               </td>
-              <td className="border text-[14px] pt-0.5 font-bold w-[25%]">
+              <td className="border text-[16px] pt-0.5 font-bold w-[25%]">
                 {printData.floor_count4}
               </td>
-              <td className="border text-[14x] pt-0.5 font-bold w-[25%]">
+              <td className="border text-[16px] pt-0.5 font-bold w-[25%]">
                 {printData.floor_count5}
               </td>
             </tr>
@@ -203,11 +203,11 @@ const FormatSticker = () => {
       </div>
 
       <div className="text-center">
-        <p className="text-[22px] font-bold">{printData.mem_code}</p>
-        <p className="text-[22px]">{printData.mem_name}</p>
+        <p className="text-[30px] font-bold">{printData.mem_code}</p>
+        <p className="text-[30px]">{printData.mem_name}</p>
       </div>
 
-      <div className="flex justify-between pl-2 text-[22px] font-bold">
+      <div className="flex justify-between pl-2 text-[28px] font-bold">
         <p>{printData.route_name ?? "อื่นๆ"}</p>
       </div>
     </div>
