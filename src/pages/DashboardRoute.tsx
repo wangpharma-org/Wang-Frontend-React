@@ -198,10 +198,10 @@ const DashboardRoute = () => {
                     </div>
                 )}
 
-                <div className="flex gap-4">
+                <div className="flex gap-4 w-full">
                     {/* แสดงรายชื่อเส้นทางทั้งหมด */}
                     {routeStatusData && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 w-full">
                             <h3 className="text-xl font-semibold text-blue-800 mb-3 text-center">
                                 สถานะเส้นทางการจัดส่ง
                                 (เปิดใช้งาน: {routeStatusData.Active?.length || 0} | ปิดใช้งาน: {routeStatusData.Inactive?.length || 0})
@@ -230,7 +230,7 @@ const DashboardRoute = () => {
                     )}
 
                     {urgentOrders.length > 0 && (
-                        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 w-1/3">
+                        <div className={`bg-red-50 border border-red-200 rounded-lg p-4 mb-6 ${urgentOrders.length === 0 ? "hidden" : "block  w-1/3"}`}>
                             <h3 className="text-4xl font-semibold text-red-800 mb-3 text-center">
                                 🚨 ออเดอร์ด่วน
                                 <p className="text-5xl">({urgentOrders.length} ร้าน)</p>

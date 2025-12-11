@@ -35,6 +35,7 @@ import RequestProduct from "./pages/RequestProduct";
 import RouteManage from "./pages/RouteManage";
 import DashboardRoute from "./pages/DashboardRoute";
 import LoopDashBoard from "./pages/LoopDashboard";
+import StackedAreaChart from "./pages/Charts";
 import { io } from "socket.io-client";
 import { useEffect } from "react";
 import UploadStock from "./pages/UploadStock";
@@ -324,7 +325,6 @@ function App() {
               </div>
             }
           />
-
           <Route
             path="/update-stock"
             element={
@@ -333,6 +333,13 @@ function App() {
                 <RequireAuth>
                   <UploadStock />
                 </RequireAuth>
+              <div>
+          />
+          <Route
+            path="/charts"
+            element={
+              <div>
+                <StackedAreaChart />
               </div>
             }
           />
