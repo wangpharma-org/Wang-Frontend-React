@@ -333,7 +333,8 @@ function App() {
                 <RequireAuth>
                   <UploadStock />
                 </RequireAuth>
-              <div>
+              </div>
+            }
           />
           <Route
             path="/charts"
