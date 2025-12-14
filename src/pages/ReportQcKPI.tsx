@@ -336,104 +336,89 @@ const Dashboard: React.FC = () => {
 
   const colCount = (dataOnTop?.length ?? 0) + 1;
   const gridStyle = {
-    gridTemplateColumns: `repeat(${colCount}, minmax(0, 1fr))`,
+    gridTemplateColumns: `repeat(${colCount - 1}, minmax(0, 1fr))`,
   };
 
   return (
     <>
       <Navbar />
       <div className="bg-gray-100 p-4 font-sans">
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-4">
+        <div className="flex bg-white rounded-lg shadow-lg p-6 mb-4">
           {/* วันที่ Row */}
-          <div className="grid gap-6" style={gridStyle}>
-            <div className="font-semibold text-center px-3 text-2xl text-gray-700">
+          <div className="flex flex-col ">
+            <div className="font-semibold text-2xl text-gray-700 mb-2">
               วันที่
             </div>
-            {dataOnTop?.map((item, i) => (
-              <div key={i} className="text-center text-2xl">
-                <div className="text-red-500 px-3 py-1 rounded font-bold">
-                  {dayjs(item?.date).format("DD / MM / YY")}
-                </div>
-              </div>
-            ))}
-
-            {/* SO IN */}
-            <div className="font-semibold text-gray-700 text-3xl text-center">
+            <div className="font-semibold text-gray-700 text-3xl mb-2">
               SO <span className="text-sm">IN</span>
             </div>
-            {dataOnTop?.map((item, i) => (
-              <div key={i} className="text-center text-2xl font-bold">
-                {item?.allOrders}
-              </div>
-            ))}
-
-            {/* ทั่วถิ่น */}
-            <div className="font-semibold text-red-600 text-4xl text-center">
+            <div className="font-semibold text-red-600 text-4xl mb-2">
               ทั่วถิ่น
             </div>
-            {dataOnTop?.map((item, i) => (
-              <div key={i} className="text-center text-2xl font-bold">
-                {item?.local}
-              </div>
-            ))}
-
-            {/* หาดใหญ่ */}
-            <div className="font-semibold text-blue-500 text-4xl text-center">
+            <div className="font-semibold text-blue-500 text-4xl mb-2">
               หาดใหญ่
             </div>
-            {dataOnTop?.map((item, i) => (
-              <div key={i} className="text-center text-2xl font-bold">
-                {item?.hatyai}
-              </div>
-            ))}
-
-            {/* ทั่วไทย */}
-            <div className="font-semibold text-orange-500 text-4xl text-center">
+            <div className="font-semibold text-orange-500 text-4xl mb-2">
               ทั่วไทย
             </div>
-            {dataOnTop?.map((item, i) => (
-              <div key={i} className="text-center text-2xl font-bold">
-                {item?.country}
-              </div>
-            ))}
-
-            {/* รวม */}
-            <div className="font-semibold text-green-600 text-4xl text-center">
+            <div className="font-semibold text-green-600 text-4xl mb-2">
               รวม
             </div>
-            {dataOnTop?.map((item, i) => (
-              <div key={i} className="text-center text-2xl font-bold">
-                {item?.allOrdersNotQC}
-              </div>
-            ))}
           </div>
+          {dataOnTop === null ? (
+            <div className="flex-1 flex justify-center items-center text-2xl md:text-3xl lg:text-5xl font-bold text-center text-gray-600">Loading...</div>
+          ) :
+            <div className="flex gap-4 w-50 overflow-x-auto md:overflow-hidden lg:grid md:w-full" style={gridStyle}>
+              {dataOnTop?.map((item, index) => (
+                <div key={index} className="flex flex-col items-center w-full">
+                  <div className="text-red-500 px-3 py-1 rounded font-bold text-2xl mb-2">
+                    {dayjs(item.date).format("DD/MM/YY")}
+                  </div>
+                  <div className="text-center text-2xl font-bold py-1 mb-2">
+                    {item.allOrders}
+                  </div>
+                  <div className="text-center text-2xl font-bold py-1 mb-2">
+                    {item.local}
+                  </div>
+                  <div className="text-center text-2xl font-bold py-1 mb-2">
+                    {item.hatyai}
+                  </div>
+                  <div className="text-center text-2xl font-bold py-1 mb-2">
+                    {item.country}
+                  </div>
+                  <div className="text-center text-2xl font-bold py-1 mb-2">
+                    {item.allOrdersNotQC}
+                  </div>
+                </div>
+              ))}
+            </div>}
         </div>
       </div>
 
       {/* Middle Section with Large Number */}
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="flex justify-center gap-20 items-center text-center">
-            <div className="text-2xl text-gray-600 font-bold">
+      <div className="flex flex-col md:grid md:grid-cols-2 gap-4 mb-4 ">
+        <div className="bg-white rounded-lg shadow-lg p-6 ">
+          <div className="flex flex-col md:flex-row justify-center md:gap-20 items-center text-center">
+            <div className="text-lg md:text-2xl text-gray-600 font-bold">
               เหลือ QC ทั้งหมด
             </div>
             <div
               id="OrderList"
-              className="text-8xl font-bold text-blue-600 mb-2"
+              className="text-5xl md:text-8xl font-bold text-blue-600 mb-2"
             >
               {data?.AllQC}
             </div>
-            <div className="text-2xl text-gray-600 font-bold">รายการ</div>
+            <div className="text-lg md:text-2xl text-gray-600 font-bold">รายการ</div>
           </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="flex justify-center gap-1">
-            <p className="text-lg text-green-700 font-bold">
+          <div className="flex md:flex-row flex-col  justify-center gap-1">
+            <p className="text-md md:text-lg text-green-700 font-bold">
               ทุกการเพิ่ม Qc 1 Stations จะช่วยลดเวลาได้ {timeAdd} น.
             </p>
-            <p className="text-lg">-</p>
-            <p className="text-lg text-red-700 font-bold">
+            <p className="text-lg hidden md:block">-</p>
+            <p className="text-md md:text-lg text-red-700 font-bold">
               ทุกการ หายไปของ Qc 1 Stations จะเพิ่มเวลาการทำงาน {timeReduced}{" "}
               น.
             </p>
@@ -441,10 +426,10 @@ const Dashboard: React.FC = () => {
           <div className="flex justify-center items-center mt-3">
             <div className="text-2xl font-semibold">
               เสร็จใน{" "}
-              <span className="text-blue-600 text-5xl font-bold">
+              <span className="text-blue-600 text-3xl md:text-5xl font-bold">
                 {thaiDate}
               </span>{" "}
-              <span className="text-blue-600 text-5xl font-bold">
+              <span className="text-blue-600 text-3xl md:text-5xl font-bold">
                 {thaiTime}
               </span>{" "}
               น.
@@ -453,11 +438,11 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Weekly Analysis Section */}
       <div className="bg-white rounded-lg shadow-lg p-6 mb-4">
-        <div className="grid grid-cols-6 gap-0 mb-4">
+        <p className="text-lg font-bold mb-2 text-center block md:hidden">อัตราความเร็วพนักงานคลังแต่ละชั้น</p>
+        <div className="flex w-full gap-0 mb-4">
           {/* Labels Column */}
-          <div className="text-left bg-gray-100 border-r">
+          <div className="text-left bg-gray-100 border-r md:w-1/6 w-1/3">
             <div className="h-16 p-3 border-b text-black font-semibold text-lg flex items-center">
               ชิ้นแรก วันนี้
             </div>
@@ -471,54 +456,57 @@ const Dashboard: React.FC = () => {
               ความเร็วเฉลี่ย
             </div>
           </div>
-          {floorData
-            ?.slice()
-            .sort((a, b) => a.product_floor.localeCompare(b.product_floor))
-            .map((floor) => {
-              return (
-                <div key={floor.product_floor} className="text-center">
-                  <div
-                    className={`${floor.product_floor === '2' ? 'text-yellow-600' : floor.product_floor === '3' ? 'text-blue-600' : floor.product_floor === '4' ? 'text-red-700' : floor.product_floor === '5' ? 'text-green-700' : 'text-gray-600'} h-16 flex flex-col border-gray-300 border-t border-r border-b justify-center`}
-                  >
-                    <div className="text-lg font-bold">
-                      F{floor.product_floor}
+          <div className="flex md:w-full overflow-x-auto w-60">
+            {floorData
+              ?.slice()
+              .sort((a, b) => a.product_floor.localeCompare(b.product_floor))
+              .map((floor) => {
+                return (
+                  <div key={floor.product_floor} className="text-center w-full">
+                    <div
+                      className={`${floor.product_floor === '2' ? 'text-yellow-600' : floor.product_floor === '3' ? 'text-blue-600' : floor.product_floor === '4' ? 'text-red-700' : floor.product_floor === '5' ? 'text-green-700' : 'text-gray-600'} h-16 flex flex-col border-gray-300 border-t border-r border-b justify-center`}
+                    >
+                      <div className="text-lg font-bold">
+                        F{floor.product_floor}
+                      </div>
+                      <div className="text-sm font-bold w-40 md:w-full md:text-center mx-auto">
+                        {displayTime(floor.firstPickingTime)}
+                      </div>
                     </div>
-                    <div className="text-sm font-bold">
-                      {displayTime(floor.firstPickingTime)}
+                    <div
+                      className={`text-white h-20 border-b flex items-center justify-center border-r border-gray-300`}
+                    >
+                      <div className={`${floor.product_floor === '2' ? 'text-yellow-600' : floor.product_floor === '3' ? 'text-blue-600' : floor.product_floor === '4' ? 'text-red-700' : floor.product_floor === '5' ? 'text-green-700' : 'text-gray-600'} text-5xl font-bold`}>
+                        {floor.remainingItem}
+                      </div>
                     </div>
-                  </div>
-                  <div
-                    className={`text-white h-20 border-b flex items-center justify-center border-r border-gray-300`}
-                  >
-                    <div className={`${floor.product_floor === '2' ? 'text-yellow-600' : floor.product_floor === '3' ? 'text-blue-600' : floor.product_floor === '4' ? 'text-red-700' : floor.product_floor === '5' ? 'text-green-700' : 'text-gray-600'} text-5xl font-bold`}>
-                      {floor.remainingItem}
-                    </div>
-                  </div>
-                  <div
-                    className={`
+                    <div
+                      className={`
                         ${floor.product_floor === '2' ? 'text-yellow-600' : floor.product_floor === '3' ? 'text-blue-600' : floor.product_floor === '4' ? 'text-red-700' : floor.product_floor === '5' ? 'text-green-700' : 'text-gray-600'}
                         h-12 border-b flex items-center justify-center border-r border-gray-300`}
-                  >
-                    <div className={`text-sm font-bold`}>
-                      {displayTime(floor.lastPickingTime)}
+                    >
+                      <div className={`text-sm font-bold`}>
+                        {displayTime(floor.lastPickingTime)}
+                      </div>
+                    </div>
+                    <div
+                      className={`${getSpeedColorClass(calculateAverageSpeed(floor) * 60)} text-white h-16 flex flex-col justify-center border-r border-gray-300`}
+                    >
+                      <p className="text-lg font-bold">
+                        {(calculateAverageSpeed(floor) * 60).toFixed(2)}
+                      </p>
+                      <p className="text-xs">รก./ชม.</p>
                     </div>
                   </div>
-                  <div
-                    className={`${getSpeedColorClass(calculateAverageSpeed(floor) * 60)} text-white h-16 flex flex-col justify-center border-r border-gray-300`}
-                  >
-                    <p className="text-lg font-bold">
-                      {(calculateAverageSpeed(floor) * 60).toFixed(2)}
-                    </p>
-                    <p className="text-xs">รก./ชม.</p>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+          </div>
         </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-lg p-6">
-        <div className="grid grid-cols-5 gap-0">
+        <p className="text-xl font-semibold text-center block md:hidden">ข้อมูลจากพนักงาน Qc</p>
+        <div className="md:grid md:grid-cols-5 gap-0 overflow-x-auto flex md:overflow-hidden">
           {qcStationsData?.map((station) => {
             const workingHours = calculateWorkingHours(
               station.firstQcTime,
@@ -535,7 +523,7 @@ const Dashboard: React.FC = () => {
                 <div className={`${speed >= 300 ? 'bg-blue-500' : speed >= 200 ? 'bg-green-600' : speed >= 150 ? 'bg-yellow-500' : speed >= 0 && 'bg-red-600'} text-white p-3 text-center font-bold text-lg`}>
                   Q{station.stationId}
                 </div>
-                <div className="bg-gray-100 p-2 flex justify-center items-center text-xs">
+                <div className="bg-gray-100 p-2 flex justify-center items-center text-xs w-80 md:w-full">
                   <span className="font-semibold text-base">
                     {station.prepare_nickname} หัวโต๊ะ + {station.qc_nickname}{" "}
                     คิว + {station.packed_nickname} แพ็ค
@@ -550,7 +538,7 @@ const Dashboard: React.FC = () => {
                   </div>
                   <div className="flex-1 p-4 text-center border-r border-gray-500">
                     <div className="text-3xl font-bold">{itemsPerBox}</div>
-                    <div className="text-xs text-gray-600">รก / ลัง</div>
+                    <div className="w-10 text-xs text-gray-600">รก / ลัง</div>
                   </div>
                   <div className="flex-1 p-4 text-center">
                     <div className="text-3xl font-bold">
