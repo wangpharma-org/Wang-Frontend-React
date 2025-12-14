@@ -38,6 +38,7 @@ import LoopDashBoard from "./pages/LoopDashboard";
 import StackedAreaChart from "./pages/Charts";
 import { io } from "socket.io-client";
 import { useEffect } from "react";
+import UploadStock from "./pages/UploadStock";
 
 function App() {
   useEffect(() => {
@@ -321,6 +322,17 @@ function App() {
             element={
               <div>
                 <DashboardRoute />
+              </div>
+            }
+          />
+          <Route
+            path="/update-stock"
+            element={
+              <div>
+                <Navbar />
+                <RequireAuth>
+                  <UploadStock />
+                </RequireAuth>
               </div>
             }
           />
