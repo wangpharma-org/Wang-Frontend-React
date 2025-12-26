@@ -166,6 +166,7 @@ const styles = {
 const RequestProduct: React.FC = () => {
   const queryParams = new URLSearchParams(location.search);
   const so_running = queryParams.get("so_running");
+  const barcode = queryParams.get("barcode");
   const [data, setData] = useState<ShoppingOrder | null>(null);
   const prepareEmpData = sessionStorage.getItem("prepare-emp");
   const QCEmpData = sessionStorage.getItem("qc-emp");
@@ -504,11 +505,9 @@ const RequestProduct: React.FC = () => {
               </p>
             </div>
           </div>
-          <div className="row-span-1 border-b"></div>
-          <div className="row-span-1 border-b">
+          <div className="row-span-2 border-b flex flex-col justify-center w-full text-center">
             <div className="flex justify-left w-full gap-1 p-1">
-              <p className="text-[7px]">ปรับ :</p>
-              <p className="text-[7px]">ไม่มีข้อมูล</p>
+              <p className="text-[12px] font-bold">บาร์โค้ดที่ถูกต้อง : {barcode}</p>
             </div>
           </div>
           <div className="row-span-1 grid grid-cols-3 divide-black divide-x">
