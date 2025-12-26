@@ -81,15 +81,15 @@ const FormatSticker = () => {
   useEffect(() => {
     setLoading(false);
     if (!printData) return;
-    const printTimeout = setTimeout(() => {
-      window.print();
-    }, 1000);
+    // const printTimeout = setTimeout(() => {
+    //   window.print();
+    // }, 1000);
     window.onafterprint = () => {
       localStorage.setItem("print_status", "done");
       window.close();
     };
     return () => {
-      clearTimeout(printTimeout);
+      // clearTimeout(printTimeout);
       window.onafterprint = null;
     };
   }, [printData]);
@@ -115,15 +115,10 @@ const FormatSticker = () => {
             </p>
           </div>
         )}
-        <div className="flex items-center justify-center">
-          {printData.mem_code && (
-            <QRCodeSVG value={printData.mem_code} size={60} />
-          )}
-        </div>
       </div>
 
       {printData.sh_running?.map((_, index: number) => {
-        if (index % 2 !== 0) return null; 
+        if (index % 2 !== 0) return null;
 
         return (
           <div key={index} className="flex justify-between px-2">
@@ -155,30 +150,30 @@ const FormatSticker = () => {
           </thead>
           <tbody>
             <tr>
-              <td className="border text-[14px] pt-0.5 font-bold w-[25%]">
+              <td className="border text-[15px] pt-0.5 font-bold w-[25%]">
                 {printData.floor_count2 > 0 ? "✓" : "x"}
               </td>
-              <td className="border text-[14px] pt-0.5 font-bold w-[25%]">
+              <td className="border text-[15px] pt-0.5 font-bold w-[25%]">
                 {printData.floor_count3 > 0 ? "✓" : "x"}
               </td>
-              <td className="border text-[14px] pt-0.5 font-bold w-[25%]">
+              <td className="border text-[15px] pt-0.5 font-bold w-[25%]">
                 {printData.floor_count4 > 0 ? "✓" : "x"}
               </td>
-              <td className="border text-[14px] pt-0.5 font-bold w-[25%]">
+              <td className="border text-[15px] pt-0.5 font-bold w-[25%]">
                 {printData.floor_count5 > 0 ? "✓" : "x"}
               </td>
             </tr>
             <tr>
-              <td className="border text-[16px] pt-0.5 font-bold w-[25%]">
+              <td className="border text-[17px] pt-0.5 font-bold w-[25%]">
                 {printData.floor_count2}
               </td>
-              <td className="border text-[16px] pt-0.5 font-bold w-[25%]">
+              <td className="border text-[17px] pt-0.5 font-bold w-[25%]">
                 {printData.floor_count3}
               </td>
-              <td className="border text-[16px] pt-0.5 font-bold w-[25%]">
+              <td className="border text-[17px] pt-0.5 font-bold w-[25%]">
                 {printData.floor_count4}
               </td>
-              <td className="border text-[16px] pt-0.5 font-bold w-[25%]">
+              <td className="border text-[17px] pt-0.5 font-bold w-[25%]">
                 {printData.floor_count5}
               </td>
             </tr>
@@ -196,16 +191,22 @@ const FormatSticker = () => {
           <p className="flex justify-end text-[14px]">
             {dayjs().format("DD/MM/YYYY HH:mm")}
           </p>
-          <p className="flex justify-end text-[14px]">
-            {printData.route_name ?? "อื่นๆ"}
-          </p>
         </div>
       </div>
+      <div className="flex justify-between align-top mx-4">
+        <div className="flex items-start justify-center mt-1">
+          {printData.mem_code && (
+            <QRCodeSVG value={printData.mem_code} size={60} />
+          )}
+        </div>
 
-      <div className="text-center">
-        <p className="text-[30px] font-bold">{printData.mem_code}</p>
-        <p className="text-[30px]">{printData.mem_name}</p>
+        <div className="text-right">
+          <p className="text-[30px] font-bold">{printData.mem_code}</p>
+        </div>
       </div>
+      <div className="text-right mr-3">
+          <p className="text-[30px]">{printData.mem_name}</p>
+        </div>
 
       <div className="flex justify-between pl-2 text-[28px] font-bold">
         <p>{printData.route_name ?? "อื่นๆ"}</p>
