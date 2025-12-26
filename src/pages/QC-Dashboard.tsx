@@ -16,6 +16,7 @@ import dayjs from "dayjs";
 import { SHIPPING_OTHER } from "../const/Constant";
 import { useNavigate } from "react-router";
 import Swal from "sweetalert2";
+import ManualPicture from "../assets/manual_sticker.png";
 
 const TAB_KEY = "qc-dashboard";
 
@@ -150,6 +151,14 @@ const QCDashboard = () => {
 
   // Modal Manage shopping head
   const [modalManageOpen, setModalManageOpen] = useState<boolean>(false);
+
+  // Modal Print Sticker Open
+  const [modalPrintStickerOpen, setModalPrintStickerOpen] =
+    useState<string | null>(null);
+
+  // Modal Alert Barcode Not Found
+  const [modalBarcodeNotFound, setModalBarcodeNotFound] =
+    useState<boolean>(false);
 
   // Data State
   const [orderForQC, setOrderForQC] = useState<ShoppingOrder>();
@@ -783,6 +792,7 @@ const QCDashboard = () => {
 
       setOrderForQC(data.data);
     } else {
+      setModalBarcodeNotFound(true);
       console.log("ไม่พบ barcode นี้ใน order");
     }
     if (inputBarcode.current) {
@@ -1451,6 +1461,57 @@ const QCDashboard = () => {
     return (
       <div>
         <div>
+        <Modal
+            isOpen={modalBarcodeNotFound}
+            onClose={() => setModalBarcodeNotFound(false)}
+          >
+            <div className="flex text-center justify-center">
+              <p className="text-3xl font-bold">แจ้งเตือน</p>
+            </div>
+            <div className="flex text-center justify-center mt-2">
+              <p className="text-3xl text-red-700">สินค้ารายการนี้ไม่มีบาร์โค้ดอยู่ในระบบกรุณากดปุ่มพิมพ์สติกเกอร์จากรายการที่ตรงกันและนำไปแจ้งผู้ดูแลเพื่อแก้ไขต่อไป</p>
+            </div>
+            <div className="flex text-center justify-center mt-2">
+              <img
+                src={ManualPicture}
+                className="w-lg rounded-lg mt-4"
+              ></img>
+            </div>
+            <div className="flex w-full justify-center mt-3">
+            <button 
+                className="bg-green-700 p-3 px-10 text-2xl rounded-lg hover:bg-green-800 text-white drop-shadow-sm cursor-pointer"
+                onClick={() => {
+                  if (modalBarcodeNotFound) {
+                    setModalBarcodeNotFound(false);
+                  }
+                }}
+              >ปิด</button>
+            </div>
+            
+          </Modal>
+          
+          <Modal
+            isOpen={modalPrintStickerOpen}
+            onClose={() => setModalPrintStickerOpen(null)}
+          >
+            <div className="flex text-center justify-center">
+              <p className="text-3xl font-bold">สิ่งที่ต้องทำหลังพิมพ์สติกเกอร์</p>
+            </div>
+            <div className="mt-4 flex justify-center items-center gap-4 my-2">
+              <p className='text-2xl'>พิมพ์สติกเกอร์เพื่อส่งต่อให้ผู้ดูแล (พี่มาร์ค) เพื่อทำการแก้ไขข้อมูลสินค้าในระบบ</p>
+            </div>
+            <div className="flex w-full justify-center mt-3">
+            <button 
+                className="bg-red-700 p-3 text-xl rounded-lg hover:bg-red-800 text-white drop-shadow-sm cursor-pointer"
+                onClick={() => {
+                  if (modalPrintStickerOpen) {
+                    setModalPrintStickerOpen(null);
+                    handleRequestProduct(modalPrintStickerOpen);
+                  }
+                }}
+              >พิมพ์สติกเกอร์</button>
+            </div>
+          </Modal>
           <Modal
             isOpen={modalManageOpen}
             onClose={() => setModalManageOpen(false)}
@@ -2550,6 +2611,13 @@ const QCDashboard = () => {
                                         }}
                                       >
                                         จัดชั้น 1
+                                      </button>
+                                      <button
+                                        id={`Floor1`}
+                                        className={`p-1 rounded-lg text-base text-white cursor-pointer bg-blue-500`}
+                                        onClick={()=>{setModalPrintStickerOpen(so.so_running)}}
+                                      >
+                                        พิมพ์สติกเกอร์
                                       </button>
                                     </div>
                                   </td>
