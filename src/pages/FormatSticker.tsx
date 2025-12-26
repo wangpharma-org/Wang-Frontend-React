@@ -81,15 +81,15 @@ const FormatSticker = () => {
   useEffect(() => {
     setLoading(false);
     if (!printData) return;
-    // const printTimeout = setTimeout(() => {
-    //   window.print();
-    // }, 1000);
+    const printTimeout = setTimeout(() => {
+      window.print();
+    }, 1000);
     window.onafterprint = () => {
       localStorage.setItem("print_status", "done");
       window.close();
     };
     return () => {
-      // clearTimeout(printTimeout);
+      clearTimeout(printTimeout);
       window.onafterprint = null;
     };
   }, [printData]);
