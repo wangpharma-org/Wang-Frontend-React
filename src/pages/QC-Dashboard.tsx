@@ -119,6 +119,11 @@ export interface urgent {
   amount: string,
 }
 
+export interface ProductNotFoundBarCode {
+  pro_code: string;
+  pro_name: string;
+}
+
 export type ShoppingHead = Root[];
 export type ShoppingHeadOne = Root;
 
@@ -161,6 +166,9 @@ const QCDashboard = () => {
     useState<boolean>(false);
 
   const [barcodeNotFound, setBarcodeNotFound] = useState<string>("");
+  const [productNotFoundBarCode, setProductNotFoundBarCode] = useState<
+    ProductNotFoundBarCode | null
+  >(null);
 
   // Data State
   const [orderForQC, setOrderForQC] = useState<ShoppingOrder>();
@@ -213,6 +221,7 @@ const QCDashboard = () => {
   // State ของสินค้าที่ไม่มี Barcode
   const [productNotHaveBarcode, setProductNotHaveBarcode] =
     useState<Product | null>(null);
+
 
   // State เก็บไอดีห้องของการต่อ WebSocket
   const [myRoom, setMyRoom] = useState<string | null>(null);
@@ -1162,6 +1171,10 @@ const QCDashboard = () => {
     window.open(`/print-request?so_running=${so_running}&emp_code=${QCEmp?.dataEmp.emp_code}&barcode=${barcodeNotFound}`);
   };
 
+  const handleRequestProductFloorOne = async (so_running: string) => {
+    window.open(`/print-request?so_running=${so_running}`);
+  };
+
   const handlePrintStickerBox = async () => {
     if (dataQC) {
       setLoadingPrinting(true);
@@ -1523,9 +1536,9 @@ const QCDashboard = () => {
                 className={`p-3 text-xl rounded-lg  text-white drop-shadow-sm ${!barcodeNotFound || barcodeNotFound.length < 1 ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-700 hover:bg-red-800 cursor-pointer'}`}
                 disabled={!barcodeNotFound || barcodeNotFound.length < 1}
                 onClick={() => {
-                  if (modalPrintStickerOpen) {
+                  if (modalPrintStickerOpen && barcodeNotFound && barcodeNotFound.length > 0 && productNotFoundBarCode) {
                     setModalPrintStickerOpen(null);
-                    handleRequestProduct(modalPrintStickerOpen);
+                    handleRequestProduct(modalPrintStickerOpen, productNotFoundBarCode?.pro_code, productNotFoundBarCode?.pro_name, barcodeNotFound);
                   }
                 }}
               >พิมพ์สติกเกอร์</button>
@@ -2615,7 +2628,7 @@ const QCDashboard = () => {
                                         id={`Floor1`}
                                         className={`p-1 rounded-lg text-base text-white cursor-pointer bg-blue-500`}
                                         onClick={() => {
-                                          handleRequestProduct(so.so_running);
+                                          handleRequestProductFloorOne(so.so_running);
                                         }}
                                       >
                                         จัดชั้น 1
@@ -2623,7 +2636,13 @@ const QCDashboard = () => {
                                       <button
                                         id={`Floor1`}
                                         className={`p-1 rounded-lg text-base text-white cursor-pointer bg-blue-500`}
-                                        onClick={() => { setModalPrintStickerOpen(so.so_running) }}
+                                        onClick={() => { 
+                                          setModalPrintStickerOpen(so.so_running) 
+                                          setProductNotFoundBarCode({
+                                            pro_code: so.product.product_code,
+                                            pro_name: so.product.product_name
+                                          })
+                                        }}
                                       >
                                         พิมพ์สติกเกอร์
                                       </button>
