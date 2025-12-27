@@ -6,6 +6,7 @@ import React, {
   ReactNode,
 } from "react";
 import axios from "axios";
+import Swal from "sweetalert2";
 
 interface UserInfo {
   user_id: number;
@@ -17,6 +18,7 @@ interface UserInfo {
   nickname?: string;
   manage_qc?: string;
   manage_product?: string;
+  allowUsed: boolean;
 }
 
 interface AuthContextType {
@@ -83,6 +85,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         nickname: payload.nickname,
         manage_qc: payload.manage_qc,
         manage_product: payload.manage_product,
+        allowUsed: payload.allowUsed,
       };
 
       setAccessToken(access_token);
@@ -92,6 +95,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       sessionStorage.setItem("access_token", access_token);
       sessionStorage.setItem("refresh_token", refresh_token);
       sessionStorage.setItem("user_info", JSON.stringify(user));
+
+
+      const users = sessionStorage.getItem("user_info");
+      console.log("User info on Home page:", users);
+      if (users && JSON.parse(users)) {
+        if (JSON.parse(users).allowUsed === false) {
+          Swal.fire({
+            icon: "error",
+            title: "เกิดข้อผิดพลาด",
+            text: `รหัสนี้ ${user.emp_code} ไม่ได้รับอนุญาตให้เข้าใช้งานระบบ กรุณาติดต่อฝ่าย HR`,
+          });
+          setAccessToken(null);
+          setRefreshToken(null);
+          setUserInfo(null);
+          sessionStorage.removeItem("access_token");
+          sessionStorage.removeItem("refresh_token");
+          sessionStorage.removeItem("user_info");
+        }
+      }
+
 
       return true;
     } catch (error) {
