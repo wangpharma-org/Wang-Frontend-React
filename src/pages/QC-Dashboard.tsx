@@ -820,31 +820,49 @@ const QCDashboard = () => {
   // ดึง API ข้อมูลพนักงาน
 
   const handleGetDataEmp = async (emp_code: string, type_emp: string) => {
-    const data = await axios.get(
-      `${import.meta.env.VITE_API_URL_ORDER}/api/qc/get-emp/${emp_code}`
-    );
-    if (type_emp === "prepare-emp" && data) {
-      sessionStorage.setItem("prepare-emp", JSON.stringify(data.data));
-      setPrepareEmp(data.data);
-      if (!QCEmp) {
-        inputRefEmpQC.current?.focus();
+    try {
+      const data = await axios.get(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/qc/get-emp/${emp_code}`
+      );
+      if (data.data.dataEmp.allowUsed === true) {
+        if (type_emp === "prepare-emp" && data) {
+          sessionStorage.setItem("prepare-emp", JSON.stringify(data.data));
+          setPrepareEmp(data.data);
+          if (!QCEmp) {
+            inputRefEmpQC.current?.focus();
+          }
+        } else if (type_emp === "qc-emp" && data) {
+          sessionStorage.setItem("qc-emp", JSON.stringify(data.data));
+          setQCEmp(data.data);
+          if (!packedEMP) {
+            inputRefEmpPacked.current?.focus();
+          }
+        } else if (type_emp === "packed-emp" && data) {
+          sessionStorage.setItem("packed-emp", JSON.stringify(data.data));
+          setPackedEmp(data.data);
+        } else if (type_emp === "strapping-emp" && data) {
+          console.log("Strapping EMP", data.data)
+          sessionStorage.setItem("strapping-emp", JSON.stringify(data.data));
+          setStrappingEMP(data.data);
+        }
+        else {
+          return;
+        }
       }
-    } else if (type_emp === "qc-emp" && data) {
-      sessionStorage.setItem("qc-emp", JSON.stringify(data.data));
-      setQCEmp(data.data);
-      if (!packedEMP) {
-        inputRefEmpPacked.current?.focus();
+      else {
+        Swal.fire({
+          icon: "error",
+          title: "เกิดข้อผิดพลาด",
+          text: `รหัสนี้ ${emp_code} ไม่ได้รับอนุญาตให้เข้าใช้งานระบบ กรุณาติดต่อฝ่าย HR`,
+        });
       }
-    } else if (type_emp === "packed-emp" && data) {
-      sessionStorage.setItem("packed-emp", JSON.stringify(data.data));
-      setPackedEmp(data.data);
-    } else if (type_emp === "strapping-emp" && data) {
-      console.log("Strapping EMP", data.data)
-      sessionStorage.setItem("strapping-emp", JSON.stringify(data.data));
-      setStrappingEMP(data.data);
     }
-    else {
-      return;
+    catch (error) {
+      console.log("Error fetching employee data:", error);
+      Swal.fire({
+        icon: "error",
+        title: `ไม่พบรหัสพนักงาน ${emp_code} ในระบบ`,
+      });
     }
   };
 
