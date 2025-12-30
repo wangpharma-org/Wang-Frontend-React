@@ -6,7 +6,8 @@ import Clock from "../components/Clock";
 import ProductBox from "../components/ProductBox";
 import { Bounce, toast, ToastContainer } from "react-toastify";
 import axios from "axios";
-import print from "../assets/printing.png";
+import printBox from "../assets/print_box.png";
+import printBucket from "../assets/print_bucket.png";
 import Swal from "sweetalert2";
 
 interface Product {
@@ -362,8 +363,58 @@ function ProductList() {
     logout();
   };
 
+  const printStickerSelect = (
+      type: string,
+      mem_code: string,
+    ) => {
+      Swal.fire({
+        title: `${type}ที่`,
+        input: "number",
+        inputAttributes: {
+          autocapitalize: "off",
+          min: "1"
+        },
+        showCancelButton: true,
+        confirmButtonText: "พิมพ์สติกเกอร์",
+        cancelButtonText: "ยกเลิก",
+        showLoaderOnConfirm: true,
+  
+        didOpen: () => {
+          const confirmBtn = Swal.getConfirmButton();
+          const input = Swal.getInput();
+  
+          if (confirmBtn) {
+            confirmBtn.disabled = true;
+          }
+  
+          input?.addEventListener("input", () => {
+            if (confirmBtn) {
+              confirmBtn.disabled = !input.value;
+            }
+          });
+        },
+  
+        preConfirm: async (count_save) => {
+          if (!count_save) {
+            Swal.showValidationMessage("กรุณาระบุจำนวน");
+            return;
+          }
+  
+          printSticker(
+            mem_code,
+            type,
+            Number(count_save)
+          );
+        },
+  
+        allowOutsideClick: () => !Swal.isLoading()
+      });
+    };
+
   const printSticker = async (
     mem_code: string,
+    type: string,
+    count: number
   ) => {
     console.log("printSticker", mem_code);
     try {
@@ -379,6 +430,8 @@ function ProductList() {
           mem_name: listproduct?.mem_name,
           emp_name_request: null,
           emp_code_request: null,
+          type: type ?? null,
+          count: count ?? null,
         },
         {
           headers: {
@@ -441,7 +494,7 @@ function ProductList() {
           console.log(response.data)
 
           return response.data;
-        } catch (error) {
+        } catch {
           Swal.showValidationMessage(`
             กรุณาใส่เฉพาะตัวเลข
         `);
@@ -597,9 +650,15 @@ function ProductList() {
               </div>
               <div
                 className="mr-2"
-                onClick={() => mem_code && printSticker(mem_code)}
+                onClick={() => mem_code && printStickerSelect("ลัง", mem_code)}
               >
-                <img src={print} className="w-7" />
+                <img src={printBox} className="w-9" />
+              </div>
+              <div
+                className="mr-2"
+                onClick={() => mem_code && printStickerSelect("ตะกร้า", mem_code)}
+              >
+                <img src={printBucket} className="w-9" />
               </div>
             </div>
             <div

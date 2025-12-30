@@ -36,6 +36,8 @@ const FormatSticker = () => {
   const floor_count5 = new URLSearchParams(window.location.search).get(
     "floor_count5"
   );
+  const type = new URLSearchParams(window.location.search).get("type");
+  const count = new URLSearchParams(window.location.search).get("count");
   const floor = new URLSearchParams(window.location.search).get("floor");
 
   const printData = useMemo(() => ({
@@ -57,6 +59,8 @@ const FormatSticker = () => {
     floor_count4: floor_count4 ? Number(floor_count4) : 0,
     floor_count5: floor_count5 ? Number(floor_count5) : 0,
     floor: floor ? Number(floor) : 0,
+    type: type ?? null,
+    count: count ? Number(count) : null,
   }), [
     emp_code,
     emp_name,
@@ -71,7 +75,9 @@ const FormatSticker = () => {
     floor_count3,
     floor_count4,
     floor_count5,
-    floor
+    floor,
+    type,
+    count,
   ]);
 
   const [loading, setLoading] = useState(true);
@@ -107,14 +113,21 @@ const FormatSticker = () => {
           <p className="text-[16px]">คนจัด</p>
           <p className="text-[22px] font-bold">{printData.emp_name}</p>
         </div>
-        {printData?.emp_name_request && (
-          <div className="flex items-baseline gap-1.5">
-            <p className="text-[16px]">รายการขอเพิ่ม : </p>
-            <p className="text-[22px] font-bold">
-              {printData?.emp_name_request}
-            </p>
-          </div>
-        )}
+        <div>
+          {printData?.emp_name_request && (
+            <div className="flex items-baseline gap-1.5">
+              <p className="text-[16px]">รายการขอเพิ่ม : </p>
+              <p className="text-[22px] font-bold">
+                {printData?.emp_name_request}
+              </p>
+            </div>
+          )}
+          {printData?.type && printData.count && (
+            <div className="flex items-baseline gap-1.5 font-bold text-[20px]">
+              <p>{printData.type}ที่ {printData.count}</p>
+            </div>
+          )}
+        </div>
       </div>
 
       {printData.sh_running?.map((_, index: number) => {
@@ -205,8 +218,8 @@ const FormatSticker = () => {
         </div>
       </div>
       <div className="text-right mr-3">
-          <p className="text-[30px]">{printData.mem_name}</p>
-        </div>
+        <p className="text-[30px]">{printData.mem_name}</p>
+      </div>
 
       <div className="flex justify-between pl-2 text-[28px] font-bold">
         <p>{printData.route_name ?? "อื่นๆ"}</p>

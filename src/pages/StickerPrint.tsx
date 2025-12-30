@@ -17,6 +17,8 @@ export interface TicketItem {
   floor_count3: number;
   floor_count4: number;
   floor_count5: number;
+  type: string | null;
+  count: number | null;
 }
 
 const StickerPrint = () => {
@@ -111,6 +113,14 @@ const StickerPrint = () => {
         }${
           currentTicket.floor_count5
             ? `&floor_count5=${currentTicket.floor_count5}`
+            : ""
+        }${
+          currentTicket.type
+            ? `&type=${currentTicket.type}`
+            : ""
+        }${
+          currentTicket.count
+            ? `&count=${currentTicket.count}`
             : ""
         }${currentTicket.floor ? `&floor=${currentTicket.floor}` : ""}`,
         "_blank"
