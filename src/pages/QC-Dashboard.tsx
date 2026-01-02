@@ -128,10 +128,18 @@ export interface ShoppingOrderPrint {
   mem_code: string
   mem_name: string
   route_name: string
+  basket_floor_2: number
+  basket_floor_3: number
+  basket_floor_4: number
+  basket_floor_5: number
+  box_floor_2: number
+  box_floor_3: number
+  box_floor_4: number
+  box_floor_5: number
+  last_printed: string
   basket_count: number
   box_count: number
   total_items: number
-  last_printed: string
 }
 
 
@@ -2054,12 +2062,45 @@ const QCDashboard = () => {
                 })}
               </div>
             </div>}
-            {basketDataForPrint && basketDataForPrint.length > 0 && <div className="bg-blue-500 text-white my-1 py-1">
-              <p className="text-2xl font-bold">จำนวนตะกร้าและลัง</p>
-              <div className="text-2xl font-bold">
-                {basketDataForPrint[0].basket_count} ตะกร้า {basketDataForPrint[0].box_count ? `กับ ${basketDataForPrint[0].box_count} ลัง` : ''}
-              </div>
-            </div>}
+            {basketDataForPrint && basketDataForPrint.length > 0 && (() => {
+              const data = basketDataForPrint[0];
+
+              return (
+                <div className="bg-white text-black my-2 py-3 px-4 rounded shadow">
+                  <p className="text-2xl font-bold text-center mb-3">
+                    จำนวนตะกร้าและลัง
+                  </p>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center font-bold text-xl">
+
+                    <div className="rounded-lg border-2 border-yellow-400 bg-yellow-100 text-yellow-800 py-3">
+                      <div className="text-2xl mb-1">F2</div>
+                      <div>{data.basket_floor_2} ตะกร้า</div>
+                      <div>{data.box_floor_2} ลัง</div>
+                    </div>
+
+                    <div className="rounded-lg border-2 border-blue-400 bg-blue-100 text-blue-800 py-3">
+                      <div className="text-2xl mb-1">F3</div>
+                      <div>{data.basket_floor_3} ตะกร้า</div>
+                      <div>{data.box_floor_3} ลัง</div>
+                    </div>
+
+                    <div className="rounded-lg border-2 border-red-400 bg-red-100 text-red-800 py-3">
+                      <div className="text-2xl mb-1">F4</div>
+                      <div>{data.basket_floor_4} ตะกร้า</div>
+                      <div>{data.box_floor_4} ลัง</div>
+                    </div>
+
+                    <div className="rounded-lg border-2 border-green-400 bg-green-100 text-green-800 py-3">
+                      <div className="text-2xl mb-1">F5</div>
+                      <div>{data.basket_floor_5} ตะกร้า</div>
+                      <div>{data.box_floor_5} ลัง</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="w-full mt-5 h-8 px-6">
               <div className="grid grid-cols-6 gap-3">
                 <div className="col-span-1 bg-blue-50 p-4 rounded-xl self-start">
