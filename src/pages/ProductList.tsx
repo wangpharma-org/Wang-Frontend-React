@@ -363,53 +363,129 @@ function ProductList() {
     logout();
   };
 
-  const printStickerSelect = (
-      type: string,
-      mem_code: string,
-    ) => {
-      Swal.fire({
-        title: `${type}ที่`,
-        input: "number",
-        inputAttributes: {
-          autocapitalize: "off",
-          min: "1"
-        },
-        showCancelButton: true,
-        confirmButtonText: "พิมพ์สติกเกอร์",
-        cancelButtonText: "ยกเลิก",
-        showLoaderOnConfirm: true,
-  
-        didOpen: () => {
-          const confirmBtn = Swal.getConfirmButton();
-          const input = Swal.getInput();
-  
+   const printStickerSelect = (
+    type: string,
+    mem_code: string,
+  ) => {
+    Swal.fire({
+      title: `${type}ที่`,
+      input: "number",
+      inputAttributes: {
+        autocapitalize: "off",
+        min: "1"
+      },
+      showCancelButton: true,
+      confirmButtonText: "พิมพ์สติกเกอร์",
+      cancelButtonText: "ยกเลิก",
+      showLoaderOnConfirm: true,
+
+      didOpen: () => {
+        const confirmBtn = Swal.getConfirmButton();
+        const input = Swal.getInput();
+
+        if (confirmBtn) {
+          confirmBtn.disabled = true;
+        }
+
+        input?.addEventListener("input", () => {
           if (confirmBtn) {
-            confirmBtn.disabled = true;
+            confirmBtn.disabled = !input.value;
           }
-  
-          input?.addEventListener("input", () => {
-            if (confirmBtn) {
-              confirmBtn.disabled = !input.value;
+        });
+      },
+
+      preConfirm: async (count_save) => {
+        if (!count_save) {
+          Swal.showValidationMessage("กรุณาระบุจำนวน");
+          return;
+        }
+
+        try {
+          const checkPrintStatus = await axios.post(
+            `${import.meta.env.VITE_API_URL_ORDER}/api/picking/CheckStatusPrint`,
+            {
+              mem_code,
+              type,
+              count: Number(count_save)
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${sessionStorage.getItem(
+                  "access_token"
+                )}`,
+              },
             }
-          });
-        },
-  
-        preConfirm: async (count_save) => {
-          if (!count_save) {
-            Swal.showValidationMessage("กรุณาระบุจำนวน");
-            return;
-          }
-  
-          printSticker(
-            mem_code,
-            type,
-            Number(count_save)
           );
-        },
-  
-        allowOutsideClick: () => !Swal.isLoading()
-      });
-    };
+          if (checkPrintStatus.data) {
+            printSticker(
+              mem_code,
+              type,
+              Number(count_save)
+            );
+          }
+        } catch (error: unknown) {
+          if (axios.isAxiosError(error) && error.response) {
+            const { message } = error.response.data;
+
+            // แยก logic ตาม type จาก backend
+            switch (error.response.data.type) {
+              case "haveTicket": {
+                const result = await Swal.fire({
+                  icon: "warning",
+                  title: "แจ้งเตือน",
+                  text: message,
+                  showCancelButton: true,
+                  confirmButtonText: "พิมพ์ซ้ำ",
+                  cancelButtonText: "ยกเลิก",
+                  reverseButtons: true,
+                });
+
+                if (result.isConfirmed) {
+                  printSticker(
+                    mem_code,
+                    type,
+                    Number(count_save)
+                  );
+                }
+
+                break;
+              }
+
+              case "countTicket":
+                Swal.fire({
+                  icon: "error",
+                  title: "จำนวนไม่ถูกต้อง",
+                  text: message,
+                });
+                break;
+
+              case "createTicketOne":
+                Swal.fire({
+                  icon: "error",
+                  title: "จำนวนไม่ถูกต้อง",
+                  text: message,
+                });
+                break;
+
+              default:
+                Swal.fire({
+                  icon: "error",
+                  title: "เกิดข้อผิดพลาด",
+                  text: message || "ไม่สามารถดำเนินการได้",
+                });
+            }
+          } else {
+            Swal.fire({
+              icon: "error",
+              title: "Server Error",
+              text: "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้",
+            });
+          }
+        }
+      },
+      allowOutsideClick: () => !Swal.isLoading()
+    });
+  };
 
   const printSticker = async (
     mem_code: string,

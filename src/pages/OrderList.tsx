@@ -599,10 +599,10 @@ const OrderList = () => {
           }
         } catch (error: unknown) {
           if (axios.isAxiosError(error) && error.response) {
-            const { type, message } = error.response.data;
+            const { message } = error.response.data;
 
             // แยก logic ตาม type จาก backend
-            switch (type) {
+            switch (error.response.data.type) {
               case "haveTicket": {
                 const result = await Swal.fire({
                   icon: "warning",
@@ -631,6 +631,14 @@ const OrderList = () => {
               }
 
               case "countTicket":
+                Swal.fire({
+                  icon: "error",
+                  title: "จำนวนไม่ถูกต้อง",
+                  text: message,
+                });
+                break;
+
+              case "createTicketOne":
                 Swal.fire({
                   icon: "error",
                   title: "จำนวนไม่ถูกต้อง",
