@@ -575,7 +575,8 @@ const OrderList = () => {
             {
               mem_code,
               type,
-              count: Number(count_save)
+              count: Number(count_save),
+              floor : userInfo?.floor_picking
             },
             {
               headers: {
@@ -626,7 +627,6 @@ const OrderList = () => {
                     Number(count_save)
                   );
                 }
-
                 break;
               }
 
@@ -661,10 +661,7 @@ const OrderList = () => {
             });
           }
         }
-
-
       },
-
       allowOutsideClick: () => !Swal.isLoading()
     });
   };
