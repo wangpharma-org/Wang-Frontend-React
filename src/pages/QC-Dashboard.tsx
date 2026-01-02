@@ -124,6 +124,25 @@ export interface ProductNotFoundBarCode {
   pro_name: string;
 }
 
+export interface ShoppingOrderPrint {
+  mem_code: string
+  mem_name: string
+  route_name: string
+  basket_floor_2: number
+  basket_floor_3: number
+  basket_floor_4: number
+  basket_floor_5: number
+  box_floor_2: number
+  box_floor_3: number
+  box_floor_4: number
+  box_floor_5: number
+  last_printed: string
+  basket_count: number
+  box_count: number
+  total_items: number
+}
+
+
 export type ShoppingHead = Root[];
 export type ShoppingHeadOne = Root;
 
@@ -255,6 +274,8 @@ const QCDashboard = () => {
 
   const navigate = useNavigate();
 
+  const [basketDataForPrint, setBasketDataForPrint] = useState<ShoppingOrderPrint[] | null>(null);
+
   const handleCheckFlagRequest = async () => {
     const flag = await axios.get(
       `${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/request`
@@ -348,7 +369,6 @@ const QCDashboard = () => {
     }
   };
 
-  // เริ่มต้นโปรแกรม
   useEffect(() => {
     checkFlagDeleteBill();
     handleCheckFlagRequest();
@@ -368,10 +388,15 @@ const QCDashboard = () => {
       console.log("✅ Connected to WebSocket");
     });
 
+    newSocket.on(`box_count:${mem_code}`, (data) => {
+      console.log("box_count_from init useEffect", data);
+      setBasketDataForPrint(data);
+    });
+
     newSocket.on("urgent", (data) => {
       console.log('urgent', data);
       setUrgent(data);
-    })
+    });
 
     newSocket.on("qcdata", (data) => {
       console.log("Received data:", data);
@@ -435,6 +460,26 @@ const QCDashboard = () => {
       newSocket.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    if (mem_code && socket) {
+      socket.emit("box_count", { mem_code });
+      console.log("socket box_count listener setup", mem_code);
+
+      const handleBoxCount = (data: ShoppingOrderPrint[] | null) => {
+        console.log("handleBoxCount", data);
+        setBasketDataForPrint(data);
+      };
+
+      socket.on(`box_count:${mem_code}`, handleBoxCount);
+
+      // Cleanup function
+      return () => {
+        socket.off(`box_count:${mem_code}`, handleBoxCount);
+        console.log("socket box_count listener removed", mem_code);
+      };
+    }
+  }, [mem_code, socket]);
 
   // auto focus
 
@@ -520,7 +565,6 @@ const QCDashboard = () => {
       let sortedData = [];
 
       if (Array.isArray(dataQC)) {
-        // 🔥 เรียงตาม sh_datetime
         sortedData = [...dataQC].sort((a, b) => {
           return (
             new Date(a.sh_datetime).getTime() -
@@ -708,6 +752,7 @@ const QCDashboard = () => {
     setAddShRunningArray(null);
     setErrMsgSubmit(null);
     setErrMsgPrintBox(null);
+    setBasketDataForPrint(null);
     inputBill.current?.focus();
   };
 
@@ -1541,7 +1586,7 @@ const QCDashboard = () => {
               <p className='text-2xl'>พิมพ์สติกเกอร์เพื่อส่งต่อให้ผู้ดูแล (พี่มาร์ค) เพื่อทำการแก้ไขข้อมูลสินค้าในระบบ</p>
             </div>
             <div className="mt-4 flex justify-center items-center gap-4 my-2">
-              <input 
+              <input
                 type="text"
                 value={barcodeNotFound}
                 onChange={(e) => setBarcodeNotFound(e.target.value)}
@@ -1691,8 +1736,8 @@ const QCDashboard = () => {
                     id={`OrderConfirmationPopUp`}
                     disabled={Number(amountRequest) === 0}
                     className={`text-center text-white text-lg p-2 rounded-lg px-8 cursor-pointer ${Number(amountRequest) > 0
-                        ? "hover:bg-green-800 bg-green-700"
-                        : "hover:bg-gray-600 bg-gray-500"
+                      ? "hover:bg-green-800 bg-green-700"
+                      : "hover:bg-gray-600 bg-gray-500"
                       }`}
                     onClick={() =>
                       handleRequestMore(
@@ -1974,9 +2019,9 @@ const QCDashboard = () => {
                   inputLot !== orderForQC.product.lot_priority
                 }
                 className={`mt-4  text-white px-4 py-2 rounded-md cursor-pointer ${!!orderForQC?.product?.lot_priority &&
-                    inputLot !== orderForQC.product.lot_priority
-                    ? "bg-gray-500"
-                    : "bg-green-600 hover:bg-green-700"
+                  inputLot !== orderForQC.product.lot_priority
+                  ? "bg-gray-500"
+                  : "bg-green-600 hover:bg-green-700"
                   }`}
               >
                 ตกลง
@@ -2017,6 +2062,50 @@ const QCDashboard = () => {
                 })}
               </div>
             </div>}
+            {basketDataForPrint && basketDataForPrint.length > 0 && (() => {
+              const data = basketDataForPrint[0];
+
+              return (
+                <div className="bg-white text-black my-2 py-3 px-4 rounded shadow">
+                  <p className="text-2xl font-bold text-center mb-3">
+                    จำนวนตะกร้าและลัง
+                  </p>
+
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center font-bold text-xl">
+
+                    <div className="rounded-lg border-2 border-yellow-400 bg-yellow-100 text-yellow-800 py-3">
+                      <div className="text-2xl mb-1">F2</div>
+                      <div>{data.basket_floor_2} ตะกร้า</div>
+                      <div>{data.box_floor_2} ลัง</div>
+                    </div>
+
+                    <div className="rounded-lg border-2 border-blue-400 bg-blue-100 text-blue-800 py-3">
+                      <div className="text-2xl mb-1">F3</div>
+                      <div>{data.basket_floor_3} ตะกร้า</div>
+                      <div>{data.box_floor_3} ลัง</div>
+                    </div>
+
+                    <div className="rounded-lg border-2 border-red-400 bg-red-100 text-red-800 py-3">
+                      <div className="text-2xl mb-1">F4</div>
+                      <div>{data.basket_floor_4} ตะกร้า</div>
+                      <div>{data.box_floor_4} ลัง</div>
+                    </div>
+
+                    <div className="rounded-lg border-2 border-green-400 bg-green-100 text-green-800 py-3">
+                      <div className="text-2xl mb-1">F5</div>
+                      <div>{data.basket_floor_5} ตะกร้า</div>
+                      <div>{data.box_floor_5} ลัง</div>
+                    </div>
+                    <div className="rounded-lg border-2 border-amber-500 bg-amber-100 text-amber-800 py-3">
+                      <div className="text-2xl mb-1">รวม</div>
+                      <div>{data.basket_count} ตะกร้า</div>
+                      <div>{data.box_count} ลัง</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="w-full mt-5 h-8 px-6">
               <div className="grid grid-cols-6 gap-3">
                 <div className="col-span-1 bg-blue-50 p-4 rounded-xl self-start">
@@ -2266,8 +2355,8 @@ const QCDashboard = () => {
                       disabled={!isReady}
                       ref={inputBarcode}
                       className={`col-span-6  border-4 p-2 px-5 rounded-lg text-4xl text-center ${isReady
-                          ? `bg-orange-100 border-orange-500`
-                          : `border-gray-500 bg-gray-200 `
+                        ? `bg-orange-100 border-orange-500`
+                        : `border-gray-500 bg-gray-200 `
                         }`}
                       placeholder="รหัสสินค้า / Barcode"
                       onKeyDown={(e) => {
@@ -2313,12 +2402,12 @@ const QCDashboard = () => {
                               return (
                                 <tr
                                   className={`  border-b-2 border-blue-200 ${so.so_already_qc === "Yes"
-                                      ? "bg-green-100 hover:bg-green-100"
-                                      : so.so_already_qc === "RT"
-                                        ? "bg-red-100 hover:bg-red-100"
-                                        : so.so_already_qc === "notComplete"
-                                          ? "bg-yellow-50 hover:bg-yellow-50"
-                                          : "bg-white hover:bg-gray-50"
+                                    ? "bg-green-100 hover:bg-green-100"
+                                    : so.so_already_qc === "RT"
+                                      ? "bg-red-100 hover:bg-red-100"
+                                      : so.so_already_qc === "notComplete"
+                                        ? "bg-yellow-50 hover:bg-yellow-50"
+                                        : "bg-white hover:bg-gray-50"
                                     }`}
                                 >
                                   <td className="py-4 text-lg border-r-2 border-blue-200 font-semibold px-2">
@@ -2332,14 +2421,14 @@ const QCDashboard = () => {
                                       </p>
                                       <div
                                         className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full mt-1 ${so.product.product_floor === "5"
-                                            ? "bg-green-500"
-                                            : so.product.product_floor === "4"
-                                              ? "bg-red-500"
-                                              : so.product.product_floor === "3"
-                                                ? "bg-blue-500"
-                                                : so.product.product_floor === "2"
-                                                  ? "bg-yellow-500"
-                                                  : "bg-gray-400"
+                                          ? "bg-green-500"
+                                          : so.product.product_floor === "4"
+                                            ? "bg-red-500"
+                                            : so.product.product_floor === "3"
+                                              ? "bg-blue-500"
+                                              : so.product.product_floor === "2"
+                                                ? "bg-yellow-500"
+                                                : "bg-gray-400"
                                           } `}
                                       ></div>
                                     </div>
@@ -2359,8 +2448,8 @@ const QCDashboard = () => {
 
                                       <p
                                         className={`text-base font-bold ${so?.picking_status === "picking"
-                                            ? "text-green-600"
-                                            : "text-red-600"
+                                          ? "text-green-600"
+                                          : "text-red-600"
                                           }`}
                                       >
                                         {so?.picking_status === "pending"
@@ -2607,8 +2696,8 @@ const QCDashboard = () => {
                                             so.picking_status !== "picking"
                                           }
                                           className={` p-1 rounded-lg text-base text-white cursor-pointer ${so.picking_status !== "picking"
-                                              ? "bg-gray-500 hover:bg-gray-600"
-                                              : "bg-blue-500 hover:bg-blue-600"
+                                            ? "bg-gray-500 hover:bg-gray-600"
+                                            : "bg-blue-500 hover:bg-blue-600"
                                             } `}
                                           onClick={() =>
                                             handleFetchData(
@@ -2627,9 +2716,9 @@ const QCDashboard = () => {
                                           so.so_already_qc === "Yes"
                                         }
                                         className={` p-1 rounded-lg text-base text-white cursor-pointer ${so.so_already_qc === "RT" ||
-                                            so.so_already_qc === "Yes"
-                                            ? "hover:bg-gray-600 bg-gray-500"
-                                            : "hover:bg-red-600 bg-red-500"
+                                          so.so_already_qc === "Yes"
+                                          ? "hover:bg-gray-600 bg-gray-500"
+                                          : "hover:bg-red-600 bg-red-500"
                                           }`}
                                         onClick={() => {
                                           handleRT(so.so_running);
@@ -2654,8 +2743,8 @@ const QCDashboard = () => {
                                       <button
                                         id={`Floor1`}
                                         className={`p-1 rounded-lg text-base text-white cursor-pointer bg-blue-500`}
-                                        onClick={() => { 
-                                          setModalPrintStickerOpen(so.so_running) 
+                                        onClick={() => {
+                                          setModalPrintStickerOpen(so.so_running)
                                           setProductNotFoundBarCode({
                                             pro_code: so.product.product_code,
                                             pro_name: so.product.product_name
@@ -2947,8 +3036,8 @@ const QCDashboard = () => {
                       <button
                         // disabled={hasNotQC !== 0 || loadingSubmit || !hasPrintSticker}
                         className={`w-full flex justify-center items-center  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${hasNotQC !== 0 || loadingSubmit || !hasPrintSticker
-                            ? "bg-gray-500 hover:bg-gray-600"
-                            : "bg-green-500 hover:bg-green-600"
+                          ? "bg-gray-500 hover:bg-gray-600"
+                          : "bg-green-500 hover:bg-green-600"
                           }`}
                         onClick={() => {
                           if (

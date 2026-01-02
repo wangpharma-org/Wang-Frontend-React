@@ -139,7 +139,7 @@ const OrderList = () => {
             .filter((routeName) => routeName !== "")
         )
       ];
-      
+
       Swal.fire({
         icon: "warning",
         title: "เส้นทางนี้ถูกระงับ",
@@ -408,7 +408,9 @@ const OrderList = () => {
     route_name: string | null,
     mem_name: string,
     emp_code_request: string | null,
-    emp_name_request: string | null
+    emp_name_request: string | null,
+    type: string,
+    count: number | null,
   ) => {
     console.log("printSticker", route_code);
     try {
@@ -424,6 +426,8 @@ const OrderList = () => {
           mem_name: mem_name,
           emp_name_request: emp_code_request,
           emp_code_request: emp_name_request,
+          type: type,
+          count: count ?? null,
         },
         {
           headers: {
@@ -513,7 +517,7 @@ const OrderList = () => {
           console.log(response.data)
 
           return response.data;
-        } catch (error) {
+        } catch {
           Swal.showValidationMessage(`
           กรุณาใส่เฉพาะตัวเลข
       `);
@@ -522,6 +526,146 @@ const OrderList = () => {
       allowOutsideClick: () => !Swal.isLoading()
     })
   }
+
+  const printStickerSelect = (
+    type: string,
+    mem_code: string,
+    route_name: string | null,
+    route_code: string | null,
+    mem_name: string,
+    emp_code_request: string | null,
+    emp_name_request: string | null
+  ) => {
+    Swal.fire({
+      title: `${type}ที่`,
+      input: "number",
+      inputAttributes: {
+        autocapitalize: "off",
+        min: "1"
+      },
+      showCancelButton: true,
+      confirmButtonText: "พิมพ์สติกเกอร์",
+      cancelButtonText: "ยกเลิก",
+      showLoaderOnConfirm: true,
+
+      didOpen: () => {
+        const confirmBtn = Swal.getConfirmButton();
+        const input = Swal.getInput();
+
+        if (confirmBtn) {
+          confirmBtn.disabled = true;
+        }
+
+        input?.addEventListener("input", () => {
+          if (confirmBtn) {
+            confirmBtn.disabled = !input.value;
+          }
+        });
+      },
+
+      preConfirm: async (count_save) => {
+        if (!count_save) {
+          Swal.showValidationMessage("กรุณาระบุจำนวน");
+          return;
+        }
+
+        try {
+          const checkPrintStatus = await axios.post(
+            `${import.meta.env.VITE_API_URL_ORDER}/api/picking/CheckStatusPrint`,
+            {
+              mem_code,
+              type,
+              count: Number(count_save),
+              floor : userInfo?.floor_picking
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${sessionStorage.getItem(
+                  "access_token"
+                )}`,
+              },
+            }
+          );
+          if (checkPrintStatus.data) {
+            printSticker(
+              mem_code,
+              route_code ?? null,
+              route_name ?? null,
+              mem_name,
+              emp_code_request,
+              emp_name_request,
+              type,
+              Number(count_save)
+            );
+          }
+        } catch (error: unknown) {
+          if (axios.isAxiosError(error) && error.response) {
+            const { message } = error.response.data;
+
+            // แยก logic ตาม type จาก backend
+            switch (error.response.data.type) {
+              case "haveTicket": {
+                const result = await Swal.fire({
+                  icon: "warning",
+                  title: "แจ้งเตือน",
+                  text: message,
+                  showCancelButton: true,
+                  confirmButtonText: "พิมพ์ซ้ำ",
+                  cancelButtonText: "ยกเลิก",
+                  reverseButtons: true,
+                });
+
+                if (result.isConfirmed) {
+                  printSticker(
+                    mem_code,
+                    route_code,
+                    route_name,
+                    mem_name,
+                    emp_code_request,
+                    emp_name_request,
+                    type,
+                    Number(count_save)
+                  );
+                }
+                break;
+              }
+
+              case "countTicket":
+                Swal.fire({
+                  icon: "error",
+                  title: "จำนวนไม่ถูกต้อง",
+                  text: message,
+                });
+                break;
+
+              case "createTicketOne":
+                Swal.fire({
+                  icon: "error",
+                  title: "จำนวนไม่ถูกต้อง",
+                  text: message,
+                });
+                break;
+
+              default:
+                Swal.fire({
+                  icon: "error",
+                  title: "เกิดข้อผิดพลาด",
+                  text: message || "ไม่สามารถดำเนินการได้",
+                });
+            }
+          } else {
+            Swal.fire({
+              icon: "error",
+              title: "Server Error",
+              text: "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้",
+            });
+          }
+        }
+      },
+      allowOutsideClick: () => !Swal.isLoading()
+    });
+  };
+
 
   useEffect(() => {
     console.log("totalPicking", totalPicking);
@@ -753,15 +897,11 @@ const OrderList = () => {
                                   item.route_route_name ?? null,
                                   item.member_mem_name,
                                   item.emp_code_request,
-                                  item.emp_code_request_emp_nickname
+                                  item.emp_code_request_emp_nickname,
+                                  "สินค้าใหม่",
+                                  null,
                                 )
                               }
-                            //   // printSticker(
-                            //   //   String(item.member_mem_code),
-                            //   //   String(item.emp_code_request),
-                            //   //   String(item.head_sh_running)
-                            //   // )
-                            // }
                             ></img>
                             <img
                               id={"acceptOrder"}
@@ -923,10 +1063,10 @@ const OrderList = () => {
                                     </div>
                                   )}
                                 </div>
-                                {order.urgent && 
-                                <p className="bg-red-600 text-white rounded-sm text-center py-0.5 mb-0.5 font-bold">ด่วน</p>
+                                {order.urgent &&
+                                  <p className="bg-red-600 text-white rounded-sm text-center py-0.5 mb-0.5 font-bold">ด่วน</p>
                                 }
-                              
+
                                 <div className="flex justify-between">
                                   <div className="flex justify-start">
                                     <p>{order.mem_code}</p>&nbsp;
@@ -1136,23 +1276,44 @@ const OrderList = () => {
                                     )}
                                     <div>
                                       {userInfo?.floor_picking && (
-                                        <button
-                                          id={`printSticker${order.mem_code}`}
-                                          className="border rounded-sm px-2 py-1 bg-blue-400 text-white shadow-xl border-gray-300"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            printSticker(
-                                              order?.mem_code,
-                                              order?.mem_route?.route_code,
-                                              order?.mem_route?.route_name,
-                                              order?.mem_name,
-                                              null,
-                                              null
-                                            );
-                                          }}
-                                        >
-                                          พิมพ์สติกเกอร์
-                                        </button>
+                                        <div className="flex gap-1">
+                                          <button
+                                            id={`printSticker${order.mem_code}`}
+                                            className="border rounded-sm px-2 py-1 bg-blue-400 text-white shadow-xl border-gray-300"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              printStickerSelect(
+                                                "ตะกร้า",
+                                                order?.mem_code,
+                                                order?.mem_route?.route_name,
+                                                order?.mem_route?.route_code,
+                                                order?.mem_name,
+                                                null,
+                                                null,
+                                              );
+                                            }}
+                                          >
+                                            สติกเกอร์ติดตะกร้า
+                                          </button>
+                                          <button
+                                            id={`printSticker${order.mem_code}`}
+                                            className="border rounded-sm px-2 py-1 bg-blue-400 text-white shadow-xl border-gray-300"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              printStickerSelect(
+                                                "ลัง",
+                                                order?.mem_code,
+                                                order?.mem_route?.route_name,
+                                                order?.mem_route?.route_code,
+                                                order?.mem_name,
+                                                null,
+                                                null,
+                                              );
+                                            }}
+                                          >
+                                            สติกเกอร์ติดลัง
+                                          </button>
+                                        </div>
                                       )}
                                     </div>
                                   </div>

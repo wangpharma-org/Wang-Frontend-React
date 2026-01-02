@@ -17,6 +17,9 @@ export interface TicketItem {
   floor_count3: number;
   floor_count4: number;
   floor_count5: number;
+  type: string | null;
+  count: number | null;
+  status: string;
 }
 
 const StickerPrint = () => {
@@ -26,7 +29,6 @@ const StickerPrint = () => {
   const [data, setData] = useState<TicketItem[]>([]);
   const [listPrintTicket, setListPrint] = useState<TicketItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [latestTicket, setLatestTicket] = useState<string | null>(null);
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
@@ -67,14 +69,13 @@ const StickerPrint = () => {
 
   useEffect(() => {
     const listByFloor = data.filter(
-      (item) => item.floor === Number(selectFloor)
+      (item) => item.floor === Number(selectFloor) && item.status === "pending"
     );
     setListPrint(listByFloor);
   }, [selectFloor, data]);
 
   useEffect(() => {
-    if (listPrintTicket.length > 0 && currentIndex < listPrintTicket.length && (listPrintTicket[currentIndex].ticket_id.toString() !== latestTicket)) {
-      setLatestTicket(listPrintTicket[currentIndex].ticket_id.toString())
+    if (listPrintTicket.length > 0) {
       const currentTicket = listPrintTicket[currentIndex];
       console.log(`Current Index: ${currentIndex}`);
       localStorage.removeItem("print_status");
@@ -111,6 +112,14 @@ const StickerPrint = () => {
         }${
           currentTicket.floor_count5
             ? `&floor_count5=${currentTicket.floor_count5}`
+            : ""
+        }${
+          currentTicket.type
+            ? `&type=${currentTicket.type}`
+            : ""
+        }${
+          currentTicket.count
+            ? `&count=${currentTicket.count}`
             : ""
         }${currentTicket.floor ? `&floor=${currentTicket.floor}` : ""}`,
         "_blank"
