@@ -2071,7 +2071,7 @@ const QCDashboard = () => {
                     จำนวนตะกร้าและลัง
                   </p>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center font-bold text-xl">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center font-bold text-xl">
 
                     <div className="rounded-lg border-2 border-yellow-400 bg-yellow-100 text-yellow-800 py-3">
                       <div className="text-2xl mb-1">F2</div>
@@ -2095,6 +2095,11 @@ const QCDashboard = () => {
                       <div className="text-2xl mb-1">F5</div>
                       <div>{data.basket_floor_5} ตะกร้า</div>
                       <div>{data.box_floor_5} ลัง</div>
+                    </div>
+                    <div className="rounded-lg border-2 border-amber-500 bg-amber-100 text-amber-800 py-3">
+                      <div className="text-2xl mb-1">รวม</div>
+                      <div>{data.basket_count} ตะกร้า</div>
+                      <div>{data.box_count} ลัง</div>
                     </div>
                   </div>
                 </div>
