@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dayjs from "dayjs";
 import { QRCodeSVG } from "qrcode.react";
 import { useMemo } from "react";
@@ -84,13 +84,16 @@ const FormatSticker = () => {
   ]);
 
   const [loading, setLoading] = useState(true);
+  const printedRef = useRef(false);
 
   console.log(ticketId);
 
   useEffect(() => {
+     if (printedRef.current) return;
     setLoading(false);
     if (!printData) return;
     const printTimeout = setTimeout(() => {
+        printedRef.current = true;
       window.print();
     }, 1000);
     window.onafterprint = () => {
