@@ -39,6 +39,7 @@ const FormatSticker = () => {
   const type = new URLSearchParams(window.location.search).get("type");
   const count = new URLSearchParams(window.location.search).get("count");
   const floor = new URLSearchParams(window.location.search).get("floor");
+  const countBox = new URLSearchParams(window.location.search).get("countBox");
 
   const printData = useMemo(() => ({
     emp_code: emp_code ?? null,
@@ -61,6 +62,7 @@ const FormatSticker = () => {
     floor: floor ? Number(floor) : 0,
     type: type ?? null,
     count: count ? Number(count) : null,
+    countBox: countBox ? Number(countBox) : 0,
   }), [
     emp_code,
     emp_name,
@@ -78,6 +80,7 @@ const FormatSticker = () => {
     floor,
     type,
     count,
+    countBox,
   ]);
 
   const [loading, setLoading] = useState(true);
@@ -224,6 +227,14 @@ const FormatSticker = () => {
       <div className="flex justify-between pl-2 text-[28px] font-bold">
         <p>{printData.route_name ?? "อื่นๆ"}</p>
       </div>
+
+      {printData.type !== "ตะกร้า" ? null : <div>
+        <p className="text-[20px] font-bold px-2">
+         {!countBox ? '' : `จำนวนลังที่พิมพ์: ${countBox}`}
+        </p>
+      </div>
+      }
+
     </div>
   );
 };

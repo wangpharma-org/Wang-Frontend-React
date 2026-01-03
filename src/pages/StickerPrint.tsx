@@ -29,6 +29,7 @@ const StickerPrint = () => {
   const [data, setData] = useState<TicketItem[]>([]);
   const [listPrintTicket, setListPrint] = useState<TicketItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [countBox, setCountBox] = useState(0);
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
@@ -72,66 +73,67 @@ const StickerPrint = () => {
       (item) => item.floor === Number(selectFloor) && item.status === "pending"
     );
     setListPrint(listByFloor);
+
+    const floorMemPairs = new Set(
+      listByFloor.map(item => `${item.floor}_${item.mem_code}`)
+    );
+
+    const filteredData = data
+      .filter(item =>
+        floorMemPairs.has(`${item.floor}_${item.mem_code}`) &&
+        item.type === "ลัง"
+      )
+      .map(item => item.count ?? 0);
+
+    const maxCount = filteredData.length > 0 ? Math.max(...filteredData) : 0;
+    setCountBox(maxCount);
+    console.log("Max Count Box:", maxCount);
+
   }, [selectFloor, data]);
 
   useEffect(() => {
-    if (listPrintTicket.length > 0) {
+    if (listPrintTicket.length > 0 && currentIndex < listPrintTicket.length) {
       const currentTicket = listPrintTicket[currentIndex];
       console.log(`Current Index: ${currentIndex}`);
       localStorage.removeItem("print_status");
 
       window.open(
-        `/format-sticker?ticketId=${currentTicket.ticket_id}&sh_running=${
-          currentTicket.sh_running
-        }&mem_code=${currentTicket.mem_code}&mem_name=${
-          currentTicket.mem_name
-        }&route_code=${currentTicket.route_code}&route_name=${
-          currentTicket.route_name
-        }&emp_code=${currentTicket.emp_code}&emp_name=${
-          currentTicket.emp_name
-        }${
-          currentTicket.emp_code_request
-            ? `&emp_code_request=${currentTicket.emp_code_request}`
-            : ""
-        }${
-          currentTicket.emp_name_request
-            ? `&emp_name_request=${currentTicket.emp_name_request}`
-            : ""
-        }${
-          currentTicket.floor_count2
-            ? `&floor_count2=${currentTicket.floor_count2}`
-            : ""
-        }${
-          currentTicket.floor_count3
-            ? `&floor_count3=${currentTicket.floor_count3}`
-            : ""
-        }${
-          currentTicket.floor_count4
-            ? `&floor_count4=${currentTicket.floor_count4}`
-            : ""
-        }${
-          currentTicket.floor_count5
-            ? `&floor_count5=${currentTicket.floor_count5}`
-            : ""
-        }${
-          currentTicket.type
-            ? `&type=${currentTicket.type}`
-            : ""
-        }${
-          currentTicket.count
-            ? `&count=${currentTicket.count}`
-            : ""
-        }${currentTicket.floor ? `&floor=${currentTicket.floor}` : ""}`,
+        `/format-sticker?ticketId=${currentTicket.ticket_id}&sh_running=${currentTicket.sh_running
+        }&mem_code=${currentTicket.mem_code}&mem_name=${currentTicket.mem_name
+        }&route_code=${currentTicket.route_code}&route_name=${currentTicket.route_name
+        }&emp_code=${currentTicket.emp_code}&emp_name=${currentTicket.emp_name
+        }${currentTicket.emp_code_request
+          ? `&emp_code_request=${currentTicket.emp_code_request}`
+          : ""
+        }${currentTicket.emp_name_request
+          ? `&emp_name_request=${currentTicket.emp_name_request}`
+          : ""
+        }${currentTicket.floor_count2
+          ? `&floor_count2=${currentTicket.floor_count2}`
+          : ""
+        }${currentTicket.floor_count3
+          ? `&floor_count3=${currentTicket.floor_count3}`
+          : ""
+        }${currentTicket.floor_count4
+          ? `&floor_count4=${currentTicket.floor_count4}`
+          : ""
+        }${currentTicket.floor_count5
+          ? `&floor_count5=${currentTicket.floor_count5}`
+          : ""
+        }${currentTicket.type
+          ? `&type=${currentTicket.type}`
+          : ""
+        }${currentTicket.count
+          ? `&count=${currentTicket.count}`
+          : ""
+        }${currentTicket.floor ? `&floor=${currentTicket.floor}` : ""}
+        ${countBox ? `&countBox=${countBox}` : ""}`,
         "_blank"
       );
-      if (
-        listPrintTicket.length > 0 &&
-        currentIndex >= listPrintTicket.length
-      ) {
-        setCurrentIndex(0);
-      }
+    } else if (currentIndex >= listPrintTicket.length && listPrintTicket.length > 0) {
+      setCurrentIndex(0);
     }
-  }, [listPrintTicket, selectFloor]);
+  }, [listPrintTicket, selectFloor, currentIndex, countBox]);
 
   useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
