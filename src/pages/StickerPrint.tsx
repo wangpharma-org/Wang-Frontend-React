@@ -20,6 +20,7 @@ export interface TicketItem {
   type: string | null;
   count: number | null;
   status: string;
+  update_at: string;
 }
 
 const StickerPrint = () => {
@@ -29,6 +30,7 @@ const StickerPrint = () => {
   const [data, setData] = useState<TicketItem[]>([]);
   const [listPrintTicket, setListPrint] = useState<TicketItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [updatedAt, setUpdatedAt] = useState("");
   const [countBox, setCountBox] = useState(0);
 
   useEffect(() => {
@@ -92,11 +94,11 @@ const StickerPrint = () => {
   }, [selectFloor, data]);
 
   useEffect(() => {
-    if (listPrintTicket.length > 0 && currentIndex < listPrintTicket.length) {
+    if (listPrintTicket.length > 0 && currentIndex < listPrintTicket.length && updatedAt !== listPrintTicket[currentIndex].update_at) {
       const currentTicket = listPrintTicket[currentIndex];
+      console.log("Current Ticket:", currentTicket);
       console.log(`Current Index: ${currentIndex}`);
       localStorage.removeItem("print_status");
-
       window.open(
         `/format-sticker?ticketId=${currentTicket.ticket_id}&sh_running=${currentTicket.sh_running
         }&mem_code=${currentTicket.mem_code}&mem_name=${currentTicket.mem_name
@@ -148,6 +150,7 @@ const StickerPrint = () => {
             console.warn("❌ Socket not connected");
           }
           setCurrentIndex((prev) => prev + 1);
+          setUpdatedAt(printedTicket.update_at);
         }
       }
     };
