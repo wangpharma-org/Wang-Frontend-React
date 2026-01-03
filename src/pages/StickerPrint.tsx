@@ -74,17 +74,21 @@ const StickerPrint = () => {
     );
     setListPrint(listByFloor);
 
-    if (listByFloor.map((item) => item.type === "ตะกร้า")) {
-      const filteredData = data
-        .filter(item => listByFloor.map(f => f.floor).includes(item.floor) && listByFloor.map(f => f.mem_code).includes(item.mem_code) && item.type === "ลัง")
-        .map(item => item.count ?? 0);
-      const maxCount = filteredData.length > 0 ? Math.max(...filteredData) : 0;
-      setCountBox(maxCount);
-      console.log("Max Count Box:", maxCount);
-    } else {
-      setCountBox(0);
-      console.log("No Box Type Found");
-    }
+    const floorMemPairs = new Set(
+      listByFloor.map(item => `${item.floor}_${item.mem_code}`)
+    );
+
+    const filteredData = data
+      .filter(item =>
+        floorMemPairs.has(`${item.floor}_${item.mem_code}`) &&
+        item.type === "ลัง"
+      )
+      .map(item => item.count ?? 0);
+
+    const maxCount = filteredData.length > 0 ? Math.max(...filteredData) : 0;
+    setCountBox(maxCount);
+    console.log("Max Count Box:", maxCount);
+
   }, [selectFloor, data]);
 
   useEffect(() => {
