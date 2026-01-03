@@ -228,11 +228,11 @@ const FormatSticker = () => {
         <p>{printData.route_name ?? "อื่นๆ"}</p>
       </div>
 
-      {printData.type === "ตะกร้า" && countBox == '0' ? <div>
-          <p className="text-[20px] font-bold px-2">
-            จำนวนลังที่พิมพ์: {countBox || 0}
-          </p>
-        </div> : null
+      {printData.type !== "ตะกร้า" ? null : <div>
+        <p className="text-[20px] font-bold px-2">
+         {!countBox ? '' : `จำนวนลังที่พิมพ์: ${countBox}`}
+        </p>
+      </div>
       }
 
     </div>
