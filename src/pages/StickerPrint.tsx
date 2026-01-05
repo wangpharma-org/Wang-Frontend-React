@@ -21,6 +21,7 @@ export interface TicketItem {
   count: number | null;
   status: string;
   update_at: string;
+  product_name: string | null;
 }
 
 const StickerPrint = () => {
@@ -129,6 +130,10 @@ const StickerPrint = () => {
           ? `&count=${currentTicket.count}`
           : ""
         }${currentTicket.floor ? `&floor=${currentTicket.floor}` : ""}
+        ${currentTicket.product_name
+          ? `&product_name=${encodeURIComponent(currentTicket.product_name)}`
+          : ""
+        }
         ${countBox ? `&countBox=${countBox}` : ""}`,
         "_blank"
       );

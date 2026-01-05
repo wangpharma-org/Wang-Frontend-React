@@ -36,6 +36,9 @@ const FormatSticker = () => {
   const floor_count5 = new URLSearchParams(window.location.search).get(
     "floor_count5"
   );
+  const product_name = new URLSearchParams(window.location.search).get(
+    "product_name"
+  );
   const type = new URLSearchParams(window.location.search).get("type");
   const count = new URLSearchParams(window.location.search).get("count");
   const floor = new URLSearchParams(window.location.search).get("floor");
@@ -63,6 +66,7 @@ const FormatSticker = () => {
     type: type ?? null,
     count: count ? Number(count) : null,
     countBox: countBox ? Number(countBox) : 0,
+    product_name: product_name ?? null,
   }), [
     emp_code,
     emp_name,
@@ -81,6 +85,7 @@ const FormatSticker = () => {
     type,
     count,
     countBox,
+    product_name,
   ]);
 
   const [loading, setLoading] = useState(true);
@@ -89,11 +94,11 @@ const FormatSticker = () => {
   console.log(ticketId);
 
   useEffect(() => {
-     if (printedRef.current) return;
+    if (printedRef.current) return;
     setLoading(false);
     if (!printData) return;
     const printTimeout = setTimeout(() => {
-        printedRef.current = true;
+      printedRef.current = true;
       window.print();
     }, 1000);
     window.onafterprint = () => {
@@ -120,17 +125,17 @@ const FormatSticker = () => {
           <p className="text-[22px] font-bold">{printData.emp_name}</p>
         </div>
         <div>
-          {printData?.emp_name_request && (
-            <div className="flex items-baseline gap-1.5">
-              <p className="text-[16px]">รายการขอเพิ่ม : </p>
-              <p className="text-[22px] font-bold">
-                {printData?.emp_name_request}
-              </p>
-            </div>
-          )}
           {printData?.type && printData.count && (
-            <div className="flex items-baseline gap-1.5 font-bold text-[20px]">
-              <p>{printData.type}ที่ {printData.count}</p>
+            <div className="gap-1.5 font-bold text-[20px] flex flex-col justify-end items-end text-right">
+              <p>
+                {printData.type}ที่ {printData.count}
+              </p>
+
+              {printData.product_name && (
+                <p className="text-[16px] truncate w-[200px]">
+                  สินค้า: {printData.product_name}
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -233,7 +238,7 @@ const FormatSticker = () => {
 
       {printData.type !== "ตะกร้า" ? null : <div>
         <p className="text-[20px] font-bold px-2">
-         {!countBox ? '' : `จำนวนลังที่พิมพ์: ${countBox}`}
+          {!countBox ? '' : `จำนวนลังที่พิมพ์: ${countBox}`}
         </p>
       </div>
       }

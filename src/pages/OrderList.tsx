@@ -411,6 +411,7 @@ const OrderList = () => {
     emp_name_request: string | null,
     type: string,
     count: number | null,
+    product_name: string | null
   ) => {
     console.log("printSticker", route_code);
     try {
@@ -428,6 +429,7 @@ const OrderList = () => {
           emp_code_request: emp_name_request,
           type: type,
           count: count ?? null,
+          product_name: product_name ?? null,
         },
         {
           headers: {
@@ -595,7 +597,8 @@ const OrderList = () => {
               emp_code_request,
               emp_name_request,
               type,
-              Number(count_save)
+              Number(count_save),
+              null
             );
           }
         } catch (error: unknown) {
@@ -624,7 +627,8 @@ const OrderList = () => {
                     emp_code_request,
                     emp_name_request,
                     type,
-                    Number(count_save)
+                    Number(count_save),
+                    null
                   );
                 }
                 break;
@@ -900,6 +904,7 @@ const OrderList = () => {
                                   item.emp_code_request_emp_nickname,
                                   "สินค้าใหม่",
                                   null,
+                                  item.product_product_name
                                 )
                               }
                             ></img>
@@ -1294,24 +1299,6 @@ const OrderList = () => {
                                             }}
                                           >
                                             สติกเกอร์ติดตะกร้า
-                                          </button>
-                                          <button
-                                            id={`printSticker${order.mem_code}`}
-                                            className="border rounded-sm px-2 py-1 bg-blue-400 text-white shadow-xl border-gray-300"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              printStickerSelect(
-                                                "ลัง",
-                                                order?.mem_code,
-                                                order?.mem_route?.route_name,
-                                                order?.mem_route?.route_code,
-                                                order?.mem_name,
-                                                null,
-                                                null,
-                                              );
-                                            }}
-                                          >
-                                            สติกเกอร์ติดลัง
                                           </button>
                                         </div>
                                       )}
