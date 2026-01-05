@@ -4,6 +4,7 @@ import box from "../assets/product-17.png";
 import { Dispatch, SetStateAction, useState } from "react";
 import { useRef, useEffect } from "react";
 import Swal from 'sweetalert2'
+import printBox from "../assets/print_box.png";
 
 interface ProductBoxProps {
   orderItem: ShoppingOrder;
@@ -12,6 +13,7 @@ interface ProductBoxProps {
   handleClick: (orderItem: ShoppingOrder, status: string) => void;
   prepareScan: string | null;
   setPrepareScan: Dispatch<SetStateAction<string | null>>;
+  printStickerSelect: (type: string, product_name: string) => void;
 }
 
 // Removed from the top level and will be added inside the component
@@ -22,6 +24,7 @@ export default function ProductBox({
   handleClick,
   prepareScan,
   setPrepareScan,
+  printStickerSelect,
 }: ProductBoxProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -123,7 +126,8 @@ export default function ProductBox({
             />
           </div>
           <div className="text-xs w-2/3 ml-1">
-            <button
+            <div className="flex justify-between">
+              <button
               id={`buttonpicking`}
               className="text-white rounded-sm shadow-md bg-gray-500 py-2 px-3"
               onClick={(e) => {
@@ -135,6 +139,14 @@ export default function ProductBox({
             >
               จัดแบบไม่สแกน
             </button>
+              <div
+                className="mr-2 bg-gray-500 p-1.5 rounded-[100%] cursor-pointer shadow-md"
+                onClick={() => printStickerSelect("ลัง", orderItem.product.product_name)}
+              >
+                <img src={printBox} className="w-9" />
+              </div>
+            </div>
+            
             <div className="flex justify-between pt-1 px-1">
               <p className="font-bold w-50 truncate ...   select-none">
                 {orderItem.product.product_name}
