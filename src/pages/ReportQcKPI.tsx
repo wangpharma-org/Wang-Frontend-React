@@ -9,6 +9,7 @@ export interface DashboardData {
   QCStation: QCStation[];
   AllQC: number;
   SummaryPicking: SummaryPicking[];
+  SummaryPickingAndEmployee: SummaryPickingAndEmployee[];
 }
 
 export interface QCdatum {
@@ -57,6 +58,13 @@ export interface QCStation {
 export interface QuartarlyData {
   quarter: string;
   speed: number;
+}
+
+interface SummaryPickingAndEmployee {
+  emp_nickname: string;
+  counted: number;
+  speed: number;
+  floor: string;
 }
 
 const Dashboard: React.FC = () => {
@@ -442,18 +450,21 @@ const Dashboard: React.FC = () => {
         <p className="text-lg font-bold mb-2 text-center block md:hidden">อัตราความเร็วพนักงานคลังแต่ละชั้น</p>
         <div className="flex w-full gap-0 mb-4">
           {/* Labels Column */}
-          <div className="text-left bg-gray-100 border-r md:w-1/6 w-1/3">
+          <div className=" bg-gray-100 border-r md:w-1/6 w-1/3">
             <div className="h-16 p-3 border-b text-black font-semibold text-lg flex items-center">
               ชิ้นแรก วันนี้
             </div>
             <div className="h-20 p-3 border-b text-black font-semibold text-lg flex items-center">
               เหลือ ทั้งหมด
             </div>
-            <div className="h-12 p-3 border-b text-black font-semibold text-lg flex items-center">
+            <div className="h-12 p-3 text-black font-semibold text-lg flex items-center border-b">
               ล่าสุด วันนี้
             </div>
-            <div className="h-16 p-3 text-black font-semibold text-lg flex items-center">
+            <div className="h-16 p-3 text-black font-semibold text-lg flex items-center border-b">
               ความเร็วเฉลี่ย
+            </div>
+            <div className="h-21 p-3 text-black font-semibold text-lg flex items-center">
+              พนักงานจัดออเดอร์
             </div>
           </div>
           <div className="flex md:w-full overflow-x-auto w-60">
@@ -496,6 +507,34 @@ const Dashboard: React.FC = () => {
                         {(calculateAverageSpeed(floor) * 60).toFixed(2)}
                       </p>
                       <p className="text-xs">รก./ชม.</p>
+                    </div>
+                    <div className="flex justify-between items-center text-center border-b border-r border-t border-gray-300 h-21">
+                      {(() => {
+                        const employees = data?.SummaryPickingAndEmployee.filter((emp) => emp.floor === floor.product_floor) || [];
+
+                        if (employees.length === 0) {
+                          return (
+                            <div className="text-sm w-full py-8">
+                              <p>ไม่มีข้อมูล</p>
+                            </div>
+                          );
+                        }
+
+                        return employees.map((emp) => (
+                          <div key={emp.emp_nickname} className={`text-sm w-full text-white p-1 md:p-2 h-21 ${emp.speed >= 201 ? 'bg-green-500' : (emp.speed >= 150 && emp.speed < 201) ? 'bg-yellow-500' : (emp.speed < 149) ? 'bg-red-500' : (emp.speed >= 300) ? 'bg-blue-500' : ''}`}>
+                            <div className="flex flex-col items-center w-full">
+                              <p className="text-[14px] md:text-lg font-bold">{emp.emp_nickname}</p>
+                              <p className="inline-block mr-1 text-xs md:text-sm">
+                                <p className="inline-block mr-1 font-bold text-[12px] md:text-base">
+                                  {emp.counted}
+                                </p>
+                                รายการ</p>
+                              <p className="inline-block text-xs md:text-sm">
+                                <p className="inline-block mr-1 font-bold text-[12px] md:text-base">{(Number(emp.speed) || 0).toFixed(2)}</p> รก./ชม.</p>
+                            </div>
+                          </div>
+                        ));
+                      })()}
                     </div>
                   </div>
                 );
