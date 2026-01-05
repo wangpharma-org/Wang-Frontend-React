@@ -6,7 +6,6 @@ import Clock from "../components/Clock";
 import ProductBox from "../components/ProductBox";
 import { Bounce, toast, ToastContainer } from "react-toastify";
 import axios from "axios";
-import printBox from "../assets/print_box.png";
 import printBucket from "../assets/print_bucket.png";
 import Swal from "sweetalert2";
 
@@ -365,7 +364,7 @@ function ProductList() {
 
    const printStickerSelect = (
     type: string,
-    mem_code: string,
+    product_name: string | null,
   ) => {
     Swal.fire({
       title: `${type}ที่`,
@@ -419,9 +418,10 @@ function ProductList() {
           );
           if (checkPrintStatus.data) {
             printSticker(
-              mem_code,
+              mem_code!,
               type,
-              Number(count_save)
+              Number(count_save),
+              product_name
             );
           }
         } catch (error: unknown) {
@@ -443,9 +443,11 @@ function ProductList() {
 
                 if (result.isConfirmed) {
                   printSticker(
-                    mem_code,
+                    mem_code!,
                     type,
-                    Number(count_save)
+                    Number(count_save),
+                    product_name
+                    
                   );
                 }
 
@@ -491,7 +493,8 @@ function ProductList() {
   const printSticker = async (
     mem_code: string,
     type: string,
-    count: number
+    count: number,
+    product_name: string | null
   ) => {
     console.log("printSticker", mem_code);
     try {
@@ -509,6 +512,7 @@ function ProductList() {
           emp_code_request: null,
           type: type ?? null,
           count: count ?? null,
+          product_name: product_name ?? null,
         },
         {
           headers: {
@@ -725,15 +729,10 @@ function ProductList() {
                 <p>{listproduct?.mem_code}</p>&nbsp;
                 <p className="w-40 truncate">{listproduct?.mem_name}</p>
               </div>
+              
               <div
                 className="mr-2"
-                onClick={() => mem_code && printStickerSelect("ลัง", mem_code)}
-              >
-                <img src={printBox} className="w-9" />
-              </div>
-              <div
-                className="mr-2"
-                onClick={() => mem_code && printStickerSelect("ตะกร้า", mem_code)}
+                onClick={() => printStickerSelect("ตะกร้า", null)}
               >
                 <img src={printBucket} className="w-9" />
               </div>
@@ -915,6 +914,7 @@ function ProductList() {
                                   socket={socket}
                                   handleDoubleClick={handleDoubleClick}
                                   handleClick={handleClick}
+                                  printStickerSelect={printStickerSelect}
                                 />
                               );
                             }
