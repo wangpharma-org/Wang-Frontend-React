@@ -4,15 +4,16 @@ import { Socket, io } from "socket.io-client";
 import dayjs from "dayjs";
 
 export interface DashboardData {
-  QCdata: QCdatum[];
+  QCdata: QCdata[];
   floorData: FloorData[];
   QCStation: QCStation[];
   AllQC: number;
   SummaryPicking: SummaryPicking[];
+  averageSpeedQC: AverageSpeedAllQCResponse;
   SummaryPickingAndEmployee: SummaryPickingAndEmployee[];
 }
 
-export interface QCdatum {
+export interface QCdata {
   date: Date;
   allOrders: number;
   hatyai: number;
@@ -60,6 +61,11 @@ export interface QuartarlyData {
   speed: number;
 }
 
+export interface AverageSpeedAllQCResponse {
+  averageSpeed: number;
+  totalQC: number;
+}
+   
 interface SummaryPickingAndEmployee {
   emp_nickname: string;
   counted: number;
@@ -76,7 +82,7 @@ const Dashboard: React.FC = () => {
   const [qcStationsData, setQcStationsData] = useState<QCStation[] | null>(
     null
   );
-  const [dataOnTop, setDataOnTop] = useState<QCdatum[] | null>(null);
+  const [dataOnTop, setDataOnTop] = useState<QCdata[] | null>(null);
   const [quartarlyData, setQuartarlyData] = useState<QuartarlyData[]>([]);
 
 
@@ -404,7 +410,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Middle Section with Large Number */}
-      <div className="flex flex-col md:grid md:grid-cols-2 gap-4 mb-4 ">
+      <div className="flex flex-col md:grid md:grid-cols-3 gap-4 mb-4 ">
         <div className="bg-white rounded-lg shadow-lg p-6 ">
           <div className="flex flex-col md:flex-row justify-center md:gap-20 items-center text-center">
             <div className="text-lg md:text-2xl text-gray-600 font-bold">
@@ -419,6 +425,37 @@ const Dashboard: React.FC = () => {
             <div className="text-lg md:text-2xl text-gray-600 font-bold">รายการ</div>
           </div>
         </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-6 space-y-6">
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-center">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="text-lg md:text-xl text-gray-600 font-bold mb-2">
+                ความเร็วเฉลี่ย QC ทั้งหมด
+              </div>
+              <div className="text-2xl md:text-5xl font-bold text-green-600">
+                {data?.averageSpeedQC?.averageSpeed.toFixed(2)}
+              </div>
+              <div className="text-gray-500 font-semibold">
+                รายการ / ชั่วโมง
+              </div>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="text-lg md:text-xl text-gray-600 font-bold mb-2">
+                จำนวน QC ทั้งหมด
+              </div>
+              <div className="text-2xl md:text-5xl font-bold text-purple-600">
+                {data?.averageSpeedQC?.totalQC ?? 0}
+              </div>
+              <div className="text-gray-500 font-semibold">
+                รายการ
+              </div>
+            </div>
+          </div>
+        </div>
+
+
 
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="flex md:flex-row flex-col  justify-center gap-1">
