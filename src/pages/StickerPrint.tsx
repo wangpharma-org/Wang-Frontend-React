@@ -141,7 +141,7 @@ const StickerPrint = () => {
     } else if (currentIndex >= listPrintTicket.length && listPrintTicket.length > 0) {
       setCurrentIndex(0);
     }
-  }, [listPrintTicket, selectFloor, currentIndex, countBox]);
+  }, [listPrintTicket, selectFloor, countBox]);
 
   useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
