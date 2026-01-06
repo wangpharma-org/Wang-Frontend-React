@@ -65,7 +65,7 @@ export interface AverageSpeedAllQCResponse {
   averageSpeed: number;
   totalQC: number;
 }
-   
+
 interface SummaryPickingAndEmployee {
   emp_nickname: string;
   counted: number;
@@ -128,13 +128,13 @@ const Dashboard: React.FC = () => {
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       );
       setDataOnTop(sortedData);
-      console.log(data);
+      // console.log(data);
     }
   }, [data]);
 
   useEffect(() => {
     if (qcStationsData) {
-      console.log("qcStationsData:", qcStationsData);
+      // console.log("qcStationsData:", qcStationsData);
 
       const newData: QuartarlyData[] = qcStationsData.map((station) => {
         const workingHours = calculateWorkingHours(
@@ -142,7 +142,7 @@ const Dashboard: React.FC = () => {
           station.lastQcTime
         );
         const speed = calculateSpeed(station.qc_count, workingHours);
-        console.log(`Station ${station.stationId} Speed:`, speed);
+        // console.log(`Station ${station.stationId} Speed:`, speed);
 
         return {
           quarter: `Q${station.stationId}`,
@@ -196,13 +196,13 @@ const Dashboard: React.FC = () => {
 
   // ฟังก์ชันคำนวณความเร็ว (รายการ/ชั่วโมง)
   const calculateSpeed = (qc_count: number, workingHours: number): number => {
-    console.log("=== calculateSpeed ===");
-    console.log("qc_count:", qc_count);
-    console.log("workingHours:", workingHours);
+    // console.log("=== calculateSpeed ===");
+    // console.log("qc_count:", qc_count);
+    // console.log("workingHours:", workingHours);
     const trimmedHours = Math.floor(workingHours * 100) / 100;
     if (workingHours === 0) return 0;
     const speed = qc_count / trimmedHours;
-    console.log("speed :", speed);
+    // console.log("speed :", speed);
     return Math.floor(speed);
   };
 
@@ -220,16 +220,16 @@ const Dashboard: React.FC = () => {
       station.firstQcTime,
       station.lastQcTime
     );
-    console.log("workingHours : ", workingHours);
-    console.log("station.firstQcTime:", station.firstQcTime);
-    console.log("station.lastQcTime:", station.lastQcTime);
+    // console.log("workingHours : ", workingHours);
+    // console.log("station.firstQcTime:", station.firstQcTime);
+    // console.log("station.lastQcTime:", station.lastQcTime);
     return calculateSpeed(station.qc_count, workingHours);
   };
 
   // ฟังก์ชันคำนวณความเร็วเฉลี่ย
   const calculateAverageSpeed = (floor: FloorData): number => {
-    console.log("floor data :", floorData);
-    console.log("floor : ", floor);
+    // console.log("floor data :", floorData);
+    // console.log("floor : ", floor);
     // ถ้ายังไม่เริ่มจัดออเดอร์วันนี้
     if (
       !floor.firstPickingTime ||
@@ -277,7 +277,7 @@ const Dashboard: React.FC = () => {
     // ความเร็วเฉลี่ย = จำนวนสินค้าที่จัดไปแล้ว / เวลาที่ใช้
     const averageSpeed = floor.completedItem / timeDifferenceInMinutes;
 
-    console.log("averageSpeed : ", averageSpeed);
+    // console.log("averageSpeed : ", averageSpeed);
     return averageSpeed;
   };
 
@@ -329,11 +329,11 @@ const Dashboard: React.FC = () => {
         .getMinutes()
         .toString()
         .padStart(2, "0")}`;
-    console.log("=== การคำนวณเวลาเสร็จ ===");
-    console.log("ผลรวมความเร็ว:", sumSpeed, "ต่อชั่วโมง");
-    console.log("เวลาที่ต้องใช้:", minutesNeeded, "นาที");
-    console.log("เวลาปัจจุบัน:", currentTime.toLocaleString("th-TH"));
-    console.log("เสร็จใน:", thaiDate, thaiTime, "น.");
+    // console.log("=== การคำนวณเวลาเสร็จ ===");
+    // console.log("ผลรวมความเร็ว:", sumSpeed, "ต่อชั่วโมง");
+    // console.log("เวลาที่ต้องใช้:", minutesNeeded, "นาที");
+    // console.log("เวลาปัจจุบัน:", currentTime.toLocaleString("th-TH"));
+    // console.log("เสร็จใน:", thaiDate, thaiTime, "น.");
     return {
       thaiDate,
       thaiTime,
@@ -352,6 +352,39 @@ const Dashboard: React.FC = () => {
   const gridStyle = {
     gridTemplateColumns: `repeat(${colCount - 1}, minmax(0, 1fr))`,
   };
+
+  const groupedQCData = (qcStationsData: QCStation[] | null): QCStation[] => {
+    if (!qcStationsData || qcStationsData.length === 0) return [];
+
+    const grouped = qcStationsData.reduce((acc, item) => {
+      const key = item.qc_nickname || 'unknown';
+
+      const currentTime = item.lastQcTime ? new Date(item.lastQcTime).getTime() : 0;
+
+      if (!acc[key]) {
+        acc[key] = item;
+      } else {
+        const existingTime = acc[key].lastQcTime ? new Date(acc[key].lastQcTime).getTime() : 0;
+        console.log(`Comparing times for key ${key}: currentTime=${currentTime}, existingTime=${existingTime}`);
+        // console.log(`Item:`, item);
+        console.log(`Existing:`, acc[key]);
+        if (currentTime > existingTime) {
+          acc[key] = item;
+        }
+      }
+
+      return acc;
+    }, {} as Record<string, QCStation>);
+
+    return Object.values(grouped);
+  };
+
+  const [timeInput, setTimeInput] = useState<string>("");
+  const timeNow = new Date();
+  const calculateSpeedAtTime = (timeInput: string): number => {
+    if (!data?.AllQC) return 0;
+    return ((data?.AllQC) / (((Number(timeInput.split(":")[0]) * 60 + Number(timeInput.split(":")[1])) - (timeNow.getHours() * 60 + timeNow.getMinutes())))).toFixed(2) as unknown as number;
+  }
 
   return (
     <>
@@ -411,8 +444,8 @@ const Dashboard: React.FC = () => {
 
       {/* Middle Section with Large Number */}
       <div className="flex flex-col md:grid md:grid-cols-3 gap-4 mb-4 ">
-        <div className="bg-white rounded-lg shadow-lg p-6 ">
-          <div className="flex flex-col md:flex-row justify-center md:gap-20 items-center text-center">
+        <div className="flex bg-white rounded-lg shadow-lg p-6 ">
+          <div className="flex flex-col justify-center items-center text-center w-full">
             <div className="text-lg md:text-2xl text-gray-600 font-bold">
               เหลือ QC ทั้งหมด
             </div>
@@ -423,6 +456,23 @@ const Dashboard: React.FC = () => {
               {data?.AllQC}
             </div>
             <div className="text-lg md:text-2xl text-gray-600 font-bold">รายการ</div>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="text-lg md:text-xl text-gray-600 font-bold mb-2">
+              อัตราความเร็วของ QC
+              <input
+                type="time"
+                value={timeInput}
+                onChange={(e) => setTimeInput(e.target.value)}
+                className="ml-2 px-2 py-1 border rounded"
+              />
+            </div>
+            <div className="text-2xl md:text-5xl font-bold text-purple-600">
+              {calculateSpeedAtTime(timeInput) ?? 0}
+            </div>
+            <div className="text-gray-500 font-semibold">
+              รายการ / นาที
+            </div>
           </div>
         </div>
 
@@ -454,8 +504,6 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
-
-
 
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="flex md:flex-row flex-col  justify-center gap-1">
@@ -583,7 +631,7 @@ const Dashboard: React.FC = () => {
       <div className="bg-white rounded-lg shadow-lg p-6">
         <p className="text-xl font-semibold text-center block md:hidden">ข้อมูลจากพนักงาน Qc</p>
         <div className="md:grid md:grid-cols-5 gap-0 overflow-x-auto flex md:overflow-hidden">
-          {qcStationsData?.map((station) => {
+          {groupedQCData(qcStationsData)?.map((station, index) => {
             const workingHours = calculateWorkingHours(
               station.firstQcTime,
               station.lastQcTime
@@ -597,7 +645,7 @@ const Dashboard: React.FC = () => {
             return (
               <div key={station.stationId} className="border border-gray-300">
                 <div className={`${speed >= 300 ? 'bg-blue-500' : speed >= 200 ? 'bg-green-600' : speed >= 150 ? 'bg-yellow-500' : speed >= 0 && 'bg-red-600'} text-white p-3 text-center font-bold text-lg`}>
-                  Q{station.stationId}
+                  Q{index + 1}
                 </div>
                 <div className="bg-gray-100 p-2 flex justify-center items-center text-xs w-80 md:w-full">
                   <span className="font-semibold text-base">
