@@ -225,6 +225,7 @@ const FormatSticker = () => {
         </div>
 
         <div className="text-right">
+          <p>{printData.route_name ?? "อื่นๆ"}</p>
           <p className="text-[30px] font-bold">{printData.mem_code}</p>
         </div>
       </div>
