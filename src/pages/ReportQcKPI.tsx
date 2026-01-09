@@ -390,7 +390,11 @@ const Dashboard: React.FC = () => {
   const timeNow = new Date();
   const calculateSpeedAtTime = (timeInput: string): number => {
     if (!data?.AllQC) return 0;
-    return ((data?.AllQC) / (((Number(timeInput.split(":")[0]) * 60 + Number(timeInput.split(":")[1])) - (timeNow.getHours() * 60 + timeNow.getMinutes())))).toFixed(2) as unknown as number;
+    const caltimeforhour = ((((Number(timeInput.split(":")[0]) * 60 + Number(timeInput.split(":")[1])) - (timeNow.getHours() * 60 + timeNow.getMinutes()))) / 60).toFixed(2)
+    if (Number(caltimeforhour) < 1) return 0;
+    console.log("caltimeforhour :", caltimeforhour);
+    const result = ((data?.AllQC) / Number(caltimeforhour));
+    return result.toFixed(2) ? Number(result.toFixed(2)) : 0;
   }
 
   return (
@@ -477,7 +481,7 @@ const Dashboard: React.FC = () => {
             <div className="flex justify-between">
               <div className="flex flex-col  items-center text-center w-full">
                 <span className="text-2xl md:text-5xl font-bold text-purple-600">
-                  {(calculateSpeedAtTime(timeInput) * 60).toFixed(2) ?? 0}
+                 {(calculateSpeedAtTime(timeInput)) ?? 0}
                 </span>
                 <span className="text-gray-500 font-semibold text-xs">
                   รายการ / ชั่วโมง
