@@ -71,6 +71,7 @@ interface SummaryPickingAndEmployee {
   counted: number;
   speed: number;
   floor: string;
+  lastPickingTime: Date;
 }
 
 const Dashboard: React.FC = () => {
@@ -226,60 +227,60 @@ const Dashboard: React.FC = () => {
     return calculateSpeed(station.qc_count, workingHours);
   };
 
-  // ฟังก์ชันคำนวณความเร็วเฉลี่ย
-  const calculateAverageSpeed = (floor: FloorData): number => {
-    // console.log("floor data :", floorData);
-    // console.log("floor : ", floor);
-    // ถ้ายังไม่เริ่มจัดออเดอร์วันนี้
-    if (
-      !floor.firstPickingTime ||
-      !floor.lastPickingTime ||
-      floor.completedItem === 0
-    ) {
-      return 0;
-    }
+  // // ฟังก์ชันคำนวณความเร็วเฉลี่ย
+  // const calculateAverageSpeed = (floor: FloorData): number => {
+  //   // console.log("floor data :", floorData);
+  //   // console.log("floor : ", floor);
+  //   // ถ้ายังไม่เริ่มจัดออเดอร์วันนี้
+  //   if (
+  //     !floor.firstPickingTime ||
+  //     !floor.lastPickingTime ||
+  //     floor.completedItem === 0
+  //   ) {
+  //     return 0;
+  //   }
 
-    // แปลงเวลาเป็นนาที
-    const firstDate = new Date(floor.firstPickingTime);
-    const lastDate = new Date(floor.lastPickingTime);
-    const [firstHour, firstMin] = firstDate
-      .toLocaleTimeString("en-TH", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      })
-      .split(":")
-      .map(Number);
-    const [lastHour, lastMin] = lastDate
-      .toLocaleTimeString("en-TH", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      })
-      .split(":")
-      .map(Number);
-    const firstTimeInMinutes = firstHour * 60 + firstMin;
-    const lastTimeInMinutes = lastHour * 60 + lastMin;
+  //   // แปลงเวลาเป็นนาที
+  //   const firstDate = new Date(floor.firstPickingTime);
+  //   const lastDate = new Date(floor.lastPickingTime);
+  //   const [firstHour, firstMin] = firstDate
+  //     .toLocaleTimeString("en-TH", {
+  //       hour: "2-digit",
+  //       minute: "2-digit",
+  //       hour12: false,
+  //     })
+  //     .split(":")
+  //     .map(Number);
+  //   const [lastHour, lastMin] = lastDate
+  //     .toLocaleTimeString("en-TH", {
+  //       hour: "2-digit",
+  //       minute: "2-digit",
+  //       hour12: false,
+  //     })
+  //     .split(":")
+  //     .map(Number);
+  //   const firstTimeInMinutes = firstHour * 60 + firstMin;
+  //   const lastTimeInMinutes = lastHour * 60 + lastMin;
 
-    // คำนวณระยะเวลาที่ใช้ (นาที)
-    let timeDifferenceInMinutes = lastTimeInMinutes - firstTimeInMinutes;
+  //   // คำนวณระยะเวลาที่ใช้ (นาที)
+  //   let timeDifferenceInMinutes = lastTimeInMinutes - firstTimeInMinutes;
 
-    // จัดการกรณีข้ามวัน (เช่น เริ่ม 23:00 เสร็จ 01:00)
-    if (timeDifferenceInMinutes < 0) {
-      timeDifferenceInMinutes += 24 * 60; // เพิ่ม 24 ชั่วโมง
-    }
+  //   // จัดการกรณีข้ามวัน (เช่น เริ่ม 23:00 เสร็จ 01:00)
+  //   if (timeDifferenceInMinutes < 0) {
+  //     timeDifferenceInMinutes += 24 * 60; // เพิ่ม 24 ชั่วโมง
+  //   }
 
-    // ป้องกันการหารด้วย 0
-    if (timeDifferenceInMinutes === 0) {
-      return 0;
-    }
+  //   // ป้องกันการหารด้วย 0
+  //   if (timeDifferenceInMinutes === 0) {
+  //     return 0;
+  //   }
 
-    // ความเร็วเฉลี่ย = จำนวนสินค้าที่จัดไปแล้ว / เวลาที่ใช้
-    const averageSpeed = floor.completedItem / timeDifferenceInMinutes;
+  //   // ความเร็วเฉลี่ย = จำนวนสินค้าที่จัดไปแล้ว / เวลาที่ใช้
+  //   const averageSpeed = floor.completedItem / timeDifferenceInMinutes;
 
-    // console.log("averageSpeed : ", averageSpeed);
-    return averageSpeed;
-  };
+  //   // console.log("averageSpeed : ", averageSpeed);
+  //   return averageSpeed;
+  // };
 
   // ฟังก์ชันแสดงเวลา (ถ้า null แสดง **:**)
   const displayTime = (time: Date) => {
@@ -288,11 +289,17 @@ const Dashboard: React.FC = () => {
       : "__:__ น.";
   };
 
-  // ฟังก์ชันคำนวณสีตามความเร็ว
-  const getSpeedColorClass = (speedPerHour: number): string => {
-    if (speedPerHour >= 350) return "bg-blue-500";
-    if (speedPerHour >= 251 && speedPerHour <= 349) return "bg-green-500";
-    if (speedPerHour >= 151 && speedPerHour <= 249) return "bg-yellow-500";
+  // // ฟังก์ชันคำนวณสีตามความเร็ว
+  // const getSpeedColorClass = (speedPerHour: number): string => {
+  //   if (speedPerHour >= 350) return "bg-blue-500";
+  //   if (speedPerHour >= 251 && speedPerHour <= 349) return "bg-green-500";
+  //   if (speedPerHour >= 151 && speedPerHour <= 249) return "bg-yellow-500";
+  //   return "bg-red-500";
+  // };
+  const getSpeedColorClass2 = (speedPerHour: number): string => {
+    if (speedPerHour >= 200) return "bg-blue-500";
+    if (speedPerHour >= 150 && speedPerHour <= 199) return "bg-green-500";
+    if (speedPerHour >= 100 && speedPerHour <= 149) return "bg-yellow-500";
     return "bg-red-500";
   };
 
@@ -444,7 +451,7 @@ const Dashboard: React.FC = () => {
 
       {/* Middle Section with Large Number */}
       <div className="flex flex-col md:grid md:grid-cols-3 gap-4 mb-4 ">
-        <div className="flex bg-white rounded-lg shadow-lg p-6 ">
+        <div className="flex bg-white rounded-lg shadow-lg p-6 flex-col md:flex-row justify-between items-center md:items-stretch">
           <div className="flex flex-col justify-center items-center text-center w-full">
             <div className="text-lg md:text-2xl text-gray-600 font-bold">
               เหลือ QC ทั้งหมด
@@ -457,8 +464,8 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="text-lg md:text-2xl text-gray-600 font-bold">รายการ</div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="text-lg md:text-xl text-gray-600 font-bold mb-2">
+          <div className="bg-gray-50 rounded-lg p-4 w-full">
+            <div className="text-sm md:text-xl text-gray-600 font-bold mb-2">
               อัตราความเร็วของ QC
               <input
                 type="time"
@@ -467,11 +474,15 @@ const Dashboard: React.FC = () => {
                 className="ml-2 px-2 py-1 border rounded"
               />
             </div>
-            <div className="text-2xl md:text-5xl font-bold text-purple-600">
-              {calculateSpeedAtTime(timeInput) ?? 0}
-            </div>
-            <div className="text-gray-500 font-semibold">
-              รายการ / นาที
+            <div className="flex justify-between">
+              <div className="flex flex-col  items-center text-center w-full">
+                <span className="text-2xl md:text-5xl font-bold text-purple-600">
+                  {(calculateSpeedAtTime(timeInput) * 60).toFixed(2) ?? 0}
+                </span>
+                <span className="text-gray-500 font-semibold text-xs">
+                  รายการ / ชั่วโมง
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -548,7 +559,7 @@ const Dashboard: React.FC = () => {
             <div className="h-16 p-3 text-black font-semibold text-lg flex items-center border-b">
               ความเร็วเฉลี่ย
             </div>
-            <div className="h-21 p-3 text-black font-semibold text-lg flex items-center">
+            <div className="h-30 p-3 text-black font-semibold text-lg flex items-center">
               พนักงานจัดออเดอร์
             </div>
           </div>
@@ -585,15 +596,35 @@ const Dashboard: React.FC = () => {
                         {displayTime(floor.lastPickingTime)}
                       </div>
                     </div>
-                    <div
+                    {/* <div
                       className={`${getSpeedColorClass(calculateAverageSpeed(floor) * 60)} text-white h-16 flex flex-col justify-center border-r border-gray-300`}
                     >
                       <p className="text-lg font-bold">
                         {(calculateAverageSpeed(floor) * 60).toFixed(2)}
                       </p>
                       <p className="text-xs">รก./ชม.</p>
-                    </div>
-                    <div className="flex justify-between items-center text-center border-b border-r border-t border-gray-300 h-21">
+                    </div> */}
+                    {(() => {
+                      const floorEmployees = data?.SummaryPickingAndEmployee.filter(
+                        (emp) => emp.floor === floor.product_floor
+                      ) || [];
+
+                      const avgSpeed = floorEmployees.length > 0
+                        ? floorEmployees.reduce((sum, emp) => sum + Number(emp.speed), 0) / floorEmployees.length
+                        : 0;
+
+                      return (
+                        <div
+                          className={`${getSpeedColorClass2(avgSpeed)} text-white h-16 flex flex-col justify-center border-r border-gray-300 border-b`}
+                        >
+                          <p className="text-lg font-bold">
+                            {avgSpeed.toFixed(2)}
+                          </p>
+                          <p className="text-xs">รก./ชม. (เฉลี่ย {floorEmployees.length} คน)</p>
+                        </div>
+                      );
+                    })()}
+                    <div className="flex justify-between items-center text-center border-b border-r border-t border-gray-300 h-30">
                       {(() => {
                         const employees = data?.SummaryPickingAndEmployee.filter((emp) => emp.floor === floor.product_floor) || [];
 
@@ -606,7 +637,7 @@ const Dashboard: React.FC = () => {
                         }
 
                         return employees.map((emp) => (
-                          <div key={emp.emp_nickname} className={`text-sm w-full text-white p-1 md:p-2 h-21 ${emp.speed >= 201 ? 'bg-green-500' : (emp.speed >= 150 && emp.speed < 201) ? 'bg-yellow-500' : (emp.speed < 149) ? 'bg-red-500' : (emp.speed >= 300) ? 'bg-blue-500' : ''}`}>
+                          <div key={emp.emp_nickname} className={`text-sm w-full text-white p-1 md:p-2 h-30 ${getSpeedColorClass2(Number(emp.speed) || 0)}`}>
                             <div className="flex flex-col items-center w-full">
                               <p className="text-[14px] md:text-lg font-bold">{emp.emp_nickname}</p>
                               <p className="inline-block mr-1 text-xs md:text-sm">
@@ -616,6 +647,21 @@ const Dashboard: React.FC = () => {
                                 รายการ</p>
                               <p className="inline-block text-xs md:text-sm">
                                 <p className="inline-block mr-1 font-bold text-[12px] md:text-base">{(Number(emp.speed) || 0).toFixed(2)}</p> รก./ชม.</p>
+                              {(() => {
+                                const now = new Date().getTime();
+                                const lastTime = new Date(emp.lastPickingTime).getTime();
+                                const minutesDiff = (now - lastTime) / (1000 * 60);
+                                const isRecent = minutesDiff < 5; // ถ้าห่างกันไม่ถึง 5 นาที ถือว่ายังทำงานอยู่
+
+                                // แปลงเวลาเป็น timezone ไทย
+                                const thaiTime = dayjs(emp.lastPickingTime).format("HH:mm:ss");
+
+                                return (
+                                  <p className={`${isRecent ? 'text-gray-200' : 'text-red-500 bg-white'} text-xs md:text-sm font-bold`}>
+                                    ล่าสุด: {thaiTime}
+                                  </p>
+                                );
+                              })()}
                             </div>
                           </div>
                         ));
@@ -644,14 +690,24 @@ const Dashboard: React.FC = () => {
 
             return (
               <div key={station.stationId} className="border border-gray-300">
-                <div className={`${speed >= 300 ? 'bg-blue-500' : speed >= 200 ? 'bg-green-600' : speed >= 150 ? 'bg-yellow-500' : speed >= 0 && 'bg-red-600'} text-white p-3 text-center font-bold text-lg`}>
-                  Q{index + 1}
+                <div className={`text-balck p-3 text-center font-bold text-lg border-b border-gray-300 bg-gray-200 ${station.qc_nickname === station.prepare_nickname && station.qc_nickname === station.packed_nickname ? 'text-red-500' : ''}`}>
+                  Q{index + 1} [{station.qc_nickname}]
                 </div>
-                <div className="bg-gray-100 p-2 flex justify-center items-center text-xs w-80 md:w-full">
-                  <span className="font-semibold text-base">
-                    {station.prepare_nickname} หัวโต๊ะ + {station.qc_nickname}{" "}
-                    คิว + {station.packed_nickname} แพ็ค
-                  </span>
+                <div className="bg-gray-100 p-2 flex justify-between items-center text-xs w-80 md:w-full">
+                  {!(station.qc_nickname === station.prepare_nickname && station.qc_nickname === station.packed_nickname) ?
+                    <>
+                      <span className="font-semibold text-base w-full text-center">
+                        หัวโต๊ะ: {station.prepare_nickname}
+                      </span>
+                      <span className="font-semibold text-base w-full text-center">
+                        แพ็ค: {station.packed_nickname}
+                      </span>
+                    </>
+                    :
+                    <span className="font-semibold text-base w-full text-center text-red-500">
+                      ทุกตำแหน่งคือคนเดียวกัน
+                    </span>
+                  }
                 </div>
                 <div className="bg-white flex">
                   <div className="flex-1 p-4 text-center border-r border-gray-300">
