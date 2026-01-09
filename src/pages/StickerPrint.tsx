@@ -32,6 +32,7 @@ const StickerPrint = () => {
   const [listPrintTicket, setListPrint] = useState<TicketItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [updatedAt, setUpdatedAt] = useState("");
+  const [ticket_id, setTicketId] = useState(0);
   const [countBox, setCountBox] = useState(0);
 
   useEffect(() => {
@@ -95,7 +96,7 @@ const StickerPrint = () => {
   }, [selectFloor, data]);
 
   useEffect(() => {
-    if (listPrintTicket.length > 0 && currentIndex < listPrintTicket.length && updatedAt !== listPrintTicket[currentIndex].update_at) {
+    if (listPrintTicket.length > 0 && currentIndex < listPrintTicket.length && (updatedAt !== listPrintTicket[currentIndex].update_at  && ticket_id !== listPrintTicket[currentIndex].ticket_id)) {
       const currentTicket = listPrintTicket[currentIndex];
       console.log("Current Ticket:", currentTicket);
       console.log(`Current Index: ${currentIndex}`);
@@ -140,7 +141,7 @@ const StickerPrint = () => {
     } else if (currentIndex >= listPrintTicket.length && listPrintTicket.length > 0) {
       setCurrentIndex(0);
     }
-  }, [listPrintTicket, selectFloor, currentIndex, countBox]);
+  }, [listPrintTicket, selectFloor, countBox]);
 
   useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
@@ -156,6 +157,7 @@ const StickerPrint = () => {
           }
           setCurrentIndex((prev) => prev + 1);
           setUpdatedAt(printedTicket.update_at);
+          setTicketId(printedTicket.ticket_id);
         }
       }
     };
