@@ -23,6 +23,8 @@ const RouteManage = () => {
     const [urgentCustomers, setUrgentCustomers] = useState<UrgentCustomer[]>([]);
 
     const [urgentLoading, setUrgentLoading] = useState<boolean>(false);
+    const userAuth = sessionStorage.getItem("user_info")
+    const admin = userAuth ? JSON.parse(userAuth).manage_product == "Yes" : false;
 
     useEffect(() => {
         handleGetRoutes();
@@ -133,7 +135,16 @@ const RouteManage = () => {
         }
         setUrgentLoading(false);
     };
-
+    if (!admin) {
+        return (
+            <div className="flex justify-center items-center h-screen">
+                <div className="text-center">
+                    <div className="text-6xl mb-4">🚫</div>
+                    <div className="text-2xl font-semibold">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="grid grid-cols-2 justify-center items-left p-10 mx-auto gap-6 min-w-7xl w-full">
