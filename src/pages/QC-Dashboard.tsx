@@ -2769,10 +2769,15 @@ const QCDashboard = () => {
                       </div>
                     ) : (
                       !dataQC && (
-                        <div className="w-full flex justify-center text-3xl mt-5 text-red-700 font-bold">
-                          <p>
+                        <div>
+                          <p className="w-full flex justify-center text-3xl mt-5 text-red-700 font-bold">
                             กรุณากรอกรหัสพนักงานและรหัสลูกค้าหรือเลขบิลให้เรียบร้อย
                           </p>
+                          <button className="mt-3 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-sm text-lg" onClick={() => {
+                            window.open("https://www.wangpharma.com/Akitokung/api/back_up/re_picking_page.php");
+                          }}>
+                            เว็ปสำหรับยิง เมื่อบิลไม่เข้าระบบ
+                          </button>
                         </div>
                       )
                     )}
