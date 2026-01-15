@@ -276,6 +276,8 @@ const QCDashboard = () => {
 
   const [basketDataForPrint, setBasketDataForPrint] = useState<ShoppingOrderPrint[] | null>(null);
 
+  const mac_address = localStorage.getItem("mac_address");
+
   const handleCheckFlagRequest = async () => {
     const flag = await axios.get(
       `${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/request`
@@ -866,8 +868,18 @@ const QCDashboard = () => {
 
   const handleGetDataEmp = async (emp_code: string, type_emp: string) => {
     try {
+      if (type_emp === "qc-emp" && !mac_address) {
+        alert("กรุณาติดต่อผู้ดูแลระบบ เนื่องจากไม่พบ Mac Address ของอุปกรณ์นี้");
+        setInputQC("");
+        return;
+      }
       const data = await axios.get(
-        `${import.meta.env.VITE_API_URL_ORDER}/api/qc/get-emp/${emp_code}`
+        `${import.meta.env.VITE_API_URL_ORDER}/api/qc/get-emp/${emp_code}`,
+        {
+          params: {
+            mac_address: type_emp === "qc-emp" ? mac_address : null
+          }
+        }
       );
       if (data.data.dataEmp.allowUsed === true) {
         if (type_emp === "prepare-emp" && data) {
@@ -1523,6 +1535,27 @@ const QCDashboard = () => {
     if (modalOpen) setModalOpen(false);
   };
 
+  const checkEmployeeStation = async () => {
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/fix-station-qc/employee-data`,
+        {
+          mac_address: mac_address,
+        }
+      );
+      if (response.data.status === false) {
+        Swal.fire({
+          icon: "error",
+          title: "ไม่ได้ทำงานเกิน 20 นาที ",
+          text: `กรุณากรอกข้อมูลช่องพนักงานตรวสอบสินค้าใหม่อีกครั้ง`,
+        });
+        handleClearEmpData("qc-emp");
+      }
+    } catch (error) {
+      console.log("Error checking employee station:", error);
+    }
+  }
+
   if (error) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -2157,7 +2190,7 @@ const QCDashboard = () => {
                             disabled={!isReady}
                             ref={index === 0 ? inputBill : null}
                             // readOnly={true}
-                            onChange={(e) => handleChange(e, index)}
+                            onChange={(e) => { handleChange(e, index); checkEmployeeStation(); }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
                                 lastInputTimeRef.current = null;

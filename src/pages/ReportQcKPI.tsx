@@ -54,6 +54,7 @@ export interface QCStation {
   lastQcTime: Date;
   qc_count: number;
   box_amount: string;
+  mac_address: string;
 }
 
 export interface QuartarlyData {
@@ -360,31 +361,31 @@ const Dashboard: React.FC = () => {
     gridTemplateColumns: `repeat(${colCount - 1}, minmax(0, 1fr))`,
   };
 
-  const groupedQCData = (qcStationsData: QCStation[] | null): QCStation[] => {
-    if (!qcStationsData || qcStationsData.length === 0) return [];
+  // const groupedQCData = (qcStationsData: QCStation[] | null): QCStation[] => {
+  //   if (!qcStationsData || qcStationsData.length === 0) return [];
 
-    const grouped = qcStationsData.reduce((acc, item) => {
-      const key = item.qc_nickname || 'unknown';
+  //   const grouped = qcStationsData.reduce((acc, item) => {
+  //     const key = item.qc_nickname || 'unknown';
 
-      const currentTime = item.lastQcTime ? new Date(item.lastQcTime).getTime() : 0;
+  //     const currentTime = item.lastQcTime ? new Date(item.lastQcTime).getTime() : 0;
 
-      if (!acc[key]) {
-        acc[key] = item;
-      } else {
-        const existingTime = acc[key].lastQcTime ? new Date(acc[key].lastQcTime).getTime() : 0;
-        console.log(`Comparing times for key ${key}: currentTime=${currentTime}, existingTime=${existingTime}`);
-        // console.log(`Item:`, item);
-        console.log(`Existing:`, acc[key]);
-        if (currentTime > existingTime) {
-          acc[key] = item;
-        }
-      }
+  //     if (!acc[key]) {
+  //       acc[key] = item;
+  //     } else {
+  //       const existingTime = acc[key].lastQcTime ? new Date(acc[key].lastQcTime).getTime() : 0;
+  //       console.log(`Comparing times for key ${key}: currentTime=${currentTime}, existingTime=${existingTime}`);
+  //       // console.log(`Item:`, item);
+  //       console.log(`Existing:`, acc[key]);
+  //       if (currentTime > existingTime) {
+  //         acc[key] = item;
+  //       }
+  //     }
 
-      return acc;
-    }, {} as Record<string, QCStation>);
+  //     return acc;
+  //   }, {} as Record<string, QCStation>);
 
-    return Object.values(grouped);
-  };
+  //   return Object.values(grouped);
+  // };
 
   const [timeInput, setTimeInput] = useState<string>("");
   const timeNow = new Date();
@@ -481,7 +482,7 @@ const Dashboard: React.FC = () => {
             <div className="flex justify-between">
               <div className="flex flex-col  items-center text-center w-full">
                 <span className="text-2xl md:text-5xl font-bold text-purple-600">
-                 {(calculateSpeedAtTime(timeInput)) ?? 0}
+                  {(calculateSpeedAtTime(timeInput)) ?? 0}
                 </span>
                 <span className="text-gray-500 font-semibold text-xs">
                   รายการ / ชั่วโมง
@@ -681,7 +682,7 @@ const Dashboard: React.FC = () => {
       <div className="bg-white rounded-lg shadow-lg p-6">
         <p className="text-xl font-semibold text-center block md:hidden">ข้อมูลจากพนักงาน Qc</p>
         <div className="md:grid md:grid-cols-5 gap-0 overflow-x-auto flex md:overflow-hidden">
-          {groupedQCData(qcStationsData)?.map((station, index) => {
+          {qcStationsData?.map((station, index) => {
             const workingHours = calculateWorkingHours(
               station.firstQcTime,
               station.lastQcTime
@@ -693,56 +694,64 @@ const Dashboard: React.FC = () => {
             const speed = getStationSpeed(station);
 
             return (
-              <div key={station.stationId} className="border border-gray-300">
+              <div key={station.stationId} className={`border border-gray-300 ${!(station.qc_nickname && station.packed_nickname) ? 'bg-red-100 flex flex-col h-68' : ''}`}>
                 <div className={`text-balck p-3 text-center font-bold text-lg border-b border-gray-300 bg-gray-200 ${station.qc_nickname === station.prepare_nickname && station.qc_nickname === station.packed_nickname ? 'text-red-500' : ''}`}>
-                  Q{index + 1} [{station.qc_nickname}]
+                  Q{index + 1} [{station.qc_nickname || "ว่าง"}]
                 </div>
-                <div className="bg-gray-100 p-2 flex justify-between items-center text-xs w-80 md:w-full">
-                  {!(station.qc_nickname === station.prepare_nickname && station.qc_nickname === station.packed_nickname) ?
-                    <>
-                      <span className="font-semibold text-base w-full text-center">
-                        หัวโต๊ะ: {station.prepare_nickname}
-                      </span>
-                      <span className="font-semibold text-base w-full text-center">
-                        แพ็ค: {station.packed_nickname}
-                      </span>
-                    </>
-                    :
-                    <span className="font-semibold text-base w-full text-center text-red-500">
-                      ทุกตำแหน่งคือคนเดียวกัน
-                    </span>
-                  }
-                </div>
-                <div className="bg-white flex">
-                  <div className="flex-1 p-4 text-center border-r border-gray-300">
-                    <div className="text-3xl font-bold">
-                      {station.qc_count}
+                {!(station.qc_nickname && station.packed_nickname) ? 
+                  <div className="text-center text-red-600 font-bold items-center flex justify-center text-3xl my-auto">
+                    ว่าง
+                  </div>
+                  :
+                  <div>
+                    <div className="bg-gray-100 p-2 flex justify-between items-center text-xs w-80 md:w-full">
+                      {!(station.qc_nickname === station.prepare_nickname && station.qc_nickname === station.packed_nickname) ?
+                        <>
+                          <span className="font-semibold text-base w-full text-center">
+                            หัวโต๊ะ: {station.prepare_nickname}
+                          </span>
+                          <span className="font-semibold text-base w-full text-center">
+                            แพ็ค: {station.packed_nickname}
+                          </span>
+                        </>
+                        :
+                        <span className="font-semibold text-base w-full text-center text-red-500">
+                          ทุกตำแหน่งคือคนเดียวกัน
+                        </span>
+                      }
                     </div>
-                    <div className="text-xs text-gray-600">รก.</div>
-                  </div>
-                  <div className="flex-1 p-4 text-center border-r border-gray-500">
-                    <div className="text-3xl font-bold">{itemsPerBox}</div>
-                    <div className="w-10 text-xs text-gray-600">รก / ลัง</div>
-                  </div>
-                  <div className="flex-1 p-4 text-center">
-                    <div className="text-3xl font-bold">
-                      {station.box_amount ?? 0}
+                    <div className="bg-white flex">
+                      <div className="flex-1 p-4 text-center border-r border-gray-300">
+                        <div className="text-3xl font-bold">
+                          {station.qc_count}
+                        </div>
+                        <div className="text-xs text-gray-600">รก.</div>
+                      </div>
+                      <div className="flex-1 p-4 text-center border-r border-gray-500">
+                        <div className="text-3xl font-bold">{itemsPerBox}</div>
+                        <div className="w-10 text-xs text-gray-600">รก / ลัง</div>
+                      </div>
+                      <div className="flex-1 p-4 text-center">
+                        <div className="text-3xl font-bold">
+                          {station.box_amount ?? 0}
+                        </div>
+                        <div className="text-xs text-gray-600">ลัง</div>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-600">ลัง</div>
+                    <div className="bg-white p-2 text-center text-base text-gray-500 border-t border-gray-300">
+                      {station.firstQcTime
+                        ? `${dayjs(station.firstQcTime).format("HH:mm")} น.`
+                        : "__:__"}{" "}
+                      ชิ้นแรก &lt;== | {workingHours.toFixed(2)} | ==&gt; ล่าสุด{" "}
+                      {station.lastQcTime
+                        ? `${dayjs(station.lastQcTime).format("HH:mm")} น.`
+                        : "__:__"}
+                    </div>
+                    <div className={`${speed >= 300 ? 'bg-blue-500' : speed >= 200 ? 'bg-green-600' : speed >= 150 ? 'bg-yellow-500' : speed >= 0 && 'bg-red-600'} text-white p-3 text-center font-bold text-xs`}>
+                      speed <span className="text-xl">{speed}</span> รก./ชม.
+                    </div>
                   </div>
-                </div>
-                <div className="bg-white p-2 text-center text-base text-gray-500 border-t border-gray-300">
-                  {station.firstQcTime
-                    ? `${dayjs(station.firstQcTime).format("HH:mm")} น.`
-                    : "__:__"}{" "}
-                  ชิ้นแรก &lt;== | {workingHours.toFixed(2)} | ==&gt; ล่าสุด{" "}
-                  {station.lastQcTime
-                    ? `${dayjs(station.lastQcTime).format("HH:mm")} น.`
-                    : "__:__"}
-                </div>
-                <div className={`${speed >= 300 ? 'bg-blue-500' : speed >= 200 ? 'bg-green-600' : speed >= 150 ? 'bg-yellow-500' : speed >= 0 && 'bg-red-600'} text-white p-3 text-center font-bold text-xs`}>
-                  speed <span className="text-xl">{speed}</span> รก./ชม.
-                </div>
+                }
               </div>
             );
           })}
