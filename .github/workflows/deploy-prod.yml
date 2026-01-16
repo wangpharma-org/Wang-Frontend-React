@@ -38,15 +38,18 @@ jobs:
         run: doctl registry login --expiry-seconds 600
 
       - name: Set image tag
-        run: |
-          echo "TAG=sha-${GITHUB_SHA::7}" >> $GITHUB_ENV
-          echo "IMAGE=registry.digitalocean.com/${{ secrets.DOCR_REGISTRY }}/${{ secrets.IMAGE_REPO_FRONTEND }}:${TAG}" >> $GITHUB_ENV
+        run: echo "TAG=sha-${GITHUB_SHA::7}" >> $GITHUB_ENV
 
-      - name: Build & Push image (Frontend)
+      - name: Build & Push image to DOCR
+        env:
+          DOCR_REGISTRY: ${{ secrets.DOCR_REGISTRY }}
+          IMAGE_REPO: ${{ secrets.IMAGE_REPO_FRONTEND }}
         run: |
           set -e
-          docker build -t "$IMAGE" .
+          IMAGE="registry.digitalocean.com/${DOCR_REGISTRY}/${IMAGE_REPO_FRONTEND}:${TAG}"
+          docker build -t "$IMAGE" -f Dockerfile .
           docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
       - name: Setup kubeconfig
         run: |
