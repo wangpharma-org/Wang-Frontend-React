@@ -43,10 +43,11 @@ jobs:
       - name: Build & Push image to DOCR
         env:
           DOCR_REGISTRY: ${{ secrets.DOCR_REGISTRY }}
-          IMAGE_REPO: ${{ secrets.IMAGE_REPO_FRONTEND }}
+          IMAGE_REPO_FRONTEND: ${{ secrets.IMAGE_REPO_FRONTEND }}
         run: |
           set -e
           IMAGE="registry.digitalocean.com/${DOCR_REGISTRY}/${IMAGE_REPO_FRONTEND}:${TAG}"
+          echo "IMAGE=$IMAGE"
           docker build -t "$IMAGE" -f Dockerfile .
           docker push "$IMAGE"
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
