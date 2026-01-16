@@ -1,0 +1,67 @@
+name: CD Frontend (Vite → DOCR → K8s)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+concurrency:
+  group: frontend-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      K8S_NAMESPACE: default
+      DEPLOYMENT_NAME: react-deployment
+      CONTAINER_NAME: ui
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Write .env.production
+        run: |
+          set -e
+          cat > .env.production <<'EOF'
+          ${{ secrets.FRONTEND_ENV_PROD }}
+          EOF
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DO_ACCESS_TOKEN }}
+
+      - name: Login DOCR
+        run: doctl registry login --expiry-seconds 600
+
+      - name: Set image tag
+        run: |
+          echo "TAG=sha-${GITHUB_SHA::7}" >> $GITHUB_ENV
+          echo "IMAGE=registry.digitalocean.com/${{ secrets.DOCR_REGISTRY }}/${{ secrets.IMAGE_REPO_FRONTEND }}:${TAG}" >> $GITHUB_ENV
+
+      - name: Build & Push image (Frontend)
+        run: |
+          set -e
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Setup kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_PROD }}" > ~/.kube/config
+
+      - name: Deploy (set image)
+        run: |
+          set -e
+          kubectl -n "${K8S_NAMESPACE}" set image deploy/"${DEPLOYMENT_NAME}" \
+            "${CONTAINER_NAME}"="$IMAGE"
+
+          kubectl -n "${K8S_NAMESPACE}" rollout status deploy/"${DEPLOYMENT_NAME}" --timeout=600s
+
+      - name: Show status
+        run: |
+          kubectl -n "${K8S_NAMESPACE}" get deploy "${DEPLOYMENT_NAME}" -o wide
+          kubectl -n "${K8S_NAMESPACE}" get pod -l app=ui -o wide
