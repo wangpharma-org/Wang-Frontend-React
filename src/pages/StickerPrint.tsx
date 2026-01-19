@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Socket, io } from "socket.io-client";
 
 export interface TicketItem {
@@ -22,6 +22,7 @@ export interface TicketItem {
   status: string;
   update_at: string;
   product_name: string | null;
+  note: string | null;
 }
 
 const StickerPrint = () => {
@@ -33,6 +34,8 @@ const StickerPrint = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [updatedAt, setUpdatedAt] = useState("");
   const [countBox, setCountBox] = useState(0);
+  const [lastNotePrint, setLastNotePrint] = useState<string | null>(null);
+  const openedTicketIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
@@ -95,10 +98,13 @@ const StickerPrint = () => {
   }, [selectFloor, data]);
 
   useEffect(() => {
-    if (listPrintTicket.length > 0 && currentIndex < listPrintTicket.length && updatedAt !== listPrintTicket[currentIndex].update_at) {
+    if (listPrintTicket.length > 0 && currentIndex < listPrintTicket.length && (!listPrintTicket[currentIndex].note ? updatedAt !== listPrintTicket[currentIndex].update_at : true) && (lastNotePrint ? listPrintTicket[currentIndex].note !== lastNotePrint : true)) {
       const currentTicket = listPrintTicket[currentIndex];
       console.log("Current Ticket:", currentTicket);
       console.log(`Current Index: ${currentIndex}`);
+      console.log('List Print Ticket length:', listPrintTicket.length);
+      if (openedTicketIdRef.current === currentTicket.ticket_id) return;
+      openedTicketIdRef.current = currentTicket.ticket_id;
       localStorage.removeItem("print_status");
       window.open(
         `/format-sticker?ticketId=${currentTicket.ticket_id}&sh_running=${currentTicket.sh_running
@@ -133,8 +139,10 @@ const StickerPrint = () => {
         ${currentTicket.product_name
           ? `&product_name=${encodeURIComponent(currentTicket.product_name)}`
           : ""
-        }
-        ${countBox ? `&countBox=${countBox}` : ""}`,
+        }${currentTicket.note
+          ? `&note=${encodeURIComponent(currentTicket.note)}`
+          : ""
+        }${countBox ? `&countBox=${countBox}` : ""}`,
         "_blank"
       );
     } else if (currentIndex >= listPrintTicket.length && listPrintTicket.length > 0) {
@@ -154,8 +162,14 @@ const StickerPrint = () => {
           } else {
             console.warn("❌ Socket not connected");
           }
+          openedTicketIdRef.current = null;
           setCurrentIndex((prev) => prev + 1);
           setUpdatedAt(printedTicket.update_at);
+          if (printedTicket.type === "ลัง") {
+            setLastNotePrint(printedTicket.note || null);
+          } else {
+            setLastNotePrint(null);
+          }
         }
       }
     };

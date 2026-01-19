@@ -43,6 +43,9 @@ const FormatSticker = () => {
   const count = new URLSearchParams(window.location.search).get("count");
   const floor = new URLSearchParams(window.location.search).get("floor");
   const countBox = new URLSearchParams(window.location.search).get("countBox");
+  const note = new URLSearchParams(window.location.search).get(
+    "note"
+  );
 
   const printData = useMemo(() => ({
     emp_code: emp_code ?? null,
@@ -67,6 +70,7 @@ const FormatSticker = () => {
     count: count ? Number(count) : null,
     countBox: countBox ? Number(countBox) : 0,
     product_name: product_name ?? null,
+    note: note ?? null,
   }), [
     emp_code,
     emp_name,
@@ -86,6 +90,7 @@ const FormatSticker = () => {
     count,
     countBox,
     product_name,
+    note
   ]);
 
   const [loading, setLoading] = useState(true);
@@ -242,7 +247,9 @@ const FormatSticker = () => {
         </p>
       </div>
       }
-
+      <p className="text-[20px] font-bold px-2">
+          {!note ? '' : `${note}`}
+        </p>
     </div>
   );
 };
