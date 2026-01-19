@@ -6,6 +6,7 @@ import order from "../assets/sent.png";
 // import checklist from "../assets/checklist.png";
 import barcode from "../assets/barcode-scanner.png"
 import reportPicking from "../assets/report-picking.png";
+import RouteManage from "../assets/evaluation.png";
 import { useNavigate } from "react-router";
 const listMenu = [
   {
@@ -13,18 +14,21 @@ const listMenu = [
     name: "จัดการสินค้า",
     href: "/product-manage",
     imageSrc: reciept,
+    admin: true,
   },
   {
     id: 2,
     name: "ระบบตรวจสอบสินค้า (QC)",
     href: "/dashboard-qc",
     imageSrc: barcode,
+    admin: false,
   },
   {
     id: 3,
     name: "จัดออเดอร์",
     href: "/order-list",
     imageSrc: order,
+    admin: false,
   },
   // {
   //   id: 4,
@@ -37,6 +41,7 @@ const listMenu = [
     name: "สถิติการจัดออเดอร์ (พนักงาน)",
     href: "/report",
     imageSrc: reportPicking,
+    admin: false,
   },
   // {
   //   id: 6,
@@ -44,6 +49,13 @@ const listMenu = [
   //   href: "/verify-order",
   //   imageSrc: checklist,
   // },
+  {
+    id: 7,
+    name: "จัดการOrder",
+    href: "/route-manage",
+    imageSrc: RouteManage,
+    admin: true,
+  }
 ];
 const Home = () => {
   const navigate = useNavigate()
@@ -56,6 +68,8 @@ const Home = () => {
   }, {} as Record<number, boolean>);
 
   const [visibilityMap, setVisibilityMap] = useState<Record<number, boolean>>(defaultVisibility);
+  const userAuth = sessionStorage.getItem("user_info")
+  const admin = userAuth ? JSON.parse(userAuth).manage_product == "Yes" : false;
 
   useEffect(() => {
     // โหลดสถานะของแต่ละปุ่ม (แมพจาก listMenu.id)
@@ -95,7 +109,7 @@ const Home = () => {
 
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           {listMenu
-            .filter((menu) => visibilityMap[menu.id] !== false) // ซ่อนเฉพาะที่ได้ false
+            .filter((menu) => visibilityMap[menu.id] !== false && (menu.admin ? admin : true)) // ซ่อนเฉพาะที่ได้ false
             .map((menu) => (
               <a
                 id={`${menu.name}`}

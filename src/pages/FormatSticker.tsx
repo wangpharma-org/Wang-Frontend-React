@@ -230,6 +230,7 @@ const FormatSticker = () => {
         </div>
 
         <div className="text-right">
+          <p className="text-[30px]">{printData.route_name ?? "อื่นๆ"}</p>
           <p className="text-[30px] font-bold">{printData.mem_code}</p>
         </div>
       </div>
@@ -237,9 +238,9 @@ const FormatSticker = () => {
         <p className="text-[30px]">{printData.mem_name}</p>
       </div>
 
-      <div className="flex justify-between pl-2 text-[28px] font-bold">
+      {/* <div className="flex justify-between pl-2 text-[28px] font-bold">
         <p>{printData.route_name ?? "อื่นๆ"}</p>
-      </div>
+      </div> */}
 
       {printData.type !== "ตะกร้า" ? null : <div>
         <p className="text-[20px] font-bold px-2">

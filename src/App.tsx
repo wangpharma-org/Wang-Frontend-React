@@ -302,9 +302,9 @@ function App() {
             element={
               <div>
                 <Navbar />
-                {/* <RequireAuth> */}
-                <RouteManage />
-                {/* </RequireAuth> */}
+                <RequireAuth>
+                  <RouteManage />
+                </RequireAuth>
               </div>
             }
           />
