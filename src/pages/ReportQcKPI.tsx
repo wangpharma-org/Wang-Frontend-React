@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import { Socket, io } from "socket.io-client";
 import dayjs from "dayjs";
+import 'dayjs/locale/th';
+dayjs.locale('th');
 
 export interface DashboardData {
   QCdata: QCdata[];
@@ -430,7 +432,7 @@ const Dashboard: React.FC = () => {
               {dataOnTop?.map((item, index) => (
                 <div key={index} className="flex flex-col items-center w-full">
                   <div className="text-red-500 px-3 py-1 rounded font-bold text-2xl mb-2">
-                    {dayjs(item.date).format("DD/MM/YY")}
+                    {dayjs(item.date).format('dddd DD/MM/YY')}
                   </div>
                   <div className="text-center text-2xl font-bold py-1 mb-2">
                     {item.allOrders}
