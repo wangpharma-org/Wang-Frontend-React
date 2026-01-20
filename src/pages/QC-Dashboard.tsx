@@ -114,9 +114,9 @@ export interface dataForEmp {
 }
 
 export interface urgent {
-  mem_code: string,
-  mem_name: string,
-  amount: string,
+  mem_code: string;
+  mem_name: string;
+  amount: string;
 }
 
 export interface ProductNotFoundBarCode {
@@ -125,23 +125,22 @@ export interface ProductNotFoundBarCode {
 }
 
 export interface ShoppingOrderPrint {
-  mem_code: string
-  mem_name: string
-  route_name: string
-  basket_floor_2: number
-  basket_floor_3: number
-  basket_floor_4: number
-  basket_floor_5: number
-  box_floor_2: number
-  box_floor_3: number
-  box_floor_4: number
-  box_floor_5: number
-  last_printed: string
-  basket_count: number
-  box_count: number
-  total_items: number
+  mem_code: string;
+  mem_name: string;
+  route_name: string;
+  basket_floor_2: number;
+  basket_floor_3: number;
+  basket_floor_4: number;
+  basket_floor_5: number;
+  box_floor_2: number;
+  box_floor_3: number;
+  box_floor_4: number;
+  box_floor_5: number;
+  last_printed: string;
+  basket_count: number;
+  box_count: number;
+  total_items: number;
 }
-
 
 export type ShoppingHead = Root[];
 export type ShoppingHeadOne = Root;
@@ -177,17 +176,35 @@ const QCDashboard = () => {
   const [modalManageOpen, setModalManageOpen] = useState<boolean>(false);
 
   // Modal Print Sticker Open
-  const [modalPrintStickerOpen, setModalPrintStickerOpen] =
-    useState<string | null>(null);
+  const [modalPrintStickerOpen, setModalPrintStickerOpen] = useState<
+    string | null
+  >(null);
+
+  // Modal Product Request Open
+  const [modalProductRequestOpen, setModalProductRequestOpen] = useState<
+    string | null
+  >(null);
 
   // Modal Alert Barcode Not Found
   const [modalBarcodeNotFound, setModalBarcodeNotFound] =
     useState<boolean>(false);
 
   const [barcodeNotFound, setBarcodeNotFound] = useState<string>("");
-  const [productNotFoundBarCode, setProductNotFoundBarCode] = useState<
-    ProductNotFoundBarCode | null
-  >(null);
+  const [selectedReason, setSelectedReason] = useState<string | null>(null);
+  const [customReason, setCustomReason] = useState("");
+  const REQUEST_REASONS = [
+    "สินค้าเสียหาย",
+    "หาสินค้าไม่เจอ",
+    "พนักงานจัดออเดอร์ไม่จัดลงมา",
+    "อื่น ๆ",
+  ];
+
+  const finalReason =
+    selectedReason === "อื่น ๆ" ? customReason : selectedReason;
+  const [productNotFoundBarCode, setProductNotFoundBarCode] =
+    useState<ProductNotFoundBarCode | null>(null);
+  const [productCodeRequestSticker, setProductCodeRequestSticker] =
+    useState<string>("");
 
   // Data State
   const [orderForQC, setOrderForQC] = useState<ShoppingOrder>();
@@ -241,7 +258,6 @@ const QCDashboard = () => {
   const [productNotHaveBarcode, setProductNotHaveBarcode] =
     useState<Product | null>(null);
 
-
   // State เก็บไอดีห้องของการต่อ WebSocket
   const [myRoom, setMyRoom] = useState<string | null>(null);
 
@@ -274,7 +290,9 @@ const QCDashboard = () => {
 
   const navigate = useNavigate();
 
-  const [basketDataForPrint, setBasketDataForPrint] = useState<ShoppingOrderPrint[] | null>(null);
+  const [basketDataForPrint, setBasketDataForPrint] = useState<
+    ShoppingOrderPrint[] | null
+  >(null);
 
   const handleCheckFlagRequest = async () => {
     const flag = await axios.get(
@@ -319,7 +337,8 @@ const QCDashboard = () => {
   useEffect(() => {
     if (prepareEmp?.dataEmp?.emp_code) {
       setInputPrepare(
-        `${prepareEmp.dataEmp.emp_code} ${prepareEmp.dataEmp.emp_nickname || ""
+        `${prepareEmp.dataEmp.emp_code} ${
+          prepareEmp.dataEmp.emp_nickname || ""
         }`
       );
     }
@@ -350,7 +369,9 @@ const QCDashboard = () => {
   useEffect(() => {
     if (strappingEMP?.dataEmp?.emp_code) {
       setInputStrapping(
-        `${strappingEMP.dataEmp.emp_code} ${strappingEMP.dataEmp.emp_nickname || ""}`
+        `${strappingEMP.dataEmp.emp_code} ${
+          strappingEMP.dataEmp.emp_nickname || ""
+        }`
       );
     }
   }, [strappingEMP]);
@@ -394,7 +415,7 @@ const QCDashboard = () => {
     });
 
     newSocket.on("urgent", (data) => {
-      console.log('urgent', data);
+      console.log("urgent", data);
       setUrgent(data);
     });
 
@@ -886,23 +907,20 @@ const QCDashboard = () => {
           sessionStorage.setItem("packed-emp", JSON.stringify(data.data));
           setPackedEmp(data.data);
         } else if (type_emp === "strapping-emp" && data) {
-          console.log("Strapping EMP", data.data)
+          console.log("Strapping EMP", data.data);
           sessionStorage.setItem("strapping-emp", JSON.stringify(data.data));
           setStrappingEMP(data.data);
-        }
-        else {
+        } else {
           return;
         }
-      }
-      else {
+      } else {
         Swal.fire({
           icon: "error",
           title: "เกิดข้อผิดพลาด",
           text: `รหัสนี้ ${emp_code} ไม่ได้รับอนุญาตให้เข้าใช้งานระบบ กรุณาติดต่อฝ่าย HR`,
         });
       }
-    }
-    catch (error) {
+    } catch (error) {
       console.log("Error fetching employee data:", error);
       Swal.fire({
         icon: "error",
@@ -936,8 +954,7 @@ const QCDashboard = () => {
       setStrappingEMP(undefined);
       setInputStrapping("");
       inputRefEmpStrapping.current?.focus();
-    }
-    else {
+    } else {
       return;
     }
   };
@@ -1222,20 +1239,45 @@ const QCDashboard = () => {
     }
   };
 
-  const handleRequestProduct = async (so_running: string, pro_code: string, pro_name: string, barcode: string) => {
+  const handleRequestProduct = async (
+    so_running: string,
+    pro_code: string,
+    pro_name: string,
+    barcode: string
+  ) => {
     await axios.post(
-      `${import.meta.env.VITE_API_URL_ORDER}/api/line-notify/print-sticker-issue`,
+      `${
+        import.meta.env.VITE_API_URL_ORDER
+      }/api/line-notify/print-sticker-issue`,
       {
         pro_code: pro_code,
         pro_name: pro_name,
         barcode: barcode,
       }
-    )
-    window.open(`/print-request?so_running=${so_running}&emp_code=${QCEmp?.dataEmp.emp_code}&barcode=${barcodeNotFound}`);
+    );
+    window.open(
+      `/print-request?so_running=${so_running}&emp_code=${QCEmp?.dataEmp.emp_code}&barcode=${barcodeNotFound}`
+    );
   };
 
-  const handleRequestProductFloorOne = async (so_running: string) => {
-    window.open(`/print-request?so_running=${so_running}`);
+  const handleRequestProductFloorOne = async (
+    product_code: string,
+    note: string,
+    so_running: string
+  ) => {
+    await axios.post(
+      `${import.meta.env.VITE_API_URL_ORDER}/api/product-request/create`,
+      {
+        product_code: product_code,
+        emp_code: QCEmp?.dataEmp.emp_code,
+        emp_name: QCEmp?.dataEmp.emp_name,
+        note: note,
+      }
+    );
+    window.open(`/print-request?so_running=${so_running}&note=${note}`);
+    setProductCodeRequestSticker("");
+    setSelectedReason("");
+    setCustomReason("");
   };
 
   const handlePrintStickerBox = async () => {
@@ -1554,13 +1596,12 @@ const QCDashboard = () => {
               <p className="text-3xl font-bold">แจ้งเตือน</p>
             </div>
             <div className="flex text-center justify-center mt-2">
-              <p className="text-3xl text-red-700">สินค้ารายการนี้ไม่มีบาร์โค้ดอยู่ในระบบกรุณากดปุ่มพิมพ์สติกเกอร์จากรายการที่ตรงกันและนำไปแจ้งผู้ดูแลเพื่อแก้ไขต่อไป</p>
+              <p className="text-3xl text-red-700">
+                สินค้ารายการนี้ไม่มีบาร์โค้ดอยู่ในระบบกรุณากดปุ่มพิมพ์สติกเกอร์จากรายการที่ตรงกันและนำไปแจ้งผู้ดูแลเพื่อแก้ไขต่อไป
+              </p>
             </div>
             <div className="flex text-center justify-center mt-2">
-              <img
-                src={ManualPicture}
-                className="w-lg rounded-lg mt-4"
-              ></img>
+              <img src={ManualPicture} className="w-lg rounded-lg mt-4"></img>
             </div>
 
             <div className="flex w-full justify-center mt-3">
@@ -1571,19 +1612,25 @@ const QCDashboard = () => {
                     setModalBarcodeNotFound(false);
                   }
                 }}
-              >ปิด</button>
+              >
+                ปิด
+              </button>
             </div>
-
           </Modal>
           <Modal
             isOpen={modalPrintStickerOpen}
             onClose={() => setModalPrintStickerOpen(null)}
           >
             <div className="flex text-center justify-center">
-              <p className="text-3xl font-bold">สิ่งที่ต้องทำหลังพิมพ์สติกเกอร์</p>
+              <p className="text-3xl font-bold">
+                สิ่งที่ต้องทำหลังพิมพ์สติกเกอร์
+              </p>
             </div>
             <div className="mt-4 flex justify-center items-center gap-4 my-2">
-              <p className='text-2xl'>พิมพ์สติกเกอร์เพื่อส่งต่อให้ผู้ดูแล (พี่มาร์ค) เพื่อทำการแก้ไขข้อมูลสินค้าในระบบ</p>
+              <p className="text-2xl">
+                พิมพ์สติกเกอร์เพื่อส่งต่อให้ผู้ดูแล (พี่มาร์ค)
+                เพื่อทำการแก้ไขข้อมูลสินค้าในระบบ
+              </p>
             </div>
             <div className="mt-4 flex justify-center items-center gap-4 my-2">
               <input
@@ -1596,17 +1643,135 @@ const QCDashboard = () => {
             </div>
             <div className="flex w-full justify-center mt-3">
               <button
-                className={`p-3 text-xl rounded-lg  text-white drop-shadow-sm ${!barcodeNotFound || barcodeNotFound.length < 1 ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-700 hover:bg-red-800 cursor-pointer'}`}
+                className={`p-3 text-xl rounded-lg  text-white drop-shadow-sm ${
+                  !barcodeNotFound || barcodeNotFound.length < 1
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-red-700 hover:bg-red-800 cursor-pointer"
+                }`}
                 disabled={!barcodeNotFound || barcodeNotFound.length < 1}
                 onClick={() => {
-                  if (modalPrintStickerOpen && barcodeNotFound && barcodeNotFound.length > 0 && productNotFoundBarCode) {
+                  if (
+                    modalPrintStickerOpen &&
+                    barcodeNotFound &&
+                    barcodeNotFound.length > 0 &&
+                    productNotFoundBarCode
+                  ) {
                     setModalPrintStickerOpen(null);
-                    handleRequestProduct(modalPrintStickerOpen, productNotFoundBarCode?.pro_code, productNotFoundBarCode?.pro_name, barcodeNotFound);
+                    handleRequestProduct(
+                      modalPrintStickerOpen,
+                      productNotFoundBarCode?.pro_code,
+                      productNotFoundBarCode?.pro_name,
+                      barcodeNotFound
+                    );
                   }
                 }}
-              >พิมพ์สติกเกอร์</button>
+              >
+                พิมพ์สติกเกอร์
+              </button>
             </div>
           </Modal>
+          <Modal
+            isOpen={modalProductRequestOpen}
+            onClose={() => setModalProductRequestOpen(null)}
+          >
+            <div className="flex justify-center text-center">
+              <p className="text-3xl font-bold">กรุณาระบุเหตุผลการขอของใหม่</p>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {REQUEST_REASONS.map((reason) => {
+                const isSelected = selectedReason === reason;
+
+                return (
+                  <label
+                    key={reason}
+                    className={`
+                      flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer
+                      transition-all duration-200 select-none
+                      ${
+                        isSelected
+                          ? "border-red-600 bg-red-50 shadow-md"
+                          : "border-gray-300 bg-white hover:border-red-400 hover:bg-gray-50"
+                      }
+                    `}
+                  >
+                    <input
+                      type="radio"
+                      name="request-reason"
+                      value={reason}
+                      checked={isSelected}
+                      onChange={() => {
+                        setSelectedReason(reason);
+                        if (reason !== "อื่น ๆ") setCustomReason("");
+                      }}
+                      className="hidden"
+                    />
+
+                    <div
+                      className={`
+                        w-6 h-6 rounded-full border-2 flex items-center justify-center
+                        ${isSelected ? "border-red-600" : "border-gray-400"}
+                      `}
+                    >
+                      {isSelected && (
+                        <div className="w-3 h-3 rounded-full bg-red-600" />
+                      )}
+                    </div>
+
+                    <span
+                      className={`
+                        text-xl font-semibold
+                        ${isSelected ? "text-red-700" : "text-gray-700"}
+                      `}
+                    >
+                      {reason}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+
+            {selectedReason === "อื่น ๆ" && (
+              <div className="mt-4 flex justify-center">
+                <input
+                  type="text"
+                  value={customReason}
+                  onChange={(e) => setCustomReason(e.target.value)}
+                  className="bg-white text-xl text-center rounded-sm p-2 drop-shadow-xl w-lg font-bold border border-gray-300"
+                  placeholder="กรุณาระบุเหตุผลเพิ่มเติม"
+                />
+              </div>
+            )}
+
+            <div className="flex w-full justify-center mt-6">
+              <button
+                className={`p-3 text-xl rounded-lg text-white drop-shadow-sm
+        ${
+          !finalReason
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-red-700 hover:bg-red-800"
+        }`}
+                disabled={!finalReason}
+                onClick={() => {
+                  if (
+                    modalProductRequestOpen &&
+                    finalReason &&
+                    productCodeRequestSticker
+                  ) {
+                    setModalProductRequestOpen(null);
+                    handleRequestProductFloorOne(
+                      productCodeRequestSticker,
+                      finalReason,
+                      modalProductRequestOpen
+                    );
+                  }
+                }}
+              >
+                พิมพ์สติกเกอร์
+              </button>
+            </div>
+          </Modal>
+
           <Modal
             isOpen={modalManageOpen}
             onClose={() => setModalManageOpen(false)}
@@ -1666,8 +1831,8 @@ const QCDashboard = () => {
                   src={
                     dataRequest?.product?.product_image_url.startsWith("..")
                       ? `https://www.wangpharma.com${dataRequest?.product?.product_image_url.slice(
-                        2
-                      )}`
+                          2
+                        )}`
                       : dataRequest?.product?.product_image_url
                   }
                   className="w-lg rounded-lg drop-shadow-2xl"
@@ -1677,14 +1842,15 @@ const QCDashboard = () => {
                 <div>
                   <p className="text-3xl font-bold">
                     {`
-                ${Array.isArray(dataQC)
-                        ? dataQC.length > 0
-                          ? dataQC[0]?.members?.mem_name
-                          : "ไม่มีเลขบิล"
-                        : dataQC
-                          ? dataQC?.members?.mem_name
-                          : "-"
-                      }`}
+                ${
+                  Array.isArray(dataQC)
+                    ? dataQC.length > 0
+                      ? dataQC[0]?.members?.mem_name
+                      : "ไม่มีเลขบิล"
+                    : dataQC
+                    ? dataQC?.members?.mem_name
+                    : "-"
+                }`}
                   </p>
                   <p className="text-4xl font-bold mt-6 line-clamp-2">
                     {dataRequest?.product.product_name}
@@ -1735,10 +1901,11 @@ const QCDashboard = () => {
                   <button
                     id={`OrderConfirmationPopUp`}
                     disabled={Number(amountRequest) === 0}
-                    className={`text-center text-white text-lg p-2 rounded-lg px-8 cursor-pointer ${Number(amountRequest) > 0
-                      ? "hover:bg-green-800 bg-green-700"
-                      : "hover:bg-gray-600 bg-gray-500"
-                      }`}
+                    className={`text-center text-white text-lg p-2 rounded-lg px-8 cursor-pointer ${
+                      Number(amountRequest) > 0
+                        ? "hover:bg-green-800 bg-green-700"
+                        : "hover:bg-gray-600 bg-gray-500"
+                    }`}
                     onClick={() =>
                       handleRequestMore(
                         dataRequest?.so_running ?? null,
@@ -1775,8 +1942,8 @@ const QCDashboard = () => {
                       ? dataQC[0]?.members?.mem_name
                       : "ไม่มีเลขบิล"
                     : dataQC
-                      ? dataQC?.members?.mem_name
-                      : "-"}
+                    ? dataQC?.members?.mem_name
+                    : "-"}
                 </p>
                 <p className="text-lg">
                   {Array.isArray(dataQC)
@@ -1784,8 +1951,8 @@ const QCDashboard = () => {
                       ? dataQC[0]?.members?.mem_code
                       : "ไม่มีเลขบิล"
                     : dataQC
-                      ? dataQC?.members?.mem_code
-                      : "-"}
+                    ? dataQC?.members?.mem_code
+                    : "-"}
                 </p>
               </div>
             </div>
@@ -1795,8 +1962,8 @@ const QCDashboard = () => {
                   src={
                     orderForQC?.product?.product_image_url.startsWith("..")
                       ? `https://www.wangpharma.com${orderForQC?.product?.product_image_url.slice(
-                        2
-                      )}`
+                          2
+                        )}`
                       : orderForQC?.product?.product_image_url || boxnotfound
                   }
                   className="w-sm h-sm drop-shadow-xl rounded-lg"
@@ -1983,8 +2150,8 @@ const QCDashboard = () => {
                     src={
                       url?.product_img_url?.startsWith("..")
                         ? `https://www.wangpharma.com${url?.product_img_url?.slice(
-                          2
-                        )}`
+                            2
+                          )}`
                         : url?.product_img_url || boxnotfound
                     }
                     alt=""
@@ -2018,11 +2185,12 @@ const QCDashboard = () => {
                   !!orderForQC?.product?.lot_priority &&
                   inputLot !== orderForQC.product.lot_priority
                 }
-                className={`mt-4  text-white px-4 py-2 rounded-md cursor-pointer ${!!orderForQC?.product?.lot_priority &&
+                className={`mt-4  text-white px-4 py-2 rounded-md cursor-pointer ${
+                  !!orderForQC?.product?.lot_priority &&
                   inputLot !== orderForQC.product.lot_priority
-                  ? "bg-gray-500"
-                  : "bg-green-600 hover:bg-green-700"
-                  }`}
+                    ? "bg-gray-500"
+                    : "bg-green-600 hover:bg-green-700"
+                }`}
               >
                 ตกลง
               </button>
@@ -2042,69 +2210,75 @@ const QCDashboard = () => {
             <p className="mt-2 px-10 text-lg">
               {route
                 ? route
-                  ?.filter((r) => !restrictedQC?.includes(r.route_code))
-                  ?.filter((r) => r.route_name !== "อื่นๆ")
-                  .map((r, index, arr) => (
-                    <span key={r.route_code}>
-                      {r.route_name}
-                      {index < arr.length - 1 ? " , " : ""}
-                    </span>
-                  ))
+                    ?.filter((r) => !restrictedQC?.includes(r.route_code))
+                    ?.filter((r) => r.route_name !== "อื่นๆ")
+                    .map((r, index, arr) => (
+                      <span key={r.route_code}>
+                        {r.route_name}
+                        {index < arr.length - 1 ? " , " : ""}
+                      </span>
+                    ))
                 : "กรุณาป้อนรหัสพนักงาน QC เพื่อแสดงเส้นทางที่ทำงานได้"}
             </p>
-            {urgent && urgent.length > 0 && <div className="bg-red-800 text-white my-1 py-0.5">
-              <p className=" text-2xl font-bold">รายการด่วน</p>
-              <div className="">
-                {urgent.map((u) => {
-                  return (
-                    <p className="font-bold">{u.mem_code} {u.mem_name} [ รายการทั้งหมด {u.amount} บิล ] </p>
-                  )
-                })}
+            {urgent && urgent.length > 0 && (
+              <div className="bg-red-800 text-white my-1 py-0.5">
+                <p className=" text-2xl font-bold">รายการด่วน</p>
+                <div className="">
+                  {urgent.map((u) => {
+                    return (
+                      <p className="font-bold">
+                        {u.mem_code} {u.mem_name} [ รายการทั้งหมด {u.amount} บิล
+                        ]{" "}
+                      </p>
+                    );
+                  })}
+                </div>
               </div>
-            </div>}
-            {basketDataForPrint && basketDataForPrint.length > 0 && (() => {
-              const data = basketDataForPrint[0];
+            )}
+            {basketDataForPrint &&
+              basketDataForPrint.length > 0 &&
+              (() => {
+                const data = basketDataForPrint[0];
 
-              return (
-                <div className="bg-white text-black my-2 py-3 px-4 rounded shadow">
-                  <p className="text-2xl font-bold text-center mb-3">
-                    จำนวนตะกร้าและลัง
-                  </p>
+                return (
+                  <div className="bg-white text-black my-2 py-3 px-4 rounded shadow">
+                    <p className="text-2xl font-bold text-center mb-3">
+                      จำนวนตะกร้าและลัง
+                    </p>
 
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center font-bold text-xl">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center font-bold text-xl">
+                      <div className="rounded-lg border-2 border-yellow-400 bg-yellow-100 text-yellow-800 py-3">
+                        <div className="text-2xl mb-1">F2</div>
+                        <div>{data.basket_floor_2} ตะกร้า</div>
+                        <div>{data.box_floor_2} ลัง</div>
+                      </div>
 
-                    <div className="rounded-lg border-2 border-yellow-400 bg-yellow-100 text-yellow-800 py-3">
-                      <div className="text-2xl mb-1">F2</div>
-                      <div>{data.basket_floor_2} ตะกร้า</div>
-                      <div>{data.box_floor_2} ลัง</div>
-                    </div>
+                      <div className="rounded-lg border-2 border-blue-400 bg-blue-100 text-blue-800 py-3">
+                        <div className="text-2xl mb-1">F3</div>
+                        <div>{data.basket_floor_3} ตะกร้า</div>
+                        <div>{data.box_floor_3} ลัง</div>
+                      </div>
 
-                    <div className="rounded-lg border-2 border-blue-400 bg-blue-100 text-blue-800 py-3">
-                      <div className="text-2xl mb-1">F3</div>
-                      <div>{data.basket_floor_3} ตะกร้า</div>
-                      <div>{data.box_floor_3} ลัง</div>
-                    </div>
+                      <div className="rounded-lg border-2 border-red-400 bg-red-100 text-red-800 py-3">
+                        <div className="text-2xl mb-1">F4</div>
+                        <div>{data.basket_floor_4} ตะกร้า</div>
+                        <div>{data.box_floor_4} ลัง</div>
+                      </div>
 
-                    <div className="rounded-lg border-2 border-red-400 bg-red-100 text-red-800 py-3">
-                      <div className="text-2xl mb-1">F4</div>
-                      <div>{data.basket_floor_4} ตะกร้า</div>
-                      <div>{data.box_floor_4} ลัง</div>
-                    </div>
-
-                    <div className="rounded-lg border-2 border-green-400 bg-green-100 text-green-800 py-3">
-                      <div className="text-2xl mb-1">F5</div>
-                      <div>{data.basket_floor_5} ตะกร้า</div>
-                      <div>{data.box_floor_5} ลัง</div>
-                    </div>
-                    <div className="rounded-lg border-2 border-amber-500 bg-amber-100 text-amber-800 py-3">
-                      <div className="text-2xl mb-1">รวม</div>
-                      <div>{data.basket_count} ตะกร้า</div>
-                      <div>{data.box_count} ลัง</div>
+                      <div className="rounded-lg border-2 border-green-400 bg-green-100 text-green-800 py-3">
+                        <div className="text-2xl mb-1">F5</div>
+                        <div>{data.basket_floor_5} ตะกร้า</div>
+                        <div>{data.box_floor_5} ลัง</div>
+                      </div>
+                      <div className="rounded-lg border-2 border-amber-500 bg-amber-100 text-amber-800 py-3">
+                        <div className="text-2xl mb-1">รวม</div>
+                        <div>{data.basket_count} ตะกร้า</div>
+                        <div>{data.box_count} ลัง</div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })()}
+                );
+              })()}
 
             <div className="w-full mt-5 h-8 px-6">
               <div className="grid grid-cols-6 gap-3">
@@ -2128,14 +2302,15 @@ const QCDashboard = () => {
                     const bill = Array.isArray(dataQC)
                       ? dataQC[index]
                       : index === 0
-                        ? dataQC
-                        : null;
+                      ? dataQC
+                      : null;
 
                     return (
                       <div
                         key={index}
-                        className={` p-2 rounded-lg mt-3 ${isReady ? "bg-blue-400" : "bg-gray-500"
-                          }`}
+                        className={` p-2 rounded-lg mt-3 ${
+                          isReady ? "bg-blue-400" : "bg-gray-500"
+                        }`}
                       >
                         <div className="flex justify-between items-center p-1">
                           <p className="text-lg text-white font-bold">
@@ -2179,17 +2354,20 @@ const QCDashboard = () => {
 
                           <div className="px-4 py-2 bg-white rounded-sm">
                             <p
-                              className={`font-bold text-2xl ${isReady ? "text-green-600" : "text-black"
-                                }`}
+                              className={`font-bold text-2xl ${
+                                isReady ? "text-green-600" : "text-black"
+                              }`}
                             >
                               {bill ? bill?.shoppingOrders?.length : "-"}
                             </p>
                           </div>
-
                         </div>
                         {bill && (
                           <p className="text-sm text-white mt-1 font-semibold">
-                            {new Date(bill.sh_datetime).toISOString().slice(0, 16).replace("T", " ")}
+                            {new Date(bill.sh_datetime)
+                              .toISOString()
+                              .slice(0, 16)
+                              .replace("T", " ")}
                           </p>
                         )}
                       </div>
@@ -2219,7 +2397,7 @@ const QCDashboard = () => {
                               if (Array.isArray(dataQC)) {
                                 return dataQC.length > 0
                                   ? dataQC[0]?.members?.mem_code ||
-                                  "ไม่มีเลขบิล"
+                                      "ไม่มีเลขบิล"
                                   : "ไม่มีเลขบิล";
                               } else if (dataQC) {
                                 return dataQC?.members?.mem_code || "-";
@@ -2234,7 +2412,7 @@ const QCDashboard = () => {
                                 if (Array.isArray(dataQC)) {
                                   return dataQC.length > 0
                                     ? dataQC[0]?.members?.mem_name ||
-                                    "ไม่มีเลขบิล"
+                                        "ไม่มีเลขบิล"
                                     : "ไม่มีเลขบิล";
                                 } else if (dataQC) {
                                   return dataQC?.members?.mem_name || "-";
@@ -2248,7 +2426,7 @@ const QCDashboard = () => {
                                 if (Array.isArray(dataQC)) {
                                   return dataQC.length > 0
                                     ? dataQC[0]?.members?.mem_route
-                                      ?.route_name || "เส้นทาง : อื่นๆ"
+                                        ?.route_name || "เส้นทาง : อื่นๆ"
                                     : "-";
                                 } else if (dataQC) {
                                   return (
@@ -2271,7 +2449,7 @@ const QCDashboard = () => {
                           <p className="text-3xl font-bold">
                             {Array.isArray(dataQC)
                               ? dataQC[0]?.members?.mem_note ??
-                              "ไม่ระบุเงื่อนไข"
+                                "ไม่ระบุเงื่อนไข"
                               : dataQC?.members?.mem_note ?? "ไม่ระบุเงื่อนไข"}
                           </p>
                         </div>
@@ -2354,10 +2532,11 @@ const QCDashboard = () => {
                     <input
                       disabled={!isReady}
                       ref={inputBarcode}
-                      className={`col-span-6  border-4 p-2 px-5 rounded-lg text-4xl text-center ${isReady
-                        ? `bg-orange-100 border-orange-500`
-                        : `border-gray-500 bg-gray-200 `
-                        }`}
+                      className={`col-span-6  border-4 p-2 px-5 rounded-lg text-4xl text-center ${
+                        isReady
+                          ? `bg-orange-100 border-orange-500`
+                          : `border-gray-500 bg-gray-200 `
+                      }`}
                       placeholder="รหัสสินค้า / Barcode"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
@@ -2401,14 +2580,15 @@ const QCDashboard = () => {
                             .map((so, index) => {
                               return (
                                 <tr
-                                  className={`  border-b-2 border-blue-200 ${so.so_already_qc === "Yes"
-                                    ? "bg-green-100 hover:bg-green-100"
-                                    : so.so_already_qc === "RT"
+                                  className={`  border-b-2 border-blue-200 ${
+                                    so.so_already_qc === "Yes"
+                                      ? "bg-green-100 hover:bg-green-100"
+                                      : so.so_already_qc === "RT"
                                       ? "bg-red-100 hover:bg-red-100"
                                       : so.so_already_qc === "notComplete"
-                                        ? "bg-yellow-50 hover:bg-yellow-50"
-                                        : "bg-white hover:bg-gray-50"
-                                    }`}
+                                      ? "bg-yellow-50 hover:bg-yellow-50"
+                                      : "bg-white hover:bg-gray-50"
+                                  }`}
                                 >
                                   <td className="py-4 text-lg border-r-2 border-blue-200 font-semibold px-2">
                                     {index + 1}
@@ -2420,16 +2600,17 @@ const QCDashboard = () => {
                                         {so?.product?.product_floor || "ชั้น 1"}
                                       </p>
                                       <div
-                                        className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full mt-1 ${so.product.product_floor === "5"
-                                          ? "bg-green-500"
-                                          : so.product.product_floor === "4"
+                                        className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full mt-1 ${
+                                          so.product.product_floor === "5"
+                                            ? "bg-green-500"
+                                            : so.product.product_floor === "4"
                                             ? "bg-red-500"
                                             : so.product.product_floor === "3"
-                                              ? "bg-blue-500"
-                                              : so.product.product_floor === "2"
-                                                ? "bg-yellow-500"
-                                                : "bg-gray-400"
-                                          } `}
+                                            ? "bg-blue-500"
+                                            : so.product.product_floor === "2"
+                                            ? "bg-yellow-500"
+                                            : "bg-gray-400"
+                                        } `}
                                       ></div>
                                     </div>
                                   </td>
@@ -2447,18 +2628,19 @@ const QCDashboard = () => {
                                       </p>
 
                                       <p
-                                        className={`text-base font-bold ${so?.picking_status === "picking"
-                                          ? "text-green-600"
-                                          : "text-red-600"
-                                          }`}
+                                        className={`text-base font-bold ${
+                                          so?.picking_status === "picking"
+                                            ? "text-green-600"
+                                            : "text-red-600"
+                                        }`}
                                       >
                                         {so?.picking_status === "pending"
                                           ? "ยังไม่จัด"
                                           : so?.picking_status === "picking"
-                                            ? "จัดแล้ว"
-                                            : so?.picking_status === "request"
-                                              ? "กำลังขอเพิ่ม"
-                                              : so?.picking_status}
+                                          ? "จัดแล้ว"
+                                          : so?.picking_status === "request"
+                                          ? "กำลังขอเพิ่ม"
+                                          : so?.picking_status}
                                       </p>
                                       {!so.product.product_barcode &&
                                         !so.product.product_barcode2 &&
@@ -2525,9 +2707,9 @@ const QCDashboard = () => {
                                           <span className="text-black">
                                             {so?.product?.detail[0]?.create_at
                                               ? dayjs(
-                                                so?.product?.detail[0]
-                                                  ?.create_at
-                                              ).format("DD/MM/YYYY")
+                                                  so?.product?.detail[0]
+                                                    ?.create_at
+                                                ).format("DD/MM/YYYY")
                                               : "ไม่มีข้อมูล"}
                                           </span>
                                         </p>
@@ -2594,10 +2776,10 @@ const QCDashboard = () => {
                                           so.so_already_qc === "notComplete"
                                             ? warning
                                             : so.so_already_qc === "Yes"
-                                              ? accept
-                                              : so.so_already_qc === "RT"
-                                                ? box
-                                                : incorect
+                                            ? accept
+                                            : so.so_already_qc === "RT"
+                                            ? box
+                                            : incorect
                                         }
                                         className="w-10"
                                       ></img>
@@ -2695,10 +2877,11 @@ const QCDashboard = () => {
                                           disabled={
                                             so.picking_status !== "picking"
                                           }
-                                          className={` p-1 rounded-lg text-base text-white cursor-pointer ${so.picking_status !== "picking"
-                                            ? "bg-gray-500 hover:bg-gray-600"
-                                            : "bg-blue-500 hover:bg-blue-600"
-                                            } `}
+                                          className={` p-1 rounded-lg text-base text-white cursor-pointer ${
+                                            so.picking_status !== "picking"
+                                              ? "bg-gray-500 hover:bg-gray-600"
+                                              : "bg-blue-500 hover:bg-blue-600"
+                                          } `}
                                           onClick={() =>
                                             handleFetchData(
                                               so.so_running,
@@ -2715,11 +2898,12 @@ const QCDashboard = () => {
                                           so.so_already_qc === "RT" ||
                                           so.so_already_qc === "Yes"
                                         }
-                                        className={` p-1 rounded-lg text-base text-white cursor-pointer ${so.so_already_qc === "RT" ||
+                                        className={` p-1 rounded-lg text-base text-white cursor-pointer ${
+                                          so.so_already_qc === "RT" ||
                                           so.so_already_qc === "Yes"
-                                          ? "hover:bg-gray-600 bg-gray-500"
-                                          : "hover:bg-red-600 bg-red-500"
-                                          }`}
+                                            ? "hover:bg-gray-600 bg-gray-500"
+                                            : "hover:bg-red-600 bg-red-500"
+                                        }`}
                                         onClick={() => {
                                           handleRT(so.so_running);
                                         }}
@@ -2727,15 +2911,20 @@ const QCDashboard = () => {
                                         {so.so_already_qc === "RT"
                                           ? "ส่ง RT แล้ว"
                                           : so.so_already_qc === "Yes"
-                                            ? "Qc แล้ว"
-                                            : "ส่ง RT"}
+                                          ? "Qc แล้ว"
+                                          : "ส่ง RT"}
                                       </button>
 
                                       <button
                                         id={`Floor1`}
                                         className={`p-1 rounded-lg text-base text-white cursor-pointer bg-blue-500`}
                                         onClick={() => {
-                                          handleRequestProductFloorOne(so.so_running);
+                                          setModalProductRequestOpen(
+                                            so.so_running
+                                          );
+                                          setProductCodeRequestSticker(
+                                            so.product.product_code
+                                          );
                                         }}
                                       >
                                         จัดชั้น 1
@@ -2744,11 +2933,13 @@ const QCDashboard = () => {
                                         id={`Floor1`}
                                         className={`p-1 rounded-lg text-base text-white cursor-pointer bg-blue-500`}
                                         onClick={() => {
-                                          setModalPrintStickerOpen(so.so_running)
+                                          setModalPrintStickerOpen(
+                                            so.so_running
+                                          );
                                           setProductNotFoundBarCode({
                                             pro_code: so.product.product_code,
-                                            pro_name: so.product.product_name
-                                          })
+                                            pro_name: so.product.product_name,
+                                          });
                                         }}
                                       >
                                         พิมพ์สติกเกอร์
@@ -2773,9 +2964,14 @@ const QCDashboard = () => {
                           <p className="w-full flex justify-center text-3xl mt-5 text-red-700 font-bold">
                             กรุณากรอกรหัสพนักงานและรหัสลูกค้าหรือเลขบิลให้เรียบร้อย
                           </p>
-                          <button className="mt-3 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-sm text-lg" onClick={() => {
-                            window.open("https://www.wangpharma.com/Akitokung/api/back_up/re_picking_page.php");
-                          }}>
+                          <button
+                            className="mt-3 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-sm text-lg"
+                            onClick={() => {
+                              window.open(
+                                "https://www.wangpharma.com/Akitokung/api/back_up/re_picking_page.php"
+                              );
+                            }}
+                          >
                             เว็ปสำหรับยิง เมื่อบิลไม่เข้าระบบ
                           </button>
                         </div>
@@ -2803,8 +2999,8 @@ const QCDashboard = () => {
                                 ".."
                               )
                                 ? `https://www.wangpharma.com${productNotHaveBarcode?.product_image_url.slice(
-                                  2
-                                )}`
+                                    2
+                                  )}`
                                 : productNotHaveBarcode?.product_image_url
                             }
                             className="w-50 rounded-lg drop-shadow-sm"
@@ -3040,10 +3236,11 @@ const QCDashboard = () => {
                       </p>
                       <button
                         // disabled={hasNotQC !== 0 || loadingSubmit || !hasPrintSticker}
-                        className={`w-full flex justify-center items-center  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${hasNotQC !== 0 || loadingSubmit || !hasPrintSticker
-                          ? "bg-gray-500 hover:bg-gray-600"
-                          : "bg-green-500 hover:bg-green-600"
-                          }`}
+                        className={`w-full flex justify-center items-center  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${
+                          hasNotQC !== 0 || loadingSubmit || !hasPrintSticker
+                            ? "bg-gray-500 hover:bg-gray-600"
+                            : "bg-green-500 hover:bg-green-600"
+                        }`}
                         onClick={() => {
                           if (
                             hasNotQC !== 0 ||
