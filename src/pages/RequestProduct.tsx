@@ -414,7 +414,7 @@ const RequestProduct: React.FC = () => {
             </p>
             <p className="text-[10px] font-semibold">
               {data?.picking_status === "picking"
-                ? "บอกว่าจัดแล้ว"
+                ? ""
                 : data?.picking_status === "pending"
                 ? "รอจัด"
                 : data?.picking_status}
