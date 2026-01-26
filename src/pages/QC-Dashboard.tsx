@@ -13,6 +13,14 @@ import PackingIcon from "../assets/package-delivered.png";
 import { QRCodeSVG } from "qrcode.react";
 import boxnotfound from "../assets/product-17.png";
 import dayjs from "dayjs";
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import 'dayjs/locale/th';
+
+// กำหนด dayjs plugins
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.locale('th');
 import { SHIPPING_OTHER } from "../const/Constant";
 import { useNavigate } from "react-router";
 import Swal from "sweetalert2";
@@ -142,6 +150,12 @@ export interface ShoppingOrderPrint {
   total_items: number
 }
 
+interface AllStations {
+  updated_at: string,
+  emp_code: string,
+  is_active: false,
+  station: number,
+}
 
 export type ShoppingHead = Root[];
 export type ShoppingHeadOne = Root;
@@ -276,7 +290,18 @@ const QCDashboard = () => {
 
   const [basketDataForPrint, setBasketDataForPrint] = useState<ShoppingOrderPrint[] | null>(null);
 
-  const mac_address = localStorage.getItem("mac_address");
+  const [UUIDStationQC, setuuidStationQC] = useState<string | null>(localStorage.getItem("UUIDStationQC"));
+
+  // Modal Station Info
+  const [modalStationInfo, setModalStationInfo] = useState<boolean>(false);
+  const [stationData, setStationData] = useState<AllStations[]>([]);
+  const [loadingStationData, setLoadingStationData] = useState<boolean>(false);
+
+  // Modal Delete Station Confirmation
+  const [modalDeleteStation, setModalDeleteStation] = useState<boolean>(false);
+  const [stationToDelete, setStationToDelete] = useState<number | null>(null);
+
+  // const [popstationQc, setPopstationQc] = useState<boolean>(false);
 
   const handleCheckFlagRequest = async () => {
     const flag = await axios.get(
@@ -287,6 +312,30 @@ const QCDashboard = () => {
       setRequestProductFlag(true);
     }
   };
+
+  useEffect(() => {
+    if (!UUIDStationQC) {
+      Swal.fire({
+        title: 'กรุณาป้อนข้อมูล',
+        text: 'กรุณาป้อนรหัสสถานี QC',
+        input: 'text',
+        inputPlaceholder: 'รหัสสถานี QC',
+        confirmButtonText: 'ยืนยัน',
+        confirmButtonColor: '#3085d6',
+        inputValidator: (value) => {
+          if (!value) {
+            return 'กรุณาป้อนรหัสสถานี QC!'
+          }
+        }
+      }).then((result) => {
+        if (result.isConfirmed && result.value) {
+          // ทำอะไรกับ input value ที่ได้รับ
+          console.log('รหัสสถานี QC:', result.value);
+          // คุณสามารถเพิ่มโค้ดเพื่อจัดการกับค่าที่ได้รับได้ที่นี่
+        }
+      });
+    }
+  }, [UUIDStationQC]);
 
   useEffect(() => {
     if (import.meta.env.VITE_API_URL_ONOFF_ONE_TAB === "false") {
@@ -868,19 +917,38 @@ const QCDashboard = () => {
 
   const handleGetDataEmp = async (emp_code: string, type_emp: string) => {
     try {
-      if (type_emp === "qc-emp" && !mac_address) {
-        alert("กรุณาติดต่อผู้ดูแลระบบ เนื่องจากไม่พบ Mac Address ของอุปกรณ์นี้");
-        setInputQC("");
+      console.log("UUIDStationQC33:", UUIDStationQC);
+      if (type_emp === "qc-emp" && !UUIDStationQC) {
+        Swal.fire({
+          title: "กรุณาป้อนรหัสสถานี QC",
+          input: "text",
+          inputLabel: "Station QC",
+          inputPlaceholder: "กรุณาป้อนรหัสสถานี QC...",
+          confirmButtonText: "ยืนยัน",
+          inputValidator: (value) => {
+            if (!value) {
+              return "กรุณาป้อนรหัสสถานี QC";
+            }
+            console.log("Station QC Input:", value);
+          }
+        }).then((result) => {
+          if (result.isConfirmed) {
+            console.log("Station QC:", result.value);
+            sendStationQC(result.value);
+          }
+        });
         return;
       }
+      console.log("UUIDStationQC44:", UUIDStationQC);
       const data = await axios.get(
         `${import.meta.env.VITE_API_URL_ORDER}/api/qc/get-emp/${emp_code}`,
         {
           params: {
-            mac_address: type_emp === "qc-emp" ? mac_address : null
+            uuidStationChecked: type_emp === "qc-emp" ? UUIDStationQC : null
           }
         }
       );
+
       if (data.data.dataEmp.allowUsed === true) {
         if (type_emp === "prepare-emp" && data) {
           sessionStorage.setItem("prepare-emp", JSON.stringify(data.data));
@@ -905,16 +973,38 @@ const QCDashboard = () => {
         else {
           return;
         }
-      }
-      else {
+      } else {
         Swal.fire({
           icon: "error",
           title: "เกิดข้อผิดพลาด",
           text: `รหัสนี้ ${emp_code} ไม่ได้รับอนุญาตให้เข้าใช้งานระบบ กรุณาติดต่อฝ่าย HR`,
         });
       }
-    }
-    catch (error) {
+
+
+      // ตรวจสอบผลลัพธ์การตรวจสอบรหัสสถานี QC
+      if (type_emp === "qc-emp" && data.data.resultStationQc.message) {
+        const message = data.data.resultStationQc.message;
+        if (message === "UUID not found" || message === "UUID is required") {
+          localStorage.removeItem("UUIDStationQC");
+          handleClearEmpData("qc-emp");
+          setuuidStationQC(null);
+          Swal.fire({
+            icon: "error",
+            title: "รหัสสถานี QC ไม่ถูกต้อง2",
+            text: `กรุณาป้อนรหัสสถานี QC ใหม่อีกครั้ง`,
+          });
+        } else if (message === "Error updating station QC") {
+          handleClearEmpData("qc-emp");
+          Swal.fire({
+            icon: "error",
+            title: "เกิดข้อผิดพลาดในการอัปเดตสถานี QC",
+            text: `ไม่สามารถใส่ข้อมูลของพนักงานที่ทำงานอยู่แล้วได้ กรุณารอสักครู่หรือลบข้อมูลพนักงานที่ทำงานอยู่ก่อน`,
+          });
+        }
+      }
+
+    } catch (error) {
       console.log("Error fetching employee data:", error);
       Swal.fire({
         icon: "error",
@@ -964,13 +1054,6 @@ const QCDashboard = () => {
     }
   ) => {
     try {
-      console.log(data);
-      console.log("QC Old Amount", oldQCAmount);
-      console.log("QC Old Amount", data.so_qc_amount);
-      console.log(
-        "so_qc_amount + QC Old Amount",
-        Number(data.so_qc_amount) + Number(oldQCAmount)
-      );
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL_ORDER}/api/qc/update-qc`,
         {
@@ -1535,14 +1618,71 @@ const QCDashboard = () => {
     if (modalOpen) setModalOpen(false);
   };
 
-  const checkEmployeeStation = async () => {
+  const fetchStationData = async () => {
     try {
+      setLoadingStationData(true);
+      // เรียก API เพื่อดึงข้อมูล station ทั้งหมด
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/fix-station-qc/all-stations`
+      );
+
+      if (response.data && Array.isArray(response.data)) {
+        setStationData(response.data);
+      } else {
+        setStationData([]); // กรณีไม่มีข้อมูล
+      }
+    } finally {
+      setLoadingStationData(false);
+    }
+  };
+
+  const sendStationQC = async (stationQc: number) => {
+    try {
+      console.log("Checking employee station with UUIDStationQC:", stationQc);
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL_ORDER}/api/fix-station-qc/employee-data`,
         {
-          mac_address: mac_address,
+          stationQc: stationQc,
         }
       );
+      if (response.data.message && response.data.message === 'Station QC already exists') {
+        Swal.fire({
+          icon: "error",
+          title: "ในระบบมีข้อมูลนี้แล้ว",
+          text: `กรุณากรอกกรุณาตรวจสอบข้อมูลอีกครั้ง`,
+          showCancelButton: true,
+          confirmButtonText: "ตกลง",
+          cancelButtonText: "ดูข้อมูลเพิ่มเติม",
+          confirmButtonColor: "#3085d6",
+          cancelButtonColor: "#17a2b8"
+        }).then((result) => {
+          if (result.isDismissed && result.dismiss === Swal.DismissReason.cancel) {
+            // เปิด modal station โดยตรง
+            setModalStationInfo(true);
+            fetchStationData();
+          }
+        });
+      } else if (response.data.message && response.data.message === 'Maximum number of Station QCs reached') {
+        Swal.fire({
+          icon: "error",
+          title: "มีการใช้งานสถานี QC สูงสุดแล้ว",
+          text: `ไม่สามารถเพิ่มสถานี QC ได้ กรุณาตรวจสอบสถานีที่ไม่ได้ใช้งานและลบสถานี QC ที่ไม่ใช้งานออก`,
+        });
+        setuuidStationQC(null);
+      } else if (response.data.message && response.data.message === 'Error saving Station QC') {
+        Swal.fire({
+          icon: "error",
+          title: "เกิดข้อผิดพลาดในการบันทึกสถานี QC",
+          text: `กรุณาลองใหม่อีกครั้ง`,
+        });
+        setuuidStationQC(null);
+      }
+      if (response.data && response.data.UUID) {
+        console.log("checkEmployeeStation response:", response.data);
+        localStorage.setItem("UUIDStationQC", response.data.UUID);
+        setuuidStationQC(response.data.UUID);
+        console.log("UUIDStationQC set to:", UUIDStationQC);
+      }
       if (response.data.status === false) {
         Swal.fire({
           icon: "error",
@@ -1551,10 +1691,68 @@ const QCDashboard = () => {
         });
         handleClearEmpData("qc-emp");
       }
+      return response.data;
     } catch (error) {
       console.log("Error checking employee station:", error);
     }
   }
+
+  const checkEmployeeStation = async (UUID: string) => {
+    if (!UUID) {
+      Swal.fire({
+        icon: "error",
+        title: "กรุณาป้อนรหัสสถานี QC",
+      });
+
+
+    }
+    const result = await axios.post(
+      `${import.meta.env.VITE_API_URL_ORDER}/api/fix-station-qc/check-uuid-station`,
+      {
+        emp_code: QCEmp?.dataEmp?.emp_code,
+        UUID,
+      }
+    );
+    if (result.data.status === false && result.data.message === "UUID not found") {
+      localStorage.removeItem("UUIDStationQC");
+      setuuidStationQC(null);
+      handleClearEmpData("qc-emp");
+      Swal.fire({
+        icon: "error",
+        title: "รหัสสถานี QC ไม่ถูกต้อง",
+        text: `ใส่รหัสพนักงาน QC ใหม่อีกครั้ง พร้อมกรอก รหัสสถานี QC ใหม่`,
+      });
+      return;
+    }
+    return result.data;
+  }
+
+  const deleteStation = async (stationQc: number) => {
+    try {
+      const response = await axios.delete(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/fix-station-qc/delete-station-qc`,
+        {
+          data: { stationQc: stationQc },
+        }
+      );
+      if (response.data.status === true) {
+        Swal.fire({
+          icon: "success",
+          title: "ลบข้อมูลสำเร็จ",
+          text: `ลบข้อมูลสถานี QC ${stationQc} สำเร็จ`,
+        });
+        fetchStationData();
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "ลบข้อมูลไม่สำเร็จ",
+          text: `ไม่สามารถลบข้อมูลสถานี QC ${stationQc} ได้`,
+        });
+      }
+    } catch (error) {
+      console.log("Error deleting station QC:", error);
+    }
+  };
 
   if (error) {
     return (
@@ -1579,6 +1777,122 @@ const QCDashboard = () => {
     return (
       <div>
         <div>
+          <Modal
+            isOpen={modalStationInfo}
+            onClose={() => setModalStationInfo(false)}
+          >
+            <div className="flex flex-col text-center justify-center mb-4">
+              <p className="text-3xl font-bold">ข้อมูล Station QC ทั้งหมด</p>
+              <p className="text-lg text-red-600 font-semibold mt-2">
+                การใช้งานร่วมกันสูงสุดไปเกิน 10 เครื่อง
+              </p>
+            </div>
+
+            {loadingStationData ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="text-xl">กำลังโหลดข้อมูล...</div>
+              </div>
+            ) : stationData.length === 0 ? (
+              <div className="flex flex-col justify-center items-center py-12">
+                <div className="text-gray-500 text-6xl mb-4">📊</div>
+                <div className="text-2xl font-bold text-gray-600 mb-2">ไม่มีข้อมูล Station</div>
+                <div className="text-lg text-gray-500">ไม่พบข้อมูลสถานี QC ในระบบ</div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-300">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border border-gray-300 px-4 py-2 text-left">ลำดับ</th>
+                      <th className="border border-gray-300 px-4 py-2 text-left">รหัสสถานี</th>
+                      <th className="border border-gray-300 px-4 py-2 text-left">รหัสพนักงาน</th>
+                      <th className="border border-gray-300 px-4 py-2 text-center">กิจกรรมล่าสุด</th>
+                      <th className="border border-gray-300 px-4 py-2 text-center">จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stationData.map((station, index) => (
+                      <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="border border-gray-300 px-4 py-2 font-bold">{index + 1}</td>
+                        <td className="border border-gray-300 px-4 py-2">{station.station}</td>
+                        <td className="border border-gray-300 px-4 py-2">{station.emp_code || "ยังไม่มีคนทำงานเครื่องนี้"}</td>
+                        <td className="border border-gray-300 px-4 py-2 text-center text-sm">
+                          {station.updated_at ?
+                            dayjs(station.updated_at).tz('Asia/Bangkok').format('DD/MM/YYYY HH:mm:ss') :
+                            '-'
+                          }
+                        </td>
+                        <td className="border border-gray-300 px-4 py-2 text-center">
+                          <button
+                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+                            onClick={() => {
+                              setStationToDelete(station.station);
+                              setModalDeleteStation(true);
+                            }}
+                          >
+                            ลบ
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="flex justify-center mt-6">
+              <button
+                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg"
+                onClick={() => setModalStationInfo(false)}
+              >
+                ปิด
+              </button>
+            </div>
+          </Modal>
+
+          <Modal
+            isOpen={modalDeleteStation}
+            onClose={() => {
+              setModalDeleteStation(false);
+              setStationToDelete(null);
+            }}
+          >
+            <div className="flex flex-col text-center justify-center mb-4">
+              <div className="text-6xl mb-4">⚠️</div>
+              <p className="text-3xl font-bold text-red-600">ยืนยันการลบ Station QC</p>
+              <p className="text-xl mt-4 text-gray-700">
+                คุณต้องการลบ Station QC หมายเลข <span className="font-bold text-red-600">{stationToDelete}</span> หรือไม่?
+              </p>
+              <p className="text-lg text-red-500 mt-2">
+                ⚠️ การดำเนินการนี้ไม่สามารถย้อนกลับได้
+              </p>
+            </div>
+
+            <div className="flex justify-center gap-4 mt-6">
+              <button
+                className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg"
+                onClick={() => {
+                  setModalDeleteStation(false);
+                  setStationToDelete(null);
+                }}
+              >
+                ยกเลิก
+              </button>
+              <button
+                className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg"
+                onClick={() => {
+                  if (stationToDelete !== null) {
+                    deleteStation(stationToDelete);
+                    setModalDeleteStation(false);
+                    setStationToDelete(null);
+                  }
+                }}
+              >
+                ยืนยันการลบ
+              </button>
+            </div>
+          </Modal>
+
           <Modal
             isOpen={modalBarcodeNotFound}
             onClose={() => setModalBarcodeNotFound(false)}
@@ -2085,6 +2399,13 @@ const QCDashboard = () => {
                   ))
                 : "กรุณาป้อนรหัสพนักงาน QC เพื่อแสดงเส้นทางที่ทำงานได้"}
             </p>
+            <div className={`absolute top-0 right-0 ${QCEmp?.dataEmp?.manage_qc === "Yes" ? "block" : "hidden"}`}>
+              <button
+                className="mt-4 flex justify-center items-center gap-3 border-2 border-green-500 bg-green-100 rounded-lg p-3 w-fit mx-auto hover:shadow-lg hover:scale-105 transition-transform cursor-pointer mr-10"
+                onClick={() => { setModalStationInfo(true); fetchStationData(); }}>
+                ตรวจสอบสถานี QC
+              </button>
+            </div>
             {urgent && urgent.length > 0 && <div className="bg-red-800 text-white my-1 py-0.5">
               <p className=" text-2xl font-bold">รายการด่วน</p>
               <div className="">
@@ -2190,7 +2511,7 @@ const QCDashboard = () => {
                             disabled={!isReady}
                             ref={index === 0 ? inputBill : null}
                             // readOnly={true}
-                            onChange={(e) => { handleChange(e, index); checkEmployeeStation(); }}
+                            onChange={(e) => { handleChange(e, index); checkEmployeeStation(UUIDStationQC || ""); }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
                                 lastInputTimeRef.current = null;
@@ -3118,4 +3439,5 @@ const QCDashboard = () => {
     );
   }
 };
+
 export default QCDashboard;

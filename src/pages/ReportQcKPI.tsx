@@ -54,7 +54,6 @@ export interface QCStation {
   lastQcTime: Date;
   qc_count: number;
   box_amount: string;
-  mac_address: string;
 }
 
 export interface QuartarlyData {
@@ -228,75 +227,12 @@ const Dashboard: React.FC = () => {
     return calculateSpeed(station.qc_count, workingHours);
   };
 
-  // // ฟังก์ชันคำนวณความเร็วเฉลี่ย
-  // const calculateAverageSpeed = (floor: FloorData): number => {
-  //   // console.log("floor data :", floorData);
-  //   // console.log("floor : ", floor);
-  //   // ถ้ายังไม่เริ่มจัดออเดอร์วันนี้
-  //   if (
-  //     !floor.firstPickingTime ||
-  //     !floor.lastPickingTime ||
-  //     floor.completedItem === 0
-  //   ) {
-  //     return 0;
-  //   }
-
-  //   // แปลงเวลาเป็นนาที
-  //   const firstDate = new Date(floor.firstPickingTime);
-  //   const lastDate = new Date(floor.lastPickingTime);
-  //   const [firstHour, firstMin] = firstDate
-  //     .toLocaleTimeString("en-TH", {
-  //       hour: "2-digit",
-  //       minute: "2-digit",
-  //       hour12: false,
-  //     })
-  //     .split(":")
-  //     .map(Number);
-  //   const [lastHour, lastMin] = lastDate
-  //     .toLocaleTimeString("en-TH", {
-  //       hour: "2-digit",
-  //       minute: "2-digit",
-  //       hour12: false,
-  //     })
-  //     .split(":")
-  //     .map(Number);
-  //   const firstTimeInMinutes = firstHour * 60 + firstMin;
-  //   const lastTimeInMinutes = lastHour * 60 + lastMin;
-
-  //   // คำนวณระยะเวลาที่ใช้ (นาที)
-  //   let timeDifferenceInMinutes = lastTimeInMinutes - firstTimeInMinutes;
-
-  //   // จัดการกรณีข้ามวัน (เช่น เริ่ม 23:00 เสร็จ 01:00)
-  //   if (timeDifferenceInMinutes < 0) {
-  //     timeDifferenceInMinutes += 24 * 60; // เพิ่ม 24 ชั่วโมง
-  //   }
-
-  //   // ป้องกันการหารด้วย 0
-  //   if (timeDifferenceInMinutes === 0) {
-  //     return 0;
-  //   }
-
-  //   // ความเร็วเฉลี่ย = จำนวนสินค้าที่จัดไปแล้ว / เวลาที่ใช้
-  //   const averageSpeed = floor.completedItem / timeDifferenceInMinutes;
-
-  //   // console.log("averageSpeed : ", averageSpeed);
-  //   return averageSpeed;
-  // };
-
-  // ฟังก์ชันแสดงเวลา (ถ้า null แสดง **:**)
   const displayTime = (time: Date) => {
     return time
       ? `${dayjs(time).format("DD / MM / YYYY HH:mm")} น.`
       : "__:__ น.";
   };
 
-  // // ฟังก์ชันคำนวณสีตามความเร็ว
-  // const getSpeedColorClass = (speedPerHour: number): string => {
-  //   if (speedPerHour >= 350) return "bg-blue-500";
-  //   if (speedPerHour >= 251 && speedPerHour <= 349) return "bg-green-500";
-  //   if (speedPerHour >= 151 && speedPerHour <= 249) return "bg-yellow-500";
-  //   return "bg-red-500";
-  // };
   const getSpeedColorClass2 = (speedPerHour: number): string => {
     if (speedPerHour >= 200) return "bg-blue-500";
     if (speedPerHour >= 150 && speedPerHour <= 199) return "bg-green-500";
@@ -337,11 +273,6 @@ const Dashboard: React.FC = () => {
         .getMinutes()
         .toString()
         .padStart(2, "0")}`;
-    // console.log("=== การคำนวณเวลาเสร็จ ===");
-    // console.log("ผลรวมความเร็ว:", sumSpeed, "ต่อชั่วโมง");
-    // console.log("เวลาที่ต้องใช้:", minutesNeeded, "นาที");
-    // console.log("เวลาปัจจุบัน:", currentTime.toLocaleString("th-TH"));
-    // console.log("เสร็จใน:", thaiDate, thaiTime, "น.");
     return {
       thaiDate,
       thaiTime,
@@ -360,32 +291,6 @@ const Dashboard: React.FC = () => {
   const gridStyle = {
     gridTemplateColumns: `repeat(${colCount - 1}, minmax(0, 1fr))`,
   };
-
-  // const groupedQCData = (qcStationsData: QCStation[] | null): QCStation[] => {
-  //   if (!qcStationsData || qcStationsData.length === 0) return [];
-
-  //   const grouped = qcStationsData.reduce((acc, item) => {
-  //     const key = item.qc_nickname || 'unknown';
-
-  //     const currentTime = item.lastQcTime ? new Date(item.lastQcTime).getTime() : 0;
-
-  //     if (!acc[key]) {
-  //       acc[key] = item;
-  //     } else {
-  //       const existingTime = acc[key].lastQcTime ? new Date(acc[key].lastQcTime).getTime() : 0;
-  //       console.log(`Comparing times for key ${key}: currentTime=${currentTime}, existingTime=${existingTime}`);
-  //       // console.log(`Item:`, item);
-  //       console.log(`Existing:`, acc[key]);
-  //       if (currentTime > existingTime) {
-  //         acc[key] = item;
-  //       }
-  //     }
-
-  //     return acc;
-  //   }, {} as Record<string, QCStation>);
-
-  //   return Object.values(grouped);
-  // };
 
   const [timeInput, setTimeInput] = useState<string>("");
   const timeNow = new Date();
