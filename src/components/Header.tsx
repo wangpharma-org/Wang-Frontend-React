@@ -236,7 +236,7 @@ const Header = () => {
                       clipRule="evenodd"
                     />
                   </svg>
-                  Logout
+                  Logout.
                 </button>
               </div>
             </div>

@@ -1,5 +1,10 @@
 import axios from "axios";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 import React, { useEffect, useState } from "react";
 import Barcode from "react-barcode";
 
@@ -37,6 +42,7 @@ export interface Product {
   product_addr: string;
   product_stock: string;
   product_unit: string;
+  last_stock_date: Date;
   created_at: Date;
   updated_at: Date;
   detail: Detail[];
@@ -166,6 +172,7 @@ const styles = {
 const RequestProduct: React.FC = () => {
   const queryParams = new URLSearchParams(location.search);
   const so_running = queryParams.get("so_running");
+  const note = queryParams.get("note");
   const barcode = queryParams.get("barcode");
   const [data, setData] = useState<ShoppingOrder | null>(null);
   const prepareEmpData = sessionStorage.getItem("prepare-emp");
@@ -219,6 +226,9 @@ const RequestProduct: React.FC = () => {
     }
   }, [JSONQCEmpData, JSONpackedEmpData, JSONprepareEmpData, data, imageLoaded]);
 
+  const barcodeValue =
+    data?.product?.product_barcode ?? data?.product?.product_code;
+
   return (
     <div style={styles.container} className="grid grid-rows-9 border">
       <div className="row-span-1 grid grid-cols-3 divide-x divide-black border-b">
@@ -253,7 +263,7 @@ const RequestProduct: React.FC = () => {
               </p>
             </div>
             <div className="grid-cols-1">
-              <p className="text-[8px]">ผู้จัด</p>
+              <p className="text-[8px]">ผู้ตรวจ</p>
               <p className="text-[8px] font-bold">
                 {JSONQCEmpData?.dataEmp?.emp_nickname}
               </p>
@@ -290,20 +300,14 @@ const RequestProduct: React.FC = () => {
           </div>
           <div className="row-span-1 p-1">
             <div className="w-full flex justify-between">
-              <p className="text-[8px]">รหัสเจ้าหนี้</p>
-              <p className="text-[8px]">
-                AR :{" "}
-                {Array.isArray(data?.product?.detail) &&
-                data.product.detail.length > 0
-                  ? data.product.detail[0]?.creditor_code
-                  : "ไม่มีข้อมูล"}
-              </p>
+              <p className="text-[8px]">Barcode</p>
+              <p className="text-[8px]">BC : {barcodeValue}</p>
             </div>
-            {Array.isArray(data?.product?.detail) && data?.product?.detail[0]?.creditor_code && (
+            {barcodeValue && (
               <div className="flex justify-left overflow-hidden w-full">
                 <div className="scale-100">
                   <Barcode
-                    value={Array.isArray(data?.product?.detail) && data?.product?.detail[0]?.creditor_code || ""}
+                    value={barcodeValue}
                     format="CODE128"
                     width={1.2}
                     height={20}
@@ -373,7 +377,7 @@ const RequestProduct: React.FC = () => {
         </div>
         <div className="col-span-6 grid grid-rows-2">
           <div className="row-span-1 border-b flex justify-center p-0.5 w-full">
-            <p className="text-[9px]">
+            <p className="text-[9px] truncate whitespace-nowrap overflow-hidden">
               {data?.shoppingHead?.members?.mem_name}
             </p>
           </div>
@@ -404,53 +408,25 @@ const RequestProduct: React.FC = () => {
             <p className="text-[10px] font-semibold">{data?.so_unit}</p>
           </div>
           <div className="flex gap-1 items-center">
-            <p className="text-[10px] font-semibold">คนจัด : </p>
-            {
-              <p className="text-[10px] font-semibold">
-                {data?.emp?.emp_nickname}
-              </p>
-            }
-          </div>
-        </div>
-      </div>
-      <div className="row-span-1 grid grid-cols-3 divide-x divide-black border-b">
-        <div className="col-span-1 grid grid-rows-2">
-          <div className="row-span-1 border-b flex justify-left w-full gap-1 p-1">
-            <p className="text-[8px]">วันที่ :</p>
-            {Array.isArray(data?.product?.detail) && data?.product?.detail[0]?.created_at && (
-              <p className="text-[8px]">
-                {Array.isArray(data?.product?.detail) && dayjs(data?.product?.detail[0]?.created_at).format(
-                  "DD-MM-YYYY"
-                )}
-              </p>
-            )}
-          </div>
-          <div className="row-span-1 flex justify-left w-full gap-1 p-1">
-            <p className="text-[8px]">ซื้อ :</p>
-            <p className="text-[8px]">
-              {Array.isArray(data?.product?.detail) && data?.product?.detail[0]?.purchase_entry_no}
+            <p className="text-[10px] font-semibold">จัดแล้ว : </p>
+            <p className="text-[10px] font-semibold">
+              {data?.emp?.emp_nickname}
+            </p>
+            <p className="text-[10px] font-semibold">
+              {data?.picking_status === "picking"
+                ? ""
+                : data?.picking_status === "pending"
+                ? "รอจัด"
+                : data?.picking_status}
             </p>
           </div>
         </div>
-        <div className="col-span-1 grid grid-rows-2">
-          <div className="row-span-1 border-b flex justify-left w-full gap-1 p-1">
-            <p className="text-[8px]">วันที่ :</p>
-            <p className="text-[8px]">ไม่มีข้อมูล</p>
-          </div>
-          <div className="row-span-1 flex justify-left w-full gap-1 p-1">
-            <p className="text-[8px]">คืน :</p>
-            <p className="text-[8px]">ไม่มีข้อมูล</p>
-          </div>
-        </div>
-        <div className="col-span-1 grid grid-rows-2">
-          <div className="row-span-1 border-b flex justify-left w-full gap-1 p-1">
-            <p className="text-[8px]">วันที่ :</p>
-            <p className="text-[8px]">ไม่มีข้อมูล</p>
-          </div>
-          <div className="row-span-1 flex justify-left w-full gap-1 p-1">
-            <p className="text-[8px]">สั่ง :</p>
-            <p className="text-[8px]">ไม่มีข้อมูล</p>
-          </div>
+      </div>
+      <div className="row-span-1 grid grid-cols-1 divide-x text-center divide-black border-b">
+        <div className="flex justify-center w-full items-center">
+          <p className="text-[10px] font-semibold">
+            {note ? `หมายเหตุขอใหม่ : ${note}` : "สินค้าไม่มี Barcode"}
+          </p>
         </div>
       </div>
       <div className="row-span-1 grid grid-rows-2 border-b">
@@ -458,8 +434,14 @@ const RequestProduct: React.FC = () => {
           <div className="col-span-1">
             <div className="flex justify-left w-full gap-1 p-1">
               <p className="text-[8px]">ซื้อ :</p>
-              <p className="text-[8px]">{Array.isArray(data?.product?.detail) && data?.product?.detail[0]?.quantity}</p>
-              <p className="text-[8px]">{Array.isArray(data?.product?.detail) && data?.product?.detail[0]?.unit}</p>
+              <p className="text-[8px]">
+                {Array.isArray(data?.product?.detail) &&
+                  data?.product?.detail[0]?.quantity}
+              </p>
+              <p className="text-[8px]">
+                {Array.isArray(data?.product?.detail) &&
+                  data?.product?.detail[0]?.unit}
+              </p>
             </div>
           </div>
           <div className="col-span-1">
@@ -495,19 +477,33 @@ const RequestProduct: React.FC = () => {
           <div className="row-span-1 border-b">
             <div className="flex justify-center w-full gap-1 p-1">
               <p className="text-[8px]">
-                Lot : {Array.isArray(data?.product?.detail) && data?.product?.detail[0]?.product_lot}
+                Lot :{" "}
+                {Array.isArray(data?.product?.detail) &&
+                  data?.product?.detail[0]?.product_lot}
               </p>
               <p className="text-[8px]">
                 Exp :{" "}
-                {Array.isArray(data?.product?.detail) && dayjs(data?.product?.detail[0]?.product_exp).format(
-                  "DD-MM-YYYY"
-                )}
+                {Array.isArray(data?.product?.detail) &&
+                  dayjs(data?.product?.detail[0]?.product_exp).format(
+                    "DD-MM-YYYY"
+                  )}
               </p>
             </div>
           </div>
           <div className="row-span-2 border-b flex flex-col justify-center w-full text-center">
             <div className="flex justify-left w-full gap-1 p-1">
-              <p className="text-[12px] font-bold">บาร์โค้ดที่ถูกต้อง : {barcode}</p>
+              <p className="text-[10px] font-bold">
+                {!note
+                  ? `บาร์โค้ดที่ถูกต้อง : ${barcode}`
+                  : `อัปเดต Stock ล่าสุด : ${
+                      data?.product?.last_stock_date
+                        ? dayjs
+                            .utc(data.product.last_stock_date)
+                            .tz("Asia/Bangkok")
+                            .format("DD/MM/YYYY")
+                        : "ไม่มีข้อมูล"
+                    }`}
+              </p>
             </div>
           </div>
           <div className="row-span-1 grid grid-cols-3 divide-black divide-x">
