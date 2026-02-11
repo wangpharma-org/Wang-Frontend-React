@@ -320,8 +320,6 @@ const QCDashboard = () => {
   const [modalDeleteStation, setModalDeleteStation] = useState<boolean>(false);
   const [stationToDelete, setStationToDelete] = useState<number | null>(null);
 
-  // const [popstationQc, setPopstationQc] = useState<boolean>(false);
-
   const handleCheckFlagRequest = async () => {
     const flag = await axios.get(
       `${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/request`
@@ -331,30 +329,6 @@ const QCDashboard = () => {
       setRequestProductFlag(true);
     }
   };
-
-  useEffect(() => {
-    if (!UUIDStationQC) {
-      Swal.fire({
-        title: 'กรุณาป้อนข้อมูล',
-        text: 'กรุณาป้อนรหัสสถานี QC',
-        input: 'text',
-        inputPlaceholder: 'รหัสสถานี QC',
-        confirmButtonText: 'ยืนยัน',
-        confirmButtonColor: '#3085d6',
-        inputValidator: (value) => {
-          if (!value) {
-            return 'กรุณาป้อนรหัสสถานี QC!'
-          }
-        }
-      }).then((result) => {
-        if (result.isConfirmed && result.value) {
-          // ทำอะไรกับ input value ที่ได้รับ
-          console.log('รหัสสถานี QC:', result.value);
-          // คุณสามารถเพิ่มโค้ดเพื่อจัดการกับค่าที่ได้รับได้ที่นี่
-        }
-      });
-    }
-  }, [UUIDStationQC]);
 
   useEffect(() => {
     if (import.meta.env.VITE_API_URL_ONOFF_ONE_TAB === "false") {
@@ -1720,10 +1694,12 @@ const QCDashboard = () => {
         setuuidStationQC(null);
       }
       if (response.data && response.data.UUID) {
-        console.log("checkEmployeeStation response:", response.data);
         localStorage.setItem("UUIDStationQC", response.data.UUID);
         setuuidStationQC(response.data.UUID);
-        console.log("UUIDStationQC set to:", UUIDStationQC);
+        Swal.fire({
+          icon: "success",
+          title: "บันทึกรหัสสถานี QC สำเร็จ",
+        });
       }
       if (response.data.status === false) {
         Swal.fire({
@@ -1768,6 +1744,35 @@ const QCDashboard = () => {
     }
     return result.data;
   }
+
+  const cleanEmployeeFromStation = async (empCode: string) => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/station-qc/employee/${empCode}`
+      );
+      if (response.data.status === true || response.status === 200) {
+        Swal.fire({
+          icon: "success",
+          title: "ล้างข้อมูลพนักงานสำเร็จ",
+          text: `ลบพนักงาน ${empCode} ออกจากสถานีสำเร็จ`,
+        });
+        fetchStationData();
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "ล้างข้อมูลไม่สำเร็จ",
+          text: `ไม่สามารถลบพนักงาน ${empCode} ออกจากสถานีได้`,
+        });
+      }
+    } catch (error) {
+      console.log("Error cleaning employee from station:", error);
+      Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาด",
+        text: "ไม่สามารถล้างข้อมูลพนักงานได้",
+      });
+    }
+  };
 
   const deleteStation = async (stationQc: number) => {
     try {
@@ -1826,7 +1831,7 @@ const QCDashboard = () => {
             <div className="flex flex-col text-center justify-center mb-4">
               <p className="text-3xl font-bold">ข้อมูล Station QC ทั้งหมด</p>
               <p className="text-lg text-red-600 font-semibold mt-2">
-                การใช้งานร่วมกันสูงสุดไปเกิน 10 เครื่อง
+                การใช้งานร่วมกันสูงสุดไม่เกิน 10 เครื่อง
               </p>
             </div>
 
@@ -1865,15 +1870,30 @@ const QCDashboard = () => {
                           }
                         </td>
                         <td className="border border-gray-300 px-4 py-2 text-center">
-                          <button
-                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
-                            onClick={() => {
-                              setStationToDelete(station.station);
-                              setModalDeleteStation(true);
-                            }}
-                          >
-                            ลบ
-                          </button>
+                          <div className="flex gap-2 justify-center">
+                            {station.emp_code && (
+                              <button
+                                className="bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-sm"
+                                onClick={() => {
+                                  if (station.emp_code) {
+                                    cleanEmployeeFromStation(station.emp_code);
+                                  }
+                                }}
+                                title="ลบพนักงานออกจากสถานี"
+                              >
+                                ล้างพนักงาน
+                              </button>
+                            )}
+                            <button
+                              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+                              onClick={() => {
+                                setStationToDelete(station.station);
+                                setModalDeleteStation(true);
+                              }}
+                            >
+                              ลบ
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -2561,7 +2581,7 @@ const QCDashboard = () => {
                   ))
                 : "กรุณาป้อนรหัสพนักงาน QC เพื่อแสดงเส้นทางที่ทำงานได้"}
             </p>
-            <div className={`absolute top-0 right-0 ${QCEmp?.dataEmp?.manage_qc === "Yes" ? "block" : "hidden"}`}>
+            <div className={`absolute top-0 right-0`}>
               <button
                 className="mt-4 flex justify-center items-center gap-3 border-2 border-green-500 bg-green-100 rounded-lg p-3 w-fit mx-auto hover:shadow-lg hover:scale-105 transition-transform cursor-pointer mr-10"
                 onClick={() => { setModalStationInfo(true); fetchStationData(); }}>
