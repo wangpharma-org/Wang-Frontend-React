@@ -984,7 +984,7 @@ const QCDashboard = () => {
           setuuidStationQC(null);
           Swal.fire({
             icon: "error",
-            title: "รหัสสถานี QC ไม่ถูกต้อง2",
+            title: "รหัสสถานี QC ไม่ถูกต้อง",
             text: `กรุณาป้อนรหัสสถานี QC ใหม่อีกครั้ง`,
           });
         } else if (message === "Error updating station QC") {
@@ -1014,6 +1014,13 @@ const QCDashboard = () => {
       inputRefEmpPrepare.current?.focus();
       // setDataQC(null);
     } else if (type_emp === "qc-emp") {
+      const emp_qc = sessionStorage.getItem("qc-emp");
+      if (emp_qc) {
+        const emp_qc_obj = JSON.parse(emp_qc);
+        const emp_code = emp_qc_obj.dataEmp.emp_code;
+        console.log("emp_code", emp_code);
+        cleanEmployeeFromStation(emp_code);
+      }
       sessionStorage.removeItem("qc-emp");
       setQCEmp(undefined);
       setInputQC("");
@@ -1751,11 +1758,6 @@ const QCDashboard = () => {
         `${import.meta.env.VITE_API_URL_ORDER}/api/station-qc/employee/${empCode}`
       );
       if (response.data.status === true || response.status === 200) {
-        Swal.fire({
-          icon: "success",
-          title: "ล้างข้อมูลพนักงานสำเร็จ",
-          text: `ลบพนักงาน ${empCode} ออกจากสถานีสำเร็จ`,
-        });
         fetchStationData();
       } else {
         Swal.fire({
@@ -1871,19 +1873,6 @@ const QCDashboard = () => {
                         </td>
                         <td className="border border-gray-300 px-4 py-2 text-center">
                           <div className="flex gap-2 justify-center">
-                            {station.emp_code && (
-                              <button
-                                className="bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-sm"
-                                onClick={() => {
-                                  if (station.emp_code) {
-                                    cleanEmployeeFromStation(station.emp_code);
-                                  }
-                                }}
-                                title="ลบพนักงานออกจากสถานี"
-                              >
-                                ล้างพนักงาน
-                              </button>
-                            )}
                             <button
                               className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
                               onClick={() => {
