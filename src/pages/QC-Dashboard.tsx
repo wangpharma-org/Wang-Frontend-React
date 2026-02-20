@@ -215,6 +215,18 @@ const QCDashboard = () => {
   const [hasNotPicked, setHasNotPicked] = useState<number>(0);
   const [inComplete, setInComplete] = useState<number>(0);
   const [RT, setRT] = useState<number>(0);
+
+  // RT Request Modal
+  const [rtRequestModalOpen, setRtRequestModalOpen] = useState<boolean>(false);
+  const [rtQrInput, setRtQrInput] = useState<string>("");
+  const [rtSubmitting, setRtSubmitting] = useState<boolean>(false);
+  const [rtError, setRtError] = useState<string | null>(null);
+  const [rtPendingData, setRtPendingData] = useState<{
+    ref: string;
+    so_running: string;
+    sh_running: string;
+    pro_code: string;
+  } | null>(null);
   const [shRunningArray, setSHRunningArray] = useState<string[] | null>(null);
   const [memRoute, setMemRoute] = useState<string | null>(null);
 
@@ -1198,6 +1210,88 @@ const QCDashboard = () => {
         "มีบางอย่างผิดพลาด กรุณาสแกน QC Code ลูกค้าเจ้าเดิมอีกครั้งเพื่อทำงานต่อ"
       );
       handleClear();
+    }
+  };
+
+  const checkFlagRTRequest = async (): Promise<boolean> => {
+    const res = await axios.get(
+      `${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/rt-request`
+    );
+    console.log("Res flagRTRequest", res.data.status);
+    return res.data.status;
+  };
+
+  const handleRTClick = async (so: ShoppingOrder) => {
+    try {
+      const flag = await checkFlagRTRequest();
+      console.log("Flag RT Request:", flag);
+      if (flag === false) {
+        handleRT(so.so_running);
+        return;
+      }
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/rt-request`,
+        {
+          mem_code: mem_code,
+          emp_code: QCEmp?.dataEmp.emp_code,
+          pro_code: so.product.product_code,
+          unit_item: so.so_unit,
+          amount_item: so.so_amount,
+          so_running: so.so_running,
+          sh_running: so.sh_running,
+        },
+        {
+          headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
+        }
+      );
+      setRtPendingData({
+        ref: res.data.refID,
+        so_running: so.so_running,
+        sh_running: so.sh_running,
+        pro_code: so.product.product_code,
+      });
+      setRtQrInput("");
+      setRtError(null);
+      setRtRequestModalOpen(true);
+    } catch (error) {
+      console.error("Failed to create RT request", error);
+    }
+  };
+
+  const handleRTSend = async () => {
+    if (!rtPendingData || !rtQrInput.trim()) return;
+    setRtSubmitting(true);
+    setRtError(null);
+    try {
+      console.log("RT QR Input:", rtPendingData);
+      console.log("Sending RT request with ref:", rtPendingData.ref);
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/rt-request/receive`,
+        {
+          ref: rtPendingData.ref,
+          so_running: rtPendingData.so_running,
+          sh_running: rtPendingData.sh_running,
+          pro_code: rtPendingData.pro_code,
+        },
+        {
+          headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
+        }
+      );
+      if (res.data.error) {
+        Swal.fire({
+          icon: "error",
+          title: "เกิดข้อผิดพลาด",
+          text: "กรุณาลองอีกครั้ง",
+        });
+      } else {
+        setRtRequestModalOpen(false);
+        handleRT(rtPendingData.so_running);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "เกิดข้อผิดพลาด กรุณาลองใหม่";
+      setRtError(message);
+    } finally {
+      setRtSubmitting(false);
     }
   };
 
@@ -2203,6 +2297,42 @@ const QCDashboard = () => {
               </button>
             </div>
           </Modal>
+          <Modal isOpen={rtRequestModalOpen} onClose={() => { }}>
+            <div className="space-y-4 py-2">
+              <h2 className="text-lg font-bold text-center">
+                กรุณาแจ้ง___สำหรับการอนุมัติการส่ง RT
+              </h2>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  ข้อมูลจาก Qr code
+                </label>
+                <input
+                  type="password"
+                  value={rtQrInput}
+                  onChange={(e) => setRtQrInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleRTSend()}
+                  className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  autoFocus
+                />
+              </div>
+              {rtError && (
+                <p className="text-red-500 text-sm text-center">{rtError}</p>
+              )}
+              <p className="text-xs text-gray-400 text-center">
+                ปุ่มจะกดไม่ได้ถ้า ใน input ไม่มีข้อมูล
+              </p>
+              <div className="flex justify-center">
+                <button
+                  onClick={handleRTSend}
+                  disabled={rtSubmitting || !rtQrInput.trim()}
+                  className="bg-gray-700 text-white px-10 py-2 rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {rtSubmitting ? "กำลังส่ง..." : "ส่ง"}
+                </button>
+              </div>
+            </div>
+          </Modal>
+
           <div className="text-center">
             <h1 className="text-2xl font-bold text-center mt-7">
               เส้นทางที่สามารถทำงานได้
@@ -2905,7 +3035,7 @@ const QCDashboard = () => {
                                             : "hover:bg-red-600 bg-red-500"
                                         }`}
                                         onClick={() => {
-                                          handleRT(so.so_running);
+                                          handleRTClick(so);
                                         }}
                                       >
                                         {so.so_already_qc === "RT"

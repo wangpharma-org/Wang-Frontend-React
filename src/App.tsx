@@ -39,6 +39,7 @@ import StackedAreaChart from "./pages/Charts";
 import { io } from "socket.io-client";
 import { useEffect } from "react";
 import UploadStock from "./pages/UploadStock";
+import RTApproval from "./pages/RTApproval";
 
 function App() {
   useEffect(() => {
@@ -342,6 +343,14 @@ function App() {
               <div>
                 <StackedAreaChart />
               </div>
+            }
+          />
+          <Route
+            path="/rt-approval"
+            element={
+              <RequireAuth>
+                <RTApproval />
+              </RequireAuth>
             }
           />
         </Routes>
