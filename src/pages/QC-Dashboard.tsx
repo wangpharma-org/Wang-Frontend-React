@@ -226,7 +226,10 @@ const QCDashboard = () => {
     so_running: string;
     sh_running: string;
     pro_code: string;
+    employees?: { code: string; name: string }[];
   } | null>(null);
+
+  // State สำหรับเก็บ employee array ที่ได้จาก RT API
   const [shRunningArray, setSHRunningArray] = useState<string[] | null>(null);
   const [memRoute, setMemRoute] = useState<string | null>(null);
 
@@ -1249,6 +1252,7 @@ const QCDashboard = () => {
         so_running: so.so_running,
         sh_running: so.sh_running,
         pro_code: so.product.product_code,
+        employees: res.data.employee || [],
       });
       setRtQrInput("");
       setRtError(null);
@@ -2300,7 +2304,13 @@ const QCDashboard = () => {
           <Modal isOpen={rtRequestModalOpen} onClose={() => { }}>
             <div className="space-y-4 py-2">
               <h2 className="text-lg font-bold text-center">
-                กรุณาแจ้ง___สำหรับการอนุมัติการส่ง RT
+                กรุณาแจ้ง
+                {rtPendingData?.employees && rtPendingData.employees.length > 0 ? (
+                  <span className="text-blue-700"> {rtPendingData.employees.map(e => `${e.code} ${e.name}`).join(" | ")} </span>
+                ) : (
+                  "___"
+                )}
+                สำหรับการอนุมัติการส่ง RT
               </h2>
               <div>
                 <label className="block text-sm font-medium mb-1">
