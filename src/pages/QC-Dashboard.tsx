@@ -13,6 +13,14 @@ import PackingIcon from "../assets/package-delivered.png";
 import { QRCodeSVG } from "qrcode.react";
 import boxnotfound from "../assets/product-17.png";
 import dayjs from "dayjs";
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import 'dayjs/locale/th';
+
+// กำหนด dayjs plugins
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.locale('th');
 import { SHIPPING_OTHER } from "../const/Constant";
 import { useNavigate } from "react-router";
 import Swal from "sweetalert2";
@@ -140,6 +148,13 @@ export interface ShoppingOrderPrint {
   basket_count: number;
   box_count: number;
   total_items: number;
+}
+
+interface AllStations {
+  updated_at: string,
+  emp_code: string,
+  is_active: false,
+  station: number,
 }
 
 export type ShoppingHead = Root[];
@@ -294,6 +309,17 @@ const QCDashboard = () => {
     ShoppingOrderPrint[] | null
   >(null);
 
+  const [UUIDStationQC, setuuidStationQC] = useState<string | null>(localStorage.getItem("UUIDStationQC"));
+
+  // Modal Station Info
+  const [modalStationInfo, setModalStationInfo] = useState<boolean>(false);
+  const [stationData, setStationData] = useState<AllStations[]>([]);
+  const [loadingStationData, setLoadingStationData] = useState<boolean>(false);
+
+  // Modal Delete Station Confirmation
+  const [modalDeleteStation, setModalDeleteStation] = useState<boolean>(false);
+  const [stationToDelete, setStationToDelete] = useState<number | null>(null);
+
   const handleCheckFlagRequest = async () => {
     const flag = await axios.get(
       `${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/request`
@@ -337,8 +363,7 @@ const QCDashboard = () => {
   useEffect(() => {
     if (prepareEmp?.dataEmp?.emp_code) {
       setInputPrepare(
-        `${prepareEmp.dataEmp.emp_code} ${
-          prepareEmp.dataEmp.emp_nickname || ""
+        `${prepareEmp.dataEmp.emp_code} ${prepareEmp.dataEmp.emp_nickname || ""
         }`
       );
     }
@@ -887,9 +912,38 @@ const QCDashboard = () => {
 
   const handleGetDataEmp = async (emp_code: string, type_emp: string) => {
     try {
+      console.log("UUIDStationQC33:", UUIDStationQC);
+      if (type_emp === "qc-emp" && !UUIDStationQC) {
+        Swal.fire({
+          title: "กรุณาป้อนรหัสสถานี QC",
+          input: "text",
+          inputLabel: "Station QC",
+          inputPlaceholder: "กรุณาป้อนรหัสสถานี QC...",
+          confirmButtonText: "ยืนยัน",
+          inputValidator: (value) => {
+            if (!value) {
+              return "กรุณาป้อนรหัสสถานี QC";
+            }
+            console.log("Station QC Input:", value);
+          }
+        }).then((result) => {
+          if (result.isConfirmed) {
+            console.log("Station QC:", result.value);
+            sendStationQC(result.value);
+          }
+        });
+        return;
+      }
+      console.log("UUIDStationQC44:", UUIDStationQC);
       const data = await axios.get(
-        `${import.meta.env.VITE_API_URL_ORDER}/api/qc/get-emp/${emp_code}`
+        `${import.meta.env.VITE_API_URL_ORDER}/api/qc/get-emp/${emp_code}`,
+        {
+          params: {
+            uuidStationChecked: type_emp === "qc-emp" ? UUIDStationQC : null
+          }
+        }
       );
+
       if (data.data.dataEmp.allowUsed === true) {
         if (type_emp === "prepare-emp" && data) {
           sessionStorage.setItem("prepare-emp", JSON.stringify(data.data));
@@ -920,6 +974,29 @@ const QCDashboard = () => {
           text: `รหัสนี้ ${emp_code} ไม่ได้รับอนุญาตให้เข้าใช้งานระบบ กรุณาติดต่อฝ่าย HR`,
         });
       }
+
+      // ตรวจสอบผลลัพธ์การตรวจสอบรหัสสถานี QC
+      if (type_emp === "qc-emp" && data.data.resultStationQc.message) {
+        const message = data.data.resultStationQc.message;
+        if (message === "UUID not found" || message === "UUID is required") {
+          localStorage.removeItem("UUIDStationQC");
+          handleClearEmpData("qc-emp");
+          setuuidStationQC(null);
+          Swal.fire({
+            icon: "error",
+            title: "รหัสสถานี QC ไม่ถูกต้อง",
+            text: `กรุณาป้อนรหัสสถานี QC ใหม่อีกครั้ง`,
+          });
+        } else if (message === "Error updating station QC") {
+          handleClearEmpData("qc-emp");
+          Swal.fire({
+            icon: "error",
+            title: "เกิดข้อผิดพลาดในการอัปเดตสถานี QC",
+            text: `ไม่สามารถใส่ข้อมูลของพนักงานที่ทำงานอยู่แล้วได้ กรุณารอสักครู่หรือลบข้อมูลพนักงานที่ทำงานอยู่ก่อน`,
+          });
+        }
+      }
+
     } catch (error) {
       console.log("Error fetching employee data:", error);
       Swal.fire({
@@ -937,6 +1014,13 @@ const QCDashboard = () => {
       inputRefEmpPrepare.current?.focus();
       // setDataQC(null);
     } else if (type_emp === "qc-emp") {
+      const emp_qc = sessionStorage.getItem("qc-emp");
+      if (emp_qc) {
+        const emp_qc_obj = JSON.parse(emp_qc);
+        const emp_code = emp_qc_obj.dataEmp.emp_code;
+        console.log("emp_code", emp_code);
+        cleanEmployeeFromStation(emp_code);
+      }
       sessionStorage.removeItem("qc-emp");
       setQCEmp(undefined);
       setInputQC("");
@@ -969,13 +1053,6 @@ const QCDashboard = () => {
     }
   ) => {
     try {
-      console.log(data);
-      console.log("QC Old Amount", oldQCAmount);
-      console.log("QC Old Amount", data.so_qc_amount);
-      console.log(
-        "so_qc_amount + QC Old Amount",
-        Number(data.so_qc_amount) + Number(oldQCAmount)
-      );
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL_ORDER}/api/qc/update-qc`,
         {
@@ -1246,8 +1323,7 @@ const QCDashboard = () => {
     barcode: string
   ) => {
     await axios.post(
-      `${
-        import.meta.env.VITE_API_URL_ORDER
+      `${import.meta.env.VITE_API_URL_ORDER
       }/api/line-notify/print-sticker-issue`,
       {
         pro_code: pro_code,
@@ -1565,6 +1641,168 @@ const QCDashboard = () => {
     if (modalOpen) setModalOpen(false);
   };
 
+  const fetchStationData = async () => {
+    try {
+      setLoadingStationData(true);
+      // เรียก API เพื่อดึงข้อมูล station ทั้งหมด
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/fix-station-qc/all-stations`
+      );
+
+      if (response.data && Array.isArray(response.data)) {
+        setStationData(response.data);
+      } else {
+        setStationData([]); // กรณีไม่มีข้อมูล
+      }
+    } finally {
+      setLoadingStationData(false);
+    }
+  };
+
+  const sendStationQC = async (stationQc: number) => {
+    try {
+      console.log("Checking employee station with UUIDStationQC:", stationQc);
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/fix-station-qc/employee-data`,
+        {
+          stationQc: stationQc,
+        }
+      );
+      if (response.data.message && response.data.message === 'Station QC already exists') {
+        Swal.fire({
+          icon: "error",
+          title: "ในระบบมีข้อมูลนี้แล้ว",
+          text: `กรุณากรอกกรุณาตรวจสอบข้อมูลอีกครั้ง`,
+          showCancelButton: true,
+          confirmButtonText: "ตกลง",
+          cancelButtonText: "ดูข้อมูลเพิ่มเติม",
+          confirmButtonColor: "#3085d6",
+          cancelButtonColor: "#17a2b8"
+        }).then((result) => {
+          if (result.isDismissed && result.dismiss === Swal.DismissReason.cancel) {
+            // เปิด modal station โดยตรง
+            setModalStationInfo(true);
+            fetchStationData();
+          }
+        });
+      } else if (response.data.message && response.data.message === 'Maximum number of Station QCs reached') {
+        Swal.fire({
+          icon: "error",
+          title: "มีการใช้งานสถานี QC สูงสุดแล้ว",
+          text: `ไม่สามารถเพิ่มสถานี QC ได้ กรุณาตรวจสอบสถานีที่ไม่ได้ใช้งานและลบสถานี QC ที่ไม่ใช้งานออก`,
+        });
+        setuuidStationQC(null);
+      } else if (response.data.message && response.data.message === 'Error saving Station QC') {
+        Swal.fire({
+          icon: "error",
+          title: "เกิดข้อผิดพลาดในการบันทึกสถานี QC",
+          text: `กรุณาลองใหม่อีกครั้ง`,
+        });
+        setuuidStationQC(null);
+      }
+      if (response.data && response.data.UUID) {
+        localStorage.setItem("UUIDStationQC", response.data.UUID);
+        setuuidStationQC(response.data.UUID);
+        Swal.fire({
+          icon: "success",
+          title: "บันทึกรหัสสถานี QC สำเร็จ",
+        });
+      }
+      if (response.data.status === false) {
+        Swal.fire({
+          icon: "error",
+          title: "ไม่ได้ทำงานเกิน 20 นาที ",
+          text: `กรุณากรอกข้อมูลช่องพนักงานตรวสอบสินค้าใหม่อีกครั้ง`,
+        });
+        handleClearEmpData("qc-emp");
+      }
+      return response.data;
+    } catch (error) {
+      console.log("Error checking employee station:", error);
+    }
+  }
+
+  const checkEmployeeStation = async (UUID: string) => {
+    if (!UUID) {
+      Swal.fire({
+        icon: "error",
+        title: "กรุณาป้อนรหัสสถานี QC",
+      });
+
+
+    }
+    const result = await axios.post(
+      `${import.meta.env.VITE_API_URL_ORDER}/api/fix-station-qc/check-uuid-station`,
+      {
+        emp_code: QCEmp?.dataEmp?.emp_code,
+        UUID,
+      }
+    );
+    if (result.data.status === false && result.data.message === "UUID not found") {
+      localStorage.removeItem("UUIDStationQC");
+      setuuidStationQC(null);
+      handleClearEmpData("qc-emp");
+      Swal.fire({
+        icon: "error",
+        title: "รหัสสถานี QC ไม่ถูกต้อง",
+        text: `ใส่รหัสพนักงาน QC ใหม่อีกครั้ง พร้อมกรอก รหัสสถานี QC ใหม่`,
+      });
+      return;
+    }
+    return result.data;
+  }
+
+  const cleanEmployeeFromStation = async (empCode: string) => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/station-qc/employee/${empCode}`
+      );
+      if (response.data.status === true || response.status === 200) {
+        fetchStationData();
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "ล้างข้อมูลไม่สำเร็จ",
+          text: `ไม่สามารถลบพนักงาน ${empCode} ออกจากสถานีได้`,
+        });
+      }
+    } catch (error) {
+      console.log("Error cleaning employee from station:", error);
+      Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาด",
+        text: "ไม่สามารถล้างข้อมูลพนักงานได้",
+      });
+    }
+  };
+
+  const deleteStation = async (stationQc: number) => {
+    try {
+      const response = await axios.delete(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/fix-station-qc/delete-station-qc`,
+        {
+          data: { stationQc: stationQc },
+        }
+      );
+      if (response.data.status === true) {
+        Swal.fire({
+          icon: "success",
+          title: "ลบข้อมูลสำเร็จ",
+          text: `ลบข้อมูลสถานี QC ${stationQc} สำเร็จ`,
+        });
+        fetchStationData();
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "ลบข้อมูลไม่สำเร็จ",
+          text: `ไม่สามารถลบข้อมูลสถานี QC ${stationQc} ได้`,
+        });
+      }
+    } catch (error) {
+      console.log("Error deleting station QC:", error);
+    }
+  };
+
   if (error) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -1588,6 +1826,124 @@ const QCDashboard = () => {
     return (
       <div>
         <div>
+          <Modal
+            isOpen={modalStationInfo}
+            onClose={() => setModalStationInfo(false)}
+          >
+            <div className="flex flex-col text-center justify-center mb-4">
+              <p className="text-3xl font-bold">ข้อมูล Station QC ทั้งหมด</p>
+              <p className="text-lg text-red-600 font-semibold mt-2">
+                การใช้งานร่วมกันสูงสุดไม่เกิน 10 เครื่อง
+              </p>
+            </div>
+
+            {loadingStationData ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="text-xl">กำลังโหลดข้อมูล...</div>
+              </div>
+            ) : stationData.length === 0 ? (
+              <div className="flex flex-col justify-center items-center py-12">
+                <div className="text-gray-500 text-6xl mb-4">📊</div>
+                <div className="text-2xl font-bold text-gray-600 mb-2">ไม่มีข้อมูล Station</div>
+                <div className="text-lg text-gray-500">ไม่พบข้อมูลสถานี QC ในระบบ</div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-300">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border border-gray-300 px-4 py-2 text-left">ลำดับ</th>
+                      <th className="border border-gray-300 px-4 py-2 text-left">รหัสสถานี</th>
+                      <th className="border border-gray-300 px-4 py-2 text-left">รหัสพนักงาน</th>
+                      <th className="border border-gray-300 px-4 py-2 text-center">กิจกรรมล่าสุด</th>
+                      <th className="border border-gray-300 px-4 py-2 text-center">จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stationData.map((station, index) => (
+                      <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="border border-gray-300 px-4 py-2 font-bold">{index + 1}</td>
+                        <td className="border border-gray-300 px-4 py-2">{station.station}</td>
+                        <td className="border border-gray-300 px-4 py-2">{station.emp_code || "ยังไม่มีคนทำงานเครื่องนี้"}</td>
+                        <td className="border border-gray-300 px-4 py-2 text-center text-sm">
+                          {station.updated_at ?
+                            dayjs(station.updated_at).tz('Asia/Bangkok').format('DD/MM/YYYY HH:mm:ss') :
+                            '-'
+                          }
+                        </td>
+                        <td className="border border-gray-300 px-4 py-2 text-center">
+                          <div className="flex gap-2 justify-center">
+                            <button
+                              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+                              onClick={() => {
+                                setStationToDelete(station.station);
+                                setModalDeleteStation(true);
+                              }}
+                            >
+                              ลบ
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="flex justify-center mt-6">
+              <button
+                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg"
+                onClick={() => setModalStationInfo(false)}
+              >
+                ปิด
+              </button>
+            </div>
+          </Modal>
+
+          <Modal
+            isOpen={modalDeleteStation}
+            onClose={() => {
+              setModalDeleteStation(false);
+              setStationToDelete(null);
+            }}
+          >
+            <div className="flex flex-col text-center justify-center mb-4">
+              <div className="text-6xl mb-4">⚠️</div>
+              <p className="text-3xl font-bold text-red-600">ยืนยันการลบ Station QC</p>
+              <p className="text-xl mt-4 text-gray-700">
+                คุณต้องการลบ Station QC หมายเลข <span className="font-bold text-red-600">{stationToDelete}</span> หรือไม่?
+              </p>
+              <p className="text-lg text-red-500 mt-2">
+                ⚠️ การดำเนินการนี้ไม่สามารถย้อนกลับได้
+              </p>
+            </div>
+
+            <div className="flex justify-center gap-4 mt-6">
+              <button
+                className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg"
+                onClick={() => {
+                  setModalDeleteStation(false);
+                  setStationToDelete(null);
+                }}
+              >
+                ยกเลิก
+              </button>
+              <button
+                className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg"
+                onClick={() => {
+                  if (stationToDelete !== null) {
+                    deleteStation(stationToDelete);
+                    setModalDeleteStation(false);
+                    setStationToDelete(null);
+                  }
+                }}
+              >
+                ยืนยันการลบ
+              </button>
+            </div>
+          </Modal>
+
           <Modal
             isOpen={modalBarcodeNotFound}
             onClose={() => setModalBarcodeNotFound(false)}
@@ -1643,11 +1999,10 @@ const QCDashboard = () => {
             </div>
             <div className="flex w-full justify-center mt-3">
               <button
-                className={`p-3 text-xl rounded-lg  text-white drop-shadow-sm ${
-                  !barcodeNotFound || barcodeNotFound.length < 1
+                className={`p-3 text-xl rounded-lg  text-white drop-shadow-sm ${!barcodeNotFound || barcodeNotFound.length < 1
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-red-700 hover:bg-red-800 cursor-pointer"
-                }`}
+                  }`}
                 disabled={!barcodeNotFound || barcodeNotFound.length < 1}
                 onClick={() => {
                   if (
@@ -1688,10 +2043,9 @@ const QCDashboard = () => {
                     className={`
                       flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer
                       transition-all duration-200 select-none
-                      ${
-                        isSelected
-                          ? "border-red-600 bg-red-50 shadow-md"
-                          : "border-gray-300 bg-white hover:border-red-400 hover:bg-gray-50"
+                      ${isSelected
+                        ? "border-red-600 bg-red-50 shadow-md"
+                        : "border-gray-300 bg-white hover:border-red-400 hover:bg-gray-50"
                       }
                     `}
                   >
@@ -1746,11 +2100,10 @@ const QCDashboard = () => {
             <div className="flex w-full justify-center mt-6">
               <button
                 className={`p-3 text-xl rounded-lg text-white drop-shadow-sm
-        ${
-          !finalReason
-            ? "bg-gray-400 cursor-not-allowed"
-            : "bg-red-700 hover:bg-red-800"
-        }`}
+        ${!finalReason
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-red-700 hover:bg-red-800"
+                  }`}
                 disabled={!finalReason}
                 onClick={() => {
                   if (
@@ -1831,8 +2184,8 @@ const QCDashboard = () => {
                   src={
                     dataRequest?.product?.product_image_url.startsWith("..")
                       ? `https://www.wangpharma.com${dataRequest?.product?.product_image_url.slice(
-                          2
-                        )}`
+                        2
+                      )}`
                       : dataRequest?.product?.product_image_url
                   }
                   className="w-lg rounded-lg drop-shadow-2xl"
@@ -1842,15 +2195,14 @@ const QCDashboard = () => {
                 <div>
                   <p className="text-3xl font-bold">
                     {`
-                ${
-                  Array.isArray(dataQC)
-                    ? dataQC.length > 0
-                      ? dataQC[0]?.members?.mem_name
-                      : "ไม่มีเลขบิล"
-                    : dataQC
-                    ? dataQC?.members?.mem_name
-                    : "-"
-                }`}
+                ${Array.isArray(dataQC)
+                        ? dataQC.length > 0
+                          ? dataQC[0]?.members?.mem_name
+                          : "ไม่มีเลขบิล"
+                        : dataQC
+                          ? dataQC?.members?.mem_name
+                          : "-"
+                      }`}
                   </p>
                   <p className="text-4xl font-bold mt-6 line-clamp-2">
                     {dataRequest?.product.product_name}
@@ -1901,11 +2253,10 @@ const QCDashboard = () => {
                   <button
                     id={`OrderConfirmationPopUp`}
                     disabled={Number(amountRequest) === 0}
-                    className={`text-center text-white text-lg p-2 rounded-lg px-8 cursor-pointer ${
-                      Number(amountRequest) > 0
+                    className={`text-center text-white text-lg p-2 rounded-lg px-8 cursor-pointer ${Number(amountRequest) > 0
                         ? "hover:bg-green-800 bg-green-700"
                         : "hover:bg-gray-600 bg-gray-500"
-                    }`}
+                      }`}
                     onClick={() =>
                       handleRequestMore(
                         dataRequest?.so_running ?? null,
@@ -1942,8 +2293,8 @@ const QCDashboard = () => {
                       ? dataQC[0]?.members?.mem_name
                       : "ไม่มีเลขบิล"
                     : dataQC
-                    ? dataQC?.members?.mem_name
-                    : "-"}
+                      ? dataQC?.members?.mem_name
+                      : "-"}
                 </p>
                 <p className="text-lg">
                   {Array.isArray(dataQC)
@@ -1951,8 +2302,8 @@ const QCDashboard = () => {
                       ? dataQC[0]?.members?.mem_code
                       : "ไม่มีเลขบิล"
                     : dataQC
-                    ? dataQC?.members?.mem_code
-                    : "-"}
+                      ? dataQC?.members?.mem_code
+                      : "-"}
                 </p>
               </div>
             </div>
@@ -1962,8 +2313,8 @@ const QCDashboard = () => {
                   src={
                     orderForQC?.product?.product_image_url.startsWith("..")
                       ? `https://www.wangpharma.com${orderForQC?.product?.product_image_url.slice(
-                          2
-                        )}`
+                        2
+                      )}`
                       : orderForQC?.product?.product_image_url || boxnotfound
                   }
                   className="w-sm h-sm drop-shadow-xl rounded-lg"
@@ -2150,8 +2501,8 @@ const QCDashboard = () => {
                     src={
                       url?.product_img_url?.startsWith("..")
                         ? `https://www.wangpharma.com${url?.product_img_url?.slice(
-                            2
-                          )}`
+                          2
+                        )}`
                         : url?.product_img_url || boxnotfound
                     }
                     alt=""
@@ -2185,12 +2536,11 @@ const QCDashboard = () => {
                   !!orderForQC?.product?.lot_priority &&
                   inputLot !== orderForQC.product.lot_priority
                 }
-                className={`mt-4  text-white px-4 py-2 rounded-md cursor-pointer ${
-                  !!orderForQC?.product?.lot_priority &&
-                  inputLot !== orderForQC.product.lot_priority
+                className={`mt-4  text-white px-4 py-2 rounded-md cursor-pointer ${!!orderForQC?.product?.lot_priority &&
+                    inputLot !== orderForQC.product.lot_priority
                     ? "bg-gray-500"
                     : "bg-green-600 hover:bg-green-700"
-                }`}
+                  }`}
               >
                 ตกลง
               </button>
@@ -2210,16 +2560,23 @@ const QCDashboard = () => {
             <p className="mt-2 px-10 text-lg">
               {route
                 ? route
-                    ?.filter((r) => !restrictedQC?.includes(r.route_code))
-                    ?.filter((r) => r.route_name !== "อื่นๆ")
-                    .map((r, index, arr) => (
-                      <span key={r.route_code}>
-                        {r.route_name}
-                        {index < arr.length - 1 ? " , " : ""}
-                      </span>
-                    ))
+                  ?.filter((r) => !restrictedQC?.includes(r.route_code))
+                  ?.filter((r) => r.route_name !== "อื่นๆ")
+                  .map((r, index, arr) => (
+                    <span key={r.route_code}>
+                      {r.route_name}
+                      {index < arr.length - 1 ? " , " : ""}
+                    </span>
+                  ))
                 : "กรุณาป้อนรหัสพนักงาน QC เพื่อแสดงเส้นทางที่ทำงานได้"}
             </p>
+            <div className={`absolute top-0 right-0`}>
+              <button
+                className="mt-4 flex justify-center items-center gap-3 border-2 border-green-500 bg-green-100 rounded-lg p-3 w-fit mx-auto hover:shadow-lg hover:scale-105 transition-transform cursor-pointer mr-10"
+                onClick={() => { setModalStationInfo(true); fetchStationData(); }}>
+                ตรวจสอบสถานี QC
+              </button>
+            </div>
             {urgent && urgent.length > 0 && (
               <div className="bg-red-800 text-white my-1 py-0.5">
                 <p className=" text-2xl font-bold">รายการด่วน</p>
@@ -2302,15 +2659,14 @@ const QCDashboard = () => {
                     const bill = Array.isArray(dataQC)
                       ? dataQC[index]
                       : index === 0
-                      ? dataQC
-                      : null;
+                        ? dataQC
+                        : null;
 
                     return (
                       <div
                         key={index}
-                        className={` p-2 rounded-lg mt-3 ${
-                          isReady ? "bg-blue-400" : "bg-gray-500"
-                        }`}
+                        className={` p-2 rounded-lg mt-3 ${isReady ? "bg-blue-400" : "bg-gray-500"
+                          }`}
                       >
                         <div className="flex justify-between items-center p-1">
                           <p className="text-lg text-white font-bold">
@@ -2332,7 +2688,7 @@ const QCDashboard = () => {
                             disabled={!isReady}
                             ref={index === 0 ? inputBill : null}
                             // readOnly={true}
-                            onChange={(e) => handleChange(e, index)}
+                            onChange={(e) => { handleChange(e, index); checkEmployeeStation(UUIDStationQC || ""); }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
                                 lastInputTimeRef.current = null;
@@ -2354,9 +2710,8 @@ const QCDashboard = () => {
 
                           <div className="px-4 py-2 bg-white rounded-sm">
                             <p
-                              className={`font-bold text-2xl ${
-                                isReady ? "text-green-600" : "text-black"
-                              }`}
+                              className={`font-bold text-2xl ${isReady ? "text-green-600" : "text-black"
+                                }`}
                             >
                               {bill ? bill?.shoppingOrders?.length : "-"}
                             </p>
@@ -2397,7 +2752,7 @@ const QCDashboard = () => {
                               if (Array.isArray(dataQC)) {
                                 return dataQC.length > 0
                                   ? dataQC[0]?.members?.mem_code ||
-                                      "ไม่มีเลขบิล"
+                                  "ไม่มีเลขบิล"
                                   : "ไม่มีเลขบิล";
                               } else if (dataQC) {
                                 return dataQC?.members?.mem_code || "-";
@@ -2412,7 +2767,7 @@ const QCDashboard = () => {
                                 if (Array.isArray(dataQC)) {
                                   return dataQC.length > 0
                                     ? dataQC[0]?.members?.mem_name ||
-                                        "ไม่มีเลขบิล"
+                                    "ไม่มีเลขบิล"
                                     : "ไม่มีเลขบิล";
                                 } else if (dataQC) {
                                   return dataQC?.members?.mem_name || "-";
@@ -2426,7 +2781,7 @@ const QCDashboard = () => {
                                 if (Array.isArray(dataQC)) {
                                   return dataQC.length > 0
                                     ? dataQC[0]?.members?.mem_route
-                                        ?.route_name || "เส้นทาง : อื่นๆ"
+                                      ?.route_name || "เส้นทาง : อื่นๆ"
                                     : "-";
                                 } else if (dataQC) {
                                   return (
@@ -2449,7 +2804,7 @@ const QCDashboard = () => {
                           <p className="text-3xl font-bold">
                             {Array.isArray(dataQC)
                               ? dataQC[0]?.members?.mem_note ??
-                                "ไม่ระบุเงื่อนไข"
+                              "ไม่ระบุเงื่อนไข"
                               : dataQC?.members?.mem_note ?? "ไม่ระบุเงื่อนไข"}
                           </p>
                         </div>
@@ -2532,11 +2887,10 @@ const QCDashboard = () => {
                     <input
                       disabled={!isReady}
                       ref={inputBarcode}
-                      className={`col-span-6  border-4 p-2 px-5 rounded-lg text-4xl text-center ${
-                        isReady
+                      className={`col-span-6  border-4 p-2 px-5 rounded-lg text-4xl text-center ${isReady
                           ? `bg-orange-100 border-orange-500`
                           : `border-gray-500 bg-gray-200 `
-                      }`}
+                        }`}
                       placeholder="รหัสสินค้า / Barcode"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
@@ -2569,7 +2923,7 @@ const QCDashboard = () => {
                         {order?.length > 0 ? (
                           order
                             .sort((a, b) => {
-                              const getPriority = (item: any) => {
+                              const getPriority = (item: ShoppingOrder) => {
                                 if (item.so_already_qc === "RT") return 2;
                                 if (item.so_already_qc === "Yes") return 1;
                                 return 0; // ยังไม่ QC
@@ -2580,15 +2934,14 @@ const QCDashboard = () => {
                             .map((so, index) => {
                               return (
                                 <tr
-                                  className={`  border-b-2 border-blue-200 ${
-                                    so.so_already_qc === "Yes"
+                                  className={`  border-b-2 border-blue-200 ${so.so_already_qc === "Yes"
                                       ? "bg-green-100 hover:bg-green-100"
                                       : so.so_already_qc === "RT"
-                                      ? "bg-red-100 hover:bg-red-100"
-                                      : so.so_already_qc === "notComplete"
-                                      ? "bg-yellow-50 hover:bg-yellow-50"
-                                      : "bg-white hover:bg-gray-50"
-                                  }`}
+                                        ? "bg-red-100 hover:bg-red-100"
+                                        : so.so_already_qc === "notComplete"
+                                          ? "bg-yellow-50 hover:bg-yellow-50"
+                                          : "bg-white hover:bg-gray-50"
+                                    }`}
                                 >
                                   <td className="py-4 text-lg border-r-2 border-blue-200 font-semibold px-2">
                                     {index + 1}
@@ -2600,17 +2953,16 @@ const QCDashboard = () => {
                                         {so?.product?.product_floor || "ชั้น 1"}
                                       </p>
                                       <div
-                                        className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full mt-1 ${
-                                          so.product.product_floor === "5"
+                                        className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full mt-1 ${so.product.product_floor === "5"
                                             ? "bg-green-500"
                                             : so.product.product_floor === "4"
-                                            ? "bg-red-500"
-                                            : so.product.product_floor === "3"
-                                            ? "bg-blue-500"
-                                            : so.product.product_floor === "2"
-                                            ? "bg-yellow-500"
-                                            : "bg-gray-400"
-                                        } `}
+                                              ? "bg-red-500"
+                                              : so.product.product_floor === "3"
+                                                ? "bg-blue-500"
+                                                : so.product.product_floor === "2"
+                                                  ? "bg-yellow-500"
+                                                  : "bg-gray-400"
+                                          } `}
                                       ></div>
                                     </div>
                                   </td>
@@ -2628,19 +2980,18 @@ const QCDashboard = () => {
                                       </p>
 
                                       <p
-                                        className={`text-base font-bold ${
-                                          so?.picking_status === "picking"
+                                        className={`text-base font-bold ${so?.picking_status === "picking"
                                             ? "text-green-600"
                                             : "text-red-600"
-                                        }`}
+                                          }`}
                                       >
                                         {so?.picking_status === "pending"
                                           ? "ยังไม่จัด"
                                           : so?.picking_status === "picking"
-                                          ? "จัดแล้ว"
-                                          : so?.picking_status === "request"
-                                          ? "กำลังขอเพิ่ม"
-                                          : so?.picking_status}
+                                            ? "จัดแล้ว"
+                                            : so?.picking_status === "request"
+                                              ? "กำลังขอเพิ่ม"
+                                              : so?.picking_status}
                                       </p>
                                       {!so.product.product_barcode &&
                                         !so.product.product_barcode2 &&
@@ -2707,9 +3058,9 @@ const QCDashboard = () => {
                                           <span className="text-black">
                                             {so?.product?.detail[0]?.create_at
                                               ? dayjs(
-                                                  so?.product?.detail[0]
-                                                    ?.create_at
-                                                ).format("DD/MM/YYYY")
+                                                so?.product?.detail[0]
+                                                  ?.create_at
+                                              ).format("DD/MM/YYYY")
                                               : "ไม่มีข้อมูล"}
                                           </span>
                                         </p>
@@ -2776,10 +3127,10 @@ const QCDashboard = () => {
                                           so.so_already_qc === "notComplete"
                                             ? warning
                                             : so.so_already_qc === "Yes"
-                                            ? accept
-                                            : so.so_already_qc === "RT"
-                                            ? box
-                                            : incorect
+                                              ? accept
+                                              : so.so_already_qc === "RT"
+                                                ? box
+                                                : incorect
                                         }
                                         className="w-10"
                                       ></img>
@@ -2877,11 +3228,10 @@ const QCDashboard = () => {
                                           disabled={
                                             so.picking_status !== "picking"
                                           }
-                                          className={` p-1 rounded-lg text-base text-white cursor-pointer ${
-                                            so.picking_status !== "picking"
+                                          className={` p-1 rounded-lg text-base text-white cursor-pointer ${so.picking_status !== "picking"
                                               ? "bg-gray-500 hover:bg-gray-600"
                                               : "bg-blue-500 hover:bg-blue-600"
-                                          } `}
+                                            } `}
                                           onClick={() =>
                                             handleFetchData(
                                               so.so_running,
@@ -2898,12 +3248,11 @@ const QCDashboard = () => {
                                           so.so_already_qc === "RT" ||
                                           so.so_already_qc === "Yes"
                                         }
-                                        className={` p-1 rounded-lg text-base text-white cursor-pointer ${
-                                          so.so_already_qc === "RT" ||
-                                          so.so_already_qc === "Yes"
+                                        className={` p-1 rounded-lg text-base text-white cursor-pointer ${so.so_already_qc === "RT" ||
+                                            so.so_already_qc === "Yes"
                                             ? "hover:bg-gray-600 bg-gray-500"
                                             : "hover:bg-red-600 bg-red-500"
-                                        }`}
+                                          }`}
                                         onClick={() => {
                                           handleRT(so.so_running);
                                         }}
@@ -2911,8 +3260,8 @@ const QCDashboard = () => {
                                         {so.so_already_qc === "RT"
                                           ? "ส่ง RT แล้ว"
                                           : so.so_already_qc === "Yes"
-                                          ? "Qc แล้ว"
-                                          : "ส่ง RT"}
+                                            ? "Qc แล้ว"
+                                            : "ส่ง RT"}
                                       </button>
 
                                       <button
@@ -2999,8 +3348,8 @@ const QCDashboard = () => {
                                 ".."
                               )
                                 ? `https://www.wangpharma.com${productNotHaveBarcode?.product_image_url.slice(
-                                    2
-                                  )}`
+                                  2
+                                )}`
                                 : productNotHaveBarcode?.product_image_url
                             }
                             className="w-50 rounded-lg drop-shadow-sm"
@@ -3236,11 +3585,10 @@ const QCDashboard = () => {
                       </p>
                       <button
                         // disabled={hasNotQC !== 0 || loadingSubmit || !hasPrintSticker}
-                        className={`w-full flex justify-center items-center  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${
-                          hasNotQC !== 0 || loadingSubmit || !hasPrintSticker
+                        className={`w-full flex justify-center items-center  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${hasNotQC !== 0 || loadingSubmit || !hasPrintSticker
                             ? "bg-gray-500 hover:bg-gray-600"
                             : "bg-green-500 hover:bg-green-600"
-                        }`}
+                          }`}
                         onClick={() => {
                           if (
                             hasNotQC !== 0 ||
@@ -3282,4 +3630,5 @@ const QCDashboard = () => {
     );
   }
 };
+
 export default QCDashboard;
