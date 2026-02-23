@@ -53,6 +53,7 @@ export default function RTApproval() {
   const [approvedRef, setApprovedRef] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("false");
   const [search, setSearch] = useState("");
+  const [dateFilter, setDateFilter] = useState<string>("");
 
   const filteredData = data.filter((item) => {
     const matchStatus = statusFilter === "all" || item.status === statusFilter;
@@ -66,7 +67,8 @@ export default function RTApproval() {
       item.product.name.toLowerCase().includes(q) ||
       item.so_running.toLowerCase().includes(q) ||
       item.sh_running.toLowerCase().includes(q);
-    return matchStatus && matchSearch;
+    const matchDate = !dateFilter || item.created_at.slice(0, 10) === dateFilter;
+    return matchStatus && matchSearch && matchDate;
   });
 
   // สำหรับ view Duplicate — group by employee+member+product+so และแสดง count
@@ -158,6 +160,22 @@ export default function RTApproval() {
             placeholder="ค้นหา พนักงาน / ร้าน / สินค้า / SO / SH..."
             className="flex-1 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            {dateFilter && (
+              <button
+                onClick={() => setDateFilter("")}
+                className="px-3 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+              >
+                ล้าง
+              </button>
+            )}
+          </div>
           <div className="flex gap-2 flex-wrap">
             {STATUS_FILTERS.map((s) => (
               <button
@@ -185,6 +203,7 @@ export default function RTApproval() {
               <thead>
                 <tr className="bg-blue-400 text-white">
                   <th className="py-3 px-3 text-left font-semibold text-sm">ที่</th>
+                  <th className="py-3 px-3 text-left font-semibold text-sm">อ้างอิง</th>
                   <th className="py-3 px-3 text-left font-semibold text-sm">ข้อมูลพนักงาน</th>
                   <th className="py-3 px-3 text-left font-semibold text-sm">ข้อมูลร้าน</th>
                   <th className="py-3 px-3 text-left font-semibold text-sm">ชื่อสินค้า</th>
@@ -213,6 +232,7 @@ export default function RTApproval() {
                       }`}
                     >
                       <td className="py-3 px-3 text-sm">{index + 1}</td>
+                      <td className="py-3 px-3 text-sm font-semibold text-gray-700">{item.ref.slice(-6)}</td>
                       <td className="py-3 px-3 text-sm max-w-[100px]"><p className="line-clamp-3">{item.employee.code}/{item.employee.name}</p></td>
                       <td className="py-3 px-3 text-sm max-w-[180px]"><p className="line-clamp-3">{item.member.code}/{item.member.name}</p></td>
                       <td className="py-3 px-3 text-sm max-w-[160px]"><p className="line-clamp-3">{item.product.code}/{item.product.name}</p></td>
@@ -344,6 +364,7 @@ export default function RTApproval() {
           <h2 className="text-lg font-bold">สแกนที่ Station QC</h2>
           <div className="p-4 bg-red-100 rounded-xl">
             <QRCodeSVG value={approvedRef} size={200} />
+            <div id="refKey" className="mt-2 text-center text-xs text-gray-700 font-semibold">{approvedRef}</div>
           </div>
           <button
             onClick={() => { setQrModalOpen(false); fetchData(); }}

@@ -352,8 +352,7 @@ const QCDashboard = () => {
   useEffect(() => {
     if (prepareEmp?.dataEmp?.emp_code) {
       setInputPrepare(
-        `${prepareEmp.dataEmp.emp_code} ${
-          prepareEmp.dataEmp.emp_nickname || ""
+        `${prepareEmp.dataEmp.emp_code} ${prepareEmp.dataEmp.emp_nickname || ""
         }`
       );
     }
@@ -384,8 +383,7 @@ const QCDashboard = () => {
   useEffect(() => {
     if (strappingEMP?.dataEmp?.emp_code) {
       setInputStrapping(
-        `${strappingEMP.dataEmp.emp_code} ${
-          strappingEMP.dataEmp.emp_nickname || ""
+        `${strappingEMP.dataEmp.emp_code} ${strappingEMP.dataEmp.emp_nickname || ""
         }`
       );
     }
@@ -1282,11 +1280,19 @@ const QCDashboard = () => {
         }
       );
       if (res.data.error) {
-        Swal.fire({
-          icon: "error",
-          title: "เกิดข้อผิดพลาด",
-          text: "กรุณาลองอีกครั้ง",
-        });
+        if (res.data.error === "Unknown error") {
+          Swal.fire({
+            icon: "error",
+            title: "เกิดข้อผิดพลาด",
+            text: "กรุณาลองอีกครั้ง",
+          });
+        } else if (res.data.error === "RT Request not found") {
+          Swal.fire({
+            icon: "error",
+            title: "QR code ไม่ถูกต้อง",
+            text: "กรุณาสแกน QR code ที่ถูกต้อง",
+          });
+        }
       } else {
         setRtRequestModalOpen(false);
         handleRT(rtPendingData.so_running);
@@ -1344,8 +1350,7 @@ const QCDashboard = () => {
     barcode: string
   ) => {
     await axios.post(
-      `${
-        import.meta.env.VITE_API_URL_ORDER
+      `${import.meta.env.VITE_API_URL_ORDER
       }/api/line-notify/print-sticker-issue`,
       {
         pro_code: pro_code,
@@ -1741,11 +1746,10 @@ const QCDashboard = () => {
             </div>
             <div className="flex w-full justify-center mt-3">
               <button
-                className={`p-3 text-xl rounded-lg  text-white drop-shadow-sm ${
-                  !barcodeNotFound || barcodeNotFound.length < 1
+                className={`p-3 text-xl rounded-lg  text-white drop-shadow-sm ${!barcodeNotFound || barcodeNotFound.length < 1
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-red-700 hover:bg-red-800 cursor-pointer"
-                }`}
+                  }`}
                 disabled={!barcodeNotFound || barcodeNotFound.length < 1}
                 onClick={() => {
                   if (
@@ -1786,10 +1790,9 @@ const QCDashboard = () => {
                     className={`
                       flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer
                       transition-all duration-200 select-none
-                      ${
-                        isSelected
-                          ? "border-red-600 bg-red-50 shadow-md"
-                          : "border-gray-300 bg-white hover:border-red-400 hover:bg-gray-50"
+                      ${isSelected
+                        ? "border-red-600 bg-red-50 shadow-md"
+                        : "border-gray-300 bg-white hover:border-red-400 hover:bg-gray-50"
                       }
                     `}
                   >
@@ -1844,11 +1847,10 @@ const QCDashboard = () => {
             <div className="flex w-full justify-center mt-6">
               <button
                 className={`p-3 text-xl rounded-lg text-white drop-shadow-sm
-        ${
-          !finalReason
-            ? "bg-gray-400 cursor-not-allowed"
-            : "bg-red-700 hover:bg-red-800"
-        }`}
+        ${!finalReason
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-red-700 hover:bg-red-800"
+                  }`}
                 disabled={!finalReason}
                 onClick={() => {
                   if (
@@ -1929,8 +1931,8 @@ const QCDashboard = () => {
                   src={
                     dataRequest?.product?.product_image_url.startsWith("..")
                       ? `https://www.wangpharma.com${dataRequest?.product?.product_image_url.slice(
-                          2
-                        )}`
+                        2
+                      )}`
                       : dataRequest?.product?.product_image_url
                   }
                   className="w-lg rounded-lg drop-shadow-2xl"
@@ -1940,15 +1942,14 @@ const QCDashboard = () => {
                 <div>
                   <p className="text-3xl font-bold">
                     {`
-                ${
-                  Array.isArray(dataQC)
-                    ? dataQC.length > 0
-                      ? dataQC[0]?.members?.mem_name
-                      : "ไม่มีเลขบิล"
-                    : dataQC
-                    ? dataQC?.members?.mem_name
-                    : "-"
-                }`}
+                ${Array.isArray(dataQC)
+                        ? dataQC.length > 0
+                          ? dataQC[0]?.members?.mem_name
+                          : "ไม่มีเลขบิล"
+                        : dataQC
+                          ? dataQC?.members?.mem_name
+                          : "-"
+                      }`}
                   </p>
                   <p className="text-4xl font-bold mt-6 line-clamp-2">
                     {dataRequest?.product.product_name}
@@ -1999,11 +2000,10 @@ const QCDashboard = () => {
                   <button
                     id={`OrderConfirmationPopUp`}
                     disabled={Number(amountRequest) === 0}
-                    className={`text-center text-white text-lg p-2 rounded-lg px-8 cursor-pointer ${
-                      Number(amountRequest) > 0
+                    className={`text-center text-white text-lg p-2 rounded-lg px-8 cursor-pointer ${Number(amountRequest) > 0
                         ? "hover:bg-green-800 bg-green-700"
                         : "hover:bg-gray-600 bg-gray-500"
-                    }`}
+                      }`}
                     onClick={() =>
                       handleRequestMore(
                         dataRequest?.so_running ?? null,
@@ -2040,8 +2040,8 @@ const QCDashboard = () => {
                       ? dataQC[0]?.members?.mem_name
                       : "ไม่มีเลขบิล"
                     : dataQC
-                    ? dataQC?.members?.mem_name
-                    : "-"}
+                      ? dataQC?.members?.mem_name
+                      : "-"}
                 </p>
                 <p className="text-lg">
                   {Array.isArray(dataQC)
@@ -2049,8 +2049,8 @@ const QCDashboard = () => {
                       ? dataQC[0]?.members?.mem_code
                       : "ไม่มีเลขบิล"
                     : dataQC
-                    ? dataQC?.members?.mem_code
-                    : "-"}
+                      ? dataQC?.members?.mem_code
+                      : "-"}
                 </p>
               </div>
             </div>
@@ -2060,8 +2060,8 @@ const QCDashboard = () => {
                   src={
                     orderForQC?.product?.product_image_url.startsWith("..")
                       ? `https://www.wangpharma.com${orderForQC?.product?.product_image_url.slice(
-                          2
-                        )}`
+                        2
+                      )}`
                       : orderForQC?.product?.product_image_url || boxnotfound
                   }
                   className="w-sm h-sm drop-shadow-xl rounded-lg"
@@ -2248,8 +2248,8 @@ const QCDashboard = () => {
                     src={
                       url?.product_img_url?.startsWith("..")
                         ? `https://www.wangpharma.com${url?.product_img_url?.slice(
-                            2
-                          )}`
+                          2
+                        )}`
                         : url?.product_img_url || boxnotfound
                     }
                     alt=""
@@ -2283,12 +2283,11 @@ const QCDashboard = () => {
                   !!orderForQC?.product?.lot_priority &&
                   inputLot !== orderForQC.product.lot_priority
                 }
-                className={`mt-4  text-white px-4 py-2 rounded-md cursor-pointer ${
-                  !!orderForQC?.product?.lot_priority &&
-                  inputLot !== orderForQC.product.lot_priority
+                className={`mt-4  text-white px-4 py-2 rounded-md cursor-pointer ${!!orderForQC?.product?.lot_priority &&
+                    inputLot !== orderForQC.product.lot_priority
                     ? "bg-gray-500"
                     : "bg-green-600 hover:bg-green-700"
-                }`}
+                  }`}
               >
                 ตกลง
               </button>
@@ -2312,6 +2311,14 @@ const QCDashboard = () => {
                 )}
                 สำหรับการอนุมัติการส่ง RT
               </h2>
+              {rtPendingData?.ref && (
+                <p className="text-center text-sm text-gray-500">
+                  เลขอ้างอิง:{" "}
+                  <span className="font-semibold text-gray-800">
+                    {rtPendingData.ref.slice(-6)}
+                  </span>
+                </p>
+              )}
               <div>
                 <label className="block text-sm font-medium mb-1">
                   ข้อมูลจาก Qr code
@@ -2350,14 +2357,14 @@ const QCDashboard = () => {
             <p className="mt-2 px-10 text-lg">
               {route
                 ? route
-                    ?.filter((r) => !restrictedQC?.includes(r.route_code))
-                    ?.filter((r) => r.route_name !== "อื่นๆ")
-                    .map((r, index, arr) => (
-                      <span key={r.route_code}>
-                        {r.route_name}
-                        {index < arr.length - 1 ? " , " : ""}
-                      </span>
-                    ))
+                  ?.filter((r) => !restrictedQC?.includes(r.route_code))
+                  ?.filter((r) => r.route_name !== "อื่นๆ")
+                  .map((r, index, arr) => (
+                    <span key={r.route_code}>
+                      {r.route_name}
+                      {index < arr.length - 1 ? " , " : ""}
+                    </span>
+                  ))
                 : "กรุณาป้อนรหัสพนักงาน QC เพื่อแสดงเส้นทางที่ทำงานได้"}
             </p>
             {urgent && urgent.length > 0 && (
@@ -2442,15 +2449,14 @@ const QCDashboard = () => {
                     const bill = Array.isArray(dataQC)
                       ? dataQC[index]
                       : index === 0
-                      ? dataQC
-                      : null;
+                        ? dataQC
+                        : null;
 
                     return (
                       <div
                         key={index}
-                        className={` p-2 rounded-lg mt-3 ${
-                          isReady ? "bg-blue-400" : "bg-gray-500"
-                        }`}
+                        className={` p-2 rounded-lg mt-3 ${isReady ? "bg-blue-400" : "bg-gray-500"
+                          }`}
                       >
                         <div className="flex justify-between items-center p-1">
                           <p className="text-lg text-white font-bold">
@@ -2494,9 +2500,8 @@ const QCDashboard = () => {
 
                           <div className="px-4 py-2 bg-white rounded-sm">
                             <p
-                              className={`font-bold text-2xl ${
-                                isReady ? "text-green-600" : "text-black"
-                              }`}
+                              className={`font-bold text-2xl ${isReady ? "text-green-600" : "text-black"
+                                }`}
                             >
                               {bill ? bill?.shoppingOrders?.length : "-"}
                             </p>
@@ -2537,7 +2542,7 @@ const QCDashboard = () => {
                               if (Array.isArray(dataQC)) {
                                 return dataQC.length > 0
                                   ? dataQC[0]?.members?.mem_code ||
-                                      "ไม่มีเลขบิล"
+                                  "ไม่มีเลขบิล"
                                   : "ไม่มีเลขบิล";
                               } else if (dataQC) {
                                 return dataQC?.members?.mem_code || "-";
@@ -2552,7 +2557,7 @@ const QCDashboard = () => {
                                 if (Array.isArray(dataQC)) {
                                   return dataQC.length > 0
                                     ? dataQC[0]?.members?.mem_name ||
-                                        "ไม่มีเลขบิล"
+                                    "ไม่มีเลขบิล"
                                     : "ไม่มีเลขบิล";
                                 } else if (dataQC) {
                                   return dataQC?.members?.mem_name || "-";
@@ -2566,7 +2571,7 @@ const QCDashboard = () => {
                                 if (Array.isArray(dataQC)) {
                                   return dataQC.length > 0
                                     ? dataQC[0]?.members?.mem_route
-                                        ?.route_name || "เส้นทาง : อื่นๆ"
+                                      ?.route_name || "เส้นทาง : อื่นๆ"
                                     : "-";
                                 } else if (dataQC) {
                                   return (
@@ -2589,7 +2594,7 @@ const QCDashboard = () => {
                           <p className="text-3xl font-bold">
                             {Array.isArray(dataQC)
                               ? dataQC[0]?.members?.mem_note ??
-                                "ไม่ระบุเงื่อนไข"
+                              "ไม่ระบุเงื่อนไข"
                               : dataQC?.members?.mem_note ?? "ไม่ระบุเงื่อนไข"}
                           </p>
                         </div>
@@ -2672,11 +2677,10 @@ const QCDashboard = () => {
                     <input
                       disabled={!isReady}
                       ref={inputBarcode}
-                      className={`col-span-6  border-4 p-2 px-5 rounded-lg text-4xl text-center ${
-                        isReady
+                      className={`col-span-6  border-4 p-2 px-5 rounded-lg text-4xl text-center ${isReady
                           ? `bg-orange-100 border-orange-500`
                           : `border-gray-500 bg-gray-200 `
-                      }`}
+                        }`}
                       placeholder="รหัสสินค้า / Barcode"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
@@ -2720,15 +2724,14 @@ const QCDashboard = () => {
                             .map((so, index) => {
                               return (
                                 <tr
-                                  className={`  border-b-2 border-blue-200 ${
-                                    so.so_already_qc === "Yes"
+                                  className={`  border-b-2 border-blue-200 ${so.so_already_qc === "Yes"
                                       ? "bg-green-100 hover:bg-green-100"
                                       : so.so_already_qc === "RT"
-                                      ? "bg-red-100 hover:bg-red-100"
-                                      : so.so_already_qc === "notComplete"
-                                      ? "bg-yellow-50 hover:bg-yellow-50"
-                                      : "bg-white hover:bg-gray-50"
-                                  }`}
+                                        ? "bg-red-100 hover:bg-red-100"
+                                        : so.so_already_qc === "notComplete"
+                                          ? "bg-yellow-50 hover:bg-yellow-50"
+                                          : "bg-white hover:bg-gray-50"
+                                    }`}
                                 >
                                   <td className="py-4 text-lg border-r-2 border-blue-200 font-semibold px-2">
                                     {index + 1}
@@ -2740,17 +2743,16 @@ const QCDashboard = () => {
                                         {so?.product?.product_floor || "ชั้น 1"}
                                       </p>
                                       <div
-                                        className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full mt-1 ${
-                                          so.product.product_floor === "5"
+                                        className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full mt-1 ${so.product.product_floor === "5"
                                             ? "bg-green-500"
                                             : so.product.product_floor === "4"
-                                            ? "bg-red-500"
-                                            : so.product.product_floor === "3"
-                                            ? "bg-blue-500"
-                                            : so.product.product_floor === "2"
-                                            ? "bg-yellow-500"
-                                            : "bg-gray-400"
-                                        } `}
+                                              ? "bg-red-500"
+                                              : so.product.product_floor === "3"
+                                                ? "bg-blue-500"
+                                                : so.product.product_floor === "2"
+                                                  ? "bg-yellow-500"
+                                                  : "bg-gray-400"
+                                          } `}
                                       ></div>
                                     </div>
                                   </td>
@@ -2768,19 +2770,18 @@ const QCDashboard = () => {
                                       </p>
 
                                       <p
-                                        className={`text-base font-bold ${
-                                          so?.picking_status === "picking"
+                                        className={`text-base font-bold ${so?.picking_status === "picking"
                                             ? "text-green-600"
                                             : "text-red-600"
-                                        }`}
+                                          }`}
                                       >
                                         {so?.picking_status === "pending"
                                           ? "ยังไม่จัด"
                                           : so?.picking_status === "picking"
-                                          ? "จัดแล้ว"
-                                          : so?.picking_status === "request"
-                                          ? "กำลังขอเพิ่ม"
-                                          : so?.picking_status}
+                                            ? "จัดแล้ว"
+                                            : so?.picking_status === "request"
+                                              ? "กำลังขอเพิ่ม"
+                                              : so?.picking_status}
                                       </p>
                                       {!so.product.product_barcode &&
                                         !so.product.product_barcode2 &&
@@ -2847,9 +2848,9 @@ const QCDashboard = () => {
                                           <span className="text-black">
                                             {so?.product?.detail[0]?.create_at
                                               ? dayjs(
-                                                  so?.product?.detail[0]
-                                                    ?.create_at
-                                                ).format("DD/MM/YYYY")
+                                                so?.product?.detail[0]
+                                                  ?.create_at
+                                              ).format("DD/MM/YYYY")
                                               : "ไม่มีข้อมูล"}
                                           </span>
                                         </p>
@@ -2916,10 +2917,10 @@ const QCDashboard = () => {
                                           so.so_already_qc === "notComplete"
                                             ? warning
                                             : so.so_already_qc === "Yes"
-                                            ? accept
-                                            : so.so_already_qc === "RT"
-                                            ? box
-                                            : incorect
+                                              ? accept
+                                              : so.so_already_qc === "RT"
+                                                ? box
+                                                : incorect
                                         }
                                         className="w-10"
                                       ></img>
@@ -3017,11 +3018,10 @@ const QCDashboard = () => {
                                           disabled={
                                             so.picking_status !== "picking"
                                           }
-                                          className={` p-1 rounded-lg text-base text-white cursor-pointer ${
-                                            so.picking_status !== "picking"
+                                          className={` p-1 rounded-lg text-base text-white cursor-pointer ${so.picking_status !== "picking"
                                               ? "bg-gray-500 hover:bg-gray-600"
                                               : "bg-blue-500 hover:bg-blue-600"
-                                          } `}
+                                            } `}
                                           onClick={() =>
                                             handleFetchData(
                                               so.so_running,
@@ -3038,12 +3038,11 @@ const QCDashboard = () => {
                                           so.so_already_qc === "RT" ||
                                           so.so_already_qc === "Yes"
                                         }
-                                        className={` p-1 rounded-lg text-base text-white cursor-pointer ${
-                                          so.so_already_qc === "RT" ||
-                                          so.so_already_qc === "Yes"
+                                        className={` p-1 rounded-lg text-base text-white cursor-pointer ${so.so_already_qc === "RT" ||
+                                            so.so_already_qc === "Yes"
                                             ? "hover:bg-gray-600 bg-gray-500"
                                             : "hover:bg-red-600 bg-red-500"
-                                        }`}
+                                          }`}
                                         onClick={() => {
                                           handleRTClick(so);
                                         }}
@@ -3051,8 +3050,8 @@ const QCDashboard = () => {
                                         {so.so_already_qc === "RT"
                                           ? "ส่ง RT แล้ว"
                                           : so.so_already_qc === "Yes"
-                                          ? "Qc แล้ว"
-                                          : "ส่ง RT"}
+                                            ? "Qc แล้ว"
+                                            : "ส่ง RT"}
                                       </button>
 
                                       <button
@@ -3139,8 +3138,8 @@ const QCDashboard = () => {
                                 ".."
                               )
                                 ? `https://www.wangpharma.com${productNotHaveBarcode?.product_image_url.slice(
-                                    2
-                                  )}`
+                                  2
+                                )}`
                                 : productNotHaveBarcode?.product_image_url
                             }
                             className="w-50 rounded-lg drop-shadow-sm"
@@ -3376,11 +3375,10 @@ const QCDashboard = () => {
                       </p>
                       <button
                         // disabled={hasNotQC !== 0 || loadingSubmit || !hasPrintSticker}
-                        className={`w-full flex justify-center items-center  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${
-                          hasNotQC !== 0 || loadingSubmit || !hasPrintSticker
+                        className={`w-full flex justify-center items-center  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${hasNotQC !== 0 || loadingSubmit || !hasPrintSticker
                             ? "bg-gray-500 hover:bg-gray-600"
                             : "bg-green-500 hover:bg-green-600"
-                        }`}
+                          }`}
                         onClick={() => {
                           if (
                             hasNotQC !== 0 ||
