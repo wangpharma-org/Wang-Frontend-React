@@ -7,6 +7,7 @@ import order from "../assets/sent.png";
 import barcode from "../assets/barcode-scanner.png"
 import reportPicking from "../assets/report-picking.png";
 import RouteManage from "../assets/evaluation.png";
+import Document from "../assets/document.png";
 import { useNavigate } from "react-router";
 const listMenu = [
   {
@@ -56,6 +57,13 @@ const listMenu = [
     imageSrc: RouteManage,
     admin: true,
   }
+    ,{
+      id: 8,
+      name: "RT-Approval",
+      href: "/rt-approval",
+      imageSrc: Document, // TODO: เปลี่ยน icon ตามความเหมาะสม
+      admin: true,
+    }
 ];
 const Home = () => {
   const navigate = useNavigate()
@@ -103,13 +111,14 @@ const Home = () => {
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-2xl px-4 py-4 sm:px-6 sm:py-12 lg:max-w-7xl lg:px-8 cursor-pointer">
+        {/* เมนูหลัก (สำหรับผู้ใช้ทั่วไป) */}
         <h2 className="text-2xl font-bold tracking-tight text-gray-900">
           เมนูหลัก
         </h2>
 
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           {listMenu
-            .filter((menu) => visibilityMap[menu.id] !== false && (menu.admin ? admin : true)) // ซ่อนเฉพาะที่ได้ false
+            .filter((menu) => !menu.admin && visibilityMap[menu.id] !== false) // แสดงเฉพาะเมนูที่ไม่ใช่ admin
             .map((menu) => (
               <a
                 id={`${menu.name}`}
@@ -129,6 +138,37 @@ const Home = () => {
               </a>
             ))}
         </div>
+
+        {/* เมนูสำหรับผู้ดูแล (แสดงเฉพาะเมื่อเป็น admin) */}
+        {admin && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900">
+              เมนูสำหรับผู้ดูแล
+            </h2>
+            <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+              {listMenu
+                .filter((menu) => menu.admin && visibilityMap[menu.id] !== false) // แสดงเฉพาะเมนู admin
+                .map((menu) => (
+                  <a
+                    id={`${menu.name}`}
+                    key={menu.id}
+                    onClick={() => handleNavigate(menu.href)}
+                    className="group flex flex-col items-center rounded-lg bg-white p-4 shadow hover:shadow-lg hover:scale-105 transition border-2 border-orange-200"
+                  >
+                    <div className="w-20 h-20 mb-2">
+                      <img
+                        src={menu.imageSrc}
+                        className="w-full h-full rounded-md object-cover"
+                      />
+                    </div>
+                    <h3 className="text-sm font-medium text-gray-800 group-hover:text-orange-500 text-center">
+                      {menu.name}
+                    </h3>
+                  </a>
+                ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
