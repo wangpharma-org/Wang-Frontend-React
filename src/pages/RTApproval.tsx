@@ -57,6 +57,7 @@ export default function RTApproval() {
   const [dateFilter, setDateFilter] = useState<string>("");
   const [featureFlag, setFeatureFlag] = useState<boolean>(true);
   const [featureFlagLoading, setFeatureFlagLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const filteredData = data.filter((item) => {
     const matchStatus = statusFilter === "all" || item.status === statusFilter;
@@ -74,7 +75,6 @@ export default function RTApproval() {
     return matchStatus && matchSearch && matchDate;
   });
 
-  // สำหรับ view Duplicate — group by employee+member+product+so และแสดง count
   const groupedDuplicates: GroupedItem[] = (() => {
     if (statusFilter !== "Duplicate") return [];
     const groups = new Map<string, RTApprovalItem[]>();
@@ -92,13 +92,32 @@ export default function RTApproval() {
 
   const fetchData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await axios.get(`${VITE_API_URL_ORDER}/api/rt-request`, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
       });
       setData(res.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to fetch RT approval list", error);
+      
+      if (error.response?.status === 403) {
+        setError("ไม่มีสิทธิ์เข้าถึงข้อมูล กรุณาเข้าสู่ระบบใหม่");
+        sessionStorage.removeItem("access_token");
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 3000);
+      } else if (error.response?.status === 401) {
+        setError("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
+        sessionStorage.removeItem("access_token");
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 3000);
+      } else if (error.code === "ECONNREFUSED" || error.message.includes("Network Error")) {
+        setError("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเตอร์เน็ต");
+      } else {
+        setError("เกิดข้อผิดพลาดในการโหลดข้อมูล กรุณาลองใหม่อีกครั้ง");
+      }
     } finally {
       setLoading(false);
     }
@@ -109,9 +128,9 @@ export default function RTApproval() {
     checkFeatureFlag();
 
     const interval = setInterval(() => {
-      checkFeatureFlag();
       fetchData();
-      }, 5 * 60 * 1000);
+      checkFeatureFlag();
+    }, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, []);
@@ -122,10 +141,13 @@ export default function RTApproval() {
         headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
       });
       setFeatureFlag(res.data.status === true);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to check feature flag", error);
-      // Default to true if API fails
-      setFeatureFlag(true);
+      if (error.response?.status === 403 || error.response?.status === 401) {
+        setFeatureFlag(false);
+      } else {
+        setFeatureFlag(true);
+      }
     }
   };
 
@@ -226,18 +248,39 @@ export default function RTApproval() {
             </div>
           </div>
         )}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <span className="text-red-800 font-medium">{error}</span>
+              <button 
+                onClick={() => setError(null)}
+                className="ml-auto text-red-600 hover:text-red-800"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6">
           <h1 className="text-xl sm:text-2xl font-bold">รายการรออนุมัติการส่ง RT</h1>
-          <div className="flex ">
+          <div className="flex gap-2">
             <button
-              onClick={fetchData}
+              onClick={() => {
+                setError(null);
+                fetchData();
+              }}
               disabled={loading}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              {loading ? "กำลังโหลด..." : "โหลดใหม่"}
+              {loading ? "กำลังโหลด..." : error ? "ลองใหม่" : "โหลดใหม่"}
             </button>
             <button
               onClick={toggleFeatureFlag}
@@ -294,7 +337,35 @@ export default function RTApproval() {
         </div>
 
         {loading ? (
-          <div className="text-center text-gray-500 py-10">กำลังโหลด...</div>
+          <div className="text-center text-gray-500 py-10">
+            <div className="flex flex-col items-center gap-3">
+              <svg className="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>กำลังโหลดข้อมูล...</span>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="text-center text-red-500 py-10">
+            <div className="flex flex-col items-center gap-3">
+              <svg className="w-12 h-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <div className="font-semibold mb-2">ไม่สามารถโหลดข้อมูลได้</div>
+                <button 
+                  onClick={() => {
+                    setError(null);
+                    fetchData();
+                  }}
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                >
+                  ลองใหม่อีกครั้ง
+                </button>
+              </div>
+            </div>
+          </div>
         ) : tableData.length === 0 ? (
           <div className="text-center text-gray-400 py-10">ไม่มีรายการ</div>
         ) : (
