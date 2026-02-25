@@ -111,8 +111,7 @@ export default function RTApproval() {
     const interval = setInterval(() => {
       checkFeatureFlag();
       fetchData();
-      // }, 5 * 60 * 1000);
-    }, 20 * 1000);
+      }, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, []);
