@@ -230,6 +230,68 @@ export default function RTApproval() {
   const tableData = statusFilter === "Duplicate" ? groupedDuplicates : filteredData;
   const isDuplicateView = statusFilter === "Duplicate";
 
+  if (error) {
+    return (
+      <div>
+        <Navbar />
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6">
+          <div className="max-w-2xl mx-auto mt-20">
+            <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+              {/* Icon */}
+              <div className="mx-auto w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-6">
+                <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m9-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              
+              {/* Title */}
+              <h1 className="text-2xl font-bold text-gray-800 mb-3">ไม่มีสิทธิ์เข้าถึง</h1>
+              
+              {/* Description */}
+              <p className="text-gray-600 mb-2 leading-relaxed">
+                คุณไม่มีสิทธิ์ในการเข้าถึงหน้านี้ในขณะนี้
+              </p>
+              
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <button
+                  onClick={() => {
+                    setError(null);
+                    fetchData();
+                  }}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  ลองใหม่อีกครั้ง
+                </button>
+                
+                <button
+                  onClick={() => window.location.href = '/login'}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transform hover:scale-105 transition-all duration-200"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                  </svg>
+                  เข้าสู่ระบบใหม่
+                </button>
+              </div>
+              
+              {/* Error Details */}
+              {error && (
+                <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">รายละเอียดข้อผิดพลาด:</span> {error}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
   return (
     <div>
       <Navbar />
