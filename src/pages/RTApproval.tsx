@@ -103,10 +103,6 @@ export default function RTApproval() {
       
       if (error.response?.status === 403) {
         setError("ไม่มีสิทธิ์เข้าถึงข้อมูล กรุณาเข้าสู่ระบบใหม่");
-        sessionStorage.removeItem("access_token");
-        setTimeout(() => {
-          window.location.href = "/login";
-        }, 3000);
       } else if (error.response?.status === 401) {
         setError("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
         sessionStorage.removeItem("access_token");
@@ -282,17 +278,19 @@ export default function RTApproval() {
               </svg>
               {loading ? "กำลังโหลด..." : error ? "ลองใหม่" : "โหลดใหม่"}
             </button>
-            <button
-              onClick={toggleFeatureFlag}
-              disabled={featureFlagLoading}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors ${featureFlag
-                ? "bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
-                : "bg-red-50 border-red-300 text-red-700 hover:bg-red-100"
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              <div className={`w-2 h-2 rounded-full ${featureFlag ? "bg-green-500" : "bg-red-500"}`}></div>
-              {featureFlagLoading ? "กำลังปรับปรุง..." : featureFlag ? "RT เปิด" : "RT ปิด"}
-            </button>
+            {!error && (
+              <button
+                onClick={toggleFeatureFlag}
+                disabled={featureFlagLoading}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors ${featureFlag
+                  ? "bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
+                  : "bg-red-50 border-red-300 text-red-700 hover:bg-red-100"
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <div className={`w-2 h-2 rounded-full ${featureFlag ? "bg-green-500" : "bg-red-500"}`}></div>
+                {featureFlagLoading ? "กำลังปรับปรุง..." : featureFlag ? "RT เปิด" : "RT ปิด"}
+              </button>
+            )}
           </div>
         </div>
 
