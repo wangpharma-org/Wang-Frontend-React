@@ -128,7 +128,7 @@ function App() {
           <Route path="/basket-sticker" element={<BasketSticker />} />
           <Route path="/print-rt" element={<PrintRT />} />
           <Route path="/print-request" element={<RequestProduct />} />
-          <Route path="/dashboard-qc" element={<QCDashboard />} />
+          <Route path="/dashboard-qc" element={<RequireAuth><QCDashboard /></RequireAuth>} />
           <Route path="/special" element={<SpecialExpressPrint />} />
           <Route
             path="/invoice-all"

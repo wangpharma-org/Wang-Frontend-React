@@ -24,7 +24,7 @@ interface GroupedItem extends RTApprovalItem {
   _count: number;
 }
 
-const STATUS_FILTERS = ["false", "Approved", "Duplicate", "all", "Done"] as const;
+const STATUS_FILTERS = ["Pending", "Approved", "Duplicate", "all", "Done"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 function statusDisplay(status: string): { label: string; color: string } {
@@ -35,7 +35,7 @@ function statusDisplay(status: string): { label: string; color: string } {
 }
 
 function filterLabel(s: StatusFilter): string {
-  if (s === "false") return "รออนุมัติ";
+  if (s === "Pending") return "รออนุมัติ";
   if (s === "Approved") return "อนุมัติแล้ว";
   if (s === "Done") return "ดำเนินการแล้ว";
   if (s === "Duplicate") return "ซ้ำ";
@@ -51,7 +51,7 @@ export default function RTApproval() {
   const [submitting, setSubmitting] = useState(false);
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [approvedRef, setApprovedRef] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("false");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("Pending");
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState<string>("");
 
