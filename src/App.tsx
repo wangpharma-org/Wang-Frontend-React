@@ -39,6 +39,7 @@ import StackedAreaChart from "./pages/Charts";
 import { io } from "socket.io-client";
 import { useEffect } from "react";
 import UploadStock from "./pages/UploadStock";
+import RTApproval from "./pages/RTApproval";
 
 function App() {
   useEffect(() => {
@@ -127,7 +128,7 @@ function App() {
           <Route path="/basket-sticker" element={<BasketSticker />} />
           <Route path="/print-rt" element={<PrintRT />} />
           <Route path="/print-request" element={<RequestProduct />} />
-          <Route path="/dashboard-qc" element={<QCDashboard />} />
+          <Route path="/dashboard-qc" element={<RequireAuth><QCDashboard /></RequireAuth>} />
           <Route path="/special" element={<SpecialExpressPrint />} />
           <Route
             path="/invoice-all"
@@ -342,6 +343,14 @@ function App() {
               <div>
                 <StackedAreaChart />
               </div>
+            }
+          />
+          <Route
+            path="/rt-approval"
+            element={
+              <RequireAuth>
+                <RTApproval />
+              </RequireAuth>
             }
           />
         </Routes>
