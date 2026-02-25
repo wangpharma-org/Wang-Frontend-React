@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { QRCodeSVG } from "qrcode.react";
+import Swal from "sweetalert2";
 import Navbar from "../components/Navbar";
 import Modal from "../components/ModalQC";
 import boxnotfound from "../assets/product-17.png";
@@ -54,6 +55,8 @@ export default function RTApproval() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("Pending");
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState<string>("");
+  const [featureFlag, setFeatureFlag] = useState<boolean>(true);
+  const [featureFlagLoading, setFeatureFlagLoading] = useState(false);
 
   const filteredData = data.filter((item) => {
     const matchStatus = statusFilter === "all" || item.status === statusFilter;
@@ -103,7 +106,83 @@ export default function RTApproval() {
 
   useEffect(() => {
     fetchData();
+    checkFeatureFlag();
+
+    const interval = setInterval(() => {
+      checkFeatureFlag();
+      fetchData();
+      // }, 5 * 60 * 1000);
+    }, 20 * 1000);
+
+    return () => clearInterval(interval);
   }, []);
+
+  const checkFeatureFlag = async () => {
+    try {
+      const res = await axios.get(`${VITE_API_URL_ORDER}/api/feature-flag/check/rt-request`, {
+        headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
+      });
+      setFeatureFlag(res.data.status === true);
+    } catch (error) {
+      console.error("Failed to check feature flag", error);
+      // Default to true if API fails
+      setFeatureFlag(true);
+    }
+  };
+
+  const toggleFeatureFlag = async () => {
+    const newStatus = !featureFlag;
+    const action = newStatus ? "เปิดใช้งาน" : "ปิดใช้งาน";
+
+    const result = await Swal.fire({
+      title: `${action}ฟีเจอร์ RT Request`,
+      text: "การดำเนินการนี้จะส่งผลต่อการใช้งานของระบบทั้งหมด",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: newStatus ? "#10b981" : "#ef4444",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: `ยืนยัน${action}`,
+      cancelButtonText: "ยกเลิก",
+      reverseButtons: true
+    });
+
+    if (!result.isConfirmed) return;
+
+    setFeatureFlagLoading(true);
+    try {
+      await axios.post(
+        `${VITE_API_URL_ORDER}/api/feature-flag/send`,
+        {
+          module: "rt-request",
+          status: newStatus,
+          msg: `RT Request feature ${newStatus ? "enabled" : "disabled"} by user`
+        },
+        {
+          headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
+        }
+      );
+      setFeatureFlag(newStatus);
+
+      // แสดง success message
+      Swal.fire({
+        title: "สำเร็จ!",
+        text: `${action}ฟีเจอร์ RT Request เรียบร้อยแล้ว`,
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      console.error("Failed to toggle feature flag", error);
+      Swal.fire({
+        title: "เกิดข้อผิดพลาด!",
+        text: "ไม่สามารถปรับปรุงสถานะได้ กรุณาลองใหม่อีกครั้ง",
+        icon: "error",
+        confirmButtonText: "ตกลง"
+      });
+    } finally {
+      setFeatureFlagLoading(false);
+    }
+  };
 
   const handleRowClick = (item: RTApprovalItem) => {
     setSelectedItem(item);
@@ -138,18 +217,41 @@ export default function RTApproval() {
     <div>
       <Navbar />
       <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+        {!featureFlag && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <span className="text-yellow-800 font-medium">ฟีเจอร์ RT Request ถูกปิดการใช้งานชั่วคราว</span>
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6">
           <h1 className="text-xl sm:text-2xl font-bold">รายการรออนุมัติการส่ง RT</h1>
-          <button
-            onClick={fetchData}
-            disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            {loading ? "กำลังโหลด..." : "โหลดใหม่"}
-          </button>
+          <div className="flex ">
+            <button
+              onClick={fetchData}
+              disabled={loading}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {loading ? "กำลังโหลด..." : "โหลดใหม่"}
+            </button>
+            <button
+              onClick={toggleFeatureFlag}
+              disabled={featureFlagLoading}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors ${featureFlag
+                ? "bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
+                : "bg-red-50 border-red-300 text-red-700 hover:bg-red-100"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              <div className={`w-2 h-2 rounded-full ${featureFlag ? "bg-green-500" : "bg-red-500"}`}></div>
+              {featureFlagLoading ? "กำลังปรับปรุง..." : featureFlag ? "RT เปิด" : "RT ปิด"}
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -181,11 +283,10 @@ export default function RTApproval() {
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  statusFilter === s
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${statusFilter === s
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
               >
                 {filterLabel(s)}
               </button>
@@ -224,12 +325,11 @@ export default function RTApproval() {
                   return (
                     <tr
                       key={item.ref}
-                      onClick={() => clickable && handleRowClick(item)}
-                      className={`transition-colors ${
-                        !clickable
-                          ? "opacity-50 cursor-not-allowed"
-                          : `cursor-pointer hover:bg-blue-100 ${index % 2 === 0 ? "bg-blue-50" : "bg-white"}`
-                      }`}
+                      onClick={() => featureFlag && clickable && handleRowClick(item)}
+                      className={`transition-colors ${!featureFlag || !clickable
+                        ? "opacity-50 cursor-not-allowed"
+                        : `cursor-pointer hover:bg-blue-100 ${index % 2 === 0 ? "bg-blue-50" : "bg-white"}`
+                        }`}
                     >
                       <td className="py-3 px-3 text-sm">{index + 1}</td>
                       <td className="py-3 px-3 text-sm font-semibold text-gray-700">{item.ref.slice(-6)}</td>
@@ -265,12 +365,11 @@ export default function RTApproval() {
             {/* Header */}
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-bold text-gray-800">รายละเอียดการส่ง RT</h2>
-              <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                selectedItem.status === "Approved" ? "bg-green-100 text-green-700" :
+              <span className={`text-xs font-semibold px-3 py-1 rounded-full ${selectedItem.status === "Approved" ? "bg-green-100 text-green-700" :
                 selectedItem.status === "Done" ? "bg-blue-100 text-blue-700" :
-                selectedItem.status === "Duplicate" ? "bg-orange-100 text-orange-700" :
-                "bg-yellow-100 text-yellow-700"
-              }`}>
+                  selectedItem.status === "Duplicate" ? "bg-orange-100 text-orange-700" :
+                    "bg-yellow-100 text-yellow-700"
+                }`}>
                 {statusDisplay(selectedItem.status).label}
               </span>
             </div>
@@ -284,10 +383,10 @@ export default function RTApproval() {
                     src={
                       selectedItem.product.image?.startsWith("..")
                         ? `https://www.wangpharma.com${selectedItem.product.image?.slice(
-                            2
-                          )}`
-                          : selectedItem.product.image || boxnotfound
-                      }
+                          2
+                        )}`
+                        : selectedItem.product.image || boxnotfound
+                    }
                     alt={selectedItem.product.name}
                     className="h-44 w-44 object-contain rounded-xl border border-gray-200 bg-gray-50 p-2 shadow-sm"
                   />
@@ -350,10 +449,10 @@ export default function RTApproval() {
             <div className="flex justify-end">
               <button
                 onClick={handleApprove}
-                disabled={submitting || !note.trim()}
+                disabled={!featureFlag || submitting || !note.trim()}
                 className="bg-blue-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                {submitting ? "กำลังบันทึก..." : "ยืนยันอนุมัติ"}
+                {submitting ? "กำลังบันทึก..." : !featureFlag ? "ไม่สามารถอนุมัติได้" : "ยืนยันอนุมัติ"}
               </button>
             </div>
           </div>
