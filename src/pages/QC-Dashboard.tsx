@@ -221,11 +221,15 @@ const QCDashboard = () => {
   const [rtQrInput, setRtQrInput] = useState<string>("");
   const [rtSubmitting, setRtSubmitting] = useState<boolean>(false);
   const [rtError, setRtError] = useState<string | null>(null);
+  const [rtQcNote, setRtQcNote] = useState<string>("");
+  const [rtQcNoteSubmitting, setRtQcNoteSubmitting] = useState<boolean>(false);
+  const [rtQcNoteSaved, setRtQcNoteSaved] = useState<boolean>(false);
   const [rtPendingData, setRtPendingData] = useState<{
     ref: string;
     so_running: string;
     sh_running: string;
     pro_code: string;
+    key: string;
     employees?: { code: string; name: string }[];
   } | null>(null);
 
@@ -308,6 +312,8 @@ const QCDashboard = () => {
   const [basketDataForPrint, setBasketDataForPrint] = useState<
     ShoppingOrderPrint[] | null
   >(null);
+
+  const [statusNoteQc, setStatusNoteQc] = useState<boolean>(false);
 
   const handleCheckFlagRequest = async () => {
     const flag = await axios.get(
@@ -1251,6 +1257,7 @@ const QCDashboard = () => {
         sh_running: so.sh_running,
         pro_code: so.product.product_code,
         employees: res.data.employee || [],
+        key: res.data.key,
       });
       setRtQrInput("");
       setRtError(null);
@@ -1274,19 +1281,15 @@ const QCDashboard = () => {
           so_running: rtPendingData.so_running,
           sh_running: rtPendingData.sh_running,
           pro_code: rtPendingData.pro_code,
+          key: rtQrInput,
+          ...(rtQcNoteSaved && rtQcNote.trim() && { note_from_qc: rtQcNote.trim() }),
         },
         {
           headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
         }
       );
       if (res.data.error) {
-        if (res.data.error === "Unknown error") {
-          Swal.fire({
-            icon: "error",
-            title: "เกิดข้อผิดพลาด",
-            text: "กรุณาลองอีกครั้ง",
-          });
-        } else if (res.data.error === "RT Request note is missing") {
+        if (res.data.error === "RT Request note is missing") {
           Swal.fire({
             icon: "error",
             title: "ยังไม่ได้รับหมายเหตุการ RT",
@@ -1298,9 +1301,28 @@ const QCDashboard = () => {
             title: "QR code ไม่ถูกต้อง",
             text: "กรุณาสแกน QR code ที่ถูกต้อง",
           });
+        } else if (res.data.error === "No generated key found") {
+          Swal.fire({
+            icon: "error",
+            title: "ไม่พบรหัสในระบบ",
+            text: "กรุณาติดต่อผู้ดูแลระบบ",
+          });
+        } else if (res.data.error === "Invalid key") {
+          Swal.fire({
+            icon: "error",
+            title: "รหัสไม่ถูกต้อง",
+            text: "กรุณาตรวจสอบรหัสและลองใหม่อีกครั้ง",
+          });
+        } else {
+          Swal.fire({
+            icon: "error",
+            title: "เกิดข้อผิดพลาด",
+            text: "กรุณาลองอีกครั้ง",
+          });
         }
       }
       else {
+        setStatusNoteQc(true);
         setRtRequestModalOpen(false);
         handleRT(rtPendingData.so_running);
 
@@ -1310,6 +1332,50 @@ const QCDashboard = () => {
       setRtError(message);
     } finally {
       setRtSubmitting(false);
+    }
+  };
+
+  const handleAddQcNote = async () => {
+    if (!rtPendingData?.ref || !rtQcNote.trim()) return;
+
+    setRtQcNoteSubmitting(true);
+
+    try {
+      // ยิง API เพื่อบันทึกหมายเหตุลงฐานข้อมูล
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/rt-request/add-note-from-qc`,
+        {
+          ref: rtPendingData.ref,
+          empQC_note: rtQcNote.trim(),
+        },
+        {
+          headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
+        }
+      );
+
+      if (res.data.status === true) {
+        setRtQcNoteSaved(true);
+
+        Swal.fire({
+          icon: "success",
+          title: "บันทึกหมายเหตุสำเร็จ",
+          text: "หมายเหตุจากฝั่ง QC ถูกบันทึกลงระบบเรียบร้อยแล้ว",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+        setStatusNoteQc(true);
+      } else {
+        throw new Error(res.data.message || "Failed to add QC note");
+      }
+    } catch (error) {
+      console.error("Failed to add QC note", error);
+      Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาด",
+        text: "ไม่สามารถบันทึกหมายเหตุได้ กรุณาลองใหม่อีกครั้ง",
+      });
+    } finally {
+      setRtQcNoteSubmitting(false);
     }
   };
 
@@ -2319,42 +2385,167 @@ const QCDashboard = () => {
                 )}
                 สำหรับการอนุมัติการส่ง RT
               </h2>
-              {rtPendingData?.ref && (
-                <p className="text-center text-sm text-gray-500">
-                  เลขอ้างอิง:{" "}
-                  <span className="font-semibold text-gray-800">
-                    {rtPendingData.ref.slice(-6)}
-                  </span>
+
+              {/* คำอธิบายขั้นตอนการดำเนินการ */}
+              <div className="bg-blue-50 p-3 rounded-md text-sm">
+                <p className="font-semibold text-blue-800 mb-2">ขั้นตอนการดำเนินการ:</p>
+                <ol className="text-blue-700 space-y-1">
+                  <li>1. เพิ่มหมายเหตุจากฝั่ง QC</li>
+                  <li>2. แจ้งคนที่เกี่ยวข้องเพื่ออนุมัติคำขอที่จะ RT</li>
+                  <li>3. เมื่อคนที่เกี่ยวข้องอนุมัติให้แล้ว เขาจะให้ใส่รหัสเพื่อที่จะทำให้ระบบทำงานต่อได้</li>
+                </ol>
+                <p className="text-orange-600 font-semibold mt-2">
+                  ⚠️ หมายเหตุ: หน้านี้ไม่สามารถปิดได้จนกว่าจะมีการอนุมัติสำเร็จ
                 </p>
-              )}
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  ข้อมูลจาก Qr code
-                </label>
-                <input
-                  type="password"
-                  value={rtQrInput}
-                  onChange={(e) => setRtQrInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleRTSend()}
-                  className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  autoFocus
-                />
               </div>
-              {rtError && (
-                <p className="text-red-500 text-sm text-center">{rtError}</p>
+
+              {rtPendingData?.ref && (
+                <div className="bg-gray-50 p-3 rounded-md text-sm space-y-2">
+                  <p className="text-center text-gray-600">
+                    เลขอ้างอิง:{" "}
+                    <span className="font-semibold text-gray-800">
+                      {rtPendingData.ref.slice(-6)}
+                    </span>
+                  </p>
+
+                  {/* ข้อมูลสินค้า */}
+                  <div className="border-t pt-2">
+                    <p className="font-semibold text-gray-700 mb-2">ข้อมูลสินค้า:</p>
+                    <div className="flex items-center gap-3">
+                      {/* รูปภาพสินค้า */}
+                      {(() => {
+                        const currentProduct = order.find(o => o.product.product_code === rtPendingData.pro_code);
+                        const imageUrl = currentProduct?.product?.product_image_url;
+
+                        if (imageUrl) {
+                          const fullImageUrl = imageUrl.startsWith("..")
+                            ? `https://www.wangpharma.com${imageUrl.slice(2)}`
+                            : imageUrl;
+
+                          return (
+                            <img
+                              src={fullImageUrl}
+                              alt="รูปภาพสินค้า"
+                              className="w-16 h-16 object-cover rounded-md border shadow-sm"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          );
+                        }
+                        return (
+                          <div className="w-16 h-16 bg-gray-200 rounded-md flex items-center justify-center">
+                            <span className="text-gray-400 text-xs">ไม่มีรูป</span>
+                          </div>
+                        );
+                      })()}
+
+                      {/* ข้อมูลสินค้า */}
+                      <div className="flex-1">
+                        <p className="text-gray-600">
+                          รหัสสินค้า: <span className="font-medium text-gray-800">{rtPendingData.pro_code}</span>
+                        </p>
+                        {(() => {
+                          const currentProduct = order.find(o => o.product.product_code === rtPendingData.pro_code);
+                          if (currentProduct?.product?.product_name) {
+                            return (
+                              <p className="text-gray-600 text-sm mt-1">
+                                ชื่อสินค้า: <span className="font-medium text-gray-800">{currentProduct.product.product_name}</span>
+                              </p>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ข้อมูลร้าน */}
+                  <div className="border-t pt-2">
+                    <p className="font-semibold text-gray-700 mb-1">ข้อมูลร้าน:</p>
+                    <p className="text-gray-600">
+                      รหัสร้าน: <span className="font-medium text-gray-800">
+                        {Array.isArray(dataQC)
+                          ? dataQC[0]?.members?.mem_code || "-"
+                          : dataQC?.members?.mem_code || "-"}
+                      </span>
+                    </p>
+                    <p className="text-gray-600">
+                      ชื่อร้าน: <span className="font-medium text-gray-800">
+                        {Array.isArray(dataQC)
+                          ? dataQC[0]?.members?.mem_name || "-"
+                          : dataQC?.members?.mem_name || "-"}
+                      </span>
+                    </p>
+                  </div>
+                </div>
               )}
-              <p className="text-xs text-gray-400 text-center">
-                ปุ่มจะกดไม่ได้ถ้า ใน input ไม่มีข้อมูล
-              </p>
-              <div className="flex justify-center">
-                <button
-                  onClick={handleRTSend}
-                  disabled={rtSubmitting || !rtQrInput.trim()}
-                  className="bg-gray-700 text-white px-10 py-2 rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {rtSubmitting ? "กำลังส่ง..." : "ส่ง"}
-                </button>
-              </div>
+
+              {!statusNoteQc ? (
+                <div className="bg-gray-50 p-3 rounded-md">
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                    หมายเหตุจากฝั่ง QC (ไม่บังคับ)
+                  </label>
+                  <div className="flex gap-2">
+                    <textarea
+                      value={rtQcNote}
+                      onChange={(e) => setRtQcNote(e.target.value)}
+                      className="flex-1 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                      rows={2}
+                      placeholder="กรอกหมายเหตุเพิ่มเติมจากฝั่ง QC..."
+                    />
+                    <button
+                      onClick={handleAddQcNote}
+                      disabled={rtQcNoteSubmitting || !rtQcNote.trim()}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                    >
+                      {rtQcNoteSubmitting ? "กำลังบันทึก..." : "บันทึก"}
+                    </button>
+                    {rtQcNoteSaved && (
+                      <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                        บันทึกแล้ว
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    หมายเหตุนี้จะถูกส่งไปยังระบบเพื่อประกอบการพิจารณาอนุมัติ RT
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      ข้อมูลจาก Qr code
+                    </label>
+                    <input
+                      type="password"
+                      value={rtQrInput}
+                      onChange={(e) => setRtQrInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleRTSend()}
+                      className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      autoFocus
+                    />
+                  </div>
+                  {rtError && (
+                    <p className="text-red-500 text-sm text-center">{rtError}</p>
+                  )}
+                  <p className="text-xs text-gray-400 text-center">
+                    ปุ่มจะกดไม่ได้ถ้า ใน input ไม่มีข้อมูล
+                  </p>
+                  <div className="flex justify-center">
+                    <button
+                      onClick={handleRTSend}
+                      disabled={rtSubmitting || !rtQrInput.trim()}
+                      className="bg-gray-700 text-white px-10 py-2 rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {rtSubmitting ? "กำลังส่ง..." : "ส่ง"}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </Modal>
 
