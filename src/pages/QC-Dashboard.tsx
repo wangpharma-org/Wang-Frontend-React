@@ -1324,6 +1324,7 @@ const QCDashboard = () => {
       else {
         setStatusNoteQc(true);
         setRtRequestModalOpen(false);
+        handleRtModalClose();
         handleRT(rtPendingData.so_running);
 
       }
@@ -2383,7 +2384,7 @@ const QCDashboard = () => {
               </button>
             </div>
           </Modal>
-          <Modal isOpen={rtRequestModalOpen} onClose={}>
+          <Modal isOpen={rtRequestModalOpen} onClose={() => { }}>
             <div className="space-y-4 py-2">
               <h2 className="text-lg font-bold text-center">
                 กรุณาแจ้ง
@@ -2546,7 +2547,7 @@ const QCDashboard = () => {
                   </p>
                   <div className="flex justify-center">
                     <button
-                      onClick={() => { handleRTSend(); handleRtModalClose(); }}
+                      onClick={handleRTSend}
                       disabled={rtSubmitting || !rtQrInput.trim()}
                       className="bg-gray-700 text-white px-10 py-2 rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
