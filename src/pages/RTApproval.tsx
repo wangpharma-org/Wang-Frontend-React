@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { QRCodeSVG } from "qrcode.react";
 import Swal from "sweetalert2";
 import Navbar from "../components/Navbar";
 import Modal from "../components/ModalQC";
@@ -11,13 +10,37 @@ const VITE_API_URL_ORDER = import.meta.env.VITE_API_URL_ORDER;
 interface RTApprovalItem {
   ref: string;
   employee: { code: string; name: string };
-  product: { code: string; name: string; image: string; floor: string };
-  member: { code: string; name: string };
+  product: { 
+    code: string; 
+    name: string; 
+    image: string; 
+    floor: string; 
+    purchase_entry: {
+      SO_amount: string;
+      PR_amount: string;
+      RT_amount: string;
+      PO_amount: string;
+      product_code: string;
+      purchase_entry_no: string;
+      purchase_entry_date: Date;
+    }[];
+  };
+  member: { 
+    code: string; 
+    name: string; 
+    sales?: { code: string; name: string };
+    route?: {
+      code: string;
+      name: string;
+    };
+  };
   so_running: string;
   sh_running: string;
   amount_item: number;
   unit_item: string;
   status: string;
+  note?: string | null;
+  empQC_note?: string | null;
   created_at: string;
 }
 
@@ -43,6 +66,27 @@ function filterLabel(s: StatusFilter): string {
   return "ทั้งหมด";
 }
 
+function timeAgo(dateString: string): string {
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffInMs = now.getTime() - date.getTime();
+  
+  const seconds = Math.floor(diffInMs / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  const months = Math.floor(days / 30);
+  const years = Math.floor(days / 365);
+  
+  if (years > 0) return `${years} ปีที่แล้ว`;
+  if (months > 0) return `${months} เดือนที่แล้ว`;
+  if (days > 0) return `${days} วันที่แล้ว`;
+  if (hours > 0) return `${hours} ชั่วโมงที่แล้ว`;
+  if (minutes > 0) return `${minutes} นาทีที่แล้ว`;
+  if (seconds > 30) return `${seconds} วินาทีที่แล้ว`;
+  return "เพิ่งสร้าง";
+}
+
 export default function RTApproval() {
   const [data, setData] = useState<RTApprovalItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,28 +94,38 @@ export default function RTApproval() {
   const [modalOpen, setModalOpen] = useState(false);
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [qrModalOpen, setQrModalOpen] = useState(false);
-  const [approvedRef, setApprovedRef] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("Pending");
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState<string>("");
   const [featureFlag, setFeatureFlag] = useState<boolean>(true);
   const [featureFlagLoading, setFeatureFlagLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [latestKey, setLatestKey] = useState<string>("");
 
   const filteredData = data.filter((item) => {
     const matchStatus = statusFilter === "all" || item.status === statusFilter;
     const q = search.toLowerCase();
     const matchSearch =
       !q ||
-      item.employee.code.toLowerCase().includes(q) ||
-      item.employee.name.toLowerCase().includes(q) ||
-      item.member.code.toLowerCase().includes(q) ||
-      item.member.name.toLowerCase().includes(q) ||
-      item.product.name.toLowerCase().includes(q) ||
-      item.so_running.toLowerCase().includes(q) ||
-      item.sh_running.toLowerCase().includes(q);
-    const matchDate = !dateFilter || item.created_at.slice(0, 10) === dateFilter;
+      item.employee?.code?.toLowerCase().includes(q) ||
+      item.employee?.name?.toLowerCase().includes(q) ||
+      item.member?.code?.toLowerCase().includes(q) ||
+      item.member?.name?.toLowerCase().includes(q) ||
+      item.product?.code?.toLowerCase().includes(q) ||
+      item.product?.name?.toLowerCase().includes(q) ||
+      (item.product?.floor || "").toLowerCase().includes(q) ||
+      item.so_running?.toLowerCase().includes(q) ||
+      item.sh_running?.toLowerCase().includes(q) ||
+      item.ref?.toLowerCase().includes(q) ||
+      item.unit_item?.toLowerCase().includes(q) ||
+      (item.note || "").toLowerCase().includes(q) ||
+      (item.empQC_note || "").toLowerCase().includes(q) ||
+      (item.member?.sales?.code || "").toLowerCase().includes(q) ||
+      (item.member?.sales?.name || "").toLowerCase().includes(q) ||
+      (item.member?.route?.code || "").toLowerCase().includes(q) ||
+      (item.member?.route?.name || "").toLowerCase().includes(q) ||
+      item.amount_item?.toString().includes(q);
+    const matchDate = !dateFilter || item.created_at?.slice(0, 10) === dateFilter;
     return matchStatus && matchSearch && matchDate;
   });
 
@@ -88,6 +142,31 @@ export default function RTApproval() {
       amount_item: items[0].amount_item,
       _count: items.length,
     }));
+  })();
+
+  const groupedPending: GroupedItem[] = (() => {
+    if (statusFilter !== "Pending") return [];
+    const groups = new Map<string, RTApprovalItem[]>();
+    filteredData.forEach((item) => {
+      const key = `${item.employee.code}|${item.member.code}|${item.product.code}|${item.so_running}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(item);
+    });
+    return Array.from(groups.values())
+      .map((items) => {
+        // เรียงตามวันที่สร้างล่าสุดแล้วเอาอันล่าสุดมาเป็นหลัก
+        const sortedItems = items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        // หาเวลาที่เก่าที่สุด
+        const oldestItem = items.reduce((oldest, current) => 
+          new Date(current.created_at) < new Date(oldest.created_at) ? current : oldest
+        );
+        return {
+          ...sortedItems[0], // ใช้ข้อมูลล่าสุด
+          created_at: oldestItem.created_at, // แต่แสดงเวลาเก่าที่สุด
+          amount_item: sortedItems[0].amount_item,
+          _count: items.length,
+        };
+      });
   })();
 
   const fetchData = async () => {
@@ -122,14 +201,28 @@ export default function RTApproval() {
   useEffect(() => {
     fetchData();
     checkFeatureFlag();
+    fetchLatestKey();
 
     const interval = setInterval(() => {
       fetchData();
       checkFeatureFlag();
+      fetchLatestKey();
     }, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, []);
+
+  const fetchLatestKey = async () => {
+    try {
+      const res = await axios.get(`${VITE_API_URL_ORDER}/api/rt-request/latest-key`, {
+        headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
+      });
+      setLatestKey(res.data || "");
+    } catch (error: any) {
+      console.error("Failed to fetch latest key", error);
+      setLatestKey("");
+    }
+  };
 
   const checkFeatureFlag = async () => {
     try {
@@ -207,6 +300,32 @@ export default function RTApproval() {
     setModalOpen(true);
   };
 
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      Swal.fire({
+        icon: 'success',
+        title: 'คัดลอกสำเร็จ!',
+        text: `คัดลอก "${text}" แล้ว`,
+        timer: 1500,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end'
+      });
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'ไม่สามารถคัดลอกได้',
+        text: 'กรุณาลองใหม่อีกครั้ง',
+        timer: 1500,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end'
+      });
+    }
+  };
+
   const handleApprove = async () => {
     if (!selectedItem || !note.trim()) return;
     setSubmitting(true);
@@ -214,12 +333,40 @@ export default function RTApproval() {
       await axios.patch(`${VITE_API_URL_ORDER}/api/rt-request/${selectedItem.ref}`, { note }, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
       });
-      setApprovedRef(selectedItem.ref);
+      
       setModalOpen(false);
-      setQrModalOpen(true);
+      
+      // แสดง popup สำเร็จ
+      Swal.fire({
+        icon: 'success',
+        title: 'อนุมัติ RT สำเร็จ!',
+        html: `
+          <div class="text-center">
+            <p class="mb-3">อนุมัติคำขอ RT เรียบร้อยแล้ว</p>
+            <div class="bg-gray-100 rounded-lg p-3 inline-block">
+              <p class="text-sm text-gray-600 mb-1">หมายเลขอ้างอิง</p>
+              <p class="font-mono font-bold text-lg">${selectedItem.ref}</p>
+            </div>
+          </div>
+        `,
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#3b82f6',
+        showConfirmButton: true,
+        allowOutsideClick: false,
+        allowEscapeKey: false
+      });
+      
       fetchData();
     } catch (error) {
       console.error("Failed to approve RT", error);
+      
+      Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาด!',
+        text: 'ไม่สามารถอนุมัติคำขอ RT ได้ กรุณาลองใหม่อีกครั้ง',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#ef4444'
+      });
     } finally {
       setSubmitting(false);
     }
@@ -227,8 +374,11 @@ export default function RTApproval() {
 
   const isClickable = (status: string) => status !== "Approved" && status !== "Duplicate" && status !== "Done";
 
-  const tableData = statusFilter === "Duplicate" ? groupedDuplicates : filteredData;
+  const tableData = statusFilter === "Duplicate" ? groupedDuplicates : 
+                   statusFilter === "Pending" ? groupedPending.length > 0 ? groupedPending : filteredData :
+                   filteredData;
   const isDuplicateView = statusFilter === "Duplicate";
+  const isPendingGroupView = statusFilter === "Pending" && groupedPending.length > 0;
 
   if (error) {
     return (
@@ -258,6 +408,7 @@ export default function RTApproval() {
                   onClick={() => {
                     setError(null);
                     fetchData();
+                    fetchLatestKey();
                   }}
                   className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
@@ -295,7 +446,7 @@ export default function RTApproval() {
   return (
     <div>
       <Navbar />
-      <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <div className="p-4 sm:p-6 max-w-8xl mx-auto">
         {!featureFlag && (
           <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <div className="flex items-center gap-2">
@@ -326,11 +477,34 @@ export default function RTApproval() {
         )}
         <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6">
           <h1 className="text-xl sm:text-2xl font-bold">รายการรออนุมัติการส่ง RT</h1>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {/* Latest Key Display */}
+            {latestKey && (
+              <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-6 6c-3 0-5.197-1.756-5.197-4C9.803 9.756 12 8 15 8a6 6 0 016 6M7 10v4a2 2 0 002 2h4M7 10V7a5 5 0 015-5h.5" />
+                  </svg>
+                  <span className="text-sm font-medium text-blue-700">รหัสล่าสุด:</span>
+                </div>
+                <button
+                  onClick={() => copyToClipboard(latestKey)}
+                  className="group flex items-center gap-1 bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-1 rounded font-mono text-sm font-bold transition-colors cursor-pointer"
+                  title="คลิกเพื่อคัดลอกรหัส"
+                >
+                  <span>{latestKey}</span>
+                  <svg className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
+              </div>
+            )}
+            
             <button
               onClick={() => {
                 setError(null);
                 fetchData();
+                fetchLatestKey();
               }}
               disabled={loading}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -361,7 +535,7 @@ export default function RTApproval() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="ค้นหา พนักงาน / ร้าน / สินค้า / SO / SH..."
+            placeholder="ค้นหา รหัสอ้างอิง / พนักงาน / ร้าน / รหัสสินค้า / ชื่อสินค้า / ชั้น / SO / SH / จำนวน / หน่วย / ฝ่ายขาย / เส้นทาง / หมายเหตุ..."
             className="flex-1 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
           <div className="flex items-center gap-2">
@@ -427,58 +601,279 @@ export default function RTApproval() {
             </div>
           </div>
         ) : tableData.length === 0 ? (
-          <div className="text-center text-gray-400 py-10">ไม่มีรายการ</div>
+          <div className="text-center text-gray-400 py-10">
+            {statusFilter === "Pending" && groupedPending.length === 0 ? 
+              "ไม่พบรายการรออนุมัติที่ซ้ำกัน" : "ไม่มีรายการ"
+            }
+          </div>
         ) : (
-          <div className="overflow-x-auto rounded-lg shadow">
-            <table className="w-full border-collapse min-w-[700px]">
+          <div className="overflow-x-auto rounded-xl shadow-lg bg-white">
+            <table className="w-full border-collapse min-w-[1500px]">
               <thead>
-                <tr className="bg-blue-400 text-white">
-                  <th className="py-3 px-3 text-left font-semibold text-sm">ที่</th>
-                  <th className="py-3 px-3 text-left font-semibold text-sm">อ้างอิง</th>
-                  <th className="py-3 px-3 text-left font-semibold text-sm">ข้อมูลพนักงาน</th>
-                  <th className="py-3 px-3 text-left font-semibold text-sm">ข้อมูลร้าน</th>
-                  <th className="py-3 px-3 text-left font-semibold text-sm">ชื่อสินค้า</th>
-                  <th className="py-3 px-3 text-left font-semibold text-sm">SO</th>
-                  <th className="py-3 px-3 text-left font-semibold text-sm">SH</th>
-                  <th className="py-3 px-3 text-left font-semibold text-sm">จำนวน</th>
-                  <th className="py-3 px-3 text-left font-semibold text-sm">หน่วย</th>
+                <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                  <th className="py-4 px-3 text-left font-semibold text-sm">ลำดับ</th>
+                  <th className="py-4 px-3 text-left font-semibold text-sm">อ้างอิง</th>
+                  <th className="py-4 px-3 text-left font-semibold text-sm">พนักงาน</th>
+                  <th className="py-4 px-3 text-left font-semibold text-sm">รหัสร้าน</th>
+                  <th className="py-4 px-3 text-left font-semibold text-sm">ชื่อร้าน</th>
+                  <th className="py-4 px-3 text-left font-semibold text-sm">รหัสสินค้า</th>
+                  <th className="py-4 px-3 text-left font-semibold text-sm">ชื่อสินค้า</th>
+                  <th className="py-4 px-3 text-left font-semibold text-sm">SH</th>
+                  <th className="py-4 px-3 text-left font-semibold text-sm">จำนวน</th>
                   {isDuplicateView && (
-                    <th className="py-3 px-3 text-left font-semibold text-sm">รายการซ้ำ</th>
+                    <th className="py-4 px-3 text-left font-semibold text-sm">รายการซ้ำ</th>
                   )}
-                  <th className="py-3 px-3 text-left font-semibold text-sm">สถานะ</th>
+                  {isPendingGroupView && (
+                    <th className="py-4 px-3 text-left font-semibold text-sm">รายการรออนุมัติ</th>
+                  )}
+                  <th className="py-4 px-3 text-left font-semibold text-sm">สถานะ</th>
+                  <th className="py-4 px-3 text-left font-semibold text-sm">หมายเหตุ</th>
+                  <th className="py-4 px-3 text-left font-semibold text-sm">หมายเหตุจาก QC</th>
+                  <th className="py-4 px-3 text-left font-semibold text-sm">วันที่</th>
+                  <th className="py-4 px-3 text-left font-semibold text-sm">เวลาที่ผ่านมา</th>
                 </tr>
               </thead>
               <tbody>
                 {tableData.map((item, index) => {
-                  const { label, color } = statusDisplay(item.status);
+                  const { label } = statusDisplay(item.status);
                   const clickable = isClickable(item.status);
+                  const timeAgoText = timeAgo(item.created_at);
                   return (
                     <tr
                       key={item.ref}
                       onClick={() => featureFlag && clickable && handleRowClick(item)}
-                      className={`transition-colors ${!featureFlag || !clickable
-                        ? "opacity-50 cursor-not-allowed"
-                        : `cursor-pointer hover:bg-blue-100 ${index % 2 === 0 ? "bg-blue-50" : "bg-white"}`
+                      className={`transition-all duration-200 border-b border-gray-100 ${!featureFlag || !clickable
+                        ? "opacity-50 cursor-not-allowed bg-gray-50"
+                        : `cursor-pointer hover:bg-blue-50 hover:shadow-sm ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`
                         }`}
                     >
-                      <td className="py-3 px-3 text-sm">{index + 1}</td>
-                      <td className="py-3 px-3 text-sm font-semibold text-gray-700">{item.ref.slice(-6)}</td>
-                      <td className="py-3 px-3 text-sm max-w-[100px]"><p className="line-clamp-3">{item.employee.code}/{item.employee.name}</p></td>
-                      <td className="py-3 px-3 text-sm max-w-[180px]"><p className="line-clamp-3">{item.member.code}/{item.member.name}</p></td>
-                      <td className="py-3 px-3 text-sm max-w-[160px]"><p className="line-clamp-3">{item.product.code}/{item.product.name}</p></td>
-                      <td className="py-3 px-3 text-sm">{item.so_running}</td>
-                      <td className="py-3 px-3 text-sm">{item.sh_running}</td>
-                      <td className="py-3 px-3 text-sm">{item.amount_item}</td>
-                      <td className="py-3 px-3 text-sm">{item.unit_item}</td>
+                      <td className="py-4 px-3 text-sm font-medium text-gray-600">
+                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-xs font-bold">
+                          {index + 1}
+                        </span>
+                      </td>
+                      <td className="py-4 px-3 text-sm">
+                        <div className="font-mono text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                          {item.ref.slice(-6)}
+                        </div>
+                      </td>
+                      <td className="py-4 px-3 text-sm max-w-[120px]">
+                        <div className="space-y-1">
+                          <div className="font-semibold text-gray-800">{item.employee.code}</div>
+                          <div className="text-xs text-gray-600 truncate" title={item.employee.name}>{item.employee.name}</div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-3 text-sm max-w-[150px]">
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyToClipboard(item.member.code);
+                          }}
+                          className="group cursor-pointer p-2 rounded-lg border-2 border-dashed border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200"
+                          title="คลิกเพื่อคัดลอกรหัสร้าน"
+                        >
+                          <div className="font-semibold text-gray-800 group-hover:text-blue-600 flex items-center gap-2">
+                            {item.member.code}
+                            <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          {item.member.sales && (
+                            <div className="text-xs bg-green-100 text-green-600 px-1.5 py-0.5 rounded font-medium mt-1 inline-block">
+                              ฝ่ายขาย: {item.member.sales.code} {item.member.sales.name}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-4 px-3 text-sm max-w-[250px]">
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyToClipboard(item.member.name.trim());
+                          }}
+                          className="group cursor-pointer p-2 rounded-lg border-2 border-dashed border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all duration-200"
+                          title="คลิกเพื่อคัดลอกชื่อร้าน"
+                        >
+                          <div className="text-sm text-gray-800 group-hover:text-green-600 truncate flex items-center gap-2" title={item.member.name.trim()}>
+                            <span className="flex-1">{item.member.name.trim()}</span>
+                            <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          {item.member.route && (
+                            <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded inline-block mt-1">
+                              {item.member.route.code} - {item.member.route.name}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-4 px-3 text-sm max-w-[150px]">
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyToClipboard(item.product.code);
+                          }}
+                          className="group cursor-pointer p-2 rounded-lg border-2 border-dashed border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200"
+                          title="คลิกเพื่อคัดลอกรหัสสินค้า"
+                        >
+                          <div className="font-semibold text-gray-800 group-hover:text-blue-600 flex items-center gap-2">
+                            {item.product.code}
+                            <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
+                            <span className="bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded font-medium">
+                              ชั้น {item.product.floor}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-3 text-sm max-w-[250px]">
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyToClipboard(item.product.name);
+                          }}
+                          className="group cursor-pointer p-2 rounded-lg border-2 border-dashed border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all duration-200"
+                          title="คลิกเพื่อคัดลอกชื่อสินค้า"
+                        >
+                          <div className="text-sm text-gray-800 group-hover:text-green-600 line-clamp-2 flex items-start gap-2">
+                            <span className="flex-1">{item.product.name}</span>
+                            <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-3 text-sm max-w-[150px]">
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyToClipboard(item.sh_running);
+                          }}
+                          className="group cursor-pointer p-2 rounded-lg border-2 border-dashed border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-all duration-200"
+                          title="คลิกเพื่อคัดลอก SH"
+                        >
+                          <div className="font-semibold text-gray-800 group-hover:text-purple-600 flex items-center gap-2">
+                            {item.sh_running}
+                            <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            <span className="bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-medium">
+                              เอกสาร SH
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-3 text-sm text-center">
+                        <div className="space-y-1">
+                          <div className="text-lg font-bold text-gray-800">{item.amount_item.toLocaleString()}</div>
+                          <div className="text-xs text-gray-500">{item.unit_item}</div>
+                        </div>
+                      </td>
                       {isDuplicateView && (
-                        <td className="py-3 px-3 text-sm">
-                          <span className="inline-block bg-orange-100 text-orange-700 font-semibold px-2 py-0.5 rounded-full text-xs">
+                        <td className="py-4 px-3 text-sm text-center">
+                          <span className="inline-flex items-center bg-orange-100 text-orange-700 font-semibold px-3 py-1.5 rounded-full text-xs">
+                            <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 01-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12z" clipRule="evenodd" />
+                            </svg>
                             {(item as GroupedItem)._count} รายการ
                           </span>
                         </td>
                       )}
-                      <td className="py-3 px-3 text-sm">
-                        <span className={`font-medium ${color}`}>{label}</span>
+                      {isPendingGroupView && (
+                        <td className="py-4 px-3 text-sm text-center">
+                          <span className="inline-flex items-center bg-yellow-100 text-yellow-700 font-semibold px-3 py-1.5 rounded-full text-xs">
+                            <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                            </svg>
+                            {(item as GroupedItem)._count} รายการรออนุมัติ
+                          </span>
+                        </td>
+                      )}
+                      <td className="py-4 px-3 text-sm text-center">
+                        <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold ${
+                          item.status === 'Approved' ? 'bg-green-100 text-green-800 border border-green-200' :
+                          item.status === 'Done' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                          item.status === 'Duplicate' ? 'bg-orange-100 text-orange-800 border border-orange-200' :
+                          'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                        }`}>
+                          <div className={`w-2 h-2 rounded-full mr-2 ${
+                            item.status === 'Approved' ? 'bg-green-500' :
+                            item.status === 'Done' ? 'bg-blue-500' :
+                            item.status === 'Duplicate' ? 'bg-orange-500' :
+                            'bg-yellow-500'
+                          }`}></div>
+                          {label}
+                        </span>
+                      </td>
+                      <td className="py-4 px-3 text-sm max-w-[200px]">
+                        {item.note ? (
+                          <div 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyToClipboard(item.note || '');
+                            }}
+                            className="group cursor-pointer p-2 rounded-lg border-2 border-dashed border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200"
+                            title="คลิกเพื่อคัดลอกหมายเหตุ"
+                          >
+                            <div className="text-sm text-gray-800 group-hover:text-blue-600 line-clamp-2 flex items-start gap-2">
+                              <span className="flex-1">{item.note}</span>
+                              <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center text-gray-400 italic text-xs py-2">
+                            ไม่มีหมายเหตุ
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-4 px-3 text-sm max-w-[200px]">
+                        {item.empQC_note ? (
+                          <div 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyToClipboard(item.empQC_note || '');
+                            }}
+                            className="group cursor-pointer p-2 rounded-lg border-2 border-dashed border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all duration-200"
+                            title="คลิกเพื่อคัดลอกหมายเหตุจาก QC"
+                          >
+                            <div className="text-sm text-gray-800 group-hover:text-green-600 line-clamp-2 flex items-start gap-2">
+                              <span className="flex-1">{item.empQC_note}</span>
+                              <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center text-gray-400 italic text-xs py-2">
+                            ไม่มีหมายเหตุจาก QC
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-4 px-3 text-sm text-center text-gray-600">
+                        <div className="space-y-1">
+                          <div className="font-medium">{new Date(item.created_at).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit' })}</div>
+                          <div className="text-xs">{new Date(item.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-3 text-sm text-center">
+                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
+                          timeAgo(item.created_at).includes('เพิ่งสร้าง') || timeAgo(item.created_at).includes('นาทีที่แล้ว') ? 'bg-green-100 text-green-700' :
+                          timeAgo(item.created_at).includes('ชั่วโมงที่แล้ว') ? 'bg-yellow-100 text-yellow-700' :
+                          timeAgo(item.created_at).includes('วันที่แล้ว') ? 'bg-orange-100 text-orange-700' :
+                          'bg-red-100 text-red-700'
+                        }`}>
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                          </svg>
+                          {timeAgo(item.created_at)}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -493,7 +888,7 @@ export default function RTApproval() {
         {selectedItem && (
           <div>
             {/* Header */}
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-bold text-gray-800">รายละเอียดการส่ง RT</h2>
               <span className={`text-xs font-semibold px-3 py-1 rounded-full ${selectedItem.status === "Approved" ? "bg-green-100 text-green-700" :
                 selectedItem.status === "Done" ? "bg-blue-100 text-blue-700" :
@@ -505,7 +900,7 @@ export default function RTApproval() {
             </div>
 
             {/* Image + Info */}
-            <div className="flex flex-col sm:flex-row gap-5 mb-5">
+            <div className="flex flex-col sm:flex-row gap-3 mb-3">
               {/* Product Image */}
               <div className="flex-shrink-0 flex justify-center">
                 {selectedItem.product.image ? (
@@ -518,23 +913,22 @@ export default function RTApproval() {
                         : selectedItem.product.image || boxnotfound
                     }
                     alt={selectedItem.product.name}
-                    className="h-44 w-44 object-contain rounded-xl border border-gray-200 bg-gray-50 p-2 shadow-sm"
+                    className="h-32 w-32 object-contain rounded-lg border border-gray-200 bg-gray-50 p-2 shadow-sm"
                   />
                 ) : (
-                  <div className="h-44 w-44 flex items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 text-gray-400 text-xs">
+                  <div className="h-32 w-32 flex items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 text-gray-400 text-xs">
                     ไม่มีรูปภาพ
                   </div>
                 )}
               </div>
 
               {/* Product Details */}
-              <div className="flex-1 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              <div className="flex-1 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                 {[
                   { label: "รหัสสินค้า", value: selectedItem.product.code },
                   { label: "ชื่อสินค้า", value: selectedItem.product.name, clamp: true },
                   { label: "ชั้นวาง", value: selectedItem.product.floor || "-" },
                   { label: "จำนวน / หน่วย", value: `${selectedItem.amount_item} ${selectedItem.unit_item}` },
-                  { label: "SO", value: selectedItem.so_running },
                   { label: "SH", value: selectedItem.sh_running },
                 ].map(({ label, value, clamp }) => (
                   <div key={label} className="flex flex-col gap-0.5">
@@ -545,17 +939,79 @@ export default function RTApproval() {
               </div>
             </div>
 
+            {/* Purchase Entry Information */}
+            <div className="border-t border-gray-100 mb-3" />
+            
+            <div className="mb-3">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                ประวัติการสั่งซื้อ
+              </h3>
+              
+              {selectedItem.product.purchase_entry && selectedItem.product.purchase_entry.length > 0 ? (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {selectedItem.product.purchase_entry.map((entry, index) => (
+                    <div key={index} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">เลขที่ใบสั่งซื้อ:</span>
+                          <span className="font-medium text-gray-800">{entry.purchase_entry_no}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">วันที่สั่งซื้อ:</span>
+                          <span className="font-medium text-gray-800">
+                            {new Date(entry.purchase_entry_date).toLocaleDateString('th-TH', {
+                              day: '2-digit',
+                              month: '2-digit', 
+                              year: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">จำนวน SO:</span>
+                          <span className="font-medium text-blue-600">{parseFloat(entry.SO_amount).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">จำนวน PR:</span>
+                          <span className="font-medium text-green-600">{parseFloat(entry.PR_amount).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">จำนวน PO:</span>
+                          <span className="font-medium text-purple-600">{parseFloat(entry.PO_amount).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">จำนวน RT:</span>
+                          <span className="font-medium text-red-600">{parseFloat(entry.RT_amount).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center">
+                  <div className="flex flex-col items-center gap-2 py-2">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span className="text-gray-500 text-sm">ไม่มีข้อมูลประวัติการสั่งซื้อ</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Divider */}
-            <div className="border-t border-gray-100 mb-5" />
+            <div className="border-t border-gray-100 mb-3" />
 
             {/* Employee & Member */}
-            <div className="grid grid-cols-2 gap-4 mb-5">
-              <div className="bg-gray-50 rounded-lg px-4 py-3">
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className="bg-gray-50 rounded-lg px-3 py-2">
                 <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">พนักงาน</p>
                 <p className="font-semibold text-gray-800 text-sm">{selectedItem.employee.code}</p>
                 <p className="text-gray-600 text-sm">{selectedItem.employee.name}</p>
               </div>
-              <div className="bg-gray-50 rounded-lg px-4 py-3">
+              <div className="bg-gray-50 rounded-lg px-3 py-2">
                 <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">ร้านค้า</p>
                 <p className="font-semibold text-gray-800 text-sm">{selectedItem.member.code}</p>
                 <p className="text-gray-600 text-sm">{selectedItem.member.name}</p>
@@ -563,13 +1019,13 @@ export default function RTApproval() {
             </div>
 
             {/* Note */}
-            <div className="mb-5">
+            <div className="mb-4">
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 หมายเหตุ <span className="text-red-500">*</span>
               </label>
               <textarea
-                className="w-full border border-gray-200 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                rows={3}
+                className="w-full border border-gray-200 rounded-lg p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                rows={2}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="กรอกหมายเหตุ..."
@@ -587,21 +1043,6 @@ export default function RTApproval() {
             </div>
           </div>
         )}
-      </Modal>
-      <Modal isOpen={qrModalOpen} onClose={() => { setQrModalOpen(false); fetchData(); }}>
-        <div className="flex flex-col items-center space-y-4 py-2">
-          <h2 className="text-lg font-bold">สแกนที่ Station QC</h2>
-          <div className="p-4 bg-red-100 rounded-xl">
-            <QRCodeSVG value={approvedRef} size={200} />
-            <div id="refKey" className="mt-2 text-center text-xs text-gray-700 font-semibold">{approvedRef}</div>
-          </div>
-          <button
-            onClick={() => { setQrModalOpen(false); fetchData(); }}
-            className="bg-gray-700 text-white px-10 py-2 rounded-md hover:bg-gray-800"
-          >
-            ปิด
-          </button>
-        </div>
       </Modal>
     </div>
   );
