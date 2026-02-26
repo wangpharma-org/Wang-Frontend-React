@@ -1742,6 +1742,15 @@ const QCDashboard = () => {
     if (modalOpen) setModalOpen(false);
   };
 
+  const handleRtModalClose = () => {
+    setRtRequestModalOpen(false);
+    setStatusNoteQc(false);
+    setRtQcNote("");
+    setRtQcNoteSaved(false);
+    setRtQrInput("");
+    setRtError(null);
+  };
+
   if (error) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -2374,7 +2383,7 @@ const QCDashboard = () => {
               </button>
             </div>
           </Modal>
-          <Modal isOpen={rtRequestModalOpen} onClose={() => { }}>
+          <Modal isOpen={rtRequestModalOpen} onClose={handleRtModalClose}>
             <div className="space-y-4 py-2">
               <h2 className="text-lg font-bold text-center">
                 กรุณาแจ้ง
