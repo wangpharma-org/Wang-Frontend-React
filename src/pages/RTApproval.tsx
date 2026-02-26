@@ -637,7 +637,6 @@ export default function RTApproval() {
                 {tableData.map((item, index) => {
                   const { label } = statusDisplay(item.status);
                   const clickable = isClickable(item.status);
-                  const timeAgoText = timeAgo(item.created_at);
                   return (
                     <tr
                       key={item.ref}
