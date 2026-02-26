@@ -1322,9 +1322,9 @@ const QCDashboard = () => {
         }
       }
       else {
-        setStatusNoteQc(true);
-        setRtRequestModalOpen(false);
         handleRtModalClose();
+        setStatusNoteQc(false);
+        setRtRequestModalOpen(false);
         handleRT(rtPendingData.so_running);
 
       }
@@ -1744,13 +1744,13 @@ const QCDashboard = () => {
   };
 
   const handleRtModalClose = () => {
-    setRtRequestModalOpen(false);
-    setStatusNoteQc(false);
-    setRtQcNote("");
-    setRtQcNoteSaved(false);
-    setRtQrInput("");
-    setRtError(null);
-  };
+  setRtRequestModalOpen(false);
+  setStatusNoteQc(false);
+  setRtQcNote("");
+  setRtQcNoteSaved(false);
+  setRtQrInput("");
+  setRtError(null);
+};
 
   if (error) {
     return (
