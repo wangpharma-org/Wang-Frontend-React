@@ -60,6 +60,9 @@ export interface Product {
   attribute: ProductAttr[];
   detail: ProductDetail[];
   unit: Unit[];
+  rtRequests: {
+    status: string;
+  }[];
 }
 
 export interface Unit {
@@ -199,6 +202,15 @@ const QCDashboard = () => {
     "อื่น ๆ",
   ];
 
+  const RT_NOTE = [
+    "สินค้าไม่พร้อมขาย",
+    "สินค้าหมด",
+    "สินค้าหมดอายุ",
+    "สินค้าถูกจำกัดจำนวน",
+    "สินค้าไม่อนุญาตให้ขายในเส้นทางนี้",
+    "อื่น ๆ",
+  ];
+
   const finalReason =
     selectedReason === "อื่น ๆ" ? customReason : selectedReason;
   const [productNotFoundBarCode, setProductNotFoundBarCode] =
@@ -218,20 +230,20 @@ const QCDashboard = () => {
 
   // RT Request Modal
   const [rtRequestModalOpen, setRtRequestModalOpen] = useState<boolean>(false);
-  const [rtQrInput, setRtQrInput] = useState<string>("");
-  const [rtSubmitting, setRtSubmitting] = useState<boolean>(false);
-  const [rtError, setRtError] = useState<string | null>(null);
   const [rtQcNote, setRtQcNote] = useState<string>("");
-  const [rtQcNoteSubmitting, setRtQcNoteSubmitting] = useState<boolean>(false);
-  const [rtQcNoteSaved, setRtQcNoteSaved] = useState<boolean>(false);
+  const [selectedRTReason, setSelectedRTReason] = useState<string | null>(null);
+  const [customRTReason, setCustomRTReason] = useState<string>("");
+  // const [rtQcNoteSaved, setRtQcNoteSaved] = useState<boolean>(false);
   const [rtPendingData, setRtPendingData] = useState<{
     ref: string;
     so_running: string;
     sh_running: string;
     pro_code: string;
-    key: string;
     employees?: { code: string; name: string }[];
   } | null>(null);
+
+  // เก็บข้อมูลสินค้าที่จะ RT
+  const [rtSelectedProduct, setRtSelectedProduct] = useState<ShoppingOrder | null>(null);
 
   // State สำหรับเก็บ employee array ที่ได้จาก RT API
   const [shRunningArray, setSHRunningArray] = useState<string[] | null>(null);
@@ -313,7 +325,8 @@ const QCDashboard = () => {
     ShoppingOrderPrint[] | null
   >(null);
 
-  const [statusNoteQc, setStatusNoteQc] = useState<boolean>(false);
+  const [isSavingRT, setIsSavingRT] = useState<boolean>(false);
+  const [featureFlagRTRequest, setFeatureFlagRTRequest] = useState<boolean>(false);
 
   const handleCheckFlagRequest = async () => {
     const flag = await axios.get(
@@ -342,6 +355,8 @@ const QCDashboard = () => {
       }
     };
     window.addEventListener("storage", handleStorage);
+
+    checkFlagRTRequest();
 
     const cleanup = () => {
       localStorage.removeItem(TAB_KEY);
@@ -437,6 +452,12 @@ const QCDashboard = () => {
       console.log("urgent", data);
       setUrgent(data);
     });
+
+    // newSocket.on("data_updated", (data) => {
+    //   console.log("Data updated from server:", data);
+    //   // Force refresh when external changes detected
+    //   handleManualRefresh();
+    // });
 
     newSocket.on("qcdata", (data) => {
       console.log("Received data:", data);
@@ -796,6 +817,42 @@ const QCDashboard = () => {
     inputBill.current?.focus();
   };
 
+  // Manual refresh function
+  const handleManualRefresh = async () => {
+    try {
+      if (socket && (mem_code || sh_running || shRunningArray)) {
+        // Re-emit join_room to get fresh data
+        if (mem_code) {
+          socket.emit("join_room", {
+            mem_code,
+            sh_running: null,
+            sh_running_array: null,
+            addShRunningArray: null,
+          });
+        } else if (sh_running) {
+          socket.emit("join_room", {
+            mem_code: null,
+            sh_running,
+            sh_running_array: null,
+            addShRunningArray: null,
+          });
+        } else if (shRunningArray) {
+          socket.emit("join_room", {
+            mem_code: null,
+            sh_running: null,
+            sh_running_array: null,
+            addShRunningArray: shRunningArray,
+          });
+        }
+
+        // Also refresh urgent data
+        socket.emit("get_urgent");
+      }
+    } catch (error) {
+      console.error("Manual refresh failed:", error);
+    }
+  };
+
   // ดึงข้อมูลสำหรับแสดงในหน้าขอสินค้าเพิ่ม
 
   const handleFetchData = async (so_running: string, amount_max: number) => {
@@ -893,8 +950,6 @@ const QCDashboard = () => {
     if (inputBarcode.current) {
       inputBarcode.current.value = "";
     }
-    // const so_running = order.find()
-    // const data = await axios.get(`${import.meta.env.VITE_API_URL_ORDER}/api/qc/${}`)
   };
 
   const handleModalClose = () => {
@@ -1224,18 +1279,38 @@ const QCDashboard = () => {
     const res = await axios.get(
       `${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/rt-request`
     );
-    console.log("Res flagRTRequest", res.data.status);
+    setFeatureFlagRTRequest(res.data.status);
+
     return res.data.status;
   };
 
   const handleRTClick = async (so: ShoppingOrder) => {
     try {
-      const flag = await checkFlagRTRequest();
-      console.log("Flag RT Request:", flag);
-      if (flag === false) {
-        handleRT(so.so_running);
-        return;
+      setRtSelectedProduct(so);
+
+      const checkfeatureFlagRTRequest = await checkFlagRTRequest();
+
+      if (!checkfeatureFlagRTRequest) {
+        await handleRT(so.so_running);
+      } else {
+        if (!so.so_running || !so.sh_running) {
+          console.error("Missing so_running or sh_running for RT request");
+          setIsSavingRT(false);
+        }
+        setRtRequestModalOpen(true);
+        if (rtQcNote.trim()) {
+          sendRTRequest(so, rtQcNote);
+        }
+
       }
+    } catch (error) {
+      console.error("Failed to create RT request", error);
+      setIsSavingRT(false);
+    }
+  };
+
+  const sendRTRequest = async (so: ShoppingOrder, rtQcNote: string) => {
+    try {
       const res = await axios.post(
         `${import.meta.env.VITE_API_URL_ORDER}/api/rt-request`,
         {
@@ -1246,107 +1321,6 @@ const QCDashboard = () => {
           amount_item: so.so_amount,
           so_running: so.so_running,
           sh_running: so.sh_running,
-        },
-        {
-          headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
-        }
-      );
-      setRtPendingData({
-        ref: res.data.refID,
-        so_running: so.so_running,
-        sh_running: so.sh_running,
-        pro_code: so.product.product_code,
-        employees: res.data.employee || [],
-        key: res.data.key,
-      });
-      setRtQrInput("");
-      setRtError(null);
-      setRtRequestModalOpen(true);
-    } catch (error) {
-      console.error("Failed to create RT request", error);
-    }
-  };
-
-  const handleRTSend = async () => {
-    if (!rtPendingData || !rtQrInput.trim()) return;
-    setRtSubmitting(true);
-    setRtError(null);
-    try {
-      console.log("RT QR Input:", rtPendingData);
-      console.log("Sending RT request with ref:", rtPendingData.ref);
-      const res = await axios.post(
-        `${import.meta.env.VITE_API_URL_ORDER}/api/rt-request/receive`,
-        {
-          ref: rtPendingData.ref,
-          so_running: rtPendingData.so_running,
-          sh_running: rtPendingData.sh_running,
-          pro_code: rtPendingData.pro_code,
-          key: rtQrInput,
-          ...(rtQcNoteSaved && rtQcNote.trim() && { note_from_qc: rtQcNote.trim() }),
-        },
-        {
-          headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
-        }
-      );
-      if (res.data.error) {
-        if (res.data.error === "RT Request note is missing") {
-          Swal.fire({
-            icon: "error",
-            title: "ยังไม่ได้รับหมายเหตุการ RT",
-            text: "กรุณาแจ้งผู้ที่เกี่ยวข้องให้ใส่หมายเหตุการ RT ก่อน",
-          });
-        } else if (res.data.error === "RT Request not found") {
-          Swal.fire({
-            icon: "error",
-            title: "QR code ไม่ถูกต้อง",
-            text: "กรุณาสแกน QR code ที่ถูกต้อง",
-          });
-        } else if (res.data.error === "No generated key found") {
-          Swal.fire({
-            icon: "error",
-            title: "ไม่พบรหัสในระบบ",
-            text: "กรุณาติดต่อผู้ดูแลระบบ",
-          });
-        } else if (res.data.error === "Invalid key") {
-          Swal.fire({
-            icon: "error",
-            title: "รหัสไม่ถูกต้อง",
-            text: "กรุณาตรวจสอบรหัสและลองใหม่อีกครั้ง",
-          });
-        } else {
-          Swal.fire({
-            icon: "error",
-            title: "เกิดข้อผิดพลาด",
-            text: "กรุณาลองอีกครั้ง",
-          });
-        }
-      }
-      else {
-        handleRtModalClose();
-        setStatusNoteQc(false);
-        setRtRequestModalOpen(false);
-        handleRT(rtPendingData.so_running);
-
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "เกิดข้อผิดพลาด กรุณาลองใหม่";
-      setRtError(message);
-    } finally {
-      setRtSubmitting(false);
-    }
-  };
-
-  const handleAddQcNote = async () => {
-    if (!rtPendingData?.ref || !rtQcNote.trim()) return;
-
-    setRtQcNoteSubmitting(true);
-
-    try {
-      // ยิง API เพื่อบันทึกหมายเหตุลงฐานข้อมูล
-      const res = await axios.post(
-        `${import.meta.env.VITE_API_URL_ORDER}/api/rt-request/add-note-from-qc`,
-        {
-          ref: rtPendingData.ref,
           empQC_note: rtQcNote.trim(),
         },
         {
@@ -1354,29 +1328,54 @@ const QCDashboard = () => {
         }
       );
 
-      if (res.data.status === true) {
-        setRtQcNoteSaved(true);
-
-        Swal.fire({
-          icon: "success",
-          title: "บันทึกหมายเหตุสำเร็จ",
-          text: "หมายเหตุจากฝั่ง QC ถูกบันทึกลงระบบเรียบร้อยแล้ว",
-          timer: 2000,
-          showConfirmButton: false,
+      if (res.data.status === "Pending") {
+        setRtPendingData({
+          ref: res.data.refID,
+          so_running: so.so_running,
+          sh_running: so.sh_running,
+          pro_code: so.product.product_code,
+          employees: res.data.employee || [],
         });
-        setStatusNoteQc(true);
+
+        setDataQC((prev) => {
+          if (!prev) return null;
+
+          const updateOrder = (order: ShoppingOrder): ShoppingOrder => {
+            if (order.so_running === so.so_running) {
+              return { ...order, product: { ...order.product, rtRequests: [{ status: "Pending" }] } };
+            }
+            return order;
+          };
+
+          if (Array.isArray(prev)) {
+            return prev.map((root) => ({
+              ...root,
+              shoppingOrders: root.shoppingOrders.map(updateOrder),
+            }));
+          } else {
+            return {
+              ...prev,
+              shoppingOrders: prev.shoppingOrders.map(updateOrder),
+            };
+          }
+        });
+
+        setRtRequestModalOpen(false);
+        setRtQcNote("");
+        setSelectedRTReason("");
       } else {
-        throw new Error(res.data.message || "Failed to add QC note");
+        setRtRequestModalOpen(false);
+        setRtQcNote("");
+        setSelectedRTReason("");
       }
-    } catch (error) {
-      console.error("Failed to add QC note", error);
+
+      setIsSavingRT(false);
+    } catch {
       Swal.fire({
         icon: "error",
         title: "เกิดข้อผิดพลาด",
-        text: "ไม่สามารถบันทึกหมายเหตุได้ กรุณาลองใหม่อีกครั้ง",
+        text: "ไม่สามารถสร้างคำร้องได้"
       });
-    } finally {
-      setRtQcNoteSubmitting(false);
     }
   };
 
@@ -1742,15 +1741,6 @@ const QCDashboard = () => {
 
     if (modalOpen) setModalOpen(false);
   };
-
-  const handleRtModalClose = () => {
-  setRtRequestModalOpen(false);
-  setStatusNoteQc(false);
-  setRtQcNote("");
-  setRtQcNoteSaved(false);
-  setRtQrInput("");
-  setRtError(null);
-};
 
   if (error) {
     return (
@@ -2384,7 +2374,13 @@ const QCDashboard = () => {
               </button>
             </div>
           </Modal>
-          <Modal isOpen={rtRequestModalOpen} onClose={() => { }}>
+          <Modal isOpen={rtRequestModalOpen} onClose={() => {
+            setRtRequestModalOpen(false);
+            setIsSavingRT(false);
+            setSelectedRTReason(null);
+            setCustomRTReason("");
+            setRtQcNote("");
+          }}>
             <div className="space-y-4 py-2">
               <h2 className="text-lg font-bold text-center">
                 กรุณาแจ้ง
@@ -2404,154 +2400,218 @@ const QCDashboard = () => {
                   <li>2. แจ้งคนที่เกี่ยวข้องเพื่ออนุมัติคำขอที่จะ RT</li>
                   <li>3. เมื่อคนที่เกี่ยวข้องอนุมัติให้แล้ว เขาจะให้ใส่รหัสเพื่อที่จะทำให้ระบบทำงานต่อได้</li>
                 </ol>
-                <p className="text-orange-600 font-semibold mt-2">
-                  ⚠️ หมายเหตุ: หน้านี้ไม่สามารถปิดได้จนกว่าจะมีการอนุมัติสำเร็จ
+                <p className="text-blue-600 font-semibold mt-2">
+                  💡 หมายเหตุ: คุณสามารถกดยกเลิกเพื่อปิดหน้านี้ได้หากไม่ต้องการส่งคำขอ RT
                 </p>
               </div>
 
-              {rtPendingData?.ref && (
-                <div className="bg-gray-50 p-3 rounded-md text-sm space-y-2">
-                  <p className="text-center text-gray-600">
-                    เลขอ้างอิง:{" "}
-                    <span className="font-semibold text-gray-800">
-                      {rtPendingData.ref.slice(-6)}
-                    </span>
-                  </p>
+              {rtSelectedProduct && (
+                <>
+                  <div className="bg-gray-50 p-3 rounded-md text-sm space-y-2">
 
-                  {/* ข้อมูลสินค้า */}
-                  <div className="border-t pt-2">
-                    <p className="font-semibold text-gray-700 mb-2">ข้อมูลสินค้า:</p>
-                    <div className="flex items-center gap-3">
-                      {/* รูปภาพสินค้า */}
-                      {(() => {
-                        const currentProduct = order.find(o => o.product.product_code === rtPendingData.pro_code);
-                        const imageUrl = currentProduct?.product?.product_image_url;
-
-                        if (imageUrl) {
-                          const fullImageUrl = imageUrl.startsWith("..")
-                            ? `https://www.wangpharma.com${imageUrl.slice(2)}`
-                            : imageUrl;
-
-                          return (
-                            <img
-                              src={fullImageUrl}
-                              alt="รูปภาพสินค้า"
-                              className="w-16 h-16 object-cover rounded-md border shadow-sm"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                              }}
-                            />
-                          );
-                        }
-                        return (
-                          <div className="w-16 h-16 bg-gray-200 rounded-md flex items-center justify-center">
-                            <span className="text-gray-400 text-xs">ไม่มีรูป</span>
-                          </div>
-                        );
-                      })()}
-
-                      {/* ข้อมูลสินค้า */}
-                      <div className="flex-1">
-                        <p className="text-gray-600">
-                          รหัสสินค้า: <span className="font-medium text-gray-800">{rtPendingData.pro_code}</span>
-                        </p>
+                    {/* ข้อมูลสินค้า */}
+                    <div className="border-t pt-2">
+                      <p className="font-semibold text-gray-700 mb-2">ข้อมูลสินค้า:</p>
+                      <div className="flex items-center gap-3">
+                        {/* รูปภาพสินค้า */}
                         {(() => {
-                          const currentProduct = order.find(o => o.product.product_code === rtPendingData.pro_code);
-                          if (currentProduct?.product?.product_name) {
+                          // ใช้ข้อมูลจาก rtSelectedProduct ที่เก็บไว้
+                          const imageUrl = rtSelectedProduct?.product?.product_image_url;
+
+                          if (imageUrl) {
+                            const fullImageUrl = imageUrl.startsWith("..")
+                              ? `https://www.wangpharma.com${imageUrl.slice(2)}`
+                              : imageUrl;
+
                             return (
-                              <p className="text-gray-600 text-sm mt-1">
-                                ชื่อสินค้า: <span className="font-medium text-gray-800">{currentProduct.product.product_name}</span>
-                              </p>
+                              <img
+                                src={fullImageUrl}
+                                alt="รูปภาพสินค้า"
+                                className="w-16 h-16 object-cover rounded-md border shadow-sm"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
                             );
                           }
-                          return null;
+                          return (
+                            <div className="w-16 h-16 bg-gray-200 rounded-md flex items-center justify-center">
+                              <span className="text-gray-400 text-xs">ไม่มีรูป</span>
+                            </div>
+                          );
                         })()}
+
+                        {/* ข้อมูลสินค้า */}
+                        <div className="flex-1">
+                          <p className="text-gray-600">
+                            รหัสสินค้า: <span className="font-medium text-gray-800">
+                              {rtSelectedProduct?.product?.product_code || "-"}
+                            </span>
+                          </p>
+                          <p className="text-gray-600 text-sm mt-1">
+                            ชื่อสินค้า: <span className="font-medium text-gray-800">
+                              {rtSelectedProduct?.product?.product_name || "-"}
+                            </span>
+                          </p>
+                          <p className="text-gray-600 text-sm mt-1">
+                            บาร์โค้ด: <span className="font-medium text-gray-800">
+                              {rtSelectedProduct?.product?.product_barcode || "-"}
+                            </span>
+                          </p>
+                          <div className="flex gap-4 mt-2">
+                            <p className="text-gray-600 text-sm">
+                              ชั้น: <span className="font-medium text-red-600">
+                                {rtSelectedProduct?.product?.product_floor || "-"}
+                              </span>
+                            </p>
+                            <p className="text-gray-600 text-sm">
+                              คงเหลือ: <span className="font-medium text-green-600">
+                                {rtSelectedProduct?.product?.product_stock || "0"} {rtSelectedProduct?.product?.product_unit || ""}
+                              </span>
+                            </p>
+                          </div>
+                        </div>
                       </div>
+                    </div>
+
+                    {/* ข้อมูลร้าน */}
+                    <div className="border-t pt-2">
+                      <p className="font-semibold text-gray-700 mb-1">ข้อมูลร้าน:</p>
+                      {(() => {
+                        // หาข้อมูลร้านที่ถูกต้องจาก sh_running ที่เกี่ยวข้อง
+                        let storeInfo = null;
+
+                        if (Array.isArray(dataQC) && rtSelectedProduct) {
+                          storeInfo = dataQC.find(item => item.sh_running === rtSelectedProduct.sh_running)?.members;
+                        } else if (dataQC && !Array.isArray(dataQC) && rtSelectedProduct) {
+                          storeInfo = dataQC.sh_running === rtSelectedProduct.sh_running ? dataQC.members : null;
+                        }
+
+                        if (!storeInfo && dataQC) {
+                          // fallback ถ้าหาไม่เจอ ใช้ข้อมูลแรกแทน
+                          storeInfo = Array.isArray(dataQC) ? dataQC[0]?.members : dataQC?.members;
+                        }
+
+                        return (
+                          <>
+                            <p className="text-gray-600">
+                              รหัสร้าน: <span className="font-medium text-gray-800">
+                                {storeInfo?.mem_code || "-"}
+                              </span>
+                            </p>
+                            <p className="text-gray-600">
+                              ชื่อร้าน: <span className="font-medium text-gray-800">
+                                {storeInfo?.mem_name || "-"}
+                              </span>
+                            </p>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
 
-                  {/* ข้อมูลร้าน */}
-                  <div className="border-t pt-2">
-                    <p className="font-semibold text-gray-700 mb-1">ข้อมูลร้าน:</p>
-                    <p className="text-gray-600">
-                      รหัสร้าน: <span className="font-medium text-gray-800">
-                        {Array.isArray(dataQC)
-                          ? dataQC[0]?.members?.mem_code || "-"
-                          : dataQC?.members?.mem_code || "-"}
-                      </span>
-                    </p>
-                    <p className="text-gray-600">
-                      ชื่อร้าน: <span className="font-medium text-gray-800">
-                        {Array.isArray(dataQC)
-                          ? dataQC[0]?.members?.mem_name || "-"
-                          : dataQC?.members?.mem_name || "-"}
-                      </span>
-                    </p>
+                  <div className="flex justify-center text-center">
+                    <p className="text-3xl font-bold">กรุณาระบุเหตุผลการขอ RT</p>
                   </div>
-                </div>
-              )}
 
-              {!statusNoteQc ? (
-                <div className="bg-gray-50 p-3 rounded-md">
-                  <label className="block text-sm font-medium mb-2 text-gray-700">
-                    หมายเหตุจากฝั่ง QC (ไม่บังคับ)
-                  </label>
-                  <div className="flex gap-2">
-                    <textarea
-                      value={rtQcNote}
-                      onChange={(e) => setRtQcNote(e.target.value)}
-                      className="flex-1 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-                      rows={2}
-                      placeholder="กรอกหมายเหตุเพิ่มเติมจากฝั่ง QC..."
-                    />
-                    <button
-                      onClick={handleAddQcNote}
-                      disabled={rtQcNoteSubmitting || !rtQcNote.trim()}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-                    >
-                      {rtQcNoteSubmitting ? "กำลังบันทึก..." : "บันทึก"}
-                    </button>
-                    {rtQcNoteSaved && (
-                      <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                        บันทึกแล้ว
-                      </div>
-                    )}
+                  <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {RT_NOTE.map((reason) => {
+                      const isSelected = selectedRTReason === reason;
+
+                      return (
+                        <label
+                          key={reason}
+                          className={`
+                      flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer
+                      transition-all duration-200 select-none
+                      ${isSelected
+                              ? "border-red-600 bg-red-50 shadow-md"
+                              : "border-gray-300 bg-white hover:border-red-400 hover:bg-gray-50"
+                            }
+                    `}
+                        >
+                          <input
+                            type="radio"
+                            name="rt-request-reason"
+                            value={reason}
+                            checked={isSelected}
+                            onChange={() => {
+                              setSelectedRTReason(reason);
+                              if (reason !== "อื่น ๆ") {
+                                setRtQcNote(reason);
+                                setCustomRTReason("");
+                              } else {
+                                setRtQcNote("");
+                              }
+                            }}
+                            className="hidden"
+                          />
+
+                          <div
+                            className={`
+                        w-6 h-6 rounded-full border-2 flex items-center justify-center
+                        ${isSelected ? "border-red-600" : "border-gray-400"}
+                      `}
+                          >
+                            {isSelected && (
+                              <div className="w-3 h-3 rounded-full bg-red-600" />
+                            )}
+                          </div>
+
+                          <span
+                            className={`
+                        text-xl font-semibold
+                        ${isSelected ? "text-red-700" : "text-gray-700"}
+                      `}
+                          >
+                            {reason}
+                          </span>
+                        </label>
+                      );
+                    })}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    หมายเหตุนี้จะถูกส่งไปยังระบบเพื่อประกอบการพิจารณาอนุมัติ RT
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      ข้อมูลจาก Qr code
-                    </label>
-                    <input
-                      type="password"
-                      value={rtQrInput}
-                      onChange={(e) => setRtQrInput(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleRTSend()}
-                      className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      autoFocus
-                    />
-                  </div>
-                  {rtError && (
-                    <p className="text-red-500 text-sm text-center">{rtError}</p>
+
+                  {selectedRTReason === "อื่น ๆ" && (
+                    <div className="mt-4 flex justify-center">
+                      <input
+                        type="text"
+                        value={customRTReason}
+                        onChange={(e) => {
+                          setCustomRTReason(e.target.value);
+                          setRtQcNote(e.target.value);
+                        }}
+                        className="bg-white text-xl text-center rounded-sm p-2 drop-shadow-xl w-lg font-bold border border-gray-300"
+                        placeholder="กรุณาระบุเหตุผลเพิ่มเติม"
+                      />
+                    </div>
                   )}
-                  <p className="text-xs text-gray-400 text-center">
-                    ปุ่มจะกดไม่ได้ถ้า ใน input ไม่มีข้อมูล
-                  </p>
-                  <div className="flex justify-center">
+
+                  <div className="flex w-full justify-center gap-4 mt-6">
                     <button
-                      onClick={handleRTSend}
-                      disabled={rtSubmitting || !rtQrInput.trim()}
-                      className="bg-gray-700 text-white px-10 py-2 rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => {
+                        setRtRequestModalOpen(false);
+                        setSelectedRTReason(null);
+                        setCustomRTReason("");
+                        setRtQcNote("");
+                      }}
+                      className="p-3 text-xl rounded-lg text-white bg-gray-500 hover:bg-gray-600 drop-shadow-sm"
                     >
-                      {rtSubmitting ? "กำลังส่ง..." : "ส่ง"}
+                      ยกเลิก
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (rtSelectedProduct) {
+                          handleRTClick(rtSelectedProduct);
+                        }
+                      }}
+                      disabled={!rtQcNote.trim()}
+                      className={`p-3 text-xl rounded-lg text-white drop-shadow-sm
+                        ${!rtQcNote.trim()
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : "bg-red-700 hover:bg-red-800"
+                        }`}
+                    >
+                      {isSavingRT ? "กำลังบันทึก..." : "ส่งคำขอแจ้ง RT"}
                     </button>
                   </div>
                 </>
@@ -3146,6 +3206,7 @@ const QCDashboard = () => {
                                             "สติกเกอร์ผิดตะกร้า"
                                           }
                                           value="สติกเกอร์ผิดตะกร้า"
+                                          readOnly
                                           className="text-blue-600"
                                         />
                                         <span className="text-base text-left font-bold text-red-700">
@@ -3159,6 +3220,7 @@ const QCDashboard = () => {
                                           name={`qc_status_${so.so_running}`}
                                           checked={so.so_qc_note === "ขาด"}
                                           value="ขาด"
+                                          readOnly
                                           className="text-blue-600"
                                         />
                                         <span className="text-base font-bold text-blue-800">
@@ -3172,6 +3234,7 @@ const QCDashboard = () => {
                                           name={`qc_status_${so.so_running}`}
                                           checked={so.so_qc_note === "ไม่ครบ"}
                                           value="ไม่ครบ"
+                                          readOnly
                                           className="text-blue-600"
                                         />
                                         <span className="text-base font-bold text-green-700">
@@ -3185,6 +3248,7 @@ const QCDashboard = () => {
                                           name={`qc_status_${so.so_running}`}
                                           checked={so.so_qc_note === "หยิบผิด"}
                                           value="หยิบผิด"
+                                          readOnly
                                           className="text-blue-600"
                                         />
                                         <span className="text-base font-bold text-blue-500">
@@ -3198,6 +3262,7 @@ const QCDashboard = () => {
                                           name={`qc_status_${so.so_running}`}
                                           checked={so.so_qc_note === "หยิบเกิน"}
                                           value="หยิบเกิน"
+                                          readOnly
                                           className="text-blue-600"
                                         />
                                         <span className="text-base font-bold text-orange-500">
@@ -3211,6 +3276,7 @@ const QCDashboard = () => {
                                           name={`qc_status_${so.so_running}`}
                                           checked={so.so_qc_note === "ไม่มีของ"}
                                           value="ไม่มีของ"
+                                          readOnly
                                           className="text-blue-600"
                                         />
                                         <span className="text-base font-bold text-red-600">
@@ -3249,18 +3315,30 @@ const QCDashboard = () => {
                                         }
                                         className={` p-1 rounded-lg text-base text-white cursor-pointer ${so.so_already_qc === "RT" ||
                                           so.so_already_qc === "Yes"
-                                          ? "hover:bg-gray-600 bg-gray-500"
-                                          : "hover:bg-red-600 bg-red-500"
+                                          ? "hover:bg-gray-600 bg-gray-500" : (so.product?.rtRequests?.[0]?.status === "Approved" || so.product?.rtRequests?.[0]?.status === "Duplicate") && featureFlagRTRequest === true
+                                            ? "hover:bg-green-600 bg-green-500" : so.product?.rtRequests?.[0]?.status === "Pending" && featureFlagRTRequest === true
+                                              ? "hover:bg-yellow-600 bg-yellow-500"
+                                              : "hover:bg-red-600 bg-red-500"
                                           }`}
                                         onClick={() => {
-                                          handleRTClick(so);
+                                          if (so.product?.rtRequests?.[0]?.status === "Approved" || so.product?.rtRequests?.[0]?.status === "Duplicate") {
+                                            handleRT(so.so_running);
+                                          } else if (so.product?.rtRequests?.[0]?.status === "Pending") {
+                                            handleManualRefresh();
+                                          } else {
+                                            handleRTClick(so);
+                                          }
                                         }}
                                       >
                                         {so.so_already_qc === "RT"
                                           ? "ส่ง RT แล้ว"
                                           : so.so_already_qc === "Yes"
                                             ? "Qc แล้ว"
-                                            : "ส่ง RT"}
+                                            : (so.product?.rtRequests?.[0]?.status === "Approved" || so.product?.rtRequests?.[0]?.status === "Duplicate") && featureFlagRTRequest === true && so.so_already_qc !== "RT"
+                                              ? "RT ได้แล้ว"
+                                              : so.product?.rtRequests?.[0]?.status === "Pending" && featureFlagRTRequest === true
+                                                ? "รออนุมัติ กดเพื่อโหลดใหม่"
+                                                : "ส่ง RT"}
                                       </button>
 
                                       <button

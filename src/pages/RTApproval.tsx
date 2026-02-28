@@ -10,11 +10,11 @@ const VITE_API_URL_ORDER = import.meta.env.VITE_API_URL_ORDER;
 interface RTApprovalItem {
   ref: string;
   employee: { code: string; name: string };
-  product: { 
-    code: string; 
-    name: string; 
-    image: string; 
-    floor: string; 
+  product: {
+    code: string;
+    name: string;
+    image: string;
+    floor: string;
     purchase_entry: {
       SO_amount: string;
       PR_amount: string;
@@ -25,9 +25,9 @@ interface RTApprovalItem {
       purchase_entry_date: Date;
     }[];
   };
-  member: { 
-    code: string; 
-    name: string; 
+  member: {
+    code: string;
+    name: string;
     sales?: { code: string; name: string };
     route?: {
       code: string;
@@ -70,14 +70,14 @@ function timeAgo(dateString: string): string {
   const now = new Date();
   const date = new Date(dateString);
   const diffInMs = now.getTime() - date.getTime();
-  
+
   const seconds = Math.floor(diffInMs / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
   const months = Math.floor(days / 30);
   const years = Math.floor(days / 365);
-  
+
   if (years > 0) return `${years} ปีที่แล้ว`;
   if (months > 0) return `${months} เดือนที่แล้ว`;
   if (days > 0) return `${days} วันที่แล้ว`;
@@ -92,8 +92,21 @@ export default function RTApproval() {
   const [loading, setLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState<RTApprovalItem | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [note, setNote] = useState("");
+  const [, setNote] = useState("");
+  const [selectedReason, setSelectedReason] = useState<string | null>(null);
+  const [customReason, setCustomReason] = useState("");
+  
+  const NOTE_OPTIONS = [
+    "ให้ผ่านอนุมัติ",
+    "สินค้าจริงไม่มี", 
+    "ให้สินค้าอื่นทดแทน",
+    "สินค้ามีการสลับกัน ตรวจสอบเพิ่ม",
+    "อื่นๆ"
+  ];
+
+  const finalNote = selectedReason === "อื่นๆ" ? customReason : selectedReason;
   const [submitting, setSubmitting] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("Pending");
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState<string>("");
@@ -157,7 +170,7 @@ export default function RTApproval() {
         // เรียงตามวันที่สร้างล่าสุดแล้วเอาอันล่าสุดมาเป็นหลัก
         const sortedItems = items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         // หาเวลาที่เก่าที่สุด
-        const oldestItem = items.reduce((oldest, current) => 
+        const oldestItem = items.reduce((oldest, current) =>
           new Date(current.created_at) < new Date(oldest.created_at) ? current : oldest
         );
         return {
@@ -179,7 +192,7 @@ export default function RTApproval() {
       setData(res.data);
     } catch (error: any) {
       console.error("Failed to fetch RT approval list", error);
-      
+
       if (error.response?.status === 403) {
         setError("ไม่มีสิทธิ์เข้าถึงข้อมูล กรุณาเข้าสู่ระบบใหม่");
       } else if (error.response?.status === 401) {
@@ -209,7 +222,7 @@ export default function RTApproval() {
       fetchLatestKey();
     }, 5 * 60 * 1000);
 
-    return () => clearInterval(interval);
+    return () => { clearInterval(interval); };
   }, []);
 
   const fetchLatestKey = async () => {
@@ -218,7 +231,7 @@ export default function RTApproval() {
         headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
       });
       setLatestKey(res.data || "");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to fetch latest key", error);
       setLatestKey("");
     }
@@ -297,6 +310,8 @@ export default function RTApproval() {
   const handleRowClick = (item: RTApprovalItem) => {
     setSelectedItem(item);
     setNote("");
+    setSelectedReason(null);
+    setCustomReason("");
     setModalOpen(true);
   };
 
@@ -326,11 +341,64 @@ export default function RTApproval() {
     }
   };
 
+  const handleReject = async () => {
+    if (!selectedItem) return;
+    setRejecting(true);
+    try {
+      await axios.patch(`${VITE_API_URL_ORDER}/api/rt-request/reject/${selectedItem.ref}`, { 
+        pro_code: selectedItem.product.code,
+        mem_code: selectedItem.member.code,
+        note: finalNote?.trim() || null
+      }, {
+        headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
+      });
+
+      setModalOpen(false);
+
+      // แสดง popup สำเร็จ
+      Swal.fire({
+        icon: 'success',
+        title: 'ปฏิเสธ RT สำเร็จ!',
+        html: `
+          <div class="text-center">
+            <p class="mb-3">ปฏิเสธคำขอ RT เรียบร้อยแล้ว</p>
+            <div class="bg-gray-100 rounded-lg p-3 inline-block">
+              <p class="text-sm text-gray-600 mb-1">หมายเลขอ้างอิง</p>
+              <p class="font-mono font-bold text-lg">${selectedItem.ref}</p>
+            </div>
+          </div>
+        `,
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#ef4444',
+        showConfirmButton: true,
+        allowOutsideClick: false,
+        allowEscapeKey: false
+      });
+      fetchData();
+    } catch (error) {
+      console.error("Failed to reject RT", error);
+
+      Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาด!',
+        text: 'ไม่สามารถปฏิเสธคำขอ RT ได้ กรุณาลองใหม่อีกครั้ง',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#ef4444'
+      });
+    } finally {
+      setRejecting(false);
+    }
+  };
+
   const handleApprove = async () => {
-    if (!selectedItem || !note.trim()) return;
+    if (!selectedItem) return;
     setSubmitting(true);
     try {
-      await axios.patch(`${VITE_API_URL_ORDER}/api/rt-request/${selectedItem.ref}`, { note }, {
+      await axios.patch(`${VITE_API_URL_ORDER}/api/rt-request/${selectedItem.ref}`, { 
+        pro_code: selectedItem.product.code,
+        mem_code: selectedItem.member.code,
+        note: finalNote?.trim() || null
+      }, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
       });
       
@@ -374,9 +442,9 @@ export default function RTApproval() {
 
   const isClickable = (status: string) => status !== "Approved" && status !== "Duplicate" && status !== "Done";
 
-  const tableData = statusFilter === "Duplicate" ? groupedDuplicates : 
-                   statusFilter === "Pending" ? groupedPending.length > 0 ? groupedPending : filteredData :
-                   filteredData;
+  const tableData = statusFilter === "Duplicate" ? groupedDuplicates :
+    statusFilter === "Pending" ? groupedPending.length > 0 ? groupedPending : filteredData :
+      filteredData;
   const isDuplicateView = statusFilter === "Duplicate";
   const isPendingGroupView = statusFilter === "Pending" && groupedPending.length > 0;
 
@@ -588,7 +656,7 @@ export default function RTApproval() {
               </svg>
               <div>
                 <div className="font-semibold mb-2">ไม่สามารถโหลดข้อมูลได้</div>
-                <button 
+                <button
                   onClick={() => {
                     setError(null);
                     fetchData();
@@ -602,7 +670,7 @@ export default function RTApproval() {
           </div>
         ) : tableData.length === 0 ? (
           <div className="text-center text-gray-400 py-10">
-            {statusFilter === "Pending" && groupedPending.length === 0 ? 
+            {statusFilter === "Pending" && groupedPending.length === 0 ?
               "ไม่พบรายการรออนุมัติที่ซ้ำกัน" : "ไม่มีรายการ"
             }
           </div>
@@ -663,7 +731,7 @@ export default function RTApproval() {
                         </div>
                       </td>
                       <td className="py-4 px-3 text-sm max-w-[150px]">
-                        <div 
+                        <div
                           onClick={(e) => {
                             e.stopPropagation();
                             copyToClipboard(item.member.code);
@@ -685,7 +753,7 @@ export default function RTApproval() {
                         </div>
                       </td>
                       <td className="py-4 px-3 text-sm max-w-[250px]">
-                        <div 
+                        <div
                           onClick={(e) => {
                             e.stopPropagation();
                             copyToClipboard(item.member.name.trim());
@@ -707,7 +775,7 @@ export default function RTApproval() {
                         </div>
                       </td>
                       <td className="py-4 px-3 text-sm max-w-[150px]">
-                        <div 
+                        <div
                           onClick={(e) => {
                             e.stopPropagation();
                             copyToClipboard(item.product.code);
@@ -729,7 +797,7 @@ export default function RTApproval() {
                         </div>
                       </td>
                       <td className="py-4 px-3 text-sm max-w-[250px]">
-                        <div 
+                        <div
                           onClick={(e) => {
                             e.stopPropagation();
                             copyToClipboard(item.product.name);
@@ -746,7 +814,7 @@ export default function RTApproval() {
                         </div>
                       </td>
                       <td className="py-4 px-3 text-sm max-w-[150px]">
-                        <div 
+                        <div
                           onClick={(e) => {
                             e.stopPropagation();
                             copyToClipboard(item.sh_running);
@@ -797,21 +865,20 @@ export default function RTApproval() {
                         <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold ${
                           item.status === 'Approved' ? 'bg-green-100 text-green-800 border border-green-200' :
                           item.status === 'Done' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
-                          item.status === 'Duplicate' ? 'bg-orange-100 text-orange-800 border border-orange-200' :
-                          'bg-yellow-100 text-yellow-800 border border-yellow-200'
-                        }`}>
-                          <div className={`w-2 h-2 rounded-full mr-2 ${
-                            item.status === 'Approved' ? 'bg-green-500' :
+                            item.status === 'Duplicate' ? 'bg-orange-100 text-orange-800 border border-orange-200' :
+                              'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                          }`}>
+                          <div className={`w-2 h-2 rounded-full mr-2 ${item.status === 'Approved' ? 'bg-green-500' :
                             item.status === 'Done' ? 'bg-blue-500' :
-                            item.status === 'Duplicate' ? 'bg-orange-500' :
-                            'bg-yellow-500'
-                          }`}></div>
+                              item.status === 'Duplicate' ? 'bg-orange-500' :
+                                'bg-yellow-500'
+                            }`}></div>
                           {label}
                         </span>
                       </td>
                       <td className="py-4 px-3 text-sm max-w-[200px]">
                         {item.note ? (
-                          <div 
+                          <div
                             onClick={(e) => {
                               e.stopPropagation();
                               copyToClipboard(item.note || '');
@@ -834,7 +901,7 @@ export default function RTApproval() {
                       </td>
                       <td className="py-4 px-3 text-sm max-w-[200px]">
                         {item.empQC_note ? (
-                          <div 
+                          <div
                             onClick={(e) => {
                               e.stopPropagation();
                               copyToClipboard(item.empQC_note || '');
@@ -940,7 +1007,7 @@ export default function RTApproval() {
 
             {/* Purchase Entry Information */}
             <div className="border-t border-gray-100 mb-3" />
-            
+
             <div className="mb-3">
               <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                 <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -948,7 +1015,7 @@ export default function RTApproval() {
                 </svg>
                 ประวัติการสั่งซื้อ
               </h3>
-              
+
               {selectedItem.product.purchase_entry && selectedItem.product.purchase_entry.length > 0 ? (
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {selectedItem.product.purchase_entry.map((entry, index) => (
@@ -963,7 +1030,7 @@ export default function RTApproval() {
                           <span className="font-medium text-gray-800">
                             {new Date(entry.purchase_entry_date).toLocaleDateString('th-TH', {
                               day: '2-digit',
-                              month: '2-digit', 
+                              month: '2-digit',
                               year: 'numeric'
                             })}
                           </span>
@@ -1022,19 +1089,91 @@ export default function RTApproval() {
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 หมายเหตุ <span className="text-red-500">*</span>
               </label>
-              <textarea
-                className="w-full border border-gray-200 rounded-lg p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                rows={2}
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="กรอกหมายเหตุ..."
-              />
+              
+              <div className="space-y-3">
+                {NOTE_OPTIONS.map((option, index) => {
+                  const isSelected = selectedReason === option;
+                  
+                  return (
+                    <label
+                      key={index}
+                      className={`
+                        flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer
+                        transition-all duration-200 select-none
+                        ${isSelected
+                          ? "border-blue-500 bg-blue-50 shadow-sm"
+                          : "border-gray-200 bg-white hover:border-blue-300 hover:bg-gray-50"
+                        }
+                      `}
+                    >
+                      <input
+                        type="radio"
+                        name="note-reason"
+                        value={option}
+                        checked={isSelected}
+                        onChange={() => {
+                          setSelectedReason(option);
+                          if (option !== "อื่นๆ") {
+                            setNote(option);
+                            setCustomReason("");
+                          } else {
+                            setNote("");
+                          }
+                        }}
+                        className="hidden"
+                      />
+                      
+                      <div
+                        className={`
+                          w-5 h-5 rounded-full border-2 flex items-center justify-center
+                          ${isSelected ? "border-blue-500" : "border-gray-400"}
+                        `}
+                      >
+                        {isSelected && (
+                          <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                        )}
+                      </div>
+                      
+                      <span
+                        className={`
+                          text-sm font-medium
+                          ${isSelected ? "text-blue-700" : "text-gray-700"}
+                        `}
+                      >
+                        {option}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              
+              {selectedReason === "อื่นๆ" && (
+                <div className="mt-4">
+                  <textarea
+                    className="w-full border border-gray-200 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                    rows={3}
+                    value={customReason}
+                    onChange={(e) => {
+                      setCustomReason(e.target.value);
+                      setNote(e.target.value);
+                    }}
+                    placeholder="กรุณาระบุหมายเหตุเพิ่มเติม..."
+                  />
+                </div>
+              )}
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={handleReject}
+                disabled={!featureFlag || rejecting}
+                className="bg-red-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {rejecting ? "กำลังปฏิเสธ..." : !featureFlag ? "ไม่สามารถปฏิเสธได้" : "ปฏิเสธคำขอ"}
+              </button>
               <button
                 onClick={handleApprove}
-                disabled={!featureFlag || submitting || !note.trim()}
+                disabled={!featureFlag || submitting}
                 className="bg-blue-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {submitting ? "กำลังบันทึก..." : !featureFlag ? "ไม่สามารถอนุมัติได้" : "ยืนยันอนุมัติ"}
