@@ -275,7 +275,7 @@ const OrderList = () => {
 
     console.log("requestProduct", requestProduct);
 
-    const newFloorCounts: Record<number, number> = {};
+    const newFloorCounts: Record<number | string, number> = {};
     orderList?.forEach((member) => {
       member.shoppingHeads.forEach((head) => {
         head.shoppingOrders.forEach((order) => {
@@ -285,8 +285,8 @@ const OrderList = () => {
             const floorKey: string = hasBox
               ? "box"
               : order.product.product_floor || "1";
-            newFloorCounts[Number(floorKey)] =
-              (newFloorCounts[Number(floorKey)] || 0) + 1;
+            newFloorCounts[floorKey] =
+              (newFloorCounts[floorKey] || 0) + 1;
           }
         });
       });
