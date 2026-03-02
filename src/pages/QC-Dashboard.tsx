@@ -1112,7 +1112,6 @@ const QCDashboard = () => {
         throw new Error(response.data.msg);
       }
     } catch (error: unknown) {
-      console.log("1", error);
       if (error instanceof AxiosError && error.response && error.response.data) {
         console.error("Error Response Data:", error.response.data);
         if (error.response.data.message === "DataErrorMemCode") {
