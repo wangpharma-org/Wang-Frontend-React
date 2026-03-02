@@ -6,7 +6,7 @@ import { useEffect, useState, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import Modal from "../components/ModalQC";
 import Barcode from "react-barcode";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import prepareIcon from "../assets/received.png";
 import QCIcon from "../assets/quality-control.png";
 import PackingIcon from "../assets/package-delivered.png";
@@ -1111,9 +1111,9 @@ const QCDashboard = () => {
       } else if (response.status !== 200) {
         throw new Error(response.data.msg);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.log("1", error);
-      if (error.response && error.response.data) {
+      if (error instanceof AxiosError && error.response && error.response.data) {
         console.error("Error Response Data:", error.response.data);
         if (error.response.data.message === "DataErrorMemCode") {
           Swal.fire({
@@ -2981,7 +2981,7 @@ const QCDashboard = () => {
                         {order?.length > 0 ? (
                           order
                             .sort((a, b) => {
-                              const getPriority = (item: any) => {
+                              const getPriority = (item: ShoppingOrder) => {
                                 if (item.so_already_qc === "RT") return 2;
                                 if (item.so_already_qc === "Yes") return 1;
                                 return 0; // ยังไม่ QC
@@ -2995,7 +2995,7 @@ const QCDashboard = () => {
                               const rtStatus = findProductInQC?.status;
                               const isApprovedOrDuplicate = rtStatus === "Approved" || rtStatus === "Duplicate";
                               const isPending = rtStatus === "Pending";
-                              
+
                               return (
                                 <tr
                                   className={`  border-b-2 border-blue-200 ${so.so_already_qc === "Yes"
