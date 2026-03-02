@@ -1286,13 +1286,12 @@ const QCDashboard = () => {
 
   const handleRTClick = async (so: ShoppingOrder) => {
     try {
-      setRtSelectedProduct(so);
-
       const checkfeatureFlagRTRequest = await checkFlagRTRequest();
 
-      if (!checkfeatureFlagRTRequest) {
+      if (checkfeatureFlagRTRequest !== true) {
         await handleRT(so.so_running);
       } else {
+        setRtSelectedProduct(so);
         if (!so.so_running || !so.sh_running) {
           console.error("Missing so_running or sh_running for RT request");
           setIsSavingRT(false);
@@ -2991,6 +2990,12 @@ const QCDashboard = () => {
                               return getPriority(a) - getPriority(b);
                             })
                             .map((so, index) => {
+                              const findProductInQC = so.product?.rtRequests?.find(item => item.status === "Pending") || so.product?.rtRequests?.[0];
+                              // ตัวแปรสำหรับเช็ค RT Request Status
+                              const rtStatus = findProductInQC?.status;
+                              const isApprovedOrDuplicate = rtStatus === "Approved" || rtStatus === "Duplicate";
+                              const isPending = rtStatus === "Pending";
+                              
                               return (
                                 <tr
                                   className={`  border-b-2 border-blue-200 ${so.so_already_qc === "Yes"
@@ -3315,15 +3320,15 @@ const QCDashboard = () => {
                                         }
                                         className={` p-1 rounded-lg text-base text-white cursor-pointer ${so.so_already_qc === "RT" ||
                                           so.so_already_qc === "Yes"
-                                          ? "hover:bg-gray-600 bg-gray-500" : (so.product?.rtRequests?.[0]?.status === "Approved" || so.product?.rtRequests?.[0]?.status === "Duplicate") && featureFlagRTRequest === true
-                                            ? "hover:bg-green-600 bg-green-500" : so.product?.rtRequests?.[0]?.status === "Pending" && featureFlagRTRequest === true
+                                          ? "hover:bg-gray-600 bg-gray-500" : isApprovedOrDuplicate && featureFlagRTRequest === true
+                                            ? "hover:bg-green-600 bg-green-500" : isPending && featureFlagRTRequest === true
                                               ? "hover:bg-yellow-600 bg-yellow-500"
                                               : "hover:bg-red-600 bg-red-500"
                                           }`}
                                         onClick={() => {
-                                          if (so.product?.rtRequests?.[0]?.status === "Approved" || so.product?.rtRequests?.[0]?.status === "Duplicate") {
+                                          if (isApprovedOrDuplicate) {
                                             handleRT(so.so_running);
-                                          } else if (so.product?.rtRequests?.[0]?.status === "Pending") {
+                                          } else if (isPending) {
                                             handleManualRefresh();
                                           } else {
                                             handleRTClick(so);
@@ -3334,9 +3339,9 @@ const QCDashboard = () => {
                                           ? "ส่ง RT แล้ว"
                                           : so.so_already_qc === "Yes"
                                             ? "Qc แล้ว"
-                                            : (so.product?.rtRequests?.[0]?.status === "Approved" || so.product?.rtRequests?.[0]?.status === "Duplicate") && featureFlagRTRequest === true && so.so_already_qc !== "RT"
+                                            : isApprovedOrDuplicate && featureFlagRTRequest === true && so.so_already_qc !== "RT"
                                               ? "RT ได้แล้ว"
-                                              : so.product?.rtRequests?.[0]?.status === "Pending" && featureFlagRTRequest === true
+                                              : isPending && featureFlagRTRequest === true
                                                 ? "รออนุมัติ กดเพื่อโหลดใหม่"
                                                 : "ส่ง RT"}
                                       </button>

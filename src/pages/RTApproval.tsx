@@ -344,6 +344,7 @@ export default function RTApproval() {
   const handleReject = async () => {
     if (!selectedItem) return;
     setRejecting(true);
+    console.log("Rejecting with note:", finalNote);
     try {
       await axios.patch(`${VITE_API_URL_ORDER}/api/rt-request/reject/${selectedItem.ref}`, { 
         pro_code: selectedItem.product.code,
