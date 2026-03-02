@@ -820,31 +820,44 @@ const QCDashboard = () => {
   // Manual refresh function
   const handleManualRefresh = async () => {
     try {
-      if (socket && (mem_code || sh_running || shRunningArray)) {
-        // Re-emit join_room to get fresh data
-        if (mem_code) {
+      if (socket && wantConnect) {
+        if (inputMemCode) {
+          console.log("เข้าเงื่อนไขใน use Effect");
+          console.log("1");
           socket.emit("join_room", {
-            mem_code,
+            mem_code: inputMemCode,
             sh_running: null,
             sh_running_array: null,
             addShRunningArray: null,
           });
+          setLoading(true);
         } else if (sh_running) {
+          console.log("else if");
           socket.emit("join_room", {
             mem_code: null,
             sh_running,
             sh_running_array: null,
             addShRunningArray: null,
           });
-        } else if (shRunningArray) {
+          setLoading(true);
+        } else if (sh_running_array) {
+          console.log("2");
+          socket.emit("join_room", {
+            mem_code: null,
+            sh_running: null,
+            addShRunningArray: null,
+            sh_running_array,
+          });
+          setLoading(true);
+        } else if (addShRunningArray) {
+          console.log("ได้แล้วโว้ยยยย");
           socket.emit("join_room", {
             mem_code: null,
             sh_running: null,
             sh_running_array: null,
-            addShRunningArray: shRunningArray,
+            addShRunningArray,
           });
         }
-
         // Also refresh urgent data
         socket.emit("get_urgent");
       }
