@@ -6,7 +6,7 @@ import { useEffect, useState, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import Modal from "../components/ModalQC";
 import Barcode from "react-barcode";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import prepareIcon from "../assets/received.png";
 import QCIcon from "../assets/quality-control.png";
 import PackingIcon from "../assets/package-delivered.png";
@@ -820,31 +820,44 @@ const QCDashboard = () => {
   // Manual refresh function
   const handleManualRefresh = async () => {
     try {
-      if (socket && (mem_code || sh_running || shRunningArray)) {
-        // Re-emit join_room to get fresh data
-        if (mem_code) {
+      if (socket && wantConnect) {
+        if (inputMemCode) {
+          console.log("เข้าเงื่อนไขใน use Effect");
+          console.log("1");
           socket.emit("join_room", {
-            mem_code,
+            mem_code: inputMemCode,
             sh_running: null,
             sh_running_array: null,
             addShRunningArray: null,
           });
+          setLoading(true);
         } else if (sh_running) {
+          console.log("else if");
           socket.emit("join_room", {
             mem_code: null,
             sh_running,
             sh_running_array: null,
             addShRunningArray: null,
           });
-        } else if (shRunningArray) {
+          setLoading(true);
+        } else if (sh_running_array) {
+          console.log("2");
+          socket.emit("join_room", {
+            mem_code: null,
+            sh_running: null,
+            addShRunningArray: null,
+            sh_running_array,
+          });
+          setLoading(true);
+        } else if (addShRunningArray) {
+          console.log("ได้แล้วโว้ยยยย");
           socket.emit("join_room", {
             mem_code: null,
             sh_running: null,
             sh_running_array: null,
-            addShRunningArray: shRunningArray,
+            addShRunningArray,
           });
         }
-
         // Also refresh urgent data
         socket.emit("get_urgent");
       }
@@ -1111,9 +1124,8 @@ const QCDashboard = () => {
       } else if (response.status !== 200) {
         throw new Error(response.data.msg);
       }
-    } catch (error: any) {
-      console.log("1", error);
-      if (error.response && error.response.data) {
+    } catch (error: unknown) {
+      if (error instanceof AxiosError && error.response && error.response.data) {
         console.error("Error Response Data:", error.response.data);
         if (error.response.data.message === "DataErrorMemCode") {
           Swal.fire({
@@ -2981,7 +2993,7 @@ const QCDashboard = () => {
                         {order?.length > 0 ? (
                           order
                             .sort((a, b) => {
-                              const getPriority = (item: any) => {
+                              const getPriority = (item: ShoppingOrder) => {
                                 if (item.so_already_qc === "RT") return 2;
                                 if (item.so_already_qc === "Yes") return 1;
                                 return 0; // ยังไม่ QC
@@ -2995,7 +3007,7 @@ const QCDashboard = () => {
                               const rtStatus = findProductInQC?.status;
                               const isApprovedOrDuplicate = rtStatus === "Approved" || rtStatus === "Duplicate";
                               const isPending = rtStatus === "Pending";
-                              
+
                               return (
                                 <tr
                                   className={`  border-b-2 border-blue-200 ${so.so_already_qc === "Yes"
