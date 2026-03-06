@@ -170,9 +170,11 @@ jobs:
             # ORDER PICKING SERVICE (3003)
             # -------------------------
             - name: Install deps (order picking)
+              working-directory: services/order-picking
               run: npm ci
 
             - name: Start order picking service (playwright)
+              working-directory: services/order-picking
               shell: bash
               run: |
                   nohup bash -lc '
