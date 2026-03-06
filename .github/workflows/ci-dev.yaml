@@ -59,7 +59,6 @@ jobs:
                   printf "%s\n" "${{ secrets.PLAYWRIGHT_AUTH_ENV }}" | tr -d '\r' > services/auth/.env.playwright
                   printf "%s\n" "${{ secrets.PLAYWRIGHT_KAFKA_BACKEND }}" | tr -d '\r' > services/kafka-backend/.env.playwright
                   printf "%s\n" "${{ secrets.PLAYWRIGHT_ORDER_PICKING_ENV }}" | tr -d '\r' > services/order-picking/.env.playwright
-                  printf "%s\n" "${{ secrets.PLAYWRIGHT_ORDER_PICKING_TEST_ENV }}" | tr -d '\r' > playwright-test/.env.playwright
 
             - name: Write Firebase service account file (base64)
               shell: bash
@@ -176,7 +175,7 @@ jobs:
             - name: Debug firebase path (no secret output)
               shell: bash
               run: |
-                  cd "$GITHUB_WORKSPACE"
+                  cd "$GITHUB_WORKSPACE/services/order-picking"
                   set -a
                   source .env.playwright
                   set +a
