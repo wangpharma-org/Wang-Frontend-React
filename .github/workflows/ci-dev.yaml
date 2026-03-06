@@ -199,12 +199,12 @@ jobs:
                       exit 0
                     fi
                     echo "waiting order picking ($i/60)..."
-                    ps -p "$(cat order-picking.pid)" -o pid,cmd || true
-                    tail -n 30 order-picking.log || true
+                    ps -p "$(cat services/order-picking/order-picking.pid)" -o pid,cmd || true
+                    tail -n 30 services/order-picking/order-picking.log || true
                     sleep 2
                   done
                   echo "Order picking service not ready"
-                  tail -n 200 order-picking.log || true
+                  tail -n 200 services/order-picking/order-picking.log || true
                   exit 1
 
             # -------------------------
@@ -231,7 +231,7 @@ jobs:
                   path: |
                       services/auth.log
                       services/kafka-backend.log
-                      order-picking.log
+                      services/order-picking/order-picking.log
 
             - name: Cleanup
               if: always()
