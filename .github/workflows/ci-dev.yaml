@@ -216,6 +216,12 @@ jobs:
               working-directory: playwright-test
               run: npm ci
 
+            - name: Install playwright test
+              working-directory: playwright-test
+              shell: bash
+              run: |
+                  NODE_ENV=playwright npx playwright install
+
             - name: Run playwright test
               working-directory: playwright-test
               shell: bash
