@@ -37,7 +37,7 @@ jobs:
             - name: Checkout order-picking service
               uses: actions/checkout@v4
               with:
-                  repository: wangpharma-org/Wang-Order-Picking-NestJS
+                  repository: wangpharma-org/Wang-OrderPickingService-NestJS
                   path: services/order-picking
                   ref: develop
                   token: ${{ secrets.TOKEN_REPO_ACCESS_CI_DEVELOP }}
