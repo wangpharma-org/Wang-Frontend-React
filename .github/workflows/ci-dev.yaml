@@ -1,0 +1,264 @@
+name: E2E Test (Vite React, Playwright)
+on:
+  pull_request:
+    branches: [fix/ci-setup]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout order-picking (service)
+        uses: actions/checkout@v4
+
+      - name: Install netcat (for port checks)
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y netcat-openbsd
+
+      - name: Checkout Playwright
+        uses: actions/checkout@v4
+        with:
+          repository: wangpharma-org/Order-picking-n2n-test-playwright
+          path: playwright-test
+          ref: main
+          token: ${{ secrets.TOKEN_REPO_ACCESS_CI_DEVELOP }}
+
+      - name: Checkout auth service
+        uses: actions/checkout@v4
+        with:
+          repository: wangpharma-org/Wang-AuthService-NestJS
+          path: services/auth
+          ref: develop
+          token: ${{ secrets.TOKEN_REPO_ACCESS_CI_DEVELOP }}
+
+      - name: Checkout order-picking service
+        uses: actions/checkout@v4
+        with:
+          repository: wangpharma-org/Wang-Order-Picking-NestJS
+          path: services/order-picking
+          ref: develop
+          token: ${{ secrets.TOKEN_REPO_ACCESS_CI_DEVELOP }}
+
+      - name: Checkout kafka backend
+        uses: actions/checkout@v4
+        with:
+          repository: wangpharma-org/Wang-Kafka-API-Service
+          path: services/kafka-backend
+          ref: develop
+          token: ${{ secrets.TOKEN_REPO_ACCESS_CI_DEVELOP }}
+
+      # -------------------------
+      # WRITE ENV FILES (sanitize CRLF + ensure newline at EOF)
+      # -------------------------
+      - name: Write playwright env files from secrets
+        shell: bash
+        run: |
+          printf "%s\n" "${{ secrets.PLAYWRIGHT_AUTH_ENV }}" | tr -d '\r' > services/auth/.env.playwright
+          printf "%s\n" "${{ secrets.PLAYWRIGHT_KAFKA_BACKEND }}" | tr -d '\r' > services/kafka-backend/.env.playwright
+          printf "%s\n" "${{ secrets.PLAYWRIGHT_ORDER_PICKING_ENV }}" | tr -d '\r' > services/order-picking/.env.playwright
+          printf "%s\n" "${{ secrets.PLAYWRIGHT_ORDER_PICKING_TEST_ENV }}" | tr -d '\r' > playwright-test/.env.playwright
+
+      - name: Write Firebase service account file (base64)
+        shell: bash
+        run: |
+          mkdir -p secrets
+          printf "%s" "${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}" | base64 -d > secrets/firebase.json
+
+          # Validate JSON without printing it
+          node -e "JSON.parse(require('fs').readFileSync('secrets/firebase.json','utf8')); console.log('firebase.json valid')"
+
+      # -------------------------
+      # INFRA (Docker Compose)
+      # -------------------------
+      - name: Start infra
+        working-directory: playwright-test
+        shell: bash
+        run: docker compose up -d
+
+      - name: Wait infra ports
+        shell: bash
+        working-directory: playwright-test
+        run: |
+          for i in {1..60}; do
+            nc -z localhost 3306 \
+              && nc -z localhost 3308 \
+              && nc -z localhost 9092 \
+              && exit 0
+            sleep 2
+          done
+          echo "Infra not ready"
+          docker compose logs --no-color
+          exit 1
+
+      # -------------------------
+      # AUTH SERVICE (3001)
+      # -------------------------
+      - name: Install deps (auth)
+        working-directory: services/auth
+        run: npm ci
+
+      - name: Start auth service (PLAYWRIGHT)
+        working-directory: services/auth
+        shell: bash
+        run: |
+          nohup bash -lc '
+            cd "$GITHUB_WORKSPACE/services/auth"
+            set -a
+            source .env.playwright
+            set +a
+            NODE_ENV=playwright npm run start:dev
+          ' > ../auth.log 2>&1 &
+          echo $! > auth.pid
+
+      - name: Wait auth service
+        shell: bash
+        run: |
+          for i in {1..60}; do
+            if nc -z localhost 3001; then
+              echo "Auth is up"
+              exit 0
+            fi
+            echo "waiting auth ($i/60)..."
+            ps -p "$(cat services/auth/auth.pid)" -o pid,cmd || true
+            tail -n 30 services/auth.log || true
+            sleep 2
+          done
+          echo "Auth service not ready"
+          tail -n 200 services/auth.log || true
+          exit 1
+
+      # -------------------------
+      # KAFKA BACKEND (3025)
+      # -------------------------
+      - name: Install deps (kafka backend)
+        working-directory: services/kafka-backend
+        run: npm ci
+
+      - name: Start kafka backend (playwright)
+        working-directory: services/kafka-backend
+        shell: bash
+        run: |
+          nohup bash -lc '
+            cd "$GITHUB_WORKSPACE/services/kafka-backend"
+            set -a
+            source .env.playwright
+            set +a
+            NODE_ENV=playwright npm run start:dev
+          ' > ../kafka-backend.log 2>&1 &
+          echo $! > kafka-backend.pid
+
+      - name: Wait kafka backend
+        shell: bash
+        run: |
+          for i in {1..60}; do
+            if nc -z localhost 3025; then
+              echo "Kafka backend is up"
+              exit 0
+            fi
+            echo "waiting kafka backend ($i/60)..."
+            ps -p "$(cat services/kafka-backend/kafka-backend.pid)" -o pid,cmd || true
+            tail -n 30 services/kafka-backend.log || true
+            sleep 2
+          done
+          echo "Kafka backend not ready"
+          tail -n 200 services/kafka-backend.log || true
+          exit 1
+
+      # -------------------------
+      # ORDER PICKING SERVICE (3003)
+      # -------------------------
+      - name: Install deps (order picking)
+        run: npm ci
+
+      - name: Debug firebase path (no secret output)
+        shell: bash
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          set -a
+          source .env.playwright
+          set +a
+
+          export FIREBASE_SERVICE_ACCOUNT_PATH="$GITHUB_WORKSPACE/secrets/firebase.json"
+
+          echo "PWD=$(pwd)"
+          printf "FIREBASE_SERVICE_ACCOUNT_PATH=<%q>\n" "$FIREBASE_SERVICE_ACCOUNT_PATH"
+          ls -la secrets || true
+          test -f "$FIREBASE_SERVICE_ACCOUNT_PATH" && echo "firebase path ok" || echo "firebase path NOT found"
+
+      - name: Start order picking service (playwright)
+        shell: bash
+        run: |
+          nohup bash -lc '
+            cd "$GITHUB_WORKSPACE"
+            set -a
+            source .env.playwright
+            set +a
+
+            # Force absolute path to avoid any env formatting/cwd issues
+            export FIREBASE_SERVICE_ACCOUNT_PATH="$GITHUB_WORKSPACE/secrets/firebase.json"
+
+            test -f "$FIREBASE_SERVICE_ACCOUNT_PATH" || (echo "firebase file missing"; exit 1)
+
+            NODE_ENV=playwright npm run start:dev
+          ' > order-picking.log 2>&1 &
+          echo $! > order-picking.pid
+
+      - name: Wait order picking service
+        shell: bash
+        run: |
+          for i in {1..60}; do
+            if nc -z localhost 3003; then
+              echo "Order picking is up"
+              exit 0
+            fi
+            echo "waiting order picking ($i/60)..."
+            ps -p "$(cat order-picking.pid)" -o pid,cmd || true
+            tail -n 30 order-picking.log || true
+            sleep 2
+          done
+          echo "Order picking service not ready"
+          tail -n 200 order-picking.log || true
+          exit 1
+
+      # -------------------------
+      # TESTS
+      # -------------------------
+      - name: Install deps (OrderPickingJestTest)
+        working-directory: playwright-test
+        run: npm ci
+
+      - name: Run playwright test
+        working-directory: playwright-test
+        shell: bash
+        run: |
+          cd "$GITHUB_WORKSPACE/playwright-test"
+          set -a
+          source .env.playwright
+          set +a
+          NODE_ENV=playwright npm run test
+
+      # -------------------------
+      # CLEANUP + LOGS
+      # -------------------------
+      - name: Upload logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-logs
+          path: |
+            services/auth.log
+            services/kafka-backend.log
+            order-picking.log
+
+      - name: Cleanup
+        if: always()
+        shell: bash
+        working-directory: playwright-test
+        run: |
+          kill $(cat ../services/auth/auth.pid) 2>/dev/null || true
+          kill $(cat ../services/kafka-backend/kafka-backend.pid) 2>/dev/null || true
+          kill $(cat ../order-picking.pid) 2>/dev/null || true
+          docker compose down -v
