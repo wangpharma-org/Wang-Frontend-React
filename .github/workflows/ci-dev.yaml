@@ -172,26 +172,11 @@ jobs:
             - name: Install deps (order picking)
               run: npm ci
 
-            - name: Debug firebase path (no secret output)
-              shell: bash
-              run: |
-                  cd "$GITHUB_WORKSPACE/services/order-picking"
-                  set -a
-                  source .env.playwright
-                  set +a
-
-                  export FIREBASE_SERVICE_ACCOUNT_PATH="$GITHUB_WORKSPACE/secrets/firebase.json"
-
-                  echo "PWD=$(pwd)"
-                  printf "FIREBASE_SERVICE_ACCOUNT_PATH=<%q>\n" "$FIREBASE_SERVICE_ACCOUNT_PATH"
-                  ls -la secrets || true
-                  test -f "$FIREBASE_SERVICE_ACCOUNT_PATH" && echo "firebase path ok" || echo "firebase path NOT found"
-
             - name: Start order picking service (playwright)
               shell: bash
               run: |
                   nohup bash -lc '
-                    cd "$GITHUB_WORKSPACE"
+                    cd "$GITHUB_WORKSPACE/services/order-picking"
                     set -a
                     source .env.playwright
                     set +a
@@ -233,10 +218,6 @@ jobs:
               working-directory: playwright-test
               shell: bash
               run: |
-                  cd "$GITHUB_WORKSPACE/playwright-test"
-                  set -a
-                  source .env.playwright
-                  set +a
                   NODE_ENV=playwright npm run test
 
             # -------------------------
@@ -259,5 +240,5 @@ jobs:
               run: |
                   kill $(cat ../services/auth/auth.pid) 2>/dev/null || true
                   kill $(cat ../services/kafka-backend/kafka-backend.pid) 2>/dev/null || true
-                  kill $(cat ../order-picking.pid) 2>/dev/null || true
+                  kill $(cat ../services/order-picking/order-picking.pid) 2>/dev/null || true
                   docker compose down -v
