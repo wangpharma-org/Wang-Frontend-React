@@ -9,7 +9,7 @@ jobs:
         timeout-minutes: 30
 
         steps:
-            - name: Checkout order-picking (service)
+            - name: Checkout Frontend (service)
               uses: actions/checkout@v4
 
             - name: Install netcat (for port checks)
@@ -59,6 +59,7 @@ jobs:
                   printf "%s\n" "${{ secrets.PLAYWRIGHT_AUTH_ENV }}" | tr -d '\r' > services/auth/.env.playwright
                   printf "%s\n" "${{ secrets.PLAYWRIGHT_KAFKA_BACKEND }}" | tr -d '\r' > services/kafka-backend/.env.playwright
                   printf "%s\n" "${{ secrets.PLAYWRIGHT_ORDER_PICKING_ENV }}" | tr -d '\r' > services/order-picking/.env.playwright
+                  printf "%s\n" "${{ secrets.PLAYWRIGHT_GLOBAL_ENV }}" | tr -d '\r' > playwright-test/.env.playwright
 
             - name: Write Firebase service account file (base64)
               shell: bash
@@ -90,6 +91,39 @@ jobs:
                   done
                   echo "Infra not ready"
                   docker compose logs --no-color
+                  exit 1
+
+            # -------------------------
+            # FRONTEND
+            # -------------------------
+            - name: Install deps (frontend)
+              working-directory: .
+              run: npm ci
+            
+            - name: Start frontend (PLAYWRIGHT)
+              shell: bash
+              run: |
+                  nohup bash -lc '
+                    cd "$GITHUB_WORKSPACE"
+                    NODE_ENV=playwright npm run dev
+                  ' > frontend.log 2>&1 &
+                  echo $! > frontend.pid
+            
+            - name: Wait frontend
+              shell: bash
+              run: |
+                  for i in {1..60}; do
+                    if nc -z localhost 5173; then
+                      echo "Frontend is up"
+                      exit 0
+                    fi
+                    echo "waiting frontend ($i/60)..."
+                    ps -p "$(cat frontend.pid)" -o pid,cmd || true
+                    tail -n 30 frontend.log || true
+                    sleep 2
+                  done
+                  echo "Frontend not ready"
+                  tail -n 200 frontend.log || true
                   exit 1
 
             # -------------------------
