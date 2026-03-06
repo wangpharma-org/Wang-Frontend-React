@@ -2,9 +2,9 @@ version: '3.8'
 services:
   db-order-picking-services:
     image: mysql:8.0
-    container_name: order-picking-db-prod
+    container_name: order-picking-db
     environment:
-      MYSQL_DATABASE: order-picking-db-prod
+      MYSQL_DATABASE: order-picking-db
       MYSQL_USER: admin
       MYSQL_PASSWORD: password
       MYSQL_ROOT_PASSWORD: password
