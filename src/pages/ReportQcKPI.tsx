@@ -48,6 +48,7 @@ export interface Color {
 
 export interface QCStation {
   stationId: number;
+  station: number;
   emp_qc_by: null | string;
   qc_nickname: null | string;
   prepare_nickname: null | string;
@@ -589,7 +590,7 @@ const Dashboard: React.FC = () => {
       <div className="bg-white rounded-lg shadow-lg p-6">
         <p className="text-xl font-semibold text-center block md:hidden">ข้อมูลจากพนักงาน Qc</p>
         <div className="md:grid md:grid-cols-5 gap-0 overflow-x-auto flex md:overflow-hidden">
-          {qcStationsData?.map((station, index) => {
+          {qcStationsData?.map((station) => {
             const workingHours = calculateWorkingHours(
               station.firstQcTime,
               station.lastQcTime
@@ -603,7 +604,7 @@ const Dashboard: React.FC = () => {
             return (
               <div key={station.stationId} className={`border border-gray-300 ${!(station.qc_nickname && station.packed_nickname) ? 'bg-red-100 flex flex-col h-68' : ''}`}>
                 <div className={`text-balck p-3 text-center font-bold text-lg border-b border-gray-300 bg-gray-200 ${station.qc_nickname === station.prepare_nickname && station.qc_nickname === station.packed_nickname ? 'text-red-500' : ''}`}>
-                  Q{index + 1} [{station.qc_nickname || "ว่าง"}]
+                  Q{station.station} [{station.qc_nickname || "ว่าง"}]
                 </div>
                 {!(station.qc_nickname && station.packed_nickname) ? 
                   <div className="text-center text-red-600 font-bold items-center flex justify-center text-3xl my-auto">
