@@ -187,10 +187,12 @@ function ProductList() {
   useEffect(() => {
     if (listproduct) {
       console.log("listproduct:", listproduct);
-      const hasPending = (listproduct?.shoppingHeads ?? []).some((head) =>
+      const hasPending = (listproduct.shoppingHeads ?? []).some((head) =>
         head.shoppingOrders.some((order) => order.picking_status === "pending")
       );
       setCanSubmit(!hasPending);
+    } else {
+      setCanSubmit(false);
     }
     console.log(listproduct);
 
