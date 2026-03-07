@@ -394,8 +394,7 @@ const QCDashboard = () => {
   useEffect(() => {
     if (strappingEMP?.dataEmp?.emp_code) {
       setInputStrapping(
-        `${strappingEMP.dataEmp.emp_code} ${
-          strappingEMP.dataEmp.emp_nickname || ""
+        `${strappingEMP.dataEmp.emp_code} ${strappingEMP.dataEmp.emp_nickname || ""
         }`
       );
     }
@@ -916,7 +915,12 @@ const QCDashboard = () => {
       if (type_emp === "qc-emp" && !UUIDStationQC) {
         Swal.fire({
           title: "กรุณาป้อนรหัสสถานี QC",
-          input: "text",
+          input: "number",
+          inputAttributes: {
+            autocapitalize: "off",
+            min: "1",
+            step: "1"
+          },
           inputLabel: "Station QC",
           inputPlaceholder: "กรุณาป้อนรหัสสถานี QC...",
           confirmButtonText: "ยืนยัน",
@@ -924,12 +928,19 @@ const QCDashboard = () => {
             if (!value) {
               return "กรุณาป้อนรหัสสถานี QC";
             }
+            const numValue = Number(value);
+            if (isNaN(numValue)) {
+              return "กรุณาป้อนรหัสสถานี QC เป็นตัวเลขเท่านั้น";
+            }
+            if (numValue < 1) {
+              return "รหัสสถานี QC ต้องเป็นค่าบวกและไม่ต่ำกว่า 1";
+            }
             console.log("Station QC Input:", value);
           }
         }).then((result) => {
           if (result.isConfirmed) {
             console.log("Station QC:", result.value);
-            sendStationQC(result.value);
+            sendStationQC(result.value.trim());
           }
         });
         return;
@@ -1754,7 +1765,7 @@ const QCDashboard = () => {
 
   const cleanEmployeeFromStation = async (empCode: string) => {
     try {
-      const response = await axios.get(
+      const response = await axios.patch(
         `${import.meta.env.VITE_API_URL_ORDER}/api/station-qc/employee/${empCode}`
       );
       if (response.data.status === true || response.status === 200) {
@@ -2000,8 +2011,8 @@ const QCDashboard = () => {
             <div className="flex w-full justify-center mt-3">
               <button
                 className={`p-3 text-xl rounded-lg  text-white drop-shadow-sm ${!barcodeNotFound || barcodeNotFound.length < 1
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-red-700 hover:bg-red-800 cursor-pointer"
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-red-700 hover:bg-red-800 cursor-pointer"
                   }`}
                 disabled={!barcodeNotFound || barcodeNotFound.length < 1}
                 onClick={() => {
@@ -2254,8 +2265,8 @@ const QCDashboard = () => {
                     id={`OrderConfirmationPopUp`}
                     disabled={Number(amountRequest) === 0}
                     className={`text-center text-white text-lg p-2 rounded-lg px-8 cursor-pointer ${Number(amountRequest) > 0
-                        ? "hover:bg-green-800 bg-green-700"
-                        : "hover:bg-gray-600 bg-gray-500"
+                      ? "hover:bg-green-800 bg-green-700"
+                      : "hover:bg-gray-600 bg-gray-500"
                       }`}
                     onClick={() =>
                       handleRequestMore(
@@ -2537,9 +2548,9 @@ const QCDashboard = () => {
                   inputLot !== orderForQC.product.lot_priority
                 }
                 className={`mt-4  text-white px-4 py-2 rounded-md cursor-pointer ${!!orderForQC?.product?.lot_priority &&
-                    inputLot !== orderForQC.product.lot_priority
-                    ? "bg-gray-500"
-                    : "bg-green-600 hover:bg-green-700"
+                  inputLot !== orderForQC.product.lot_priority
+                  ? "bg-gray-500"
+                  : "bg-green-600 hover:bg-green-700"
                   }`}
               >
                 ตกลง
@@ -2888,8 +2899,8 @@ const QCDashboard = () => {
                       disabled={!isReady}
                       ref={inputBarcode}
                       className={`col-span-6  border-4 p-2 px-5 rounded-lg text-4xl text-center ${isReady
-                          ? `bg-orange-100 border-orange-500`
-                          : `border-gray-500 bg-gray-200 `
+                        ? `bg-orange-100 border-orange-500`
+                        : `border-gray-500 bg-gray-200 `
                         }`}
                       placeholder="รหัสสินค้า / Barcode"
                       onKeyDown={(e) => {
@@ -2935,12 +2946,12 @@ const QCDashboard = () => {
                               return (
                                 <tr
                                   className={`  border-b-2 border-blue-200 ${so.so_already_qc === "Yes"
-                                      ? "bg-green-100 hover:bg-green-100"
-                                      : so.so_already_qc === "RT"
-                                        ? "bg-red-100 hover:bg-red-100"
-                                        : so.so_already_qc === "notComplete"
-                                          ? "bg-yellow-50 hover:bg-yellow-50"
-                                          : "bg-white hover:bg-gray-50"
+                                    ? "bg-green-100 hover:bg-green-100"
+                                    : so.so_already_qc === "RT"
+                                      ? "bg-red-100 hover:bg-red-100"
+                                      : so.so_already_qc === "notComplete"
+                                        ? "bg-yellow-50 hover:bg-yellow-50"
+                                        : "bg-white hover:bg-gray-50"
                                     }`}
                                 >
                                   <td className="py-4 text-lg border-r-2 border-blue-200 font-semibold px-2">
@@ -2954,14 +2965,14 @@ const QCDashboard = () => {
                                       </p>
                                       <div
                                         className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full mt-1 ${so.product.product_floor === "5"
-                                            ? "bg-green-500"
-                                            : so.product.product_floor === "4"
-                                              ? "bg-red-500"
-                                              : so.product.product_floor === "3"
-                                                ? "bg-blue-500"
-                                                : so.product.product_floor === "2"
-                                                  ? "bg-yellow-500"
-                                                  : "bg-gray-400"
+                                          ? "bg-green-500"
+                                          : so.product.product_floor === "4"
+                                            ? "bg-red-500"
+                                            : so.product.product_floor === "3"
+                                              ? "bg-blue-500"
+                                              : so.product.product_floor === "2"
+                                                ? "bg-yellow-500"
+                                                : "bg-gray-400"
                                           } `}
                                       ></div>
                                     </div>
@@ -2981,8 +2992,8 @@ const QCDashboard = () => {
 
                                       <p
                                         className={`text-base font-bold ${so?.picking_status === "picking"
-                                            ? "text-green-600"
-                                            : "text-red-600"
+                                          ? "text-green-600"
+                                          : "text-red-600"
                                           }`}
                                       >
                                         {so?.picking_status === "pending"
@@ -3229,8 +3240,8 @@ const QCDashboard = () => {
                                             so.picking_status !== "picking"
                                           }
                                           className={` p-1 rounded-lg text-base text-white cursor-pointer ${so.picking_status !== "picking"
-                                              ? "bg-gray-500 hover:bg-gray-600"
-                                              : "bg-blue-500 hover:bg-blue-600"
+                                            ? "bg-gray-500 hover:bg-gray-600"
+                                            : "bg-blue-500 hover:bg-blue-600"
                                             } `}
                                           onClick={() =>
                                             handleFetchData(
@@ -3249,9 +3260,9 @@ const QCDashboard = () => {
                                           so.so_already_qc === "Yes"
                                         }
                                         className={` p-1 rounded-lg text-base text-white cursor-pointer ${so.so_already_qc === "RT" ||
-                                            so.so_already_qc === "Yes"
-                                            ? "hover:bg-gray-600 bg-gray-500"
-                                            : "hover:bg-red-600 bg-red-500"
+                                          so.so_already_qc === "Yes"
+                                          ? "hover:bg-gray-600 bg-gray-500"
+                                          : "hover:bg-red-600 bg-red-500"
                                           }`}
                                         onClick={() => {
                                           handleRT(so.so_running);
@@ -3586,8 +3597,8 @@ const QCDashboard = () => {
                       <button
                         // disabled={hasNotQC !== 0 || loadingSubmit || !hasPrintSticker}
                         className={`w-full flex justify-center items-center  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${hasNotQC !== 0 || loadingSubmit || !hasPrintSticker
-                            ? "bg-gray-500 hover:bg-gray-600"
-                            : "bg-green-500 hover:bg-green-600"
+                          ? "bg-gray-500 hover:bg-gray-600"
+                          : "bg-green-500 hover:bg-green-600"
                           }`}
                         onClick={() => {
                           if (
