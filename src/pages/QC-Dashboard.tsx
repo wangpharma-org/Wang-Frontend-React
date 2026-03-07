@@ -1739,8 +1739,6 @@ const QCDashboard = () => {
         icon: "error",
         title: "กรุณาป้อนรหัสสถานี QC",
       });
-
-
     }
     const result = await axios.post(
       `${import.meta.env.VITE_API_URL_ORDER}/api/fix-station-qc/check-uuid-station`,
