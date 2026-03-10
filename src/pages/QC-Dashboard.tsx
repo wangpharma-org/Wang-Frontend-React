@@ -845,6 +845,10 @@ const QCDashboard = () => {
 
   // Manual refresh function
   const handleManualRefresh = async () => {
+    const checkFlagRT = await checkFlagRTRequest();
+    if (checkFlagRT === true) {
+      return ;
+    }
     try {
       if (socket && wantConnect) {
         if (inputMemCode) {

@@ -766,7 +766,7 @@ export default function RTApproval() {
                       key={item.ref}
                       onClick={() => featureFlag && clickable && handleRowClick(item)}
                       className={`transition-all duration-200 border-b border-gray-100 ${!featureFlag || !clickable
-                        ? "opacity-60 cursor-not-allowed bg-gray-50"
+                        ? "opacity-60 cursor-not-allowed bg-gray-50 font-semibold text-gray-700"
                         : `cursor-pointer hover:bg-blue-50 hover:shadow-sm ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`
                         }`}
                     >
