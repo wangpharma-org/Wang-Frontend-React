@@ -48,14 +48,62 @@ interface GroupedItem extends RTApprovalItem {
   _count: number;
 }
 
-const STATUS_FILTERS = ["Pending", "Approved", "Duplicate", "all", "Done"] as const;
+const STATUS_FILTERS = ["Pending", "Approved", "Duplicate", "all", "Done", "NotActive"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 function statusDisplay(status: string): { label: string; color: string } {
   if (status === "Approved") return { label: "อนุมัติแล้ว", color: "text-green-600" };
   if (status === "Done") return { label: "ดำเนินการแล้ว", color: "text-blue-600" };
   if (status === "Duplicate") return { label: "ซ้ำ", color: "text-orange-500" };
-  return { label: "รออนุมัติ", color: "text-yellow-600" };
+  if (status === "RT-Success") return { label: "จัดแล้ว", color: "text-purple-600" };
+  if (status === "NotActive") return { label: "ช่วงปิดระบบ", color: "text-gray-600" };
+  if (status === "Rejected") return { label: "ถูกปฏิเสธ", color: "text-red-600" };
+  return { label: "รออนุมัติ", color: "text-yellow-600" }; 
+}
+
+function getStatusStyles(status: string): { bgClass: string; textClass: string; borderClass: string; dotClass: string } {
+  if (status === "Approved") return { 
+    bgClass: "bg-green-100", 
+    textClass: "text-green-800", 
+    borderClass: "border-green-200", 
+    dotClass: "bg-green-500" 
+  };
+  if (status === "Done") return { 
+    bgClass: "bg-blue-100", 
+    textClass: "text-blue-800", 
+    borderClass: "border-blue-200", 
+    dotClass: "bg-blue-500" 
+  };
+  if (status === "Duplicate") return { 
+    bgClass: "bg-orange-100", 
+    textClass: "text-orange-800", 
+    borderClass: "border-orange-200", 
+    dotClass: "bg-orange-500" 
+  };
+  if (status === "RT-Success") return { 
+    bgClass: "bg-purple-100", 
+    textClass: "text-purple-800", 
+    borderClass: "border-purple-200", 
+    dotClass: "bg-purple-500" 
+  };
+  if (status === "NotActive") return { 
+    bgClass: "bg-gray-100", 
+    textClass: "text-gray-800", 
+    borderClass: "border-gray-200", 
+    dotClass: "bg-gray-500" 
+  };
+  if (status === "Rejected") return { 
+    bgClass: "bg-red-100", 
+    textClass: "text-red-800", 
+    borderClass: "border-red-200", 
+    dotClass: "bg-red-500" 
+  };
+  return { 
+    bgClass: "bg-yellow-100", 
+    textClass: "text-yellow-800", 
+    borderClass: "border-yellow-200", 
+    dotClass: "bg-yellow-500" 
+  };
 }
 
 function filterLabel(s: StatusFilter): string {
@@ -63,6 +111,7 @@ function filterLabel(s: StatusFilter): string {
   if (s === "Approved") return "อนุมัติแล้ว";
   if (s === "Done") return "ดำเนินการแล้ว";
   if (s === "Duplicate") return "ซ้ำ";
+  if (s === "NotActive") return "ช่วงปิดระบบ";
   return "ทั้งหมด";
 }
 
@@ -95,10 +144,10 @@ export default function RTApproval() {
   const [, setNote] = useState("");
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
   const [customReason, setCustomReason] = useState("");
-  
+
   const NOTE_OPTIONS = [
     "ให้ผ่านอนุมัติ",
-    "สินค้าจริงไม่มี", 
+    "สินค้าจริงไม่มี",
     "ให้สินค้าอื่นทดแทน",
     "สินค้ามีการสลับกัน ตรวจสอบเพิ่ม",
     "อื่นๆ"
@@ -114,8 +163,9 @@ export default function RTApproval() {
   const [featureFlagLoading, setFeatureFlagLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [latestKey, setLatestKey] = useState<string>("");
+  const [active, setActive] = useState<boolean>(true);
 
-  const filteredData = data.filter((item) => {
+  const filteredData = (Array.isArray(data) ? data : []).filter((item) => {
     const matchStatus = statusFilter === "all" || item.status === statusFilter;
     const q = search.toLowerCase();
     const matchSearch =
@@ -189,22 +239,25 @@ export default function RTApproval() {
       const res = await axios.get(`${VITE_API_URL_ORDER}/api/rt-request`, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
       });
-      setData(res.data);
-    } catch (error: any) {
-      console.error("Failed to fetch RT approval list", error);
+      // Ensure data is always an array
+      setData(Array.isArray(res.data) ? res.data : []);
+    } catch (error: unknown) {
 
-      if (error.response?.status === 403) {
-        setError("ไม่มีสิทธิ์เข้าถึงข้อมูล กรุณาเข้าสู่ระบบใหม่");
-      } else if (error.response?.status === 401) {
-        setError("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
-        sessionStorage.removeItem("access_token");
-        setTimeout(() => {
-          window.location.href = "/login";
-        }, 3000);
-      } else if (error.code === "ECONNREFUSED" || error.message.includes("Network Error")) {
-        setError("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเตอร์เน็ต");
-      } else {
-        setError("เกิดข้อผิดพลาดในการโหลดข้อมูล กรุณาลองใหม่อีกครั้ง");
+      console.error("Failed to fetch RT approval list", error);
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 403) {
+          setError("ไม่มีสิทธิ์เข้าถึงข้อมูล กรุณาเข้าสู่ระบบใหม่");
+        } else if (error.response?.status === 401) {
+          setError("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
+          sessionStorage.removeItem("access_token");
+          setTimeout(() => {
+            window.location.href = "/login";
+          }, 3000);
+        } else if (error.code === "ECONNREFUSED" || error.message.includes("Network Error")) {
+          setError("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเตอร์เน็ต");
+        } else {
+          setError("เกิดข้อผิดพลาดในการโหลดข้อมูล กรุณาลองใหม่อีกครั้ง");
+        }
       }
     } finally {
       setLoading(false);
@@ -223,7 +276,7 @@ export default function RTApproval() {
     }, 5 * 60 * 1000);
 
     return () => { clearInterval(interval); };
-  }, []);
+  }, [active]);
 
   const fetchLatestKey = async () => {
     try {
@@ -243,12 +296,14 @@ export default function RTApproval() {
         headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
       });
       setFeatureFlag(res.data.status === true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to check feature flag", error);
-      if (error.response?.status === 403 || error.response?.status === 401) {
-        setFeatureFlag(false);
-      } else {
-        setFeatureFlag(true);
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 403 || error.response?.status === 401) {
+          setFeatureFlag(false);
+        } else {
+          setFeatureFlag(true);
+        }
       }
     }
   };
@@ -346,7 +401,7 @@ export default function RTApproval() {
     setRejecting(true);
     console.log("Rejecting with note:", finalNote);
     try {
-      await axios.patch(`${VITE_API_URL_ORDER}/api/rt-request/reject/${selectedItem.ref}`, { 
+      await axios.patch(`${VITE_API_URL_ORDER}/api/rt-request/reject/${selectedItem.ref}`, {
         pro_code: selectedItem.product.code,
         mem_code: selectedItem.member.code,
         note: finalNote?.trim() || null
@@ -395,16 +450,16 @@ export default function RTApproval() {
     if (!selectedItem) return;
     setSubmitting(true);
     try {
-      await axios.patch(`${VITE_API_URL_ORDER}/api/rt-request/${selectedItem.ref}`, { 
+      await axios.patch(`${VITE_API_URL_ORDER}/api/rt-request/${selectedItem.ref}`, {
         pro_code: selectedItem.product.code,
         mem_code: selectedItem.member.code,
         note: finalNote?.trim() || null
       }, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
       });
-      
+
       setModalOpen(false);
-      
+
       // แสดง popup สำเร็จ
       Swal.fire({
         icon: 'success',
@@ -424,11 +479,11 @@ export default function RTApproval() {
         allowOutsideClick: false,
         allowEscapeKey: false
       });
-      
+
       fetchData();
     } catch (error) {
       console.error("Failed to approve RT", error);
-      
+
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด!',
@@ -441,7 +496,7 @@ export default function RTApproval() {
     }
   };
 
-  const isClickable = (status: string) => status !== "Approved" && status !== "Duplicate" && status !== "Done";
+  const isClickable = (status: string) => status === "Pending";
 
   const tableData = statusFilter === "Duplicate" ? groupedDuplicates :
     statusFilter === "Pending" ? groupedPending.length > 0 ? groupedPending : filteredData :
@@ -462,15 +517,15 @@ export default function RTApproval() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m9-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              
+
               {/* Title */}
               <h1 className="text-2xl font-bold text-gray-800 mb-3">ไม่มีสิทธิ์เข้าถึง</h1>
-              
+
               {/* Description */}
               <p className="text-gray-600 mb-2 leading-relaxed">
                 คุณไม่มีสิทธิ์ในการเข้าถึงหน้านี้ในขณะนี้
               </p>
-              
+
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <button
@@ -486,7 +541,7 @@ export default function RTApproval() {
                   </svg>
                   ลองใหม่อีกครั้ง
                 </button>
-                
+
                 <button
                   onClick={() => window.location.href = '/login'}
                   className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transform hover:scale-105 transition-all duration-200"
@@ -497,7 +552,7 @@ export default function RTApproval() {
                   เข้าสู่ระบบใหม่
                 </button>
               </div>
-              
+
               {/* Error Details */}
               {error && (
                 <div className="mt-6 p-4 bg-gray-50 rounded-xl">
@@ -533,7 +588,7 @@ export default function RTApproval() {
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
               <span className="text-red-800 font-medium">{error}</span>
-              <button 
+              <button
                 onClick={() => setError(null)}
                 className="ml-auto text-red-600 hover:text-red-800"
               >
@@ -568,7 +623,7 @@ export default function RTApproval() {
                 </button>
               </div>
             )}
-            
+
             <button
               onClick={() => {
                 setError(null);
@@ -627,7 +682,7 @@ export default function RTApproval() {
             {STATUS_FILTERS.map((s) => (
               <button
                 key={s}
-                onClick={() => setStatusFilter(s)}
+                onClick={() => {setStatusFilter(s); setActive(true)}}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${statusFilter === s
                   ? "bg-blue-500 text-white"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -640,7 +695,7 @@ export default function RTApproval() {
         </div>
 
         {loading ? (
-          <div className="text-center text-gray-500 py-10">
+          <div className="text-center text-gray-800 py-10">
             <div className="flex flex-col items-center gap-3">
               <svg className="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -711,7 +766,7 @@ export default function RTApproval() {
                       key={item.ref}
                       onClick={() => featureFlag && clickable && handleRowClick(item)}
                       className={`transition-all duration-200 border-b border-gray-100 ${!featureFlag || !clickable
-                        ? "opacity-50 cursor-not-allowed bg-gray-50"
+                        ? "opacity-60 cursor-not-allowed bg-gray-50"
                         : `cursor-pointer hover:bg-blue-50 hover:shadow-sm ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`
                         }`}
                     >
@@ -863,17 +918,8 @@ export default function RTApproval() {
                         </td>
                       )}
                       <td className="py-4 px-3 text-sm text-center">
-                        <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold ${
-                          item.status === 'Approved' ? 'bg-green-100 text-green-800 border border-green-200' :
-                          item.status === 'Done' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
-                            item.status === 'Duplicate' ? 'bg-orange-100 text-orange-800 border border-orange-200' :
-                              'bg-yellow-100 text-yellow-800 border border-yellow-200'
-                          }`}>
-                          <div className={`w-2 h-2 rounded-full mr-2 ${item.status === 'Approved' ? 'bg-green-500' :
-                            item.status === 'Done' ? 'bg-blue-500' :
-                              item.status === 'Duplicate' ? 'bg-orange-500' :
-                                'bg-yellow-500'
-                            }`}></div>
+                        <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold ${getStatusStyles(item.status).bgClass} ${getStatusStyles(item.status).textClass} border ${getStatusStyles(item.status).borderClass}`}>
+                          <div className={`w-2 h-2 rounded-full mr-2 ${getStatusStyles(item.status).dotClass}`}></div>
                           {label}
                         </span>
                       </td>
@@ -930,12 +976,11 @@ export default function RTApproval() {
                         </div>
                       </td>
                       <td className="py-4 px-3 text-sm text-center">
-                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
-                          timeAgo(item.created_at).includes('เพิ่งสร้าง') || timeAgo(item.created_at).includes('นาทีที่แล้ว') ? 'bg-green-100 text-green-700' :
-                          timeAgo(item.created_at).includes('ชั่วโมงที่แล้ว') ? 'bg-yellow-100 text-yellow-700' :
-                          timeAgo(item.created_at).includes('วันที่แล้ว') ? 'bg-orange-100 text-orange-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
+                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${timeAgo(item.created_at).includes('เพิ่งสร้าง') || timeAgo(item.created_at).includes('นาทีที่แล้ว') ? 'bg-green-100 text-green-700' :
+                            timeAgo(item.created_at).includes('ชั่วโมงที่แล้ว') ? 'bg-yellow-100 text-yellow-700' :
+                              timeAgo(item.created_at).includes('วันที่แล้ว') ? 'bg-orange-100 text-orange-700' :
+                                'bg-red-100 text-red-700'
+                          }`}>
                           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                           </svg>
@@ -953,15 +998,11 @@ export default function RTApproval() {
 
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)}>
         {selectedItem && (
-          <div>
+          <div className="overflow-y-auto max-h-[80vh]">
             {/* Header */}
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-bold text-gray-800">รายละเอียดการส่ง RT</h2>
-              <span className={`text-xs font-semibold px-3 py-1 rounded-full ${selectedItem.status === "Approved" ? "bg-green-100 text-green-700" :
-                selectedItem.status === "Done" ? "bg-blue-100 text-blue-700" :
-                  selectedItem.status === "Duplicate" ? "bg-orange-100 text-orange-700" :
-                    "bg-yellow-100 text-yellow-700"
-                }`}>
+              <span className={`text-xs font-semibold px-3 py-1 rounded-full ${getStatusStyles(selectedItem.status).bgClass} ${getStatusStyles(selectedItem.status).textClass}`}>
                 {statusDisplay(selectedItem.status).label}
               </span>
             </div>
@@ -1090,11 +1131,11 @@ export default function RTApproval() {
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 หมายเหตุ <span className="text-red-500">*</span>
               </label>
-              
+
               <div className="space-y-3">
                 {NOTE_OPTIONS.map((option, index) => {
                   const isSelected = selectedReason === option;
-                  
+
                   return (
                     <label
                       key={index}
@@ -1123,7 +1164,7 @@ export default function RTApproval() {
                         }}
                         className="hidden"
                       />
-                      
+
                       <div
                         className={`
                           w-5 h-5 rounded-full border-2 flex items-center justify-center
@@ -1134,7 +1175,7 @@ export default function RTApproval() {
                           <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
                         )}
                       </div>
-                      
+
                       <span
                         className={`
                           text-sm font-medium
@@ -1147,7 +1188,7 @@ export default function RTApproval() {
                   );
                 })}
               </div>
-              
+
               {selectedReason === "อื่นๆ" && (
                 <div className="mt-4">
                   <textarea
