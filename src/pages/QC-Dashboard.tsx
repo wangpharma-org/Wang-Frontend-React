@@ -846,7 +846,8 @@ const QCDashboard = () => {
   // Manual refresh function
   const handleManualRefresh = async () => {
     const checkFlagRT = await checkFlagRTRequest();
-    if (checkFlagRT === true) {
+    console.log("checkFlagRT in handleManualRefresh:", checkFlagRT);
+    if (checkFlagRT === false) {
       return ;
     }
     try {
@@ -1439,12 +1440,12 @@ const QCDashboard = () => {
           headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
         }
       );
-      if (res.data.status === "NotActive") {
+      if (res.data.status === "NotActive" || featureFlagRTRequest === false) {
         setRtRequestModalOpen(false);
         setRtQcNote("");
         setSelectedRTReason("");
         handleRT(so.so_running);
-      } else if (res.data.status === "Pending") {
+      } else if (res.data.status === "Pending" && featureFlagRTRequest === true) {
         setRtPendingData({
           ref: res.data.refID,
           so_running: so.so_running,
