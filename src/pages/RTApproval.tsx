@@ -14,7 +14,7 @@ interface PurchestData {
   pro_stock: string;
   pro_Unit1: string;
   pro_timeStock: string;
-  update_at: string;
+  update_at: Date;
   pur: {
     purchest_pur_id: number;
     pur_date: string;
@@ -141,7 +141,6 @@ export default function RTApproval() {
   const [, setNote] = useState("");
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
   const [customReason, setCustomReason] = useState("");
-  const [purchestData, setPurchestData] = useState<PurchestData | null>(null);
 
   const NOTE_OPTIONS = [
     "ให้ผ่านอนุมัติ",
@@ -214,15 +213,15 @@ export default function RTApproval() {
     });
     return Array.from(groups.values())
       .map((items) => {
-        // เรียงตามวันที่สร้างล่าสุดแล้วเอาอันล่าสุดมาเป็นหลัก
+
         const sortedItems = items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        // หาเวลาที่เก่าที่สุด
+
         const oldestItem = items.reduce((oldest, current) =>
           new Date(current.created_at) < new Date(oldest.created_at) ? current : oldest
         );
         return {
-          ...sortedItems[0], // ใช้ข้อมูลล่าสุด
-          created_at: oldestItem.created_at, // แต่แสดงเวลาเก่าที่สุด
+          ...sortedItems[0],
+          created_at: oldestItem.created_at,
           amount_item: sortedItems[0].amount_item,
           _count: items.length,
         };
@@ -382,7 +381,6 @@ export default function RTApproval() {
         headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
       });
 
-      // อัปเดต selectedItem ด้วยข้อมูล purchest ใหม่
       if (selectedItem && res.data) {
         const updatedProduct = {
           ...selectedItem.product,
@@ -392,6 +390,7 @@ export default function RTApproval() {
           ...selectedItem,
           product: updatedProduct
         });
+        setData(prev => prev.map(item => item.ref === selectedItem.ref ? { ...item, product: updatedProduct } : item));
       }
     } catch (error) {
       console.error('Failed to fetch purchest data', error);
@@ -420,7 +419,7 @@ export default function RTApproval() {
         toast: true,
         position: 'top-end'
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to fetch purchest data', error);
       Swal.fire({
         icon: 'error',
@@ -448,8 +447,8 @@ export default function RTApproval() {
       });
 
       setModalOpen(false);
+      setSelectedItem(null);
 
-      // แสดง popup สำเร็จ
       Swal.fire({
         icon: 'success',
         title: 'ปฏิเสธ RT สำเร็จ!',
@@ -497,6 +496,7 @@ export default function RTApproval() {
       });
 
       setModalOpen(false);
+      setSelectedItem(null);
 
       // แสดง popup สำเร็จ
       Swal.fire({
@@ -779,7 +779,7 @@ export default function RTApproval() {
                   return (
                     <tr
                       key={item.ref}
-                      onClick={() => (featureFlag && clickable && handleRowClick(item), fetchPurchestDataShow(item.product.code))}
+                      onClick={() => (featureFlag && clickable && handleRowClick(item))}
                       className={`transition-all duration-200 border-b border-gray-100 ${!featureFlag || !clickable
                         ? "opacity-50 cursor-not-allowed bg-gray-50"
                         : `cursor-pointer hover:bg-blue-50 hover:shadow-sm ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`
@@ -1019,7 +1019,7 @@ export default function RTApproval() {
         )}
       </div>
 
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)}>
+      <Modal isOpen={modalOpen} onClose={() => { setModalOpen(false); setSelectedItem(null); }}>
         {selectedItem && (
           <div className="max-h-[80vh] overflow-y-auto">
             {/* Header */}
@@ -1087,16 +1087,22 @@ export default function RTApproval() {
                     </svg>
                     ข้อมูลการซื้อขาย
                   </h3>
-                  <button
-                    onClick={() => fetchPurchestData(selectedItem.product.code)}
-                    disabled={purchestLoading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-blue-300 text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <svg className={`w-3 h-3 ${purchestLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    {purchestLoading ? 'กำลังโหลด...' : 'โหลดข้อมูลล่าสุด'}
-                  </button>
+                  <div>
+
+                    <button
+                      onClick={() => fetchPurchestData(selectedItem.product.code)}
+                      disabled={purchestLoading}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-blue-300 text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <svg className={`w-3 h-3 ${purchestLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      {purchestLoading ? 'กำลังโหลด...' : 'โหลดข้อมูลล่าสุด'}
+                    </button>
+                    <p>
+                      <span className="text-xs text-gray-500">{(new Date(selectedItem?.product?.purchest?.update_at)).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}</span>
+                    </p>
+                  </div>
                 </div>
 
                 {selectedItem.product.purchest ? (
@@ -1107,7 +1113,7 @@ export default function RTApproval() {
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <span className="text-gray-500">สต็อก:</span>
-                          <span className="ml-2 font-medium">{selectedItem.product.purchest.pro_stock} {selectedItem.product.purchest.pro_Unit1}</span>
+                          <span className="ml-2 font-medium">{selectedItem.product.purchest.pro_stock}</span>
                         </div>
                         <div>
                           <span className="text-gray-500">อัปเดต:</span>
@@ -1126,7 +1132,7 @@ export default function RTApproval() {
                         {/* PUR */}
                         {selectedItem.product.purchest.pur && (
                           <div className="border border-green-200 rounded-lg p-3">
-                            <div className="font-medium text-green-700 mb-2">🛒 การซื้อ (PUR)</div>
+                            <div className="font-medium text-green-700 mb-2">การซื้อ (PUR)</div>
                             <div className="space-y-1 text-xs text-gray-600">
                               <div>วันที่: {new Date(selectedItem.product.purchest.pur.pur_date).toLocaleDateString('th-TH')}</div>
                               <div>เลขที่: {selectedItem.product.purchest.pur.pur_invoice}</div>
@@ -1138,7 +1144,7 @@ export default function RTApproval() {
                         {/* BI */}
                         {selectedItem.product.purchest.bi && (
                           <div className="border border-purple-200 rounded-lg p-3">
-                            <div className="font-medium text-purple-700 mb-2">🚚 ใบวิ่ง (BI)</div>
+                            <div className="font-medium text-purple-700 mb-2">ใบวิ่ง (BI)</div>
                             <div className="space-y-1 text-xs text-gray-600">
                               <div>วันที่: {new Date(selectedItem.product.purchest.bi.bi_date).toLocaleDateString('th-TH')}</div>
                               <div>เลขที่: {selectedItem.product.purchest.bi.bi_invoice}</div>
@@ -1150,7 +1156,7 @@ export default function RTApproval() {
                         {/* PO */}
                         {selectedItem.product.purchest.po && (
                           <div className="border border-orange-200 rounded-lg p-3">
-                            <div className="font-medium text-orange-700 mb-2">📄 ใบสั่งซื้อ (PO)</div>
+                            <div className="font-medium text-orange-700 mb-2">ใบสั่งซื้อ (PO)</div>
                             <div className="space-y-1 text-xs text-gray-600">
                               {selectedItem.product.purchest.po.po_date && (
                                 <div>วันที่: {new Date(selectedItem.product.purchest.po.po_date).toLocaleDateString('th-TH')}</div>
@@ -1164,7 +1170,7 @@ export default function RTApproval() {
                         {/* PR */}
                         {selectedItem.product.purchest.pr && selectedItem.product.purchest.pr.pr_date && (
                           <div className="border border-yellow-200 rounded-lg p-3">
-                            <div className="font-medium text-yellow-700 mb-2">📝 ใบขอซื้อ (PR)</div>
+                            <div className="font-medium text-yellow-700 mb-2">ใบขอซื้อ (PR)</div>
                             <div className="space-y-1 text-xs text-gray-600">
                               <div>วันที่: {new Date(selectedItem.product.purchest.pr.pr_date!).toLocaleDateString('th-TH')}</div>
                               <div>เลขที่: {selectedItem.product.purchest.pr.pr_invoice || '-'}</div>
