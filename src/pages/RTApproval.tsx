@@ -1100,7 +1100,7 @@ export default function RTApproval() {
                       {purchestLoading ? 'กำลังโหลด...' : 'โหลดข้อมูลล่าสุด'}
                     </button>
                     <p>
-                      <span className="text-xs text-gray-500">{(new Date(selectedItem.product.purchest!.update_at!)).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}</span>
+                      <span className="text-xs text-gray-500">{(new Date(selectedItem.product.purchest?.update_at || "-")).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}</span>
                     </p>
                   </div>
                 </div>
@@ -1262,7 +1262,7 @@ export default function RTApproval() {
                                         <td className="py-2 px-3 text-right">
                                           <div className="flex flex-col items-end gap-1">
                                             <span className={`text-xs font-medium ${dailyNet >= 0 ? 'text-green-600' : 'text-red-600'}`} title="สุทธิของวันนี้">
-                                              วัน: {dailyNet > 0 ? '+' : ''}{dailyNet.toLocaleString()}
+                                              {dailyNet > 0 ? '+' : ''}{dailyNet.toLocaleString()} {data.unit}
                                             </span>
                                             <span className={`font-semibold ${runningTotal >= 0 ? 'text-green-600' : 'text-red-600'}`} title="สะสมจากวันเก่าถึงวันนี้">
                                               รวม: {runningTotal > 0 ? '+' : ''}{runningTotal.toLocaleString()} {data.unit}
