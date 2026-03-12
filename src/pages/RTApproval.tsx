@@ -1100,7 +1100,7 @@ export default function RTApproval() {
                       {purchestLoading ? 'กำลังโหลด...' : 'โหลดข้อมูลล่าสุด'}
                     </button>
                     <p>
-                      <span className="text-xs text-gray-500">{(new Date(selectedItem?.product?.purchest?.update_at)).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}</span>
+                      <span className="text-xs text-gray-500">{(new Date(selectedItem.product.purchest!.update_at!)).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}</span>
                     </p>
                   </div>
                 </div>
