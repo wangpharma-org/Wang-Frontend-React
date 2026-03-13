@@ -7,6 +7,55 @@ import boxnotfound from "../assets/product-17.png";
 
 const VITE_API_URL_ORDER = import.meta.env.VITE_API_URL_ORDER;
 
+// Interface สำหรับข้อมูล purchest ใหม่
+interface PurchestData {
+  purchest_id: number;
+  product_code: string;
+  pro_stock: string;
+  pro_Unit1: string;
+  pro_timeStock: string;
+  update_at: Date;
+  pur: {
+    purchest_pur_id: number;
+    pur_date: string;
+    pur_invoice: string;
+    pur_amount: string;
+    pur_unit: string;
+  } | null;
+  bi: {
+    purchest_bi_id: number;
+    bi_date: string;
+    bi_invoice: string;
+    bi_amount: string;
+    bi_unit: string;
+  } | null;
+  po: {
+    purchest_po_id: number;
+    po_date: string;
+    po_invoice: string;
+    po_amount: string | null;
+    po_unit: string;
+  } | null;
+  pr: {
+    purchest_pr_id: number;
+    pr_date: string | null;
+    pr_invoice: string | null;
+    pr_amount: string | null;
+    pr_unit: string | null;
+  } | null;
+  purchestHistory: {
+    purchest_history_id: number;
+    date: string;
+    type: 'SAL' | 'RET' | 'PUR';
+    amount: number;
+    unit: string;
+  }[];
+  product: {
+    product_stock: string;
+    last_stock_date: string;
+  }
+}
+
 interface RTApprovalItem {
   ref: string;
   employee: { code: string; name: string };
@@ -15,7 +64,8 @@ interface RTApprovalItem {
     name: string;
     image: string;
     floor: string;
-    purchase_entry: {
+    purchest?: PurchestData; // เพิ่มข้อมูล purchest ใหม่
+    purchase_entry?: {
       SO_amount: string;
       PR_amount: string;
       RT_amount: string;
@@ -23,7 +73,7 @@ interface RTApprovalItem {
       product_code: string;
       purchase_entry_no: string;
       purchase_entry_date: Date;
-    }[];
+    }[]; // เก็บไว้เพื่อ backward compatibility
   };
   member: {
     code: string;
@@ -164,6 +214,7 @@ export default function RTApproval() {
   const [error, setError] = useState<string | null>(null);
   const [latestKey, setLatestKey] = useState<string>("");
   const [active, setActive] = useState<boolean>(true);
+  const [purchestLoading, setPurchestLoading] = useState(false);
 
   const filteredData = (Array.isArray(data) ? data : []).filter((item) => {
     const matchStatus = statusFilter === "all" || item.status === statusFilter;
@@ -217,15 +268,15 @@ export default function RTApproval() {
     });
     return Array.from(groups.values())
       .map((items) => {
-        // เรียงตามวันที่สร้างล่าสุดแล้วเอาอันล่าสุดมาเป็นหลัก
+
         const sortedItems = items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        // หาเวลาที่เก่าที่สุด
+
         const oldestItem = items.reduce((oldest, current) =>
           new Date(current.created_at) < new Date(oldest.created_at) ? current : oldest
         );
         return {
-          ...sortedItems[0], // ใช้ข้อมูลล่าสุด
-          created_at: oldestItem.created_at, // แต่แสดงเวลาเก่าที่สุด
+          ...sortedItems[0],
+          created_at: oldestItem.created_at,
           amount_item: sortedItems[0].amount_item,
           _count: items.length,
         };
@@ -267,28 +318,14 @@ export default function RTApproval() {
   useEffect(() => {
     fetchData();
     checkFeatureFlag();
-    fetchLatestKey();
 
     const interval = setInterval(() => {
       fetchData();
       checkFeatureFlag();
-      fetchLatestKey();
     }, 5 * 60 * 1000);
 
     return () => { clearInterval(interval); };
   }, [active]);
-
-  const fetchLatestKey = async () => {
-    try {
-      const res = await axios.get(`${VITE_API_URL_ORDER}/api/rt-request/latest-key`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
-      });
-      setLatestKey(res.data || "");
-    } catch (error) {
-      console.error("Failed to fetch latest key", error);
-      setLatestKey("");
-    }
-  };
 
   const checkFeatureFlag = async () => {
     try {
@@ -396,6 +433,66 @@ export default function RTApproval() {
     }
   };
 
+  const fetchPurchestDataShow = async (productCode: string) => {
+    setPurchestLoading(true);
+    console.log("Fetching purchest data for product code:", productCode);
+    try {
+      const res = await axios.get(`http://localhost:3003/api/purchest/history/${productCode}`, {
+        headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
+      });
+
+      if (selectedItem && res.data) {
+        const updatedProduct = {
+          ...selectedItem.product,
+          purchest: res.data
+        };
+        setSelectedItem({
+          ...selectedItem,
+          product: updatedProduct
+        });
+        setData(prev => prev.map(item => item.ref === selectedItem.ref ? { ...item, product: updatedProduct } : item));
+      }
+    } catch (error) {
+      console.error('Failed to fetch purchest data', error);
+    } finally {
+      setPurchestLoading(false);
+    }
+  };
+
+  const fetchPurchestData = async (productCode: string) => {
+    setPurchestLoading(true);
+    try {
+      const res = await axios.post(`http://localhost:3003/api/purchest/find`, {
+        product_code: productCode
+      }, {
+        headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
+      });
+      if (res.data) {
+        fetchPurchestDataShow(productCode);
+      }
+      Swal.fire({
+        icon: 'success',
+        title: 'โหลดข้อมูลสำเร็จ!',
+        text: 'ข้อมูลการซื้อขายได้รับการอัปเดตแล้ว',
+        timer: 2000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end'
+      });
+    } catch (error: unknown) {
+      console.error('Failed to fetch purchest data', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาด!',
+        text: 'ไม่สามารถโหลดข้อมูลการซื้อขายได้',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#ef4444'
+      });
+    } finally {
+      setPurchestLoading(false);
+    }
+  };
+
   const handleReject = async () => {
     if (!selectedItem) return;
     setRejecting(true);
@@ -410,8 +507,8 @@ export default function RTApproval() {
       });
 
       setModalOpen(false);
+      setSelectedItem(null);
 
-      // แสดง popup สำเร็จ
       Swal.fire({
         icon: 'success',
         title: 'ปฏิเสธ RT สำเร็จ!',
@@ -459,6 +556,7 @@ export default function RTApproval() {
       });
 
       setModalOpen(false);
+      setSelectedItem(null);
 
       // แสดง popup สำเร็จ
       Swal.fire({
@@ -532,7 +630,6 @@ export default function RTApproval() {
                   onClick={() => {
                     setError(null);
                     fetchData();
-                    fetchLatestKey();
                   }}
                   className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
@@ -628,7 +725,6 @@ export default function RTApproval() {
               onClick={() => {
                 setError(null);
                 fetchData();
-                fetchLatestKey();
               }}
               disabled={loading}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -764,7 +860,7 @@ export default function RTApproval() {
                   return (
                     <tr
                       key={item.ref}
-                      onClick={() => featureFlag && clickable && handleRowClick(item)}
+                      onClick={() => (featureFlag && clickable && handleRowClick(item))}
                       className={`transition-all duration-200 border-b border-gray-100 ${!featureFlag || !clickable
                         ? "opacity-60 cursor-not-allowed bg-gray-50 font-semibold text-gray-700"
                         : `cursor-pointer hover:bg-blue-50 hover:shadow-sm ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`
@@ -996,135 +1092,331 @@ export default function RTApproval() {
         )}
       </div>
 
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)}>
+      <Modal isOpen={modalOpen} onClose={() => { setModalOpen(false); setSelectedItem(null); }}>
         {selectedItem && (
           <div className="overflow-y-auto max-h-[80vh]">
             {/* Header */}
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-3 sticky top-0 bg-white z-20 pb-3 border-b border-gray-200">
               <h2 className="text-lg font-bold text-gray-800">รายละเอียดการส่ง RT</h2>
               <span className={`text-xs font-semibold px-3 py-1 rounded-full ${getStatusStyles(selectedItem.status).bgClass} ${getStatusStyles(selectedItem.status).textClass}`}>
                 {statusDisplay(selectedItem.status).label}
               </span>
             </div>
 
-            {/* Image + Info */}
-            <div className="flex flex-col sm:flex-row gap-3 mb-3">
-              {/* Product Image */}
-              <div className="flex-shrink-0 flex justify-center">
-                {selectedItem.product.image ? (
-                  <img
-                    src={
-                      selectedItem.product.image?.startsWith("..")
-                        ? `https://www.wangpharma.com${selectedItem.product.image?.slice(
-                          2
-                        )}`
-                        : selectedItem.product.image || boxnotfound
-                    }
-                    alt={selectedItem.product.name}
-                    className="h-32 w-32 object-contain rounded-lg border border-gray-200 bg-gray-50 p-2 shadow-sm"
-                  />
+            <div className="space-y-4">
+
+              {/* Image + Info */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* Product Image */}
+                <div className="flex-shrink-0 flex justify-center">
+                  {selectedItem.product.image ? (
+                    <img
+                      src={
+                        selectedItem.product.image?.startsWith("..")
+                          ? `https://www.wangpharma.com${selectedItem.product.image?.slice(
+                            2
+                          )}`
+                          : selectedItem.product.image || boxnotfound
+                      }
+                      alt={selectedItem.product.name}
+                      className="h-32 w-32 object-contain rounded-lg border border-gray-200 bg-gray-50 p-2 shadow-sm"
+                    />
+                  ) : (
+                    <div className="h-32 w-32 flex items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 text-gray-400 text-xs">
+                      ไม่มีรูปภาพ
+                    </div>
+                  )}
+                </div>
+
+                {/* Product Details */}
+                <div className="flex-1 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                  {[
+                    { label: "รหัสสินค้า", value: selectedItem.product.code },
+                    { label: "ชื่อสินค้า", value: selectedItem.product.name, clamp: true },
+                    { label: "ชั้นวาง", value: selectedItem.product.floor || "-" },
+                    { label: "จำนวน / หน่วย", value: `${selectedItem.amount_item} ${selectedItem.unit_item}` },
+                    { label: "SH", value: selectedItem.sh_running },
+                  ].map(({ label, value, clamp }) => (
+                    <div key={label} className="flex flex-col gap-0.5">
+                      <span className="text-xs text-gray-400 uppercase tracking-wide">{label}</span>
+                      <span className={`font-medium text-gray-800 ${clamp ? "line-clamp-2" : ""}`} title={clamp ? String(value) : undefined}>{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Purchase Information */}
+              <div className="border-t border-gray-100" />
+
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    ข้อมูลการซื้อขาย
+                  </h3>
+                  <div>
+
+                    <button
+                      onClick={() => fetchPurchestData(selectedItem.product.code)}
+                      disabled={purchestLoading}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-blue-300 text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <svg className={`w-3 h-3 ${purchestLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      {purchestLoading ? 'กำลังโหลด...' : 'โหลดข้อมูลล่าสุด'}
+                    </button>
+                    <p>
+                      <span className="text-xs text-gray-500">{(new Date(selectedItem.product.purchest?.update_at || "-")).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}</span>
+                    </p>
+                  </div>
+                </div>
+
+                {selectedItem.product.purchest ? (
+                  <div className="space-y-4">
+                    {/* ข้อมูลสต็อกปัจจุบัน */}
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3">📦 สต็อกปัจจุบัน</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-500">สต็อก:</span>
+                          <span className="ml-2 font-medium">{selectedItem.product.purchest.product.product_stock} {selectedItem.product.purchest.pro_Unit1}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">อัปเดต:</span>
+                          <span className="ml-2 font-medium">
+                            {new Date(selectedItem.product.purchest.product.last_stock_date).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ข้อมูลเอกสาร */}
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3">📋 ข้อมูลเอกสาร</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+
+                        {/* PUR */}
+                        {selectedItem.product.purchest.pur && (
+                          <div className="border border-green-200 rounded-lg p-3">
+                            <div className="font-medium text-green-700 mb-2">การซื้อ (PUR)</div>
+                            <div className="space-y-1 text-xs text-gray-600">
+                              <div>วันที่: {new Date(selectedItem.product.purchest.pur.pur_date).toLocaleDateString('th-TH')}</div>
+                              <div>เลขที่: {selectedItem.product.purchest.pur.pur_invoice}</div>
+                              <div>จำนวน: {selectedItem.product.purchest.pur.pur_amount} {selectedItem.product.purchest.pur.pur_unit}</div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* BI */}
+                        {selectedItem.product.purchest.bi && (
+                          <div className="border border-purple-200 rounded-lg p-3">
+                            <div className="font-medium text-purple-700 mb-2">ใบวิ่ง (BI)</div>
+                            <div className="space-y-1 text-xs text-gray-600">
+                              <div>วันที่: {new Date(selectedItem.product.purchest.bi.bi_date).toLocaleDateString('th-TH')}</div>
+                              <div>เลขที่: {selectedItem.product.purchest.bi.bi_invoice}</div>
+                              <div>จำนวน: {selectedItem.product.purchest.bi.bi_amount} {selectedItem.product.purchest.bi.bi_unit}</div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* PO */}
+                        {selectedItem.product.purchest.po && (
+                          <div className="border border-orange-200 rounded-lg p-3">
+                            <div className="font-medium text-orange-700 mb-2">ใบสั่งซื้อ (PO)</div>
+                            <div className="space-y-1 text-xs text-gray-600">
+                              {selectedItem.product.purchest.po.po_date && (
+                                <div>วันที่: {new Date(selectedItem.product.purchest.po.po_date).toLocaleDateString('th-TH')}</div>
+                              )}
+                              <div>เลขที่: {selectedItem.product.purchest.po.po_invoice}</div>
+                              <div>จำนวน: {selectedItem.product.purchest.po.po_amount || '-'} {selectedItem.product.purchest.po.po_unit}</div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* PR */}
+                        {selectedItem.product.purchest.pr && selectedItem.product.purchest.pr.pr_date && (
+                          <div className="border border-yellow-200 rounded-lg p-3">
+                            <div className="font-medium text-yellow-700 mb-2">ใบขอซื้อ (PR)</div>
+                            <div className="space-y-1 text-xs text-gray-600">
+                              <div>วันที่: {new Date(selectedItem.product.purchest.pr.pr_date!).toLocaleDateString('th-TH')}</div>
+                              <div>เลขที่: {selectedItem.product.purchest.pr.pr_invoice || '-'}</div>
+                              <div>จำนวน: {selectedItem.product.purchest.pr.pr_amount || '-'} {selectedItem.product.purchest.pr.pr_unit || '-'}</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* ประวัติการเคลื่อนไหว */}
+                    {selectedItem.product.purchest.purchestHistory && selectedItem.product.purchest.purchestHistory.length > 0 && (() => {
+                      // จัดกลุ่มข้อมูลตามวันที่
+                      const groupedHistory = selectedItem.product.purchest.purchestHistory.reduce((acc, history) => {
+                        const date = new Date(history.date).toLocaleDateString('th-TH');
+                        if (!acc[date]) {
+                          acc[date] = { SAL: 0, RET: 0, PUR: 0, unit: history.unit };
+                        }
+                        acc[date][history.type === 'SAL' ? 'SAL' : history.type === 'RET' ? 'RET' : 'PUR'] += history.amount;
+                        return acc;
+                      }, {} as Record<string, { SAL: number; RET: number; PUR: number; unit: string }>);
+
+                      const sortedDates = Object.keys(groupedHistory).sort((a, b) =>
+                        new Date(b.split('/').reverse().join('-')).getTime() - new Date(a.split('/').reverse().join('-')).getTime()
+                      );
+
+                      return (
+                        <div className="bg-white border border-gray-200 rounded-lg p-4">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3">📊 ประวัติล่าสุด (รวมตามวันที่)</h4>
+                          <div className="max-h-48 overflow-y-auto">
+                            <table className="w-full text-sm">
+                              <thead className="sticky top-0 z-10">
+                                <tr className="border-b border-gray-200 bg-gray-50">
+                                  <th className="py-2 px-3 text-left text-xs font-medium text-gray-600">วันที่</th>
+                                  <th className="py-2 px-3 text-right text-xs font-medium text-gray-600">ขาย</th>
+                                  <th className="py-2 px-3 text-right text-xs font-medium text-gray-600">คืน</th>
+                                  <th className="py-2 px-3 text-right text-xs font-medium text-gray-600">ซื้อ</th>
+                                  <th className="py-2 px-3 text-right text-xs font-medium text-gray-600">สุทธิ</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {(() => {
+                                  // สร้าง array ของวันที่เรียงจากเก่าไปใหม่สำหรับการคำนวณ running total
+                                  const datesSortedOldest = Object.keys(groupedHistory).sort((a, b) =>
+                                    new Date(a.split('/').reverse().join('-')).getTime() - new Date(b.split('/').reverse().join('-')).getTime()
+                                  );
+
+                                  // คำนวณ running total สำหรับแต่ละวัน
+                                  const runningTotals: Record<string, number> = {};
+                                  let accumulator = 0;
+
+                                  datesSortedOldest.forEach(date => {
+                                    const data = groupedHistory[date];
+                                    const dailyNet = data.PUR + data.RET + data.SAL; // สุทธิของวันนั้น
+                                    accumulator += dailyNet;
+                                    runningTotals[date] = accumulator;
+                                  });
+
+                                  // แสดงผลตามลำดับวันใหม่ไปเก่า (เหมือนเดิม)
+                                  return sortedDates.map((date, index) => {
+                                    const data = groupedHistory[date];
+                                    const dailyNet = data.PUR + data.RET + data.SAL; // สุทธิของวันนั้น
+                                    const runningTotal = runningTotals[date]; // สะสมจากวันแรกถึงวันนั้น
+
+                                    return (
+                                      <tr key={date} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}>
+                                        <td className="py-2 px-3 text-gray-700 font-medium">{date}</td>
+                                        <td className="py-2 px-3 text-right">
+                                          {data.SAL !== 0 && (
+                                            <span className="text-red-600 font-medium">
+                                              -{Math.abs(data.SAL).toLocaleString()}
+                                            </span>
+                                          )}
+                                        </td>
+                                        <td className="py-2 px-3 text-right">
+                                          {data.RET !== 0 && (
+                                            <span className="text-blue-600 font-medium">
+                                              +{data.RET.toLocaleString()}
+                                            </span>
+                                          )}
+                                        </td>
+                                        <td className="py-2 px-3 text-right">
+                                          {data.PUR !== 0 && (
+                                            <span className="text-green-600 font-medium">
+                                              +{data.PUR.toLocaleString()}
+                                            </span>
+                                          )}
+                                        </td>
+                                        <td className="py-2 px-3 text-right">
+                                          <div className="flex flex-col items-end gap-1">
+                                            <span className={`text-xs font-medium ${dailyNet >= 0 ? 'text-green-600' : 'text-red-600'}`} title="สุทธิของวันนี้">
+                                              {dailyNet > 0 ? '+' : ''}{dailyNet.toLocaleString()} {data.unit}
+                                            </span>
+                                            <span className={`font-semibold ${runningTotal >= 0 ? 'text-green-600' : 'text-red-600'}`} title="สะสมจากวันเก่าถึงวันนี้">
+                                              รวม: {runningTotal > 0 ? '+' : ''}{runningTotal.toLocaleString()} {data.unit}
+                                            </span>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    );
+                                  });
+                                })()}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                ) : selectedItem.product.purchase_entry && selectedItem.product.purchase_entry.length > 0 ? (
+                  // Fallback to old purchase_entry format
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {selectedItem.product.purchase_entry.map((entry, index) => (
+                      <div key={index} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">เลขที่ใบสั่งซื้อ:</span>
+                            <span className="font-medium text-gray-800">{entry.purchase_entry_no}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">วันที่สั่งซื้อ:</span>
+                            <span className="font-medium text-gray-800">
+                              {new Date(entry.purchase_entry_date).toLocaleDateString('th-TH', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              })}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">จำนวน SO:</span>
+                            <span className="font-medium text-blue-600">{parseFloat(entry.SO_amount).toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">จำนวน PR:</span>
+                            <span className="font-medium text-green-600">{parseFloat(entry.PR_amount).toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">จำนวน PO:</span>
+                            <span className="font-medium text-purple-600">{parseFloat(entry.PO_amount).toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">จำนวน RT:</span>
+                            <span className="font-medium text-red-600">{parseFloat(entry.RT_amount).toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                  <div className="h-32 w-32 flex items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 text-gray-400 text-xs">
-                    ไม่มีรูปภาพ
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center">
+                    <div className="flex flex-col items-center gap-2 py-2">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="text-gray-500 text-sm">ไม่มีข้อมูลการซื้อขาย</span>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Product Details */}
-              <div className="flex-1 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                {[
-                  { label: "รหัสสินค้า", value: selectedItem.product.code },
-                  { label: "ชื่อสินค้า", value: selectedItem.product.name, clamp: true },
-                  { label: "ชั้นวาง", value: selectedItem.product.floor || "-" },
-                  { label: "จำนวน / หน่วย", value: `${selectedItem.amount_item} ${selectedItem.unit_item}` },
-                  { label: "SH", value: selectedItem.sh_running },
-                ].map(({ label, value, clamp }) => (
-                  <div key={label} className="flex flex-col gap-0.5">
-                    <span className="text-xs text-gray-400 uppercase tracking-wide">{label}</span>
-                    <span className={`font-medium text-gray-800 ${clamp ? "line-clamp-2" : ""}`} title={clamp ? String(value) : undefined}>{value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+              {/* Divider */}
+              <div className="border-t border-gray-100" />
 
-            {/* Purchase Entry Information */}
-            <div className="border-t border-gray-100 mb-3" />
-
-            <div className="mb-3">
-              <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                ประวัติการสั่งซื้อ
-              </h3>
-
-              {selectedItem.product.purchase_entry && selectedItem.product.purchase_entry.length > 0 ? (
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {selectedItem.product.purchase_entry.map((entry, index) => (
-                    <div key={index} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">เลขที่ใบสั่งซื้อ:</span>
-                          <span className="font-medium text-gray-800">{entry.purchase_entry_no}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">วันที่สั่งซื้อ:</span>
-                          <span className="font-medium text-gray-800">
-                            {new Date(entry.purchase_entry_date).toLocaleDateString('th-TH', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric'
-                            })}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">จำนวน SO:</span>
-                          <span className="font-medium text-blue-600">{parseFloat(entry.SO_amount).toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">จำนวน PR:</span>
-                          <span className="font-medium text-green-600">{parseFloat(entry.PR_amount).toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">จำนวน PO:</span>
-                          <span className="font-medium text-purple-600">{parseFloat(entry.PO_amount).toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">จำนวน RT:</span>
-                          <span className="font-medium text-red-600">{parseFloat(entry.RT_amount).toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+              {/* Employee & Member */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-50 rounded-lg px-3 py-2">
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">พนักงาน</p>
+                  <p className="font-semibold text-gray-800 text-sm">{selectedItem.employee.code}</p>
+                  <p className="text-gray-600 text-sm">{selectedItem.employee.name}</p>
                 </div>
-              ) : (
-                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center">
-                  <div className="flex flex-col items-center gap-2 py-2">
-                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <span className="text-gray-500 text-sm">ไม่มีข้อมูลประวัติการสั่งซื้อ</span>
-                  </div>
+                <div className="bg-gray-50 rounded-lg px-3 py-2">
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">ร้านค้า</p>
+                  <p className="font-semibold text-gray-800 text-sm">{selectedItem.member.code}</p>
+                  <p className="text-gray-600 text-sm">{selectedItem.member.name}</p>
                 </div>
-              )}
-            </div>
-
-            {/* Divider */}
-            <div className="border-t border-gray-100 mb-3" />
-
-            {/* Employee & Member */}
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <div className="bg-gray-50 rounded-lg px-3 py-2">
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">พนักงาน</p>
-                <p className="font-semibold text-gray-800 text-sm">{selectedItem.employee.code}</p>
-                <p className="text-gray-600 text-sm">{selectedItem.employee.name}</p>
               </div>
-              <div className="bg-gray-50 rounded-lg px-3 py-2">
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">ร้านค้า</p>
-                <p className="font-semibold text-gray-800 text-sm">{selectedItem.member.code}</p>
-                <p className="text-gray-600 text-sm">{selectedItem.member.name}</p>
-              </div>
-            </div>
 
             {/* Note */}
             <div className="mb-4">
@@ -1143,83 +1435,86 @@ export default function RTApproval() {
                         flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer
                         transition-all duration-200 select-none
                         ${isSelected
-                          ? "border-blue-500 bg-blue-50 shadow-sm"
-                          : "border-gray-200 bg-white hover:border-blue-300 hover:bg-gray-50"
-                        }
-                      `}
-                    >
-                      <input
-                        type="radio"
-                        name="note-reason"
-                        value={option}
-                        checked={isSelected}
-                        onChange={() => {
-                          setSelectedReason(option);
-                          if (option !== "อื่นๆ") {
-                            setNote(option);
-                            setCustomReason("");
-                          } else {
-                            setNote("");
+                            ? "border-blue-500 bg-blue-50 shadow-sm"
+                            : "border-gray-200 bg-white hover:border-blue-300 hover:bg-gray-50"
                           }
-                        }}
-                        className="hidden"
-                      />
+                      `}
+                      >
+                        <input
+                          type="radio"
+                          name="note-reason"
+                          value={option}
+                          checked={isSelected}
+                          onChange={() => {
+                            setSelectedReason(option);
+                            if (option !== "อื่นๆ") {
+                              setNote(option);
+                              setCustomReason("");
+                            } else {
+                              setNote("");
+                            }
+                          }}
+                          className="hidden"
+                        />
 
-                      <div
-                        className={`
+                        <div
+                          className={`
                           w-5 h-5 rounded-full border-2 flex items-center justify-center
                           ${isSelected ? "border-blue-500" : "border-gray-400"}
                         `}
-                      >
-                        {isSelected && (
-                          <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                        )}
-                      </div>
+                        >
+                          {isSelected && (
+                            <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                          )}
+                        </div>
 
-                      <span
-                        className={`
+                        <span
+                          className={`
                           text-sm font-medium
                           ${isSelected ? "text-blue-700" : "text-gray-700"}
                         `}
-                      >
-                        {option}
-                      </span>
-                    </label>
-                  );
-                })}
+                        >
+                          {option}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {selectedReason === "อื่นๆ" && (
+                  <div className="mt-4">
+                    <textarea
+                      className="w-full border border-gray-200 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                      rows={3}
+                      value={customReason}
+                      onChange={(e) => {
+                        setCustomReason(e.target.value);
+                        setNote(e.target.value);
+                      }}
+                      placeholder="กรุณาระบุหมายเหตุเพิ่มเติม..."
+                    />
+                  </div>
+                )}
               </div>
 
-              {selectedReason === "อื่นๆ" && (
-                <div className="mt-4">
-                  <textarea
-                    className="w-full border border-gray-200 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                    rows={3}
-                    value={customReason}
-                    onChange={(e) => {
-                      setCustomReason(e.target.value);
-                      setNote(e.target.value);
-                    }}
-                    placeholder="กรุณาระบุหมายเหตุเพิ่มเติม..."
-                  />
-                </div>
-              )}
-            </div>
+              {/* Action Buttons - Sticky at bottom */}
+              <div className="sticky bottom-0 bg-white pt-4 border-t border-gray-200 flex justify-end gap-3 z-20">
+                <button
+                  onClick={handleReject}
+                  disabled={!featureFlag || rejecting}
+                  className="bg-red-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {rejecting ? "กำลังปฏิเสธ..." : !featureFlag ? "ไม่สามารถปฏิเสธได้" : "ปฏิเสธคำขอ"}
+                </button>
+                <button
+                  onClick={handleApprove}
+                  disabled={!featureFlag || submitting}
+                  className="bg-blue-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {submitting ? "กำลังบันทึก..." : !featureFlag ? "ไม่สามารถอนุมัติได้" : "ยืนยันอนุมัติ"}
+                </button>
+              </div>
 
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={handleReject}
-                disabled={!featureFlag || rejecting}
-                className="bg-red-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                {rejecting ? "กำลังปฏิเสธ..." : !featureFlag ? "ไม่สามารถปฏิเสธได้" : "ปฏิเสธคำขอ"}
-              </button>
-              <button
-                onClick={handleApprove}
-                disabled={!featureFlag || submitting}
-                className="bg-blue-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                {submitting ? "กำลังบันทึก..." : !featureFlag ? "ไม่สามารถอนุมัติได้" : "ยืนยันอนุมัติ"}
-              </button>
             </div>
           </div>
         )}
