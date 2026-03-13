@@ -212,7 +212,6 @@ export default function RTApproval() {
   const [featureFlag, setFeatureFlag] = useState<boolean>(true);
   const [featureFlagLoading, setFeatureFlagLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [latestKey, setLatestKey] = useState<string>("");
   const [active, setActive] = useState<boolean>(true);
   const [purchestLoading, setPurchestLoading] = useState(false);
 
@@ -699,28 +698,6 @@ export default function RTApproval() {
         <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6">
           <h1 className="text-xl sm:text-2xl font-bold">รายการรออนุมัติการส่ง RT</h1>
           <div className="flex items-center gap-2">
-            {/* Latest Key Display */}
-            {latestKey && (
-              <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-6 6c-3 0-5.197-1.756-5.197-4C9.803 9.756 12 8 15 8a6 6 0 016 6M7 10v4a2 2 0 002 2h4M7 10V7a5 5 0 015-5h.5" />
-                  </svg>
-                  <span className="text-sm font-medium text-blue-700">รหัสล่าสุด:</span>
-                </div>
-                <button
-                  onClick={() => copyToClipboard(latestKey)}
-                  className="group flex items-center gap-1 bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-1 rounded font-mono text-sm font-bold transition-colors cursor-pointer"
-                  title="คลิกเพื่อคัดลอกรหัส"
-                >
-                  <span>{latestKey}</span>
-                  <svg className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                </button>
-              </div>
-            )}
-
             <button
               onClick={() => {
                 setError(null);
