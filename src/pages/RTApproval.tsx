@@ -50,6 +50,10 @@ interface PurchestData {
     amount: number;
     unit: string;
   }[];
+  product: {
+    product_stock: string;
+    last_stock_date: string;
+  }
 }
 
 interface RTApprovalItem {
@@ -1113,12 +1117,12 @@ export default function RTApproval() {
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <span className="text-gray-500">สต็อก:</span>
-                          <span className="ml-2 font-medium">{selectedItem.product.purchest.pro_stock}</span>
+                          <span className="ml-2 font-medium">{selectedItem.product.purchest.product.product_stock} {selectedItem.product.purchest.pro_Unit1}</span>
                         </div>
                         <div>
                           <span className="text-gray-500">อัปเดต:</span>
                           <span className="ml-2 font-medium">
-                            {new Date(selectedItem.product.purchest.pro_timeStock).toLocaleDateString('th-TH')}
+                            {new Date(selectedItem.product.purchest.product.last_stock_date).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
                       </div>
