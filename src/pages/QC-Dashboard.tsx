@@ -845,6 +845,11 @@ const QCDashboard = () => {
 
   // Manual refresh function
   const handleManualRefresh = async () => {
+    const checkFlagRT = await checkFlagRTRequest();
+    console.log("checkFlagRT in handleManualRefresh:", checkFlagRT);
+    if (checkFlagRT === false) {
+      return ;
+    }
     try {
       if (socket && wantConnect) {
         if (inputMemCode) {
@@ -1388,10 +1393,16 @@ const QCDashboard = () => {
 
   const handleRTClick = async (so: ShoppingOrder) => {
     try {
+      console.log("Checking RT request feature flag...");
+      console.log("so", so);
       const checkfeatureFlagRTRequest = await checkFlagRTRequest();
 
       if (checkfeatureFlagRTRequest !== true) {
-        await handleRT(so.so_running);
+        setRtSelectedProduct(so);
+        setRtRequestModalOpen(true)
+        if (rtQcNote.trim()) {
+          sendRTRequest(so, rtQcNote, false);
+        }
       } else {
         setRtSelectedProduct(so);
         if (!so.so_running || !so.sh_running) {
@@ -1400,7 +1411,7 @@ const QCDashboard = () => {
         }
         setRtRequestModalOpen(true);
         if (rtQcNote.trim()) {
-          sendRTRequest(so, rtQcNote);
+          sendRTRequest(so, rtQcNote, true);
         }
 
       }
@@ -1410,7 +1421,7 @@ const QCDashboard = () => {
     }
   };
 
-  const sendRTRequest = async (so: ShoppingOrder, rtQcNote: string) => {
+  const sendRTRequest = async (so: ShoppingOrder, rtQcNote: string, active: boolean) => {
     try {
       const res = await axios.post(
         `${import.meta.env.VITE_API_URL_ORDER}/api/rt-request`,
@@ -1423,13 +1434,18 @@ const QCDashboard = () => {
           so_running: so.so_running,
           sh_running: so.sh_running,
           empQC_note: rtQcNote.trim(),
+          active: active,
         },
         {
           headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
         }
       );
-
-      if (res.data.status === "Pending") {
+      if (res.data.status === "NotActive" || featureFlagRTRequest === false) {
+        setRtRequestModalOpen(false);
+        setRtQcNote("");
+        setSelectedRTReason("");
+        handleRT(so.so_running);
+      } else if (res.data.status === "Pending" && featureFlagRTRequest === true) {
         setRtPendingData({
           ref: res.data.refID,
           so_running: so.so_running,
@@ -1464,7 +1480,8 @@ const QCDashboard = () => {
         setRtRequestModalOpen(false);
         setRtQcNote("");
         setSelectedRTReason("");
-      } else {
+      }
+      else {
         setRtRequestModalOpen(false);
         setRtQcNote("");
         setSelectedRTReason("");
@@ -3713,9 +3730,9 @@ const QCDashboard = () => {
                                               : "hover:bg-red-600 bg-red-500"
                                           }`}
                                         onClick={() => {
-                                          if (isApprovedOrDuplicate) {
+                                          if (isApprovedOrDuplicate && featureFlagRTRequest === true) {
                                             handleRT(so.so_running);
-                                          } else if (isPending) {
+                                          } else if (isPending && featureFlagRTRequest === true) {
                                             handleManualRefresh();
                                           } else {
                                             handleRTClick(so);
