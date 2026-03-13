@@ -436,7 +436,7 @@ export default function RTApproval() {
     setPurchestLoading(true);
     console.log("Fetching purchest data for product code:", productCode);
     try {
-      const res = await axios.get(`http://localhost:3003/api/purchest/history/${productCode}`, {
+      const res = await axios.get(`${VITE_API_URL_ORDER}/api/purchest/history/${productCode}`, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
       });
 
@@ -461,7 +461,7 @@ export default function RTApproval() {
   const fetchPurchestData = async (productCode: string) => {
     setPurchestLoading(true);
     try {
-      const res = await axios.post(`http://localhost:3003/api/purchest/find`, {
+      const res = await axios.post(`${VITE_API_URL_ORDER}/api/purchest/find`, {
         product_code: productCode
       }, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
