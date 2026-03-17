@@ -269,6 +269,21 @@ jobs:
         run: |
           NODE_ENV=playwright npm run test
 
+      - name: Run playwright test with trace on failure
+        if: failure()
+        working-directory: playwright-test
+        shell: bash
+        run: |
+          NODE_ENV=playwright npm run test:trace
+
+      - name: Upload Playwright Report
+        if: always() # ให้ทำงานเสมอไม่ว่าเทสจะผ่านหรือพัง
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report # ชื่อของไฟล์ที่จะให้ปรากฏบน GitHub
+          path: playwright-report/ # path ที่ Playwright สร้าง report (ปกติคือโฟลเดอร์นี้)
+          retention-days: 30 # เก็บไฟล์ไว้กี่วัน
+
       # -------------------------
       # CLEANUP + LOGS
       # -------------------------
