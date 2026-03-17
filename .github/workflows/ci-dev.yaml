@@ -254,6 +254,7 @@ jobs:
               nc -z localhost 3003 \
               && nc -z localhost 3001 \
               && nc -z localhost 3025 \
+              && nc -z localhost 5173 \
               && exit 0
             sleep 2
           done
