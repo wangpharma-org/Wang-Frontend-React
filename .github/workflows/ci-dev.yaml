@@ -277,7 +277,7 @@ jobs:
           NODE_ENV=playwright npm run test:trace
 
       - name: Upload Playwright Report
-        if: always() # ให้ทำงานเสมอไม่ว่าเทสจะผ่านหรือพัง
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report # ชื่อของไฟล์ที่จะให้ปรากฏบน GitHub
@@ -296,6 +296,8 @@ jobs:
             services/auth.log
             services/kafka-backend.log
             services/order-picking/order-picking.log
+            frontend.log
+            logs
 
       - name: Cleanup
         if: always()
