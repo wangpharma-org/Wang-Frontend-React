@@ -253,6 +253,10 @@ jobs:
         working-directory: playwright-test
         run: npm ci
 
+      - name: Install Playwright Browsers & Deps
+        run: |
+          NODE_ENV=playwright npm install --with-deps
+
       - name: Install playwright test
         working-directory: playwright-test
         shell: bash
