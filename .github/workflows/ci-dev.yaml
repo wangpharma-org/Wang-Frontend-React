@@ -83,12 +83,12 @@ jobs:
         working-directory: playwright-test
         run: |
           for i in {1..60}; do
-            nc -z localhost 3306 \
+              nc -z localhost 3306 \
               && nc -z localhost 3308 \
               && nc -z localhost 9092 \
               && nc -z localhost 3003 \
               && nc -z localhost 3001 \
-              && nc -z localhost 3025
+              && nc -z localhost 3025 \
               && exit 0
             sleep 2
           done
