@@ -59,7 +59,7 @@ jobs:
           printf "%s\n" "${{ secrets.PLAYWRIGHT_AUTH_ENV }}" | tr -d '\r' > services/auth/.env.playwright
           printf "%s\n" "${{ secrets.PLAYWRIGHT_KAFKA_BACKEND }}" | tr -d '\r' > services/kafka-backend/.env.playwright
           printf "%s\n" "${{ secrets.PLAYWRIGHT_ORDER_PICKING_ENV }}" | tr -d '\r' > services/order-picking/.env.playwright
-          printf "%s\n" "${{ secrets.PLAYWRIGHT_GLOBAL_ENV }}" | tr -d '\r' > playwright-test/.env.playwright
+          printf "%s\n" "${{ secrets.PLAYWRIGHT_GLOBAL_ENV }}" | tr -d '\r' > .env.playwright
 
       - name: Write Firebase service account file (base64)
         shell: bash
@@ -104,7 +104,7 @@ jobs:
         shell: bash
         run: |
           nohup bash -lc '
-            cd "$GITHUB_WORKSPACE/playwright-test"
+            cd "$GITHUB_WORKSPACE"
             set -a
             source .env.playwright
             set +a
