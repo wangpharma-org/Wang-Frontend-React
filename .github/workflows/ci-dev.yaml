@@ -301,10 +301,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report # ชื่อของไฟล์ที่จะให้ปรากฏบน GitHub
+          name: playwright-report
           path: |
-            playwright-report/
-            test-results/
+            playwright-test/playwright-report/
+            playwright-test/test-results/
           retention-days: 30
 
       # -------------------------
