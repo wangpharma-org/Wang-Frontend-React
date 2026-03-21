@@ -1,7 +1,7 @@
 name: E2E Test (Vite React, Playwright)
 on:
-  push:
-    branches: [fix/ci-setup]
+  pull_request:
+    branches: [develop]
 
 jobs:
   ci:
