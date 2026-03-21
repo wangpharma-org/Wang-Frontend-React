@@ -104,13 +104,13 @@ jobs:
         shell: bash
         run: |
           nohup bash -lc '
-            cd "$GITHUB_WORKSPACE/playwright-test/"
+            cd "$GITHUB_WORKSPACE/playwright-test"
             set -a
             source .env.playwright
             set +a
             NODE_ENV=playwright npm run dev
           ' > frontend.log 2>&1 &
-          echo $! > frontend.pid
+          echo $! > frontend.pid  
 
       - name: Wait frontend
         shell: bash
