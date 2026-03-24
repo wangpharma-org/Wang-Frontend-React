@@ -49,6 +49,7 @@ export interface ShoppingOrder {
   so_already_qc: string;
   so_qc_amount: number;
   amount_max: number | null;
+  so_is_gift: boolean;
   product: Product;
 }
 
@@ -259,6 +260,12 @@ const QCDashboard = () => {
 
   // เก็บข้อมูลสินค้าที่จะ RT
   const [rtSelectedProduct, setRtSelectedProduct] = useState<ShoppingOrder | null>(null);
+
+  // TODO: playground — promotion gift warning modal
+  const [promotionGiftWarning, setPromotionGiftWarning] = useState<{
+    sh_running: string;
+    giftsToRt: { so_running: string; pro_code: string; pro_name: string; qty: number; unit: string }[];
+  } | null>(null);
 
   // State สำหรับเก็บ employee array ที่ได้จาก RT API
   const [shRunningArray, setSHRunningArray] = useState<string[] | null>(null);
@@ -519,6 +526,17 @@ const QCDashboard = () => {
       console.log("feature_flag:false");
       setMsgFeatureFlag(msg ?? "ไม่มีหมายเหตุ");
       setFeatureFlag(false);
+    });
+
+    // TODO: playground — รับ event เตือนของแถมที่อาจต้อง RT
+    newSocket.on("promotion_gift_warning", (data: {
+      sh_running: string;
+      giftsToRt: { so_running: string; pro_code: string; pro_name: string; qty: number; unit: string }[];
+    }) => {
+      console.log("promotion_gift_warning", data);
+      if (data.giftsToRt?.length > 0) {
+        setPromotionGiftWarning(data);
+      }
     });
 
     const prepareEmpData = sessionStorage.getItem("prepare-emp");
@@ -2753,6 +2771,52 @@ const QCDashboard = () => {
               </button>
             </div>
           </Modal>
+          {/* TODO: playground — modal เตือนของแถมที่ต้อง RT */}
+          {promotionGiftWarning && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+              <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="text-3xl">⚠️</span>
+                  <h2 className="text-lg font-bold text-orange-600">ของแถมอาจต้องถูก RT</h2>
+                </div>
+                <p className="text-sm text-gray-600 mb-4">
+                  สินค้าที่กด RT เป็นส่วนหนึ่งของ promotion ยอดสินค้าร่วมรายการที่เหลืออาจไม่ถึงขั้นต่ำ ต้องการ RT ของแถมต่อไปนี้ด้วยหรือไม่?
+                </p>
+                <div className="space-y-2 mb-5">
+                  {promotionGiftWarning.giftsToRt.map((gift) => (
+                    <div key={gift.so_running} className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-lg px-4 py-2">
+                      <div>
+                        <p className="font-semibold text-sm">{gift.pro_name}</p>
+                        <p className="text-xs text-gray-500">{gift.pro_code} · {gift.qty} {gift.unit}</p>
+                      </div>
+                      <span className="text-orange-400 text-lg">🎁</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    className="flex-1 py-2 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600"
+                    onClick={async () => {
+                      const giftsToRt = promotionGiftWarning.giftsToRt;
+                      setPromotionGiftWarning(null);
+                      for (const gift of giftsToRt) {
+                        await handleRT(gift.so_running);
+                      }
+                    }}
+                  >
+                    RT ของแถม
+                  </button>
+                  <button
+                    className="flex-1 py-2 rounded-xl bg-gray-200 text-gray-700 font-bold hover:bg-gray-300"
+                    onClick={() => setPromotionGiftWarning(null)}
+                  >
+                    ไม่ RT
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <Modal isOpen={rtRequestModalOpen} onClose={() => {
             setRtRequestModalOpen(false);
             setIsSavingRT(false);
@@ -3497,8 +3561,13 @@ const QCDashboard = () => {
                                       <div className="w-full px-3.5">
                                         <div className="border-t-2 border-blue-200 w-full mb-1.5"></div>
                                       </div>
-                                      <p className="text-lg pb-1.5">
+                                      <p className="text-lg pb-1.5 flex items-center gap-2">
                                         {so?.product?.product_name}
+                                        {so?.so_is_gift && (
+                                          <span className="text-xs bg-orange-100 text-orange-600 border border-orange-300 rounded-full px-2 py-0.5 font-semibold">
+                                            🎁 ของแถม
+                                          </span>
+                                        )}
                                       </p>
                                       <div className="w-full px-3.5">
                                         <div className="border-t-2 border-blue-200 w-full mb-1.5"></div>
