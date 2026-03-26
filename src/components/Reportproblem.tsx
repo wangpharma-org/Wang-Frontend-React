@@ -36,6 +36,7 @@ const Reportproblem = () => {
     const [searchBill, setSearchBill] = useState("");
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const token = sessionStorage.getItem("access_token");
 
     const handleSearch = async () => {
         if (!memCode) return;
@@ -47,7 +48,7 @@ const Reportproblem = () => {
         setSearchBill("");
 
         try {
-            const response = await axios.post("http://localhost:3003/api/findOrderFromMemCode", {
+            const response = await axios.post(`${import.meta.env.VITE_API_URL_ORDER}/api/findOrderFromMemCode`, {
                 mem_code: memCode
             });
             setData(response.data);
@@ -75,7 +76,7 @@ const Reportproblem = () => {
         };
 
         try {
-            const response = await axios.post("http://localhost:3003/api/sendHeaderBillToOldSystem", payload);
+            const response = await axios.post(`${import.meta.env.VITE_API_URL_ORDER}/api/sendHeaderBillToOldSystem`, payload, { headers: { Authorization: `Bearer ${token}` } });
             const { status, message, invoice } = response.data;
 
             Swal.fire({
@@ -202,7 +203,7 @@ const Reportproblem = () => {
                                                 {orderGroup.sh_running.map((bill, bIdx) => {
                                                     const isRT = bill.status === 'RT';
                                                     const isDisabled = isDisabledGroup || isRT;
-                                                    
+
                                                     return (
                                                         <label
                                                             key={bIdx}
@@ -221,8 +222,8 @@ const Reportproblem = () => {
                                                                 <div className="text-gray-600">RT: <span className="font-medium text-gray-900">{bill.count_rt}</span></div>
                                                                 <div className="flex justify-start sm:justify-end">
                                                                     <span className={`px-3 py-1 rounded-full text-xs font-bold ${bill.status === 'Qc-checked'
-                                                                            ? 'bg-green-100 text-green-700 border border-green-200'
-                                                                            : bill.status === 'RT' 
+                                                                        ? 'bg-green-100 text-green-700 border border-green-200'
+                                                                        : bill.status === 'RT'
                                                                             ? 'bg-red-100 text-red-700 border border-red-200'
                                                                             : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
                                                                         }`}>
