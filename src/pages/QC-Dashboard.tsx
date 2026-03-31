@@ -25,6 +25,7 @@ import { SHIPPING_OTHER } from "../const/Constant";
 import { useNavigate } from "react-router";
 import Swal from "sweetalert2";
 import ManualPicture from "../assets/manual_sticker.png";
+import Reportproblem from "../components/Reportproblem";
 
 const TAB_KEY = "qc-dashboard";
 
@@ -4112,6 +4113,7 @@ const QCDashboard = () => {
             </div>
           </div>
         </div>
+        <Reportproblem />
       </div>
     );
   }
