@@ -128,6 +128,14 @@ const Reportproblem = () => {
         setSearchBill("");
     };
 
+    const formatTime = (dateString: string) => {
+    const Time = new Date(dateString).toLocaleTimeString("th-TH", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    return Time;
+  };
+
     return (
         <>
             <div className="fixed bottom-4 right-4 z-50">
@@ -182,7 +190,7 @@ const Reportproblem = () => {
                                     if (searchBill && !orderGroup.sh_running.some(bill => bill.running.toLowerCase().includes(searchBill.toLowerCase()))) {
                                         return (
                                             <div key={idx} className="mb-4 p-4 text-center text-gray-600 bg-gray-50 border border-gray-200 rounded-lg">
-                                                ไม่มีข้อมูลที่ตรงกับคำค้น "{searchBill}" ในกลุ่มวันที่ {orderGroup.date}
+                                                ไม่มีข้อมูลที่ตรงกับคำค้น "{searchBill}" ในกลุ่มวันที่ {formatTime(orderGroup.date)}
                                             </div>
                                         );
                                     }
@@ -191,7 +199,7 @@ const Reportproblem = () => {
                                     return (
                                         <div key={idx} className={`mb-4 border rounded-lg overflow-hidden shadow-sm transition-opacity ${isDisabledGroup ? 'border-gray-200 opacity-50 bg-gray-50' : 'border-gray-200'}`}>
                                             <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex flex-col gap-1">
-                                                <div className="font-bold text-gray-700">วันที่: {orderGroup.date}</div>
+                                                <div className="font-bold text-gray-700">วันที่: {formatTime(orderGroup.date)}</div>
                                                 <div className="text-xs text-gray-600 flex gap-4">
                                                     <span>เตรียม: <span className="font-medium">{orderGroup.emp_prepare}</span></span>
                                                     <span>QC: <span className="font-medium">{orderGroup.emp_qc}</span></span>
