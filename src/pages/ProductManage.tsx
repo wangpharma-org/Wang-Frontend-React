@@ -159,41 +159,45 @@ const ProductManage = () => {
   };
 
   const handleSubmit = async () => {
-    const formData = new FormData();
-    const barcodeToUpdate =
-      productManage?.product_barcode ??
-      productManage?.product_barcode2 ??
-      productManage?.product_barcode3;
+    try {
+      const formData = new FormData();
+      const barcodeToUpdate =
+        productManage?.product_barcode ??
+        productManage?.product_barcode2 ??
+        productManage?.product_barcode3;
 
-    if (barcodeToUpdate) formData.append("barcode", barcodeToUpdate);
-    if (changeFloor) formData.append("floor", changeFloor);
-    if (changeAddr) formData.append("product_addr", changeAddr);
-    if (changeLot) formData.append("lot", changeLot);
-    if (changeAmount !== null) formData.append("amount", changeAmount.toString());
-    if (selectedImage) formData.append("image", selectedImage); // แนบไฟล์รูปภาพที่เลือกใหม่
+      if (barcodeToUpdate) formData.append("barcode", barcodeToUpdate);
+      if (changeFloor) formData.append("floor", changeFloor);
+      if (changeAddr) formData.append("product_addr", changeAddr);
+      if (changeLot) formData.append("lot", changeLot);
+      if (changeAmount !== null) formData.append("amount", changeAmount.toString());
+      if (selectedImage) formData.append("image", selectedImage); // แนบไฟล์รูปภาพที่เลือกใหม่
 
-    const data = await axios.post(
-      `${import.meta.env.VITE_API_URL_ORDER}/api/manage/update-product-detail`,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
-    if (data.status === 201) {
-      if (barcode) {
-        handleSearchProductList(barcode);
+      const data = await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/manage/update-product-detail`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      if (data.status === 201) {
+        if (barcode) {
+          handleSearchProductList(barcode);
+        } else {
+          handleGetList();
+        }
+        setModalManageOpen(false);
+        setProductManage(null);
+        setChangeFloor(null);
+        setChangeAddr(null);
+        setSelectedImage(null);
+        setPreviewImage(null);
       } else {
-        handleGetList();
+        setErrMsg("มีบางอย่างผิดพลาด");
       }
-      setModalManageOpen(false);
-      setProductManage(null);
-      setChangeFloor(null);
-      setChangeAddr(null);
-      setSelectedImage(null);
-      setPreviewImage(null);
-    } else {
+    } catch {
       setErrMsg("มีบางอย่างผิดพลาด");
     }
   };
@@ -216,10 +220,10 @@ const ProductManage = () => {
                     previewImage
                       ? previewImage
                       : productManage?.product_image_url?.startsWith("..")
-                      ? `https://www.wangpharma.com${productManage?.product_image_url?.slice(
+                        ? `https://www.wangpharma.com${productManage?.product_image_url?.slice(
                           2
                         )}`
-                      : productManage?.product_image_url || product_icon
+                        : productManage?.product_image_url || product_icon
                   }
                   className="w-full h-full object-cover"
                 />
@@ -314,10 +318,10 @@ const ProductManage = () => {
                     changeFloor === "-"
                   }
                   className={`text-center text-white text-lg p-2 rounded-lg px-8 cursor-pointer ${changeFloor !== null &&
-                      changeFloor !== "" &&
-                      changeFloor !== "-"
-                      ? "hover:bg-green-800 bg-green-700"
-                      : "hover:bg-gray-600 bg-gray-500"
+                    changeFloor !== "" &&
+                    changeFloor !== "-"
+                    ? "hover:bg-green-800 bg-green-700"
+                    : "hover:bg-gray-600 bg-gray-500"
                     }`}
                   onClick={() => handleSubmit()}
                 >
@@ -346,8 +350,8 @@ const ProductManage = () => {
           <div className="p-2 bg-gray-200 flex w-fit mt-4 gap-3 rounded-lg">
             <div
               className={`p-2 font-semibold text-lg rounded-sm ${isSelect === 1
-                  ? "bg-white text-black shadow-2xl"
-                  : "text-gray-600"
+                ? "bg-white text-black shadow-2xl"
+                : "text-gray-600"
                 } cursor-pointer`}
               onClick={() => {
                 setIsSelect(1);
@@ -357,8 +361,8 @@ const ProductManage = () => {
             </div>
             <div
               className={`p-2 font-semibold text-lg rounded-sm ${isSelect === 2
-                  ? "bg-white text-black shadow-2xl"
-                  : "text-gray-600"
+                ? "bg-white text-black shadow-2xl"
+                : "text-gray-600"
                 } cursor-pointer`}
               onClick={() => {
                 setIsSelect(2);
@@ -418,7 +422,9 @@ const ProductManage = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 mt-4">
             {productList?.map((prod) => {
               return (
-                <div className="bg-gray-100 drop-shadow-xl p-4 border-2 border-gray-200 rounded-lg">
+                <div className="bg-gray-100 drop-shadow-xl p-4 border-2 border-gray-200 rounded-lg"
+                  key={prod.product_barcode ?? prod.product_barcode2 ?? prod.product_code}
+                >
                   <div className="w-full aspect-square overflow-hidden rounded-sm">
                     <img
                       src={
