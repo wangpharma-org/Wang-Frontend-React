@@ -423,7 +423,6 @@ const ProductManage = () => {
             {productList?.map((prod) => {
               return (
                 <div className="bg-gray-100 drop-shadow-xl p-4 border-2 border-gray-200 rounded-lg"
-                  key={prod.product_barcode ?? prod.product_barcode2 ?? prod.product_code}
                 >
                   <div className="w-full aspect-square overflow-hidden rounded-sm">
                     <img
