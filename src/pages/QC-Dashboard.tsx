@@ -3,6 +3,7 @@ import incorect from "../assets/incorrect.png";
 import warning from "../assets/warning.png";
 import box from "../assets/return-box.png";
 import { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { io, Socket } from "socket.io-client";
 import Modal from "../components/ModalQC";
 import Barcode from "react-barcode";
@@ -353,6 +354,15 @@ const QCDashboard = () => {
 
   const [isSavingRT, setIsSavingRT] = useState<boolean>(false);
   const [featureFlagRTRequest, setFeatureFlagRTRequest] = useState<boolean>(false);
+
+  // Promotion check modal (tier price)
+  const [promotionCheckModalOpen, setPromotionCheckModalOpen] = useState<boolean>(false);
+  const [promotionProCodes, setPromotionProCodes] = useState<string[]>([]);
+  const [pendingRTSoRunning, setPendingRTSoRunning] = useState<string | null>(null);
+  const [promotionSharedBarcode, setPromotionSharedBarcode] = useState<string>("");
+  const [promotionBarcodeConfirmed, setPromotionBarcodeConfirmed] = useState<Record<string, boolean>>({});
+  const [promotionRTDone, setPromotionRTDone] = useState<Record<string, boolean>>({});
+  const promotionBarcodeRef = useRef<HTMLInputElement>(null);
 
   const handleCheckFlagRequest = async () => {
     const flag = await axios.get(
@@ -1444,7 +1454,7 @@ const QCDashboard = () => {
         setRtRequestModalOpen(false);
         setRtQcNote("");
         setSelectedRTReason("");
-        handleRT(so.so_running);
+        executeRT(so.so_running);
       } else if (res.data.status === "Pending" && featureFlagRTRequest === true) {
         setRtPendingData({
           ref: res.data.refID,
@@ -1497,7 +1507,7 @@ const QCDashboard = () => {
     }
   };
 
-  const handleRT = async (so_running: string) => {
+  const executeRT = async (so_running: string) => {
     const data = await axios.post(
       `${import.meta.env.VITE_API_URL_ORDER}/api/qc/update-rt`,
       {
@@ -1532,6 +1542,29 @@ const QCDashboard = () => {
         }
       });
       window.open(`/print-rt?so_running=${so_running}`);
+    }
+  };
+
+  const handleRT = async (so: ShoppingOrder) => {
+    try {
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL_ECOMMERCE}/api/ecom/get-tier-price`,
+        { sh_running: so.sh_running, pro_code: so.product.product_code },
+        { headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` } }
+      );
+      if (res.data.status === true) {
+        await executeRT(so.so_running);
+      } else {
+        const proCodes: string[] = res.data.pro_code_in_promotion ?? [];
+        setPromotionProCodes(proCodes);
+        setPendingRTSoRunning(so.so_running);
+        setPromotionSharedBarcode("");
+        setPromotionBarcodeConfirmed({});
+        setPromotionRTDone({});
+        setPromotionCheckModalOpen(true);
+      }
+    } catch {
+      await executeRT(so.so_running);
     }
   };
 
@@ -3015,6 +3048,241 @@ const QCDashboard = () => {
             </div>
           </Modal>
 
+          {/* Modal ตรวจสอบสินค้าในโปรโมชั่นก่อนส่ง RT — ปิดไม่ได้ */}
+          {promotionCheckModalOpen && createPortal(
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden flex flex-col max-h-[90vh]">
+
+                {/* Header */}
+                <div className="bg-gradient-to-br from-red-500 via-rose-500 to-pink-600 px-8 py-7 flex-shrink-0">
+                  <div className="flex items-center justify-center gap-3 mb-2">
+                    <p className="text-3xl font-black text-white tracking-tight">ต้องส่ง RT สินค้าในโปรโมชั่นด้วย</p>
+                  </div>
+                  <p className="text-center text-base text-red-100 font-medium">หากส่ง RT รายการนี้ยอดการสั่งซื้อจะไม่ถึงจุดที่ได้ของแถม</p>
+                  {/* Progress */}
+                  {(() => {
+                    const doneCount = promotionProCodes.filter(pc => {
+                      const s = order.find(o => o.product.product_code === pc);
+                      if (!s) return true;
+                      if (s.so_already_qc === "RT") return true;
+                      return (promotionBarcodeConfirmed[pc] ?? false) || (promotionRTDone[pc] ?? false);
+                    }).length;
+                    const total = promotionProCodes.length;
+                    return (
+                      <div className="mt-4">
+                        <div className="flex justify-between text-sm text-red-100 mb-1.5">
+                          <span>ดำเนินการแล้ว</span>
+                          <span className="font-bold">{doneCount} / {total} รายการ</span>
+                        </div>
+                        <div className="w-full bg-red-400/40 rounded-full h-2.5">
+                          <div
+                            className="bg-white rounded-full h-2.5 transition-all duration-500"
+                            style={{ width: `${total > 0 ? (doneCount / total) * 100 : 0}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* รายการสินค้า */}
+                <div className="p-6 space-y-4 overflow-y-auto flex-1">
+                  {promotionProCodes.map((proCode) => {
+                    const soItem = order.find(o => o.product.product_code === proCode);
+                    const isAlreadyRT = soItem?.so_already_qc === "RT";
+                    const isQCd = soItem?.so_already_qc === "Yes";
+                    const barcodeConfirmed = promotionBarcodeConfirmed[proCode] ?? false;
+                    const rtDone = promotionRTDone[proCode] ?? false;
+                    const isDone = isAlreadyRT || barcodeConfirmed || rtDone;
+                    // แก้ bug รูปไม่แสดง: ตรวจสอบทั้ง null, undefined, empty string
+                    const rawImageUrl = soItem?.product?.product_image_url;
+                    console.log("So Item : ", soItem);
+                    console.log("Raw image URL for", proCode, ":", rawImageUrl);
+                    const fullImageUrl = rawImageUrl
+                      ? rawImageUrl.startsWith("..")
+                        ? `https://www.wangpharma.com${rawImageUrl.slice(2)}`
+                        : rawImageUrl
+                      : boxnotfound;
+
+                    return (
+                      <div
+                        key={proCode}
+                        className={`rounded-2xl p-4 flex items-center gap-5 transition-all duration-300 ${
+                          isDone
+                            ? "bg-gradient-to-r from-green-50 to-emerald-50 shadow-sm ring-1 ring-green-200"
+                            : isQCd
+                              ? "bg-gradient-to-r from-amber-50 to-yellow-50 shadow-sm ring-1 ring-amber-200"
+                              : "bg-gradient-to-r from-rose-50 to-pink-50 shadow-sm ring-1 ring-rose-200"
+                        }`}
+                      >
+                        {/* รูปสินค้า — ใช้ fallback ป้องกัน null/empty/โหลดไม่ได้ */}
+                        <div className="relative flex-shrink-0">
+                          <img
+                            src={fullImageUrl}
+                            className="w-20 h-20 object-cover rounded-xl shadow-md"
+                            onError={(e) => { e.currentTarget.src = boxnotfound; }}
+                          />
+                          {isDone && (
+                            <div className="absolute -top-2 -right-2 w-7 h-7 bg-green-500 rounded-full flex items-center justify-center shadow-md">
+                              <span className="text-white text-xs font-bold">✓</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* ข้อมูลสินค้า */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-gray-800 text-base leading-tight">{proCode}</p>
+                          <p className="text-sm text-gray-500 mt-1 line-clamp-2 leading-relaxed">
+                            {soItem?.product?.product_name ?? "ไม่พบรายการในออเดอร์นี้"}
+                          </p>
+                          <div className="mt-2">
+                            {isDone ? (
+                              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-green-700 bg-green-100 px-3 py-1 rounded-full">
+                                ✓ RT แล้ว
+                              </span>
+                            ) : isQCd ? (
+                              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-100 px-3 py-1 rounded-full">
+                                รายการนี้ QC ไปแล้ว กรุณานำสินค้ากลับมาส่ง RT
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-700 bg-rose-100 px-3 py-1 rounded-full">
+                                ยังไม่ได้ส่ง RT
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Action */}
+                        <div className="flex-shrink-0">
+                          {isDone ? (
+                            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                              <span className="text-green-600 text-2xl">✓</span>
+                            </div>
+                          ) : !soItem ? (
+                            <span className="text-sm text-gray-400 italic">ไม่พบในออเดอร์</span>
+                          ) : isQCd ? (
+                            <span className="text-sm text-amber-600 font-semibold">รอสแกน ↓</span>
+                          ) : (
+                            <button
+                              className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 active:scale-95 text-white font-bold px-5 py-2.5 rounded-xl shadow-md cursor-pointer transition-all text-sm"
+                              onClick={async () => {
+                                await executeRT(soItem.so_running);
+                                setPromotionRTDone(prev => ({ ...prev, [proCode]: true }));
+                              }}
+                            >
+                              ส่ง RT
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Footer */}
+                {(() => {
+                  const allDone = promotionProCodes.every(proCode => {
+                    const soItem = order.find(o => o.product.product_code === proCode);
+                    if (!soItem) return true;
+                    if (soItem.so_already_qc === "RT") return true;
+                    return (promotionBarcodeConfirmed[proCode] ?? false) || (promotionRTDone[proCode] ?? false);
+                  });
+                  return (
+                    <div className="px-6 pb-6 pt-4 flex-shrink-0 flex flex-col gap-3">
+                      {/* ช่องสแกนบาร์โค้ดช่องเดียว */}
+                      {promotionProCodes.some(pc => {
+                        const s = order.find(o => o.product.product_code === pc);
+                        return s?.so_already_qc === "Yes" && !(promotionBarcodeConfirmed[pc] ?? false);
+                      }) && (
+                        <div className="bg-amber-50 rounded-2xl p-4 ring-1 ring-amber-200">
+                          <p className="text-sm font-bold text-amber-700 mb-2 text-center">สแกนบาร์โค้ดหรือรหัสสินค้าที่ต้องการยืนยัน</p>
+                          <input
+                            ref={promotionBarcodeRef}
+                            type="text"
+                            value={promotionSharedBarcode}
+                            onChange={(e) => setPromotionSharedBarcode(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                const val = e.currentTarget.value.trim();
+                                if (!val) return;
+
+                                // ค้นหาสินค้าที่ยังรอสแกน (QCd และยังไม่ confirmed)
+                                const matched = promotionProCodes.find(pc => {
+                                  const s = order.find(o => o.product.product_code === pc);
+                                  if (!s) return false;
+                                  if (s.so_already_qc !== "Yes") return false;
+                                  if (promotionBarcodeConfirmed[pc]) return false;
+                                  const barcodes = [
+                                    s.product.product_code,
+                                    s.product.product_barcode,
+                                    s.product.product_barcode2,
+                                    s.product.product_barcode3,
+                                  ].filter(Boolean);
+                                  return barcodes.includes(val);
+                                });
+
+                                if (matched) {
+                                  const soItem = order.find(o => o.product.product_code === matched)!;
+                                  setPromotionBarcodeConfirmed(prev => ({ ...prev, [matched]: true }));
+                                  executeRT(soItem.so_running);
+                                  setPromotionSharedBarcode("");
+                                  promotionBarcodeRef.current?.focus();
+                                } else {
+                                  Swal.fire({
+                                    icon: "error",
+                                    title: "ไม่พบสินค้า",
+                                    text: `ไม่พบรหัสสินค้าหรือบาร์โค้ด "${val}" ในรายการที่รอยืนยัน`,
+                                    timer: 2000,
+                                    showConfirmButton: false,
+                                  });
+                                  setPromotionSharedBarcode("");
+                                  promotionBarcodeRef.current?.focus();
+                                }
+                              }
+                            }}
+                            placeholder="ยิงบาร์โค้ดหรือพิมพ์รหัสสินค้า..."
+                            autoFocus
+                            className="w-full text-center text-base bg-white rounded-xl px-4 py-3 outline-none ring-2 ring-amber-300 focus:ring-amber-500 placeholder-gray-300 transition-all shadow-inner"
+                          />
+                        </div>
+                      )}
+                      <button
+                        disabled={!allDone}
+                        onClick={async () => {
+                          if (pendingRTSoRunning) {
+                            setPromotionCheckModalOpen(false);
+                            await executeRT(pendingRTSoRunning);
+                            setPendingRTSoRunning(null);
+                          }
+                        }}
+                        className={`w-full py-4 rounded-2xl text-white font-black text-lg tracking-wide transition-all duration-300 ${
+                          allDone
+                            ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 shadow-lg cursor-pointer active:scale-[0.98]"
+                            : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                        }`}
+                      >
+                        {allDone ? "ดำเนินการต่อ — ส่ง RT รายการหลัก" : "กรุณาดำเนินการสินค้าทุกรายการก่อน"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPromotionCheckModalOpen(false);
+                          setPendingRTSoRunning(null);
+                          setPromotionProCodes([]);
+                          setPromotionSharedBarcode("");
+                          setPromotionBarcodeConfirmed({});
+                          setPromotionRTDone({});
+                        }}
+                        className="w-full py-3 rounded-2xl text-gray-500 font-bold text-base bg-gray-100 hover:bg-gray-200 cursor-pointer transition-all duration-200 active:scale-[0.98]"
+                      >
+                        ยกเลิก
+                      </button>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          , document.body)}
+
           <div className="text-center">
             <h1 className="text-2xl font-bold text-center mt-7">
               เส้นทางที่สามารถทำงานได้
@@ -3731,7 +3999,7 @@ const QCDashboard = () => {
                                           }`}
                                         onClick={() => {
                                           if (isApprovedOrDuplicate && featureFlagRTRequest === true) {
-                                            handleRT(so.so_running);
+                                            handleRT(so);
                                           } else if (isPending && featureFlagRTRequest === true) {
                                             handleManualRefresh();
                                           } else {
