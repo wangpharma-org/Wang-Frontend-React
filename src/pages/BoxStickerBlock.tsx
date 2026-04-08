@@ -152,6 +152,9 @@ const BoxStickerBlock = () => {
             <p className="font-semibold text-[23px]">{dataPrint?.mem_name}</p>
           </div>
         </div>
+        <div className="flex justify-center">
+          <p className="text-[12px] mt-1">ฝ่ายขาย : {dataPrint?.emp.emp_nickname} {dataPrint?.emp?.emp_tel}</p>
+        </div>
         <div className="w-[100%] flex justify-between mt-1 px-10">
           <div>
             <p className="text-[12px]">{`${dataPrint?.address_line1 ?? ""} ${

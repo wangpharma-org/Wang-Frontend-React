@@ -456,9 +456,10 @@ const ProductManage = () => {
                       className="px-3 py-2 bg-blue-500 rounded-sm text-white mt-2 hover:bg-blue-600 cursor-pointer"
                       onClick={() => {
                         handleGetProductDetail(
-                          prod.product_barcode ??
-                          prod.product_barcode2 ??
-                          prod.product_barcode3 ??
+                          prod.product_barcode ||
+                          prod.product_barcode2 ||
+                          prod.product_barcode3 ||
+                          prod.product_code ||
                           null
                         );
                       }}
