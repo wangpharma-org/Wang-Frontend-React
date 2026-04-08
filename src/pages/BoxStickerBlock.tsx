@@ -153,7 +153,7 @@ const BoxStickerBlock = () => {
           </div>
         </div>
         <div className="flex justify-center">
-          <p className="text-[12px] mt-1">ฝ่ายขาย : {dataPrint?.emp.emp_nickname} {dataPrint?.emp.emp_tel}</p>
+          <p className="text-[12px] mt-1">ฝ่ายขาย : {dataPrint?.emp.emp_nickname} {dataPrint?.emp?.emp_tel}</p>
         </div>
         <div className="w-[100%] flex justify-between mt-1 px-10">
           <div>
