@@ -521,60 +521,102 @@ const ProductManage = () => {
                         </div>
 
                         {/* Main Image */}
-                        {imgOldSystem.imageOrderPicking.mainImage && (
-                          <div className="mb-4">
-                            <div className="flex items-center justify-between mb-2">
-                              <p className="text-sm text-gray-600">รูปหลัก</p>
-                              {editMode && (
-                                <p className="text-xs text-gray-500">
-                                  รองรับ: JPG, PNG, WebP | สูงสุด 10MB
-                                </p>
-                              )}
-                            </div>
-                            <div className="max-w-md mx-auto relative">
-                              <img
-                                src={(previewImage?.startsWith("..")
-                                  ? `https://www.wangpharma.com${previewImage.slice(2)}`
-                                  : previewImage || product_icon || (
-                                    imgOldSystem.imageOrderPicking.mainImage.startsWith("..")
-                                      ? `https://www.wangpharma.com${imgOldSystem.imageOrderPicking.mainImage.slice(2)}`
-                                      : imgOldSystem.imageOrderPicking.mainImage || product_icon
-                                  ))}
-                                onClick={() => (editMode ? document.getElementById('fileInputMain')?.click() : null)}
-                                className="w-full h-auto object-cover rounded border-2 border-blue-300 cursor-pointer hover:opacity-80 transition-opacity"
-                                onError={(e) => {
-                                  e.currentTarget.src = product_icon;
-                                }}
-                                alt="Main Order Picking Image"
-                              />
-                              <span className="absolute top-2 right-2 px-2 py-1 rounded text-xs font-medium ${
-                                selectedImage ? 'bg-green-500 text-white' : 'bg-black bg-opacity-50 text-white'
-                              }">
-                                {selectedImage ? 'รูปใหม่' : 'รูปหลัก'}
-                              </span>
-                              {selectedImage && editMode && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteMainImage();
-                                  }}
-                                  className="absolute top-2 left-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center transition-colors shadow-lg"
-                                  title="ลบรูปใหม่"
-                                >
-                                  ×
-                                </button>
-                              )}
-                            </div>
-                            <input
-                              id="fileInputMain"
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={handleImageChange(null)}
-                            />
+                        <div className="mb-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-sm text-gray-600">รูปหลัก</p>
+                            {editMode && (
+                              <p className="text-xs text-gray-500">
+                                รองรับ: JPG, PNG, WebP | สูงสุด 10MB
+                              </p>
+                            )}
                           </div>
-                          // </div>
-                        )}
+                          <div className="max-w-md mx-auto relative">
+                            {(() => {
+                              const hasMainImage = previewImage || (imgOldSystem?.imageOrderPicking?.mainImage && imgOldSystem.imageOrderPicking.mainImage !== '');
+                              
+                              if (hasMainImage) {
+                                return (
+                                  <>
+                                    <img
+                                      src={(previewImage?.startsWith("..")
+                                        ? `https://www.wangpharma.com${previewImage.slice(2)}`
+                                        : previewImage || product_icon || (
+                                          imgOldSystem.imageOrderPicking.mainImage.startsWith("..")
+                                            ? `https://www.wangpharma.com${imgOldSystem.imageOrderPicking.mainImage.slice(2)}`
+                                            : imgOldSystem.imageOrderPicking.mainImage || product_icon
+                                        ))}
+                                      onClick={() => (editMode ? document.getElementById('fileInputMain')?.click() : null)}
+                                      className={`w-full h-auto object-cover rounded border-2 border-blue-300 transition-opacity ${editMode ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+                                      onError={(e) => {
+                                        e.currentTarget.src = product_icon;
+                                      }}
+                                      alt="Main Order Picking Image"
+                                    />
+                                    <span className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-medium ${
+                                      selectedImage ? 'bg-green-500 text-white' : 'bg-black bg-opacity-50 text-white'
+                                    }`}>
+                                      {selectedImage ? 'รูปใหม่' : 'รูปหลัก'}
+                                    </span>
+                                    {selectedImage && editMode && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteMainImage();
+                                        }}
+                                        className="absolute top-2 left-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center transition-colors shadow-lg"
+                                        title="ลบรูปใหม่"
+                                      >
+                                        ×
+                                      </button>
+                                    )}
+                                  </>
+                                );
+                              } else {
+                                // ไม่มีรูปหลัก - แสดง placeholder หรือ product_icon
+                                if (editMode) {
+                                  return (
+                                    <div
+                                      className="w-full h-64 border-2 border-dashed border-gray-300 hover:border-blue-500 hover:bg-blue-50 cursor-pointer rounded flex items-center justify-center bg-gray-50 transition-all group"
+                                      onClick={() => document.getElementById('fileInputMain')?.click()}
+                                    >
+                                      <div className="text-center">
+                                        <div className="w-12 h-12 mx-auto mb-2 bg-gray-200 group-hover:bg-blue-200 rounded-full flex items-center justify-center transition-colors">
+                                          <svg className="w-8 h-8 text-gray-400 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                          </svg>
+                                        </div>
+                                        <span className="text-sm text-gray-500 group-hover:text-blue-600 font-medium">เพิ่มรูปหลัก</span>
+                                      </div>
+                                      <span className="absolute top-2 right-2 bg-gray-400 group-hover:bg-blue-500 text-white text-xs px-2 py-1 rounded transition-colors">
+                                        รูปหลัก
+                                      </span>
+                                    </div>
+                                  );
+                                } else {
+                                  return (
+                                    <div className="w-full h-64 flex items-center justify-center bg-gray-100 border-2 border-gray-200 rounded">
+                                      <div className="text-center">
+                                        <img
+                                          src={product_icon}
+                                          className="w-20 h-20 object-cover opacity-50 mb-2"
+                                          alt="No Image Available"
+                                        />
+                                        <span className="text-sm text-gray-500">ไม่มีรูปหลัก</span>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                              }
+                            })()}
+                          </div>
+                          <input
+                            id="fileInputMain"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleImageChange(null)}
+                          />
+                        </div>
 
                         <div>
                           <div className="flex items-center justify-between mb-2">
