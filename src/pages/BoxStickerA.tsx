@@ -152,6 +152,9 @@ const BoxStickerA = () => {
             <p className="font-semibold text-[23px]">{dataPrint?.mem_name}</p>
           </div>
         </div>
+        <div className="flex justify-center">
+           <p>ฝ่ายขาย : {dataPrint?.emp.emp_nickname} {dataPrint?.emp?.emp_tel}</p>
+        </div>
         <div className="w-[100%] flex justify-between mt-1 px-10">
           <div>
             <p className="text-[12px]">{`${dataPrint?.address_line1 ?? ""} ${
@@ -166,7 +169,6 @@ const BoxStickerA = () => {
         </div>
         <div className="text-[12px] text-center mt-1">
             <p>ลูกค้าจ่ายก่อนส่ง แจ้งฝ่ายขายวางบิลและแจ้งลูกค้าก่อน</p>
-            
         </div>
         <div className="w-[100%] flex justify-center mt-3">
           <div className="grid grid-cols-2 gap-x-20 gap-y-2">
