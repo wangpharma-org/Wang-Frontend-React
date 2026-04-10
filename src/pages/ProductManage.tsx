@@ -1006,13 +1006,14 @@ const ProductManage = () => {
                         setChangeFloor(null);
                         setChangeAddr(null);
                         setSelectedImage(null);
-                        setPreviewImage(null);
+                        setPreviewImage('');
                         setPreviewImageOther(null);
                         setSelectedImagesOther([]);
                         setUploadEcomImage(false);
                         setUploadOldSystemImage(false);
                         setImgEcom(null);
                         setImgOldSystem(null);
+                        setEditMode(false);
                       }}
                     >
                       ยกเลิก
