@@ -50,6 +50,7 @@ export interface ShoppingOrder {
   so_qc_note: string | null;
   so_already_qc: string;
   so_qc_amount: number;
+  is_reward: boolean;
   amount_max: number | null;
   product: Product;
 }
@@ -164,6 +165,13 @@ interface AllStations {
 
 export type ShoppingHead = Root[];
 export type ShoppingHeadOne = Root;
+
+interface SwapProductResult {
+  product_code: string;
+  product_name: string;
+  product_unit: string;
+  product_stock: number;
+}
 
 const QCDashboard = () => {
   const [urgent, setUrgent] = useState<urgent[] | null>(null);
@@ -365,6 +373,16 @@ const QCDashboard = () => {
   const [promotionRTDone, setPromotionRTDone] = useState<Record<string, boolean>>({});
   const promotionBarcodeRef = useRef<HTMLInputElement>(null);
 
+  // Swap reward item modal
+  const [modalSwapRewardOpen, setModalSwapRewardOpen] = useState<boolean>(false);
+  const [swapTargetSO, setSwapTargetSO] = useState<ShoppingOrder | null>(null);
+  const [swapSearchQuery, setSwapSearchQuery] = useState<string>("");
+  const [swapSearchResults, setSwapSearchResults] = useState<SwapProductResult[]>([]);
+  const [swapSelectedProduct, setSwapSelectedProduct] = useState<SwapProductResult | null>(null);
+  const [swapNewAmount, setSwapNewAmount] = useState<string>("");
+  const [swapLoading, setSwapLoading] = useState<boolean>(false);
+  const [swapSearchLoading, setSwapSearchLoading] = useState<boolean>(false);
+
   const handleCheckFlagRequest = async () => {
     const flag = await axios.get(
       `${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/request`
@@ -372,6 +390,99 @@ const QCDashboard = () => {
     console.log("Flag Request : ", flag.data);
     if (flag.data.status === true) {
       setRequestProductFlag(true);
+    }
+  };
+
+  const handleSwapSearch = async (query: string) => {
+    setSwapSearchQuery(query);
+    if (!query.trim()) {
+      setSwapSearchResults([]);
+      return;
+    }
+    try {
+      setSwapSearchLoading(true);
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/manage/search-product`,
+        { query },
+        { headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` } }
+      );
+      setSwapSearchResults(res.data as SwapProductResult[]);
+    } catch (error) {
+      console.error("Search product error:", error);
+    } finally {
+      setSwapSearchLoading(false);
+    }
+  };
+
+  const handleSwapRewardConfirm = async () => {
+    if (!swapTargetSO || !swapSelectedProduct || !swapNewAmount) return;
+    const amount = Number(swapNewAmount);
+    if (isNaN(amount) || amount <= 0) return;
+    try {
+      setSwapLoading(true);
+      await axios.patch(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/qc/reward-swap`,
+        {
+          so_running: swapTargetSO.so_running,
+          new_product_code: swapSelectedProduct.product_code,
+          new_amount: amount,
+          new_unit: swapSelectedProduct.product_unit,
+        },
+        { headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` } }
+      );
+      // อัปเดต local state
+      setDataQC((prev) => {
+        if (!prev) return null;
+        const updateOrder = (so: ShoppingOrder): ShoppingOrder => {
+          if (so.so_running !== swapTargetSO.so_running) return so;
+          return {
+            ...so,
+            so_amount: amount,
+            so_unit: swapSelectedProduct.product_unit,
+            so_qc_amount: 0,
+            so_already_qc: "No",
+            product: {
+              ...so.product,
+              product_code: swapSelectedProduct.product_code,
+              product_name: swapSelectedProduct.product_name,
+            },
+          };
+        };
+        if (Array.isArray(prev)) {
+          return prev.map((root) => ({
+            ...root,
+            shoppingOrders: root.shoppingOrders.map(updateOrder),
+          }));
+        }
+        return { ...prev, shoppingOrders: prev.shoppingOrders.map(updateOrder) };
+      });
+      setModalSwapRewardOpen(false);
+      setSwapTargetSO(null);
+      setSwapSelectedProduct(null);
+      setSwapNewAmount("");
+      setSwapSearchQuery("");
+      setSwapSearchResults([]);
+      await Swal.fire({
+        icon: "success",
+        title: "เปลี่ยนของแถมสำเร็จ",
+        text: `เปลี่ยนเป็น ${swapSelectedProduct.product_name} จำนวน ${amount} ${swapSelectedProduct.product_unit ?? ""}`,
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } catch (error) {
+      console.error("Swap reward error:", error);
+      const errMsg =
+        error instanceof Error
+          ? error.message
+          : (error as { response?: { data?: { message?: string } } })
+              ?.response?.data?.message ?? "กรุณาลองใหม่อีกครั้ง";
+      await Swal.fire({
+        icon: "error",
+        title: "เปลี่ยนของแถมไม่สำเร็จ",
+        text: errMsg,
+      });
+    } finally {
+      setSwapLoading(false);
     }
   };
 
@@ -3783,6 +3894,25 @@ const QCDashboard = () => {
                                       <div className="w-full px-3.5">
                                         <div className="border-t-2 border-blue-200 w-full mb-1.5"></div>
                                       </div>
+                                      {so.is_reward && (
+                                        <div className="flex flex-col items-center gap-1 mb-1">
+                                          <p className="text-green-600 font-bold text-base">รายการของแถม</p>
+                                          <button
+                                            className="bg-green-600 text-white text-sm px-3 py-1 rounded hover:bg-green-700 font-bold"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSwapTargetSO(so);
+                                              setSwapSelectedProduct(null);
+                                              setSwapNewAmount("");
+                                              setSwapSearchQuery("");
+                                              setSwapSearchResults([]);
+                                              setModalSwapRewardOpen(true);
+                                            }}
+                                          >
+                                            เปลี่ยนของแถม
+                                          </button>
+                                        </div>
+                                      )}
                                       <p className="text-lg pb-1.5">
                                         {so?.product?.product_name}
                                       </p>
@@ -4382,6 +4512,151 @@ const QCDashboard = () => {
           </div>
         </div>
         <Reportproblem />
+
+        {/* Modal เปลี่ยนสินค้าของแถม */}
+        {modalSwapRewardOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[90vh]">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b-2 border-green-200">
+                <div>
+                  <p className="text-2xl font-bold text-green-700">เปลี่ยนสินค้าของแถม</p>
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    เดิม: <span className="font-bold text-gray-700">{swapTargetSO?.product?.product_name}</span>
+                  </p>
+                </div>
+                <button
+                  className="text-gray-400 hover:text-gray-600 text-3xl leading-none"
+                  onClick={() => setModalSwapRewardOpen(false)}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
+                {/* Step 1: ค้นหาสินค้า */}
+                <div>
+                  <p className="font-bold text-gray-700 mb-2">
+                    <span className="bg-green-600 text-white rounded-full w-6 h-6 inline-flex items-center justify-center text-sm mr-2">1</span>
+                    ค้นหาสินค้า (ชื่อหรือรหัส)
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      className="border-2 border-gray-300 rounded-lg px-3 py-2 flex-1 text-base focus:outline-none focus:border-green-500"
+                      placeholder="พิมพ์ชื่อหรือรหัสสินค้า..."
+                      value={swapSearchQuery}
+                      onChange={(e) => handleSwapSearch(e.target.value)}
+                      autoFocus
+                    />
+                    {swapSearchLoading && (
+                      <div className="flex items-center px-2">
+                        <div className="w-5 h-5 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ผลการค้นหา */}
+                  {swapSearchResults.length > 0 && !swapSelectedProduct && (
+                    <div className="mt-2 border-2 border-gray-200 rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-100 sticky top-0">
+                          <tr>
+                            <th className="text-left px-3 py-2 font-bold text-gray-600">รหัส</th>
+                            <th className="text-left px-3 py-2 font-bold text-gray-600">ชื่อสินค้า</th>
+                            <th className="text-center px-3 py-2 font-bold text-gray-600">หน่วย</th>
+                            <th className="text-center px-3 py-2 font-bold text-gray-600">คงเหลือ</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {swapSearchResults.map((p) => (
+                            <tr
+                              key={p.product_code}
+                              className="border-t border-gray-100 hover:bg-green-50 cursor-pointer"
+                              onClick={() => {
+                                setSwapSelectedProduct(p);
+                                setSwapNewAmount("");
+                              }}
+                            >
+                              <td className="px-3 py-2 text-blue-600 font-mono">{p.product_code}</td>
+                              <td className="px-3 py-2">{p.product_name}</td>
+                              <td className="px-3 py-2 text-center">{p.product_unit ?? "-"}</td>
+                              <td className="px-3 py-2 text-center font-bold">{p.product_stock ?? "-"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {swapSearchQuery && swapSearchResults.length === 0 && !swapSearchLoading && (
+                    <p className="mt-2 text-sm text-gray-400">ไม่พบสินค้า</p>
+                  )}
+                </div>
+
+                {/* Step 2: สินค้าที่เลือก + จำนวน */}
+                {swapSelectedProduct && (
+                  <div className="border-2 border-green-400 rounded-lg p-4 bg-green-50">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <p className="font-bold text-gray-700 mb-2">
+                          <span className="bg-green-600 text-white rounded-full w-6 h-6 inline-flex items-center justify-center text-sm mr-2">2</span>
+                          สินค้าที่เลือก
+                        </p>
+                        <p className="text-base font-bold text-green-800">{swapSelectedProduct.product_name}</p>
+                        <p className="text-sm text-gray-500">รหัส: {swapSelectedProduct.product_code} | หน่วย: {swapSelectedProduct.product_unit ?? "-"} | คงเหลือ: {swapSelectedProduct.product_stock ?? "-"}</p>
+                      </div>
+                      <button
+                        className="text-gray-400 hover:text-red-500 text-xl leading-none ml-2"
+                        onClick={() => setSwapSelectedProduct(null)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <label className="font-bold text-gray-700 whitespace-nowrap">จำนวน</label>
+                      <input
+                        type="number"
+                        min={1}
+                        className="border-2 border-green-500 rounded-lg px-3 py-2 text-xl font-bold w-32 text-center focus:outline-none focus:border-green-700"
+                        placeholder="0"
+                        value={swapNewAmount}
+                        onChange={(e) => setSwapNewAmount(e.target.value)}
+                        autoFocus
+                      />
+                      <span className="text-gray-600">{swapSelectedProduct.product_unit ?? ""}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t-2 border-gray-100 flex gap-3 justify-end">
+                <button
+                  className="px-5 py-2 rounded-lg border-2 border-gray-300 text-gray-600 font-bold hover:bg-gray-50"
+                  onClick={() => setModalSwapRewardOpen(false)}
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  disabled={!swapSelectedProduct || !swapNewAmount || Number(swapNewAmount) <= 0 || swapLoading}
+                  className={`px-6 py-2 rounded-lg font-bold text-white transition-colors ${
+                    swapSelectedProduct && swapNewAmount && Number(swapNewAmount) > 0 && !swapLoading
+                      ? "bg-green-600 hover:bg-green-700"
+                      : "bg-gray-300 cursor-not-allowed"
+                  }`}
+                  onClick={handleSwapRewardConfirm}
+                >
+                  {swapLoading ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-4"></div>
+                  ) : (
+                    "ยืนยันเปลี่ยนของแถม"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
