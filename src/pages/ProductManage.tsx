@@ -74,6 +74,12 @@ const ProductManage = () => {
   const [uploadEcomImage, setUploadEcomImage] = useState<boolean>(false);
   const [uploadOldSystemImage, setUploadOldSystemImage] = useState<boolean>(false);
   const [editMode, setEditMode] = useState<boolean>(false);
+  
+  // เพิ่ม state สำหรับติดตามภาพที่ถูกลบ
+  const [deletedImages, setDeletedImages] = useState<{
+    mainImage?: { url: string; type: 'main' };
+    additionalImages: { url: string; index: number; product_att_id?: number }[];
+  }>({ additionalImages: [] });
 
   // Helper functions สำหรับจัดการรูปภาพ
   const validateFile = (file: File): string | null => {
@@ -215,6 +221,7 @@ const ProductManage = () => {
   };
 
   const handleGetProductDetail = async (barcode: string | null) => {
+    console.log("Fetching product detail for barcode:", barcode);
     if (barcode) {
       console.log(barcode);
       const data = await axios.post(
@@ -225,9 +232,11 @@ const ProductManage = () => {
         }
       );
       console.log("data : ", data.data);
-      if (data.data) {
+
+      const da = data.data; 
+      if (da) {
         // รองรับกรณี API ส่งคืนค่ามาเป็น Array ให้หยิบรายการแรกมาแสดง
-        setProductManage(Array.isArray(data.data) ? data.data[0] : data.data);
+        setProductManage(da.find((item: Product) => item.product_code === barcode || item.product_barcode === barcode || item.product_barcode2 === barcode || item.product_barcode3 === barcode) || null);
       } else {
         setErrMsg("ไม่พบสินค้า หรือ มีบางอย่างผิดพลาด");
       }
@@ -251,6 +260,7 @@ const ProductManage = () => {
       setUploadEcomImage(false);
       setUploadOldSystemImage(false);
       setSidebarOpen(true); // เปิด sidebar เมื่อเปิด modal ใหม่
+      setDeletedImages({ additionalImages: [] }); // reset deleted images เมื่อเปิด modal ใหม่
 
       // เรียก API เพื่อดึงรูปภาพ
       if (productManage.product_code) {
@@ -293,8 +303,20 @@ const ProductManage = () => {
     if (previewImage && previewImage.startsWith('blob:')) {
       cleanupPreviewUrl(previewImage);
     }
+    
+    // บันทึกข้อมูลภาพหลักที่ถูกลบถ้ามีรูปเดิมอยู่
+    if (productManage?.product_image_url && !previewImage?.startsWith('blob:')) {
+      setDeletedImages(prev => ({
+        ...prev,
+        mainImage: { 
+          url: productManage.product_image_url!, 
+          type: 'main' 
+        }
+      }));
+    }
+    
     setSelectedImage(null);
-    setPreviewImage(productManage?.product_image_url ?? undefined); // กลับไปแสดงรูปเดิม
+    setPreviewImage(undefined); // เปลี่ยนเป็น undefined เมื่อลบจริงๆ
     // Reset file input
     const fileInput = document.getElementById('fileInputMain') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
@@ -302,6 +324,23 @@ const ProductManage = () => {
 
   const handleDeleteAdditionalImage = (index: number) => {
     console.log("Deleting additional image at index:", index);
+    
+    // บันทึกข้อมูลภาพที่ถูกลบถ้ามีรูปเดิมอยู่
+    const existingImage = imgOldSystem?.imageOrderPicking?.additionalImages?.[index];
+    if (existingImage && !previewImageOther?.[index]?.startsWith('blob:')) {
+      setDeletedImages(prev => ({
+        ...prev,
+        additionalImages: [
+          ...prev.additionalImages,
+          {
+            url: existingImage.product_img_url,
+            index: index,
+            product_att_id: existingImage.product_att_id
+          }
+        ]
+      }));
+    }
+    
     setSelectedImagesOther((prev) => {
       const newFiles = [...prev];
       newFiles[index] = null as unknown as File; // Remove file at index
@@ -313,12 +352,7 @@ const ProductManage = () => {
       if (newPreview[index] && newPreview[index]!.startsWith('blob:')) {
         cleanupPreviewUrl(newPreview[index]);
       }
-      // กลับไปแสดงรูปเดิม
-      if (imgOldSystem?.imageOrderPicking?.additionalImages?.[index]) {
-        newPreview[index] = '';
-      } else {
-        newPreview[index] = ''; // ไม่มีรูปเดิม ให้แสดง placeholder หรือไม่แสดงอะไรเลย
-      }
+      newPreview[index] = ''; // ลบออก
       console.log("Updated previewImageOther after deletion:", newPreview);
       return newPreview;
     });
@@ -365,6 +399,11 @@ const ProductManage = () => {
       if (uploadEcomImage) formData.append("uploadEcomImage", uploadEcomImage.toString());
       if (uploadOldSystemImage) formData.append("uploadOldSystemImage", uploadOldSystemImage.toString());
       if (editMode) formData.append("editMode", editMode.toString());
+      
+      // ส่งข้อมูลภาพที่ถูกลบไปให้ backend
+      if (deletedImages.mainImage || deletedImages.additionalImages.length > 0) {
+        formData.append("deletedImages", JSON.stringify(deletedImages));
+      }
 
       setUploadProgress(50); // การ progress จำลอง
 
@@ -409,6 +448,8 @@ const ProductManage = () => {
         setPreviewImage(undefined);
         setPreviewImageOther([]);
         setSelectedImagesOther([]);
+        setEditMode(false);
+        setDeletedImages({ additionalImages: [] }); // reset deleted images
       } else {
         showError("มีบางอย่างผิดพลาด");
       }
@@ -425,7 +466,7 @@ const ProductManage = () => {
     try {
       const ecomImageRes = await axios.get(
         `${import.meta.env.VITE_API_URL_ECOMMERCE
-        }/api/ecom/get-product-image/${pro_code}`
+        }/api/ecom/get-product-image/${encodeURIComponent(pro_code)}`
       );
       setImgEcom(ecomImageRes.data);
     } catch (e) {
@@ -436,7 +477,7 @@ const ProductManage = () => {
   const getImageFromOldSystem = async (pro_code: string) => {
     try {
       const oldSystemImageRes = await axios.get(
-        `${import.meta.env.VITE_API_URL_ORDER}/api/imageFromOldSystem/${pro_code}`
+        `${import.meta.env.VITE_API_URL_ORDER}/api/imageFromOldSystem/${encodeURIComponent(pro_code)}`
       );
       // API ส่งคืนข้อมูลใหม่ตาม structure ใหม่
       setImgOldSystem(oldSystemImageRes.data);
@@ -509,11 +550,6 @@ const ProductManage = () => {
                         <div className="flex items-center gap-3 mb-2 justify-between">
                           <h3 className="font-bold text-lg mb-2 text-gray-700">รูปจาก Order Picking System</h3>
                           <div className="flex items-center gap-2">
-                            {editMode && (
-                              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                                ลาก & วาง หรือคลิกเพื่ออัพโหลด
-                              </span>
-                            )}
                             <button className="text-sm text-white bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg transition-colors" onClick={() => setEditMode(!editMode)}>
                               {editMode === true ? "ดูรูปภาพ" : "แก้ไขรูปภาพ"}
                             </button>
@@ -533,7 +569,7 @@ const ProductManage = () => {
                           <div className="max-w-md mx-auto relative">
                             {(() => {
                               const hasMainImage = previewImage || (imgOldSystem?.imageOrderPicking?.mainImage && imgOldSystem.imageOrderPicking.mainImage !== '');
-                              
+
                               if (hasMainImage) {
                                 return (
                                   <>
@@ -552,9 +588,8 @@ const ProductManage = () => {
                                       }}
                                       alt="Main Order Picking Image"
                                     />
-                                    <span className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-medium ${
-                                      selectedImage ? 'bg-green-500 text-white' : 'bg-black bg-opacity-50 text-white'
-                                    }`}>
+                                    <span className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-medium ${selectedImage ? 'bg-green-500 text-white' : 'bg-black bg-opacity-50 text-white'
+                                      }`}>
                                       {selectedImage ? 'รูปใหม่' : 'รูปหลัก'}
                                     </span>
                                     {selectedImage && editMode && (
@@ -796,7 +831,7 @@ const ProductManage = () => {
                           <div className="flex flex-col items-center">
                             <p className="text-sm text-gray-600 mb-1">รูปที่ 3</p>
                             <img
-                              src={((uploadEcomImage && previewImageOther?.[1]) || (
+                              src={(uploadEcomImage ? (previewImageOther?.[1] || product_icon) : (
                                 imgEcom.pro_img3?.startsWith("..")
                                   ? `https://www.wangpharma.com${imgEcom.pro_img3?.slice(2)}`
                                   : imgEcom.pro_img3?.startsWith("images/")
@@ -814,7 +849,7 @@ const ProductManage = () => {
                           <div className="flex flex-col items-center">
                             <p className="text-sm text-gray-600 mb-1">รูปที่ 4</p>
                             <img
-                              src={(uploadEcomImage ? previewImageOther?.[2] : (
+                              src={(uploadEcomImage ? (previewImageOther?.[2] || product_icon) : (
                                 imgEcom.pro_img4?.startsWith("..")
                                   ? `https://www.wangpharma.com${imgEcom.pro_img4?.slice(2)}`
                                   : imgEcom.pro_img4?.startsWith("images/")
@@ -832,7 +867,7 @@ const ProductManage = () => {
                           <div className="flex flex-col items-center">
                             <p className="text-sm text-gray-600 mb-1">รูปที่ 5</p>
                             <img
-                              src={(uploadEcomImage ? previewImageOther?.[3] || product_icon : (
+                              src={(uploadEcomImage ? (previewImageOther?.[3] || product_icon) : (
                                 imgEcom.pro_img5?.startsWith("..")
                                   ? `https://www.wangpharma.com${imgEcom.pro_img5?.slice(2)}`
                                   : imgEcom?.pro_img5?.startsWith("images/")
@@ -982,10 +1017,10 @@ const ProductManage = () => {
                         changeFloor === "-"
                       }
                       className={`text-center text-white text-lg p-2 rounded-lg px-6 cursor-pointer flex items-center gap-2 ${!isUploading && changeFloor !== null &&
-                          changeFloor !== "" &&
-                          changeFloor !== "-"
-                          ? "hover:bg-green-800 bg-green-700"
-                          : "hover:bg-gray-600 bg-gray-500"
+                        changeFloor !== "" &&
+                        changeFloor !== "-"
+                        ? "hover:bg-green-800 bg-green-700"
+                        : "hover:bg-gray-600 bg-gray-500"
                         }`}
                       onClick={() => handleSubmit()}
                     >
@@ -1142,8 +1177,6 @@ const ProductManage = () => {
                           prod.product_code ||
                           null
                         );
-                        getIamgeForECommerce(prod.product_code);
-                        getImageFromOldSystem(prod.product_code);
                       }}
                     >
                       จัดการสินค้า
