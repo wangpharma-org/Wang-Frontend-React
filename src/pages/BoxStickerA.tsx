@@ -153,13 +153,12 @@ const BoxStickerA = () => {
           </div>
         </div>
         <div className="flex justify-center">
-           <p>ฝ่ายขาย : {dataPrint?.emp.emp_nickname} {dataPrint?.emp?.emp_tel}</p>
+           <p className="text-[20px] font-bold">ฝ่ายขาย : {dataPrint?.emp.emp_nickname}</p>
         </div>
-        <div className="w-[100%] flex justify-between mt-1 px-10">
+        <div className="w-[100%] flex flex-col mt-1 px-10">
           <div>
-            <p className="text-[12px]">{`${dataPrint?.address_line1 ?? ""} ${
-              dataPrint?.address_line2 ?? ""
-            } ผู้ดูแล : ${dataPrint?.sub_district ?? ""}`}</p>
+            <p className="text-[12px]">{`${dataPrint?.address_line1?.replace(/@|&nbsp;|&amp;/g, ' ') ?? ""} ${dataPrint?.address_line2?.replace(/@|&nbsp;|&amp;/g, ' ') ?? ""
+              }`}</p>
           </div>
           <div>
             <p className="text-[12px]">
