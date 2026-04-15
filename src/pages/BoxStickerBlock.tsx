@@ -54,6 +54,7 @@ const styles = {
 const BoxStickerBlock = () => {
   const queryParams = new URLSearchParams(location.search);
   const mem_code = queryParams.get("mem_code");
+  const emp_code_qc = queryParams.get("emp_qc");
   const printCount = parseInt(queryParams.get("print") || "1");
 
   let sh_running = queryParams.get("sh_running");
@@ -72,11 +73,11 @@ const BoxStickerBlock = () => {
 
   useEffect(() => {
     if (sh_running && !sh_running.includes(",")) {
-        setTransformedShRunning(sh_running += ",")
+      setTransformedShRunning(sh_running += ",")
     } else {
-        setTransformedShRunning(sh_running || "");
+      setTransformedShRunning(sh_running || "");
     }
-  },[sh_running]);
+  }, [sh_running]);
 
   useEffect(() => {
     if (prepareEmpData && QCEmpData && packedEmpData) {
@@ -122,65 +123,69 @@ const BoxStickerBlock = () => {
   const renderSticker = (index: number) => (
     <div
       key={index}
-      className="border-t-2 border-b-2 w-full p-2 text-sm break-after-page"
+      className="border-t-2 border-b-2 w-full p-2 text-sm break-after-page flex flex-col justify-between"
       style={styles.container}
     >
-      <div className="flex justify-between">
-        <div>
-          <p className="font-semibold text-[18px]">
-            {index + 1} / {printCount}
-          </p>
-          <p className="text-2xl font-bold">{mem_code}</p>
-        </div>
-        <div className="flex flex-col justify-left items-end">
-          <p className="font-semibold text-[11px]">{`${dayjs().format(
-            "DD-MM"
-          )}-${dayjs().year() + 543} ${dayjs().format("HH:mm")}`}</p>
-          <div className="flex">
-            <div className="flex flex-col justify-start items-end mr-1">
-              <p className="text-[11px]">สแกนบาร์โค้ดที่เครื่อง QC</p>
-              <p className="text-[11px]">เพื่อสั่งพิมพ์สติกเกอร์ติดลังใหม่</p>
-            </div>
-            <QRCodeSVG value={transformedShRunning || ""} size={60}></QRCodeSVG>
-          </div>
-        </div>
-      </div>
-
       <div>
-        <div className="flex justify-center">
-          <div className="w-[80%] flex justify-center mt-2">
-            <p className="font-semibold text-[23px]">{dataPrint?.mem_name}</p>
-          </div>
-        </div>
-        <div className="flex justify-center">
-          <p className="text-[12px] mt-1">ฝ่ายขาย : {dataPrint?.emp.emp_nickname} {dataPrint?.emp?.emp_tel}</p>
-        </div>
-        <div className="w-[100%] flex justify-between mt-1 px-10">
+        <div className="flex justify-between">
           <div>
-            <p className="text-[12px]">{`${dataPrint?.address_line1 ?? ""} ${
-              dataPrint?.address_line2 ?? ""
-            } ผู้ดูแล : ${dataPrint?.sub_district ?? ""}`}</p>
-            <p className="text-[12px] mt-1">{`QC: ${
-              dataPrint?.district ?? ""
-            }`}</p>
+            <p className="font-semibold text-[18px]">
+              {index + 1} / {printCount}
+            </p>
+            <p className="text-2xl font-bold">{mem_code}</p>
           </div>
-          <div>
-            <p className="text-[12px]">
-              เบอร์โทรลูกค้า : {dataPrint?.mem_tel ?? "-"}
-            </p>
-            <p className="text-[12px] mt-1">
-              เส้นทาง : {dataPrint?.mem_route?.route_name ?? "อื่นๆ"}
-            </p>
+          <div className="flex flex-col justify-left items-end">
+            <p className="font-semibold text-[11px]">{`${dayjs().format(
+              "DD-MM"
+            )}-${dayjs().year() + 543} ${dayjs().format("HH:mm")}`}</p>
+            <div className="flex">
+              <div className="flex flex-col justify-start items-end mr-1">
+                <p className="text-[11px]">สแกนบาร์โค้ดที่เครื่อง QC</p>
+                <p className="text-[11px]">เพื่อสั่งพิมพ์สติกเกอร์ติดลังใหม่</p>
+              </div>
+              <QRCodeSVG value={transformedShRunning || ""} size={60}></QRCodeSVG>
+            </div>
           </div>
         </div>
-        <div className="w-[100%] flex justify-center mt-3">
-          <div className="grid grid-cols-2 gap-x-20 gap-y-2">
-            {sh_running_array.map((sh_running) => (
-              <div className="col-span-1">{sh_running}</div>
-            ))}
+
+        <div>
+          <div className="flex justify-center">
+            <div className="w-[80%] flex justify-center mt-2">
+              <p className="font-semibold text-[23px]">{dataPrint?.mem_name}</p>
+            </div>
           </div>
+          <div className="flex justify-center">
+            <p className="text-[20px] mt-1 font-bold">ฝ่ายขาย : {dataPrint?.emp.emp_nickname}</p>
+          </div>
+          <div className="w-[100%] mt-1 px-10">
+            <div>
+              <p className="text-[12px] mt-1">
+                เบอร์โทรลูกค้า : {dataPrint?.mem_tel ?? "-"}
+              </p>
+            </div>
+            <div>
+              <p className="text-[12px]">{`${dataPrint?.address_line1?.replace(/@|&nbsp;|&amp;/g, ' ') ?? ""} ${dataPrint?.address_line2?.replace(/@|&nbsp;|&amp;/g, ' ') ?? ""
+                }`}</p>
+            </div>
+            <div className="flex flex-col justify-center text-center">
+              <p className="text-[20px] font-bold mt-1">{`QC: ${emp_code_qc ?? ""}`}</p>
+            </div>
+          </div>
+          <div className="w-[100%] flex justify-center mt-3">
+            <div className="grid grid-cols-2 gap-x-20 gap-y-2">
+              {sh_running_array.map((sh_running) => (
+                <div className="col-span-1">{sh_running}</div>
+              ))}
+            </div>
+          </div>
+
         </div>
       </div>
+      <div className="flex justify-center">
+          <p className="text-[26.5px] mt-1 font-bold">
+              {dataPrint?.mem_route?.route_name ?? "อื่นๆ"}
+            </p>
+        </div>
     </div>
   );
 
