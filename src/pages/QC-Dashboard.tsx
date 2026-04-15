@@ -1753,7 +1753,7 @@ const QCDashboard = () => {
         if (response.status === 201) {
           console.log("Update Success");
           window.open(
-            `/box-sticker-block?print=${countBox}&mem_code=${mem_code}&sh_running=${shRunningArray}`
+            `/box-sticker-block?print=${countBox}&mem_code=${mem_code}&sh_running=${shRunningArray}&emp_qc=${QCEmp?.dataEmp.emp_code}`
           );
         }
       } else if (
