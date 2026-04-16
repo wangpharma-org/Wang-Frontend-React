@@ -42,6 +42,7 @@ import UploadStock from "./pages/UploadStock";
 import RTApproval from "./pages/RTApproval";
 import WorklogPage from "./pages/WorklogPage";
 import TaskApprovalPage from "./pages/TaskApprovalPage";
+import RecycleBoxBarcode from "./pages/RecycleBoxBarcode";
 
 function App() {
   useEffect(() => {
@@ -128,6 +129,7 @@ function App() {
           <Route path="/fragileprint" element={<FragilePrint />} />
           <Route path="/othercourier" element={<OtherCourier />} />
           <Route path="/basket-sticker" element={<BasketSticker />} />
+          <Route path="/recycle-box-barcode" element={<RecycleBoxBarcode />} />
           <Route path="/print-rt" element={<PrintRT />} />
           <Route path="/print-request" element={<RequestProduct />} />
           <Route path="/dashboard-qc" element={<RequireAuth><QCDashboard /></RequireAuth>} />

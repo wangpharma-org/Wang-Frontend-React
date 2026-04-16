@@ -173,6 +173,13 @@ interface SwapProductResult {
   product_stock: number;
 }
 
+interface RecycleBox {
+  id: string;
+  name: string;
+  amount: number;
+  created_at: string | null;
+}
+
 const QCDashboard = () => {
   const [urgent, setUrgent] = useState<urgent[] | null>(null);
   const [dataQC, setDataQC] = useState<ShoppingHead | ShoppingHeadOne | null>(
@@ -185,7 +192,7 @@ const QCDashboard = () => {
   const [sh_running, setSh_running] = useState<string | null>(null);
   const [, setIsInputLocked] = useState(false);
   const [InputValues, setInputValues] = useState<string[]>(Array(10).fill(""));
-  const [countBox, setCountBox] = useState<number>(1);
+  const [countBox, setCountBox] = useState<number>(0);
   const [error, setError] = useState<boolean>(false);
 
   // Modal Open QC
@@ -383,6 +390,63 @@ const QCDashboard = () => {
   const [swapLoading, setSwapLoading] = useState<boolean>(false);
   const [swapSearchLoading, setSwapSearchLoading] = useState<boolean>(false);
 
+  // Recycle Box
+  const [recycleBoxes, setRecycleBoxes] = useState<RecycleBox[]>([]);
+  const [scannedBoxes, setScannedBoxes] = useState<{ id: string; name: string }[]>([]);
+
+  const fetchRecycleBoxes = async () => {
+    try {
+      const res = await axios.get(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/recycle-box/all`,
+        {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("access_token")}`,
+          },
+        }
+      );
+      setRecycleBoxes(res.data);
+    } catch (e) {
+      console.error("fetchRecycleBoxes error:", e);
+    }
+  };
+
+  const handleScanRecycleBox = async (id: string) => {
+    const box = recycleBoxes.find((b) => b.id === id);
+    if (!box) return;
+    const shArr = Array.isArray(dataQC)
+      ? dataQC.map((d) => d.sh_running)
+      : dataQC
+        ? [(dataQC as { sh_running: string }).sh_running]
+        : [];
+    try {
+      await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/recycle-box/decrement`,
+        { uuid: id, sh_running: shArr, name: box.name }
+      );
+      setScannedBoxes((prev) => [...prev, { id, name: box.name }]);
+      setCountBox((prev) => prev + 1);
+      await fetchRecycleBoxes();
+    } catch (e) {
+      console.error("handleScanRecycleBox error:", e);
+    }
+    if (inputBarcode.current) inputBarcode.current.value = "";
+  };
+
+  const handleRemoveBox = async (index: number) => {
+    const box = scannedBoxes[index];
+    try {
+      await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/recycle-box/increment`,
+        { uuid: box.id, emp_code: QCEmp?.dataEmp?.emp_code }
+      );
+      setScannedBoxes((prev) => prev.filter((_, i) => i !== index));
+      setCountBox((prev) => Math.max(0, prev - 1));
+      await fetchRecycleBoxes();
+    } catch (e) {
+      console.error("handleRemoveBox error:", e);
+    }
+  };
+
   const handleCheckFlagRequest = async () => {
     const flag = await axios.get(
       `${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/request`
@@ -485,6 +549,10 @@ const QCDashboard = () => {
       setSwapLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchRecycleBoxes();
+  }, []);
 
   useEffect(() => {
     if (import.meta.env.VITE_API_URL_ONOFF_ONE_TAB === "false") {
@@ -3736,10 +3804,13 @@ const QCDashboard = () => {
                       placeholder="รหัสสินค้า / Barcode"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                          if (e.currentTarget.value === "") {
-                            return;
+                          const val = e.currentTarget.value;
+                          if (!val) return;
+                          if (recycleBoxes.some((b) => b.id === val)) {
+                            handleScanRecycleBox(val);
+                          } else {
+                            handleScan(val);
                           }
-                          handleScan(e.currentTarget.value);
                         }
                       }}
                     ></input>
@@ -4253,6 +4324,73 @@ const QCDashboard = () => {
                       </div>
                     </div>
                   )}
+                  {/* ลังคงเหลือ */}
+                  <div className="rounded-2xl overflow-hidden shadow-sm mb-3">
+                    <div className="bg-blue-500 px-4 py-2">
+                      <p className="text-white font-bold text-base tracking-wide">ลังคงเหลือ</p>
+                    </div>
+                    <div className="bg-white p-3">
+                      {recycleBoxes.length === 0 ? (
+                        <p className="text-base text-gray-400 text-center py-3">ไม่มีข้อมูล</p>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2">
+                          {recycleBoxes.map((box) => (
+                            <div
+                              key={box.id}
+                              className="flex flex-col items-center justify-center bg-blue-50 border border-blue-100 rounded-xl py-4"
+                            >
+                              <span className="text-4xl font-black text-blue-600">{box.amount}</span>
+                              <span className="text-base font-semibold text-gray-600 mt-1">{box.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ลังที่ใช้ */}
+                  <div className="rounded-2xl overflow-hidden shadow-sm mb-3">
+                    <div className="bg-orange-500 px-4 py-2 flex items-center justify-between">
+                      <p className="text-white font-bold text-base tracking-wide">ลังที่ใช้</p>
+                      {scannedBoxes.length > 0 && (
+                        <span className="bg-white text-orange-500 text-sm font-black px-2 py-0.5 rounded-full">
+                          {scannedBoxes.length}
+                        </span>
+                      )}
+                    </div>
+                    <div className="bg-white p-3">
+                      {scannedBoxes.length === 0 ? (
+                        <p className="text-base text-gray-400 text-center py-3">ยังไม่มีลังที่สแกน</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {(() => {
+                            const groups: Record<string, { id: string; name: string; indices: number[] }> = {};
+                            scannedBoxes.forEach((b, i) => {
+                              if (!groups[b.id]) groups[b.id] = { id: b.id, name: b.name, indices: [] };
+                              groups[b.id].indices.push(i);
+                            });
+                            return Object.values(groups).map((group) => (
+                              <div key={group.id}>
+                                <p className="text-base font-bold text-orange-500 uppercase tracking-widest mb-1">{group.name}</p>
+                                {group.indices.map((originalIdx, nth) => (
+                                  <div key={originalIdx} className="flex items-center justify-between bg-orange-50 rounded-xl px-3 py-2 mb-1">
+                                    <span className="text-base font-semibold text-gray-800">ลังที่ {nth + 1}</span>
+                                    <button
+                                      onClick={() => handleRemoveBox(originalIdx)}
+                                      className="bg-red-500 hover:bg-red-600 active:bg-red-700 cursor-pointer text-white text-sm font-semibold px-3 py-1 rounded-lg transition-colors"
+                                    >
+                                      เอาออก
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            ));
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <div className=" bg-blue-50 rounded-xl self-start flex-col justify-center py-3">
                     <div className="w-full mt-3">
                       <p>พนักงานเตรียมสินค้า</p>
@@ -4385,7 +4523,7 @@ const QCDashboard = () => {
                         <div
                           className="bg-red-700 text-2xl font-bold text-white py-1 rounded-sm mt-1 hover:bg-red-800 cursor-pointer select-none"
                           onClick={() =>
-                            countBox > 1 && setCountBox((prev) => prev - 1)
+                            countBox > 0 && setCountBox((prev) => prev - 1)
                           }
                         >
                           -
@@ -4470,7 +4608,7 @@ const QCDashboard = () => {
                       </p>
                       <button
                         // disabled={hasNotQC !== 0 || loadingSubmit || !hasPrintSticker}
-                        className={`w-full flex justify-center items-center  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${hasNotQC !== 0 || loadingSubmit || !hasPrintSticker
+                        className={`w-full flex justify-center items-center  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${hasNotQC !== 0 || loadingSubmit || !hasPrintSticker || countBox === 0
                           ? "bg-gray-500 hover:bg-gray-600"
                           : "bg-green-500 hover:bg-green-600"
                           }`}
@@ -4478,7 +4616,8 @@ const QCDashboard = () => {
                           if (
                             hasNotQC !== 0 ||
                             loadingSubmit ||
-                            !hasPrintSticker
+                            !hasPrintSticker ||
+                            countBox === 0
                           ) {
                             // setSubmitFailed(true);
                             setCannotSubmit("ปริ้นสติกเกอร์ก่อนเสร็จสิ้น");
