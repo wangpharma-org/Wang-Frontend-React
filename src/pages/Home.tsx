@@ -6,6 +6,7 @@ import order from "../assets/sent.png";
 // import checklist from "../assets/checklist.png";
 import barcode from "../assets/barcode-scanner.png"
 import reportPicking from "../assets/report-picking.png";
+import log from "../assets/log.png";
 import RouteManage from "../assets/evaluation.png";
 import Document from "../assets/document.png";
 import { useNavigate } from "react-router";
@@ -56,14 +57,28 @@ const listMenu = [
     href: "/route-manage",
     imageSrc: RouteManage,
     admin: true,
-  }
-    ,{
-      id: 8,
-      name: "RT-Approval",
-      href: "/rt-approval",
-      imageSrc: Document, // TODO: เปลี่ยน icon ตามความเหมาะสม
-      admin: true,
-    }
+  },
+  {
+    id: 8,
+    name: "RT-Approval",
+    href: "/rt-approval",
+    imageSrc: Document,
+    admin: true,
+  },
+  {
+    id: 9,
+    name: "บันทึกการทำงาน",
+    href: "/worklog",
+    imageSrc: log,
+    admin: false,
+  },
+  {
+    id: 10,
+    name: "อนุมัติบันทึกการทำงาน",
+    href: "/task-approval",
+    imageSrc: Document,
+    admin: true,
+  },
 ];
 const Home = () => {
   const navigate = useNavigate()
