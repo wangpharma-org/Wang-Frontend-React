@@ -91,6 +91,13 @@ interface RouteButton {
   value: string;
 }
 
+interface RecycleBox {
+  id: string;
+  name: string;
+  amount: number;
+  created_at: string | null;
+}
+
 const OrderList = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [orderList, setOrderList] = useState<orderList[]>([]);
@@ -122,6 +129,10 @@ const OrderList = () => {
   const [featureFlag, setFeatureFlag] = useState<boolean>(true);
   const [msgFeatureFlag, setMsgFeatureFlag] = useState<string | null>(null);
   const [loadingOrder, setLoadingOrder] = useState<string | null>(null);
+  const [showRecycleModal, setShowRecycleModal] = useState(false);
+  const [recycleBoxes, setRecycleBoxes] = useState<RecycleBox[]>([]);
+  const [scanInput, setScanInput] = useState("");
+  const scanInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const totalOrders = orderList?.length;
@@ -702,6 +713,54 @@ const OrderList = () => {
 
 
 
+  const fetchRecycleBoxes = async () => {
+    const res = await axios.get(
+      `${import.meta.env.VITE_API_URL_ORDER}/api/recycle-box/all`,
+      {
+        headers: {
+          Authorization: `Bearer ${sessionStorage.getItem("access_token")}`,
+        },
+      }
+    );
+    setRecycleBoxes(res.data);
+  };
+
+  const openRecycleModal = async () => {
+    try {
+      await fetchRecycleBoxes();
+      setShowRecycleModal(true);
+      setTimeout(() => scanInputRef.current?.focus(), 100);
+    } catch {
+      toast.error("โหลดข้อมูลลังไม่สำเร็จ");
+    }
+  };
+
+  const handleScan = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return;
+    const uuid = scanInput.trim();
+    if (!uuid) return;
+    try {
+      await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/recycle-box/increment`,
+        { uuid, emp_code: userInfo?.emp_code }
+      );
+      toast.success("คืนลังสำเร็จ");
+      setScanInput("");
+      await fetchRecycleBoxes();
+      setTimeout(() => scanInputRef.current?.focus(), 100);
+    } catch {
+      toast.error("คืนลังไม่สำเร็จ");
+      setScanInput("");
+    }
+  };
+
+  const printRecycleBoxBarcode = (uuid: string, name: string) => {
+    window.open(
+      `/recycle-box-barcode?uuid=${uuid}&name=${encodeURIComponent(name)}`,
+      "_blank"
+    );
+  };
+
   if (featureFlag === false) {
     return (
       <div className="flex flex-col min-h-screen text-center items-center justify-center">
@@ -734,7 +793,7 @@ const OrderList = () => {
         <header className="p-2 bg-blue-400 text-white font-medium sticky top-0 z-40">
           <div className="flex justify-between">
             <div>
-              <button className="bg-white rounded-sm px-3 py-1 text-black drop-shadow-xs" onClick={SaveBox}>
+              <button className="bg-white rounded-sm px-3 py-1 text-black drop-shadow-xs" onClick={openRecycleModal}>
                 ลัง
               </button>
             </div>
@@ -1506,6 +1565,84 @@ const OrderList = () => {
             </div>
           </footer>
         </div>
+
+        {/* Recycle Box Modal */}
+        {showRecycleModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+              {/* Header */}
+              <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">จัดการลัง</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">สแกนบาร์โค้ดเพื่อคืนลัง</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowRecycleModal(false);
+                    setScanInput("");
+                  }}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 text-sm transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Scanner status */}
+              <div className="px-6 pt-4 pb-2">
+                <div className="flex items-center gap-3 bg-blue-50 rounded-xl px-4 py-3">
+                  <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse shrink-0" />
+                  <span className="text-sm text-blue-700 font-medium">
+                    {scanInput ? "กำลังสแกน..." : "พร้อมรับการสแกน"}
+                  </span>
+                </div>
+                {/* Hidden input — inputMode=none ป้องกันแป้นพิมพ์เด้ง, onBlur refocus ไว้ตลอด */}
+                <input
+                  ref={scanInputRef}
+                  type="text"
+                  value={scanInput}
+                  onChange={(e) => setScanInput(e.target.value)}
+                  onKeyDown={handleScan}
+                  onBlur={() => setTimeout(() => scanInputRef.current?.focus(), 10)}
+                  inputMode="none"
+                  autoComplete="off"
+                  className="sr-only"
+                />
+              </div>
+
+              {/* Box list */}
+              <div className="px-6 pb-6 pt-3 space-y-2 max-h-72 overflow-y-auto">
+                {recycleBoxes.map((box) => (
+                  <div
+                    key={box.id}
+                    className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3"
+                  >
+                    <div>
+                      <p className="font-semibold text-gray-900">{box.name}</p>
+                      <p className="text-sm text-gray-400">
+                        คงเหลือ{" "}
+                        <span className="font-bold text-blue-600">
+                          {box.amount}
+                        </span>{" "}
+                        ใบ
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => printRecycleBoxBarcode(box.id, box.name)}
+                      className="bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    >
+                      พิมพ์บาร์โค้ด
+                    </button>
+                  </div>
+                ))}
+                {recycleBoxes.length === 0 && (
+                  <p className="text-center text-gray-400 py-6">
+                    ไม่มีข้อมูลลัง
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
