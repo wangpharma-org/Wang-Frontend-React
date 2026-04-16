@@ -40,6 +40,8 @@ import { io } from "socket.io-client";
 import { useEffect } from "react";
 import UploadStock from "./pages/UploadStock";
 import RTApproval from "./pages/RTApproval";
+import WorklogPage from "./pages/WorklogPage";
+import TaskApprovalPage from "./pages/TaskApprovalPage";
 import RecycleBoxBarcode from "./pages/RecycleBoxBarcode";
 
 function App() {
@@ -352,6 +354,22 @@ function App() {
             element={
               <RequireAuth>
                 <RTApproval />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/worklog"
+            element={
+              <RequireAuth>
+                <WorklogPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/task-approval"
+            element={
+              <RequireAuth>
+                <TaskApprovalPage />
               </RequireAuth>
             }
           />
