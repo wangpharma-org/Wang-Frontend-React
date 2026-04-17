@@ -1173,7 +1173,7 @@ export default function RTApproval() {
                     {/* ข้อมูลเอกสาร */}
                     <div className="bg-white border border-gray-200 rounded-lg p-4">
                       <h4 className="text-sm font-semibold text-gray-700 mb-3">📋 ข้อมูลเอกสาร</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div className="space-y-4">
 
                         {/* PUR */}
                         {selectedItem.product.purchest.pur && (
@@ -1199,8 +1199,79 @@ export default function RTApproval() {
                           </div>
                         )}
 
-                        {/* PO */}
-                        {selectedItem.product.purchest.po && (
+                        {/* PO - Updated to handle array */}
+                        {selectedItem.product.purchest.po && Array.isArray(selectedItem.product.purchest.po) && selectedItem.product.purchest.po.length > 0 && (
+                          <div className="space-y-3">
+                            <div className="font-medium text-orange-700 flex items-center gap-2">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              ใบสั่งซื้อ (PO) - {selectedItem.product.purchest.po.length} รายการ
+                            </div>
+                            {selectedItem.product.purchest.po.map((poItem, index) => (
+                              <div key={poItem.purchest_po_id || index} className="border border-orange-200 rounded-lg">
+                                <div className="bg-orange-50 px-3 py-2 border-b border-orange-200">
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                                    <div>
+                                      <span className="text-gray-500">เลขที่:</span>
+                                      <span className="ml-1 font-medium text-orange-800">{poItem.po_invoice}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-gray-500">วันที่:</span>
+                                      <span className="ml-1 font-medium text-orange-800">
+                                        {poItem.po_date ? new Date(poItem.po_date).toLocaleDateString('th-TH') : '-'}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-gray-500">จำนวน:</span>
+                                      <span className="ml-1 font-medium text-orange-800">{poItem.po_amount || '-'} {poItem.po_unit}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                {/* Tracking Information */}
+                                {poItem.tracking_po && poItem.tracking_po.length > 0 && (
+                                  <div className="p-3">
+                                    <div className="text-xs font-medium text-gray-600 mb-2 flex items-center gap-1">
+                                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                      ประวัติติดตาม ({poItem.tracking_po.length} รายการ)
+                                    </div>
+                                    <div className="max-h-32 overflow-y-auto space-y-2">
+                                      {poItem.tracking_po
+                                        .sort((a: { date: string }, b: { date: string }) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                        .map((track: { tracking_id: string; message: string; emp: string; track_to: string; date: string }, trackIndex: number) => (
+                                        <div key={track.tracking_id || trackIndex} className="bg-gray-50 rounded p-2 border-l-2 border-orange-300">
+                                          <div className="flex items-start justify-between text-xs">
+                                            <div className="flex-1">
+                                              <div className="font-medium text-gray-700 mb-1">{track.message}</div>
+                                              <div className="flex items-center gap-2 text-gray-500">
+                                                <span>พนักงาน: {track.emp}</span>
+                                                <span>•</span>
+                                                <span>{track.track_to}</span>
+                                              </div>
+                                            </div>
+                                            <div className="text-gray-400 text-xs ml-2 flex-shrink-0">
+                                              {new Date(track.date).toLocaleDateString('th-TH', { 
+                                                day: '2-digit', 
+                                                month: '2-digit', 
+                                                year: 'numeric' 
+                                              })}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* PO - Fallback for single object (backward compatibility) */}
+                        {selectedItem.product.purchest.po && !Array.isArray(selectedItem.product.purchest.po) && (
                           <div className="border border-orange-200 rounded-lg p-3">
                             <div className="font-medium text-orange-700 mb-2">ใบสั่งซื้อ (PO)</div>
                             <div className="space-y-1 text-xs text-gray-600">
