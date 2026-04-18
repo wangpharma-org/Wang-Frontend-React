@@ -5,6 +5,13 @@ import Navbar from "../components/Navbar";
 import Modal from "../components/ModalQC";
 import boxnotfound from "../assets/product-17.png";
 import html2pdf from "html2pdf.js";
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
+import timezone from 'dayjs/plugin/timezone'
+import 'dayjs/locale/th'
+
+dayjs.extend(utc)
+dayjs.extend(timezone)
 
 const VITE_API_URL_ORDER = import.meta.env.VITE_API_URL_ORDER;
 
@@ -109,51 +116,51 @@ function statusDisplay(status: string): { label: string; color: string } {
   if (status === "RT-Success") return { label: "จัดแล้ว", color: "text-purple-600" };
   if (status === "NotActive") return { label: "ช่วงปิดระบบ", color: "text-gray-600" };
   if (status === "Rejected") return { label: "ถูกปฏิเสธ", color: "text-red-600" };
-  return { label: "รออนุมัติ", color: "text-yellow-600" }; 
+  return { label: "รออนุมัติ", color: "text-yellow-600" };
 }
 
 function getStatusStyles(status: string): { bgClass: string; textClass: string; borderClass: string; dotClass: string } {
-  if (status === "Approved") return { 
-    bgClass: "bg-green-100", 
-    textClass: "text-green-800", 
-    borderClass: "border-green-200", 
-    dotClass: "bg-green-500" 
+  if (status === "Approved") return {
+    bgClass: "bg-green-100",
+    textClass: "text-green-800",
+    borderClass: "border-green-200",
+    dotClass: "bg-green-500"
   };
-  if (status === "Done") return { 
-    bgClass: "bg-blue-100", 
-    textClass: "text-blue-800", 
-    borderClass: "border-blue-200", 
-    dotClass: "bg-blue-500" 
+  if (status === "Done") return {
+    bgClass: "bg-blue-100",
+    textClass: "text-blue-800",
+    borderClass: "border-blue-200",
+    dotClass: "bg-blue-500"
   };
-  if (status === "Duplicate") return { 
-    bgClass: "bg-orange-100", 
-    textClass: "text-orange-800", 
-    borderClass: "border-orange-200", 
-    dotClass: "bg-orange-500" 
+  if (status === "Duplicate") return {
+    bgClass: "bg-orange-100",
+    textClass: "text-orange-800",
+    borderClass: "border-orange-200",
+    dotClass: "bg-orange-500"
   };
-  if (status === "RT-Success") return { 
-    bgClass: "bg-purple-100", 
-    textClass: "text-purple-800", 
-    borderClass: "border-purple-200", 
-    dotClass: "bg-purple-500" 
+  if (status === "RT-Success") return {
+    bgClass: "bg-purple-100",
+    textClass: "text-purple-800",
+    borderClass: "border-purple-200",
+    dotClass: "bg-purple-500"
   };
-  if (status === "NotActive") return { 
-    bgClass: "bg-gray-100", 
-    textClass: "text-gray-800", 
-    borderClass: "border-gray-200", 
-    dotClass: "bg-gray-500" 
+  if (status === "NotActive") return {
+    bgClass: "bg-gray-100",
+    textClass: "text-gray-800",
+    borderClass: "border-gray-200",
+    dotClass: "bg-gray-500"
   };
-  if (status === "Rejected") return { 
-    bgClass: "bg-red-100", 
-    textClass: "text-red-800", 
-    borderClass: "border-red-200", 
-    dotClass: "bg-red-500" 
+  if (status === "Rejected") return {
+    bgClass: "bg-red-100",
+    textClass: "text-red-800",
+    borderClass: "border-red-200",
+    dotClass: "bg-red-500"
   };
-  return { 
-    bgClass: "bg-yellow-100", 
-    textClass: "text-yellow-800", 
-    borderClass: "border-yellow-200", 
-    dotClass: "bg-yellow-500" 
+  return {
+    bgClass: "bg-yellow-100",
+    textClass: "text-yellow-800",
+    borderClass: "border-yellow-200",
+    dotClass: "bg-yellow-500"
   };
 }
 
@@ -436,7 +443,6 @@ export default function RTApproval() {
 
   const fetchPurchestDataShow = async (productCode: string) => {
     setPurchestLoading(true);
-    console.log("Fetching purchest data for product code:", productCode);
     try {
       const res = await axios.get(`${VITE_API_URL_ORDER}/api/purchest/history/${productCode}`, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
@@ -497,7 +503,6 @@ export default function RTApproval() {
   const handleReject = async () => {
     if (!selectedItem) return;
     setRejecting(true);
-    console.log("Rejecting with note:", finalNote);
     try {
       await axios.patch(`${VITE_API_URL_ORDER}/api/rt-request/reject/${selectedItem.ref}`, {
         pro_code: selectedItem.product.code,
@@ -615,21 +620,18 @@ export default function RTApproval() {
     }
 
     setExportLoading(true);
-    
+
     try {
       // สร้าง HTML content สำหรับ PDF
-      const currentDate = new Date().toLocaleDateString('th-TH', {
-        year: 'numeric',
-        month: 'long', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      
+      const currentDate = dayjs()
+        .tz('Asia/Bangkok')
+        .locale('th')
+        .format('D MMMM YYYY HH:mm')  
+
       const filterText = {
         'All': 'ทั้งหมด',
         'Pending': 'รออนุมัติ',
-        'Approved': 'อนุมัติแล้ว', 
+        'Approved': 'อนุมัติแล้ว',
         'Rejected': 'ปฏิเสธ',
         'Duplicate': 'รายการซ้ำ',
         'Done': 'ดำเนินการแล้ว',
@@ -663,9 +665,9 @@ export default function RTApproval() {
             </thead>
             <tbody>
               ${tableData.map((item, index) => {
-                const rowBg = index % 2 === 0 ? '#ffffff' : '#f9fafb';
-                
-                return `
+        const rowBg = index % 2 === 0 ? '#ffffff' : '#f9fafb';
+
+        return `
                   <tr style="background-color: ${rowBg};">
                     <td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-weight: bold;">${index + 1}</td>
                     <td style="border: 1px solid #ddd; padding: 6px; font-weight: bold;">${item.member.code}</td>
@@ -685,7 +687,7 @@ export default function RTApproval() {
                     </td>
                   </tr>
                 `;
-              }).join('')}
+      }).join('')}
             </tbody>
           </table>
           
@@ -700,26 +702,26 @@ export default function RTApproval() {
       // ตั้งค่า PDF options
       const element = document.createElement('div');
       element.innerHTML = htmlContent;
-      
+
       const opt = {
         margin: [10, 10, 10, 10] as [number, number, number, number],
         filename: `RT_Approval_Report_${statusFilter}_${new Date().toISOString().split('T')[0]}.pdf`,
         image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { 
+        html2canvas: {
           scale: 2,
           useCORS: true,
           letterRendering: true
         },
-        jsPDF: { 
-          unit: 'mm', 
-          format: 'a4', 
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
           orientation: 'landscape' as const
         }
       };
 
       // สร้าง PDF
       await html2pdf().set(opt).from(element).save();
-      
+
       Swal.fire({
         icon: 'success',
         title: 'Export สำเร็จ!',
@@ -727,7 +729,7 @@ export default function RTApproval() {
         confirmButtonText: 'ตกลง',
         timer: 2000
       });
-      
+
     } catch (error) {
       console.error('Export error:', error);
       Swal.fire({
@@ -905,7 +907,7 @@ export default function RTApproval() {
             {STATUS_FILTERS.map((s) => (
               <button
                 key={s}
-                onClick={() => {setStatusFilter(s); setActive(true)}}
+                onClick={() => { setStatusFilter(s); setActive(true) }}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${statusFilter === s
                   ? "bg-blue-500 text-white"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -1200,9 +1202,9 @@ export default function RTApproval() {
                       </td>
                       <td className="py-4 px-3 text-sm text-center">
                         <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${timeAgo(item.created_at).includes('เพิ่งสร้าง') || timeAgo(item.created_at).includes('นาทีที่แล้ว') ? 'bg-green-100 text-green-700' :
-                            timeAgo(item.created_at).includes('ชั่วโมงที่แล้ว') ? 'bg-yellow-100 text-yellow-700' :
-                              timeAgo(item.created_at).includes('วันที่แล้ว') ? 'bg-orange-100 text-orange-700' :
-                                'bg-red-100 text-red-700'
+                          timeAgo(item.created_at).includes('ชั่วโมงที่แล้ว') ? 'bg-yellow-100 text-yellow-700' :
+                            timeAgo(item.created_at).includes('วันที่แล้ว') ? 'bg-orange-100 text-orange-700' :
+                              'bg-red-100 text-red-700'
                           }`}>
                           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
@@ -1296,7 +1298,7 @@ export default function RTApproval() {
                       {purchestLoading ? 'กำลังโหลด...' : 'โหลดข้อมูลล่าสุด'}
                     </button>
                     <p>
-                      <span className="text-xs text-gray-500">{(new Date(selectedItem.product.purchest?.update_at || "-")).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}</span>
+                      <span className="text-xs text-gray-500">{(new Date(selectedItem.product.purchest?.update_at || "-")).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                     </p>
                   </div>
                 </div>
@@ -1545,20 +1547,20 @@ export default function RTApproval() {
                 </div>
               </div>
 
-            {/* Note */}
-            <div className="mb-4">
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                หมายเหตุ <span className="text-red-500">*</span>
-              </label>
+              {/* Note */}
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  หมายเหตุ <span className="text-red-500">*</span>
+                </label>
 
-              <div className="space-y-3">
-                {NOTE_OPTIONS.map((option, index) => {
-                  const isSelected = selectedReason === option;
+                <div className="space-y-3">
+                  {NOTE_OPTIONS.map((option, index) => {
+                    const isSelected = selectedReason === option;
 
-                  return (
-                    <label
-                      key={index}
-                      className={`
+                    return (
+                      <label
+                        key={index}
+                        className={`
                         flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer
                         transition-all duration-200 select-none
                         ${isSelected
