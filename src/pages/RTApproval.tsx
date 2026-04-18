@@ -4,6 +4,7 @@ import Swal from "sweetalert2";
 import Navbar from "../components/Navbar";
 import Modal from "../components/ModalQC";
 import boxnotfound from "../assets/product-17.png";
+import dayjs from "dayjs";
 
 const VITE_API_URL_ORDER = import.meta.env.VITE_API_URL_ORDER;
 
@@ -1226,7 +1227,7 @@ export default function RTApproval() {
                                     <div>
                                       <span className="text-gray-500">วันที่:</span>
                                       <span className="ml-1 font-medium text-orange-800">
-                                        {poItem.po_date ? new Date(poItem.po_date).toLocaleDateString('th-TH') : '-'}
+                                        {poItem.po_date ? dayjs(poItem.po_date).format('DD/MM/YYYY') : '-'}
                                       </span>
                                     </div>
                                     <div>
