@@ -4,6 +4,14 @@ import Swal from "sweetalert2";
 import Navbar from "../components/Navbar";
 import Modal from "../components/ModalQC";
 import boxnotfound from "../assets/product-17.png";
+import html2pdf from "html2pdf.js";
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
+import timezone from 'dayjs/plugin/timezone'
+import 'dayjs/locale/th'
+
+dayjs.extend(utc)
+dayjs.extend(timezone)
 
 const VITE_API_URL_ORDER = import.meta.env.VITE_API_URL_ORDER;
 
@@ -220,6 +228,7 @@ export default function RTApproval() {
   const [error, setError] = useState<string | null>(null);
   const [active, setActive] = useState<boolean>(true);
   const [purchestLoading, setPurchestLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
   const filteredData = (Array.isArray(data) ? data : []).filter((item) => {
     const matchStatus = statusFilter === "all" || item.status === statusFilter;
@@ -440,7 +449,6 @@ export default function RTApproval() {
 
   const fetchPurchestDataShow = async (productCode: string) => {
     setPurchestLoading(true);
-    console.log("Fetching purchest data for product code:", productCode);
     try {
       const res = await axios.get(`${VITE_API_URL_ORDER}/api/purchest/history/${productCode}`, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
@@ -501,7 +509,6 @@ export default function RTApproval() {
   const handleReject = async () => {
     if (!selectedItem) return;
     setRejecting(true);
-    console.log("Rejecting with note:", finalNote);
     try {
       await axios.patch(`${VITE_API_URL_ORDER}/api/rt-request/reject/${selectedItem.ref}`, {
         pro_code: selectedItem.product.code,
@@ -598,6 +605,141 @@ export default function RTApproval() {
       filteredData;
   const isDuplicateView = statusFilter === "Duplicate";
   const isPendingGroupView = statusFilter === "Pending" && groupedPending.length > 0;
+
+  const exportToPDF = async () => {
+    if (tableData.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'ไม่มีข้อมูลสำหรับ Export',
+        text: 'กรุณาเลือกหรือกรองข้อมูลก่อนทำการ Export',
+        confirmButtonText: 'ตกลง'
+      });
+      return;
+    }
+
+    setExportLoading(true);
+
+    try {
+      // สร้าง HTML content สำหรับ PDF
+      const currentDate = dayjs()
+        .tz('Asia/Bangkok')
+        .locale('th')
+        .format('D MMMM YYYY HH:mm')  
+
+      const filterText = {
+        'All': 'ทั้งหมด',
+        'Pending': 'รออนุมัติ',
+        'Approved': 'อนุมัติแล้ว',
+        'Rejected': 'ปฏิเสธ',
+        'Duplicate': 'รายการซ้ำ',
+        'Done': 'ดำเนินการแล้ว',
+        'NotActive': 'ช่วงปิดระบบ',
+        'all': 'ทั้งหมด'
+      }[statusFilter] || statusFilter;
+
+      const htmlContent = `
+        <div style="font-family: 'Sarabun', Arial, sans-serif; padding: 20px; color: #333;">
+          <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #3b82f6; padding-bottom: 15px;">
+            <h1 style="color: #1e40af; margin: 0; font-size: 24px;">รายงานรายการรออนุมัติการส่ง RT</h1>
+            <p style="color: #6b7280; margin: 5px 0; font-size: 14px;">สถานะ: ${filterText}</p>
+            <p style="color: #6b7280; margin: 5px 0; font-size: 12px;">สร้างเมื่อ: ${currentDate}</p>
+            <p style="color: #6b7280; margin: 5px 0; font-size: 12px;">จำนวนรายการ: ${tableData.length} รายการ</p>
+          </div>
+          
+          <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin: 0;">
+            <thead>
+              <tr style="background: linear-gradient(90deg, #3b82f6, #1d4ed8); color: white;">
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">ลำดับ</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">รหัสร้าน</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">ชื่อร้าน</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">พนักงานขาย</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">รหัสสินค้า</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">ชื่อสินค้า</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">SH</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">จำนวน</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">หมายเหตุ</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">วันที่</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableData.map((item, index) => {
+        const rowBg = index % 2 === 0 ? '#ffffff' : '#f9fafb';
+
+        return `
+                  <tr style="background-color: ${rowBg};">
+                    <td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-weight: bold;">${index + 1}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px; font-weight: bold;">${item.member.code}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px; max-width: 120px; word-wrap: break-word;">${item.member.name.trim()}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px;">
+                      <div style="font-weight: bold; margin-bottom: 2px;">${item.member.sales?.code}</div>
+                      <div style="font-size: 8px; color: #6b7280;">${item.member.sales?.name}</div>
+                    </td>
+                    <td style="border: 1px solid #ddd; padding: 6px; font-weight: bold; font-family: monospace;">${item.product.code}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px; max-width: 150px; word-wrap: break-word; font-size: 9px;">${item.product.name}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px; font-weight: bold; font-family: monospace;">${item.sh_running}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-weight: bold;">${item.amount_item.toLocaleString()} ${item.unit_item}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px; max-width: 100px; word-wrap: break-word; font-size: 8px;">${item.note || 'ไม่มีหมายเหตุ'}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-size: 9px;">
+                      <div>${new Date(item.created_at).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
+                      <div style="font-size: 8px; color: #6b7280;">${new Date(item.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</div>
+                    </td>
+                  </tr>
+                `;
+      }).join('')}
+            </tbody>
+          </table>
+          
+          <div style="margin-top: 30px; padding: 15px; background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <p style="margin: 0; font-size: 10px; color: #64748b; text-align: center;">
+              รายงานนี้สร้างโดยระบบ Wang ERP • วันที่ ${currentDate} • รายการทั้งหมด ${tableData.length} รายการ
+            </p>
+          </div>
+        </div>
+      `;
+
+      // ตั้งค่า PDF options
+      const element = document.createElement('div');
+      element.innerHTML = htmlContent;
+
+      const opt = {
+        margin: [10, 10, 10, 10] as [number, number, number, number],
+        filename: `RT_Approval_Report_${statusFilter}_${new Date().toISOString().split('T')[0]}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          letterRendering: true
+        },
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'landscape' as const
+        }
+      };
+
+      // สร้าง PDF
+      await html2pdf().set(opt).from(element).save();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Export สำเร็จ!',
+        text: 'ไฟล์ PDF ถูกดาวน์โหลดแล้ว',
+        confirmButtonText: 'ตกลง',
+        timer: 2000
+      });
+
+    } catch (error) {
+      console.error('Export error:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาด!',
+        text: 'ไม่สามารถ Export PDF ได้ กรุณาลองใหม่อีกครั้ง',
+        confirmButtonText: 'ตกลง'
+      });
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   if (error) {
     return (
@@ -708,6 +850,16 @@ export default function RTApproval() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
               {loading ? "กำลังโหลด..." : error ? "ลองใหม่" : "โหลดใหม่"}
+            </button>
+            <button
+              onClick={exportToPDF}
+              disabled={exportLoading || loading}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-blue-300 text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 ${exportLoading ? "animate-pulse" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {exportLoading ? "กำลัง Export..." : "Export PDF"}
             </button>
             {!error && (
               <button
