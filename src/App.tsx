@@ -41,6 +41,8 @@ import { useEffect } from "react";
 import UploadStock from "./pages/UploadStock";
 import RTApproval from "./pages/RTApproval";
 import RecycleBoxBarcode from "./pages/RecycleBoxBarcode";
+import ReturnReceipt from "./pages/ReturnReceipt";
+import ReturnReceiptPrint from "./pages/ReturnReceiptPrint";
 
 function App() {
   useEffect(() => {
@@ -354,6 +356,21 @@ function App() {
                 <RTApproval />
               </RequireAuth>
             }
+          />
+          <Route
+            path="/return-receipt"
+            element={
+              <div>
+                <Navbar />
+                <RequireAuth>
+                  <ReturnReceipt />
+                </RequireAuth>
+              </div>
+            }
+          />
+          <Route
+            path="/return-receipt-print"
+            element={<ReturnReceiptPrint />}
           />
         </Routes>
       </Router>
