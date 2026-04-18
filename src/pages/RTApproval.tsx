@@ -326,6 +326,13 @@ export default function RTApproval() {
     return () => { clearInterval(interval); };
   }, [active]);
 
+  // Auto-fetch purchest data when modal opens and purchest data is missing
+  useEffect(() => {
+    if (modalOpen && selectedItem && !selectedItem.product.purchest) {
+      fetchPurchestData(selectedItem.product.code);
+    }
+  }, [modalOpen, selectedItem]);
+
   const checkFeatureFlag = async () => {
     try {
       const res = await axios.get(`${VITE_API_URL_ORDER}/api/feature-flag/check/rt-request`, {
@@ -459,6 +466,7 @@ export default function RTApproval() {
   };
 
   const fetchPurchestData = async (productCode: string) => {
+    if (!productCode) return;
     setPurchestLoading(true);
     try {
       const res = await axios.post(`${VITE_API_URL_ORDER}/api/purchest/find`, {
@@ -1134,7 +1142,6 @@ export default function RTApproval() {
                     ข้อมูลการซื้อขาย
                   </h3>
                   <div>
-
                     <button
                       onClick={() => fetchPurchestData(selectedItem.product.code)}
                       disabled={purchestLoading}
@@ -1190,7 +1197,7 @@ export default function RTApproval() {
                         {/* BI */}
                         {selectedItem.product.purchest.bi && (
                           <div className="border border-purple-200 rounded-lg p-3">
-                            <div className="font-medium text-purple-700 mb-2">ใบวิ่ง (BI)</div>
+                            <div className="font-medium text-purple-700 mb-2">การขาย (BI)</div>
                             <div className="space-y-1 text-xs text-gray-600">
                               <div>วันที่: {new Date(selectedItem.product.purchest.bi.bi_date).toLocaleDateString('th-TH')}</div>
                               <div>เลขที่: {selectedItem.product.purchest.bi.bi_invoice}</div>
@@ -1438,7 +1445,7 @@ export default function RTApproval() {
                     ))}
                   </div>
                 ) : (
-                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center">
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center" >
                     <div className="flex flex-col items-center gap-2 py-2">
                       <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
