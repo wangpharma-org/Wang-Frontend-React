@@ -12,7 +12,7 @@ export default function ReturnReceiptPrint() {
   useEffect(() => {
     if (!payload) return;
     const t = setTimeout(() => {
-      window.print();
+      // window.print();
       window.addEventListener("afterprint", () => window.close(), {
         once: true,
       });

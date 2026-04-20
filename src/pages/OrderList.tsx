@@ -98,6 +98,22 @@ interface RecycleBox {
   created_at: string | null;
 }
 
+interface PendingReturn {
+  id: number;
+  product_code: string;
+  product_name: string;
+  product_floor: number | null;
+  product_image_url: string | null;
+  lot: string | null;
+  mfg: string | null;
+  exp: string | null;
+  receive_good_qty: number;
+  mem_code: string | null;
+  mem_name: string | null;
+  return_receipt_code: string | null;
+  return_receipt_date: string | null;
+}
+
 const OrderList = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [orderList, setOrderList] = useState<orderList[]>([]);
@@ -133,6 +149,11 @@ const OrderList = () => {
   const [recycleBoxes, setRecycleBoxes] = useState<RecycleBox[]>([]);
   const [scanInput, setScanInput] = useState("");
   const scanInputRef = useRef<HTMLInputElement>(null);
+  const [pendingReturns, setPendingReturns] = useState<PendingReturn[]>([]);
+  const [showReturnPanel, setShowReturnPanel] = useState(false);
+  const [loadingReturns, setLoadingReturns] = useState(false);
+  const returnPanelRef = useRef<HTMLDivElement>(null);
+  const accessToken = sessionStorage.getItem("access_token");
 
   useEffect(() => {
     const totalOrders = orderList?.length;
@@ -170,6 +191,41 @@ const OrderList = () => {
     setShowInput((prev) => !prev);
     setSelectroute("all");
     console.log("showInput " + showInput);
+  };
+
+  const fetchPendingReturns = async () => {
+    setLoadingReturns(true);
+    try {
+      const res = await axios.get<PendingReturn[]>(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/return-receipt/pending-shelf-returns`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      setPendingReturns(res.data);
+    } catch {
+      // silent
+    } finally {
+      setLoadingReturns(false);
+    }
+  };
+
+  const confirmReturn = async (id: number) => {
+    try {
+      await axios.patch(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/return-receipt/shelf-return/${id}/confirm`,
+        { emp_code: userInfo?.emp_code ?? "unknown" },
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      setPendingReturns((prev) => prev.filter((r) => r.id !== id));
+    } catch {
+      toast.error("ยืนยันไม่สำเร็จ");
+    }
+  };
+
+  const toggleReturnPanel = () => {
+    if (!showReturnPanel) {
+      fetchPendingReturns();
+    }
+    setShowReturnPanel((prev) => !prev);
   };
 
   const checkFlag = async () => {
@@ -824,7 +880,99 @@ const OrderList = () => {
               </div>
             </div>
             <div>
-              <div className="flex ">
+              <div className="flex gap-2 items-center">
+                {/* Bell button */}
+                <div className="relative">
+                  <button
+                    onClick={toggleReturnPanel}
+                    className="relative bg-white rounded-sm px-3 py-1 text-black drop-shadow-xs"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-6">
+                      <path d="M5.85 3.5a.75.75 0 0 0-1.117-1 9.719 9.719 0 0 0-2.348 4.876.75.75 0 0 0 1.479.248A8.219 8.219 0 0 1 5.85 3.5ZM19.267 2.5a.75.75 0 1 0-1.118 1 8.22 8.22 0 0 1 1.987 4.124.75.75 0 0 0 1.48-.248A9.72 9.72 0 0 0 19.267 2.5Z" />
+                      <path fillRule="evenodd" d="M12 2.25A6.75 6.75 0 0 0 5.25 9v.75a8.217 8.217 0 0 1-2.119 5.52.75.75 0 0 0 .298 1.206c1.544.57 3.16.99 4.831 1.243a3.75 3.75 0 1 0 7.48 0 24.583 24.583 0 0 0 4.83-1.244.75.75 0 0 0 .298-1.205 8.217 8.217 0 0 1-2.118-5.52V9A6.75 6.75 0 0 0 12 2.25ZM9.75 18c0-.034 0-.067.002-.1a25.05 25.05 0 0 0 4.496 0l.002.1a2.25 2.25 0 1 1-4.5 0Z" clipRule="evenodd" />
+                    </svg>
+                    {pendingReturns.length > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 leading-none">
+                        {pendingReturns.length}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Dropdown panel */}
+                  {showReturnPanel && (
+                    <div
+                      ref={returnPanelRef}
+                      className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 flex flex-col"
+                      style={{ maxHeight: "70vh" }}
+                    >
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
+                        <p className="text-sm font-semibold text-gray-800">ยาดีรอคืนชั้น</p>
+                        <button
+                          onClick={() => fetchPendingReturns()}
+                          className="text-xs text-blue-500 hover:text-blue-600"
+                        >
+                          รีเฟรช
+                        </button>
+                      </div>
+                      <div className="overflow-y-auto flex-1">
+                        {loadingReturns ? (
+                          <div className="flex items-center justify-center py-8">
+                            <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        ) : pendingReturns.length === 0 ? (
+                          <p className="text-center text-xs text-gray-400 py-8">ไม่มีรายการรอคืนชั้น</p>
+                        ) : (
+                          <div className="divide-y divide-gray-50">
+                            {pendingReturns.map((item) => (
+                              <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                                {item.product_image_url ? (
+                                  <img
+                                    src={item.product_image_url.startsWith('..') ? item.product_image_url.replace('..', 'https://wangpharma.com') : item.product_image_url}
+                                    alt={item.product_code}
+                                    className="flex-shrink-0 w-12 h-12 rounded-lg object-cover border border-gray-100 bg-gray-50"
+                                  />
+                                ) : (
+                                  <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-gray-300">
+                                      <path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 0 1 2.25-2.25h16.5A2.25 2.25 0 0 1 22.5 6v12a2.25 2.25 0 0 1-2.25 2.25H3.75A2.25 2.25 0 0 1 1.5 18V6ZM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0 0 21 18v-1.94l-2.69-2.689a1.5 1.5 0 0 0-2.12 0l-.88.879.97.97a.75.75 0 1 1-1.06 1.06l-5.16-5.159a1.5 1.5 0 0 0-2.12 0L3 16.061Zm10.125-7.81a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0Z" clipRule="evenodd" />
+                                    </svg>
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  {item.product_floor && (
+                                    <span className="inline-block bg-blue-100 text-blue-700 text-[10px] font-bold rounded px-1.5 py-0.5 mb-0.5">
+                                      ชั้น {item.product_floor}
+                                    </span>
+                                  )}
+                                  <p className="text-xs font-mono text-gray-400 leading-tight">{item.product_code}</p>
+                                  <p className="text-sm font-semibold text-gray-800 leading-tight truncate">{item.product_name}</p>
+                                  {item.lot && (
+                                    <p className="text-[11px] text-gray-400 leading-tight">Lot: {item.lot}</p>
+                                  )}
+                                  <p className="text-[11px] text-gray-500 leading-tight">
+                                    {item.mem_name ?? item.mem_code} · {item.return_receipt_code}
+                                  </p>
+                                  <p className="text-xs font-semibold text-emerald-600">รับดี {item.receive_good_qty} ชิ้น</p>
+                                </div>
+                                <button
+                                  onClick={() => confirmReturn(item.id)}
+                                  className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-600 flex items-center justify-center transition-colors"
+                                  title="ยืนยันคืนชั้นแล้ว"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+                                  </svg>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Search button */}
                 <button
                   ref={buttonRef}
                   onClick={toggleSearch}

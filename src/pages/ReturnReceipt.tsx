@@ -9,12 +9,14 @@ import {
   FiPackage,
   FiCalendar,
   FiHash,
+  FiSettings,
 } from "react-icons/fi";
 import ProductScanModal, {
   ConfirmedProduct,
   ProductScanResult,
 } from "../components/ProductScanModal";
 import { RETURN_RECEIPT_PRINT_KEY } from "./ReturnReceiptPrint";
+import ReturnRatioConfigModal from "../components/ReturnRatioConfigModal";
 
 // ────────────────────────────────────────────────────────────
 // Types
@@ -124,7 +126,11 @@ const ReturnReceipt: React.FC = () => {
   // Printing
   const [printing, setPrinting] = useState(false);
 
+  // Config modal
+  const [configOpen, setConfigOpen] = useState(false);
+
   const barcodeRef = useRef<HTMLInputElement>(null);
+  const receiverRef = useRef<HTMLInputElement>(null);
 
   // ── On mount: fetch next code ──
   useEffect(() => {
@@ -148,6 +154,7 @@ const ReturnReceipt: React.FC = () => {
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setMemberData(res.data);
+      receiverRef.current?.focus();
     } catch {
       setMemberError("ไม่พบข้อมูลลูกค้า");
       setMemberData(null);
@@ -319,7 +326,7 @@ const ReturnReceipt: React.FC = () => {
           <div className="p-2.5 bg-blue-500 rounded-xl shadow-sm shadow-blue-200">
             <FiPackage className="text-white text-lg" />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-lg font-semibold text-gray-800 leading-tight">
               รับของคืนจากลูกค้า
             </h1>
@@ -327,6 +334,13 @@ const ReturnReceipt: React.FC = () => {
               Scan รายการสินค้ารับคืนจากลูกค้า
             </p>
           </div>
+          <button
+            onClick={() => setConfigOpen(true)}
+            className="flex items-center gap-2 h-9 px-4 text-sm text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 active:scale-95 transition-all"
+          >
+            <FiSettings className="text-base" />
+            ตั้งค่าอัตราการรับคืน
+          </button>
         </div>
       </div>
 
@@ -356,14 +370,33 @@ const ReturnReceipt: React.FC = () => {
 
               <LabeledField label="รหัสลูกค้า">
                 <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={customerCode}
-                    onChange={(e) => setCustomerCode(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && fetchMember()}
-                    placeholder="ระบุรหัสลูกค้า"
-                    className="flex-1 h-10 px-3 text-base font-medium border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition"
-                  />
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={customerCode}
+                      onChange={(e) => setCustomerCode(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && fetchMember()}
+                      placeholder="ระบุรหัสลูกค้า"
+                      className="w-full h-10 px-3 pr-8 text-base font-medium border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition"
+                    />
+                    {customerCode && (
+                      <button
+                        onClick={() => {
+                          setCustomerCode("");
+                          setMemberData(null);
+                          setMemberError(null);
+                          setProducts([]);
+                          setReceiverCode("");
+                          setReceiverName(null);
+                          setReceiverLookupError(null);
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-400 hover:text-red-500 transition-colors"
+                        tabIndex={-1}
+                      >
+                        <FiX className="text-sm" />
+                      </button>
+                    )}
+                  </div>
                   <button
                     onClick={fetchMember}
                     disabled={memberLoading}
@@ -468,6 +501,7 @@ const ReturnReceipt: React.FC = () => {
                   ) : (
                     <>
                       <input
+                        ref={receiverRef}
                         type="text"
                         value={receiverCode}
                         onChange={(e) => {
@@ -475,7 +509,7 @@ const ReturnReceipt: React.FC = () => {
                           setReceiverLookupError(null);
                         }}
                         onBlur={(e) => lookupReceiver(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && lookupReceiver(receiverCode)}
+                        onKeyDown={async (e) => { if (e.key === "Enter") { await lookupReceiver(receiverCode); barcodeRef.current?.focus(); } }}
                         placeholder="กรอกรหัสพนักงานรับคืน"
                         className={`w-full h-10 px-3 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition ${
                           receiverLookupError ? "border-red-300" : "border-gray-200"
@@ -572,7 +606,7 @@ const ReturnReceipt: React.FC = () => {
                   : "ระบุรหัสลูกค้าก่อนสแกนสินค้า"
               }
               disabled={!memberData || scanning}
-              className="w-80 px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition disabled:bg-gray-50 disabled:text-gray-400"
+              className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition disabled:bg-gray-50 disabled:text-gray-400"
               autoFocus
             />
 
@@ -756,6 +790,13 @@ const ReturnReceipt: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Config Modal ── */}
+      <ReturnRatioConfigModal
+        open={configOpen}
+        onClose={() => setConfigOpen(false)}
+        accessToken={accessToken ?? ""}
+      />
 
       {/* ── Product Scan Modal ── */}
       <ProductScanModal

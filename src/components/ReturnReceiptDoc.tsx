@@ -88,13 +88,17 @@ function thaiBahtText(amount: number): string {
 // ────────────────────────────────────────────────────────────
 
 const TD: React.CSSProperties = {
-  border: "1px solid #000",
+  borderLeft: "1px solid #000",
+  borderRight: "1px solid #000",
   padding: "2px 4px",
   fontSize: "8pt",
   lineHeight: "1.3",
 };
 const TH: React.CSSProperties = {
-  border: "1px solid #000",
+  borderTop: "1px solid #000",
+  borderLeft: "1px solid #000",
+  borderRight: "1px solid #000",
+  borderBottom: "1px solid #000",
   padding: "3px 4px",
   fontSize: "8pt",
   fontWeight: "bold",
@@ -103,10 +107,6 @@ const TH: React.CSSProperties = {
 };
 
 const MIN_ROWS = 20;
-
-// ────────────────────────────────────────────────────────────
-// Component
-// ────────────────────────────────────────────────────────────
 
 const ReturnReceiptDoc: React.FC<{ payload: ReturnReceiptPayload }> = ({ payload }) => {
   const {
@@ -120,7 +120,6 @@ const ReturnReceiptDoc: React.FC<{ payload: ReturnReceiptPayload }> = ({ payload
     receiverDisplay,
   } = payload;
 
-  // Build flattened print rows
   interface PrintRow {
     rowNum: number | null;
     product_code: string | null;
@@ -155,7 +154,7 @@ const ReturnReceiptDoc: React.FC<{ payload: ReturnReceiptPayload }> = ({ payload
           qty,
           unit: li === 0 ? p.product_unit : null,
           price: li === 0 ? p.price_per_unit : 0,
-          amount: qty * p.price_per_unit,
+          amount: p.return_rate === 0 ? 0 : qty * p.price_per_unit * (p.return_rate / 100),
         });
       });
     }
@@ -168,7 +167,7 @@ const ReturnReceiptDoc: React.FC<{ payload: ReturnReceiptPayload }> = ({ payload
   const empDisplay = receiverDisplay || keyEmpDisplay;
 
   return (
-    <div className="print-content" style={{ fontFamily: "'Sarabun', 'TH SarabunPSK', 'Angsana New', Arial, sans-serif", color: "#000", backgroundColor: "#fff" }}>
+    <div className="print-content" style={{ fontFamily: "'Sarabun', sans-serif", color: "#000", backgroundColor: "#fff" }}>
       {/* ── Print CSS ── */}
       <style type="text/css">{`
         @media print {
@@ -177,92 +176,84 @@ const ReturnReceiptDoc: React.FC<{ payload: ReturnReceiptPayload }> = ({ payload
         body { margin: 0; background: #fff; }
       `}</style>
 
-      <div style={{ width: "100%", padding: "0", boxSizing: "border-box" }}>
+      <div className="border" style={{ width: "210mm", height: "297mm", overflow: "hidden", margin: "0 auto", padding: "8mm", boxSizing: "border-box" }}>
 
         {/* ══════════════════════════════════════════
             HEADER: QR | Title | QR
         ══════════════════════════════════════════ */}
-        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "3mm" }}>
-          <tbody>
-            <tr>
-              <td style={{ width: "13%", textAlign: "center", verticalAlign: "bottom" }}>
-                <QRCodeSVG value={member.mem_code} size={55} />
-                <div style={{ fontSize: "7pt", marginTop: "1mm" }}>Member</div>
-              </td>
-              <td style={{ textAlign: "center", verticalAlign: "middle" }}>
-                <div style={{ fontSize: "17pt", fontWeight: "bold", lineHeight: "1.2" }}>ใบส่งคืนสินค้า</div>
-                <div style={{ fontSize: "13pt", fontWeight: "bold", marginTop: "1mm" }}>{return_receipt_code}</div>
-              </td>
-              <td style={{ width: "13%", textAlign: "center", verticalAlign: "bottom" }}>
-                <QRCodeSVG value={return_receipt_code} size={55} />
-                <div style={{ fontSize: "7pt", marginTop: "1mm" }}>Invoice</div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "3mm" }}>
+          <div style={{ textAlign: "center" }}>
+            <QRCodeSVG value={member.mem_code} size={55} />
+            <div style={{ fontSize: "7pt", marginTop: "1mm" }}>Member</div>
+          </div>
+          <div style={{ textAlign: "center", alignSelf: "center" }}>
+            <div style={{ fontSize: "17pt", fontWeight: "semibold", lineHeight: "1.2" }}>ใบส่งคืนสินค้า</div>
+            <div style={{ fontSize: "13pt", fontWeight: "semibold", marginTop: "1mm" }}>SORTIV</div>
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <QRCodeSVG value={return_receipt_code} size={55} />
+            <div style={{ fontSize: "7pt", marginTop: "1mm" }}>Invoice</div>
+          </div>
+        </div>
 
         {/* ══════════════════════════════════════════
             INFO SECTION
         ══════════════════════════════════════════ */}
-        <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #000" }}>
-          <tbody>
-            <tr>
-              {/* Left: Customer info */}
-              <td style={{ ...TD, width: "65%", border: "1px solid #000", padding: "3px 7px", verticalAlign: "top" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <tbody>
-                    <tr>
-                      <td style={{ fontSize: "8pt", fontWeight: "bold", whiteSpace: "nowrap", paddingRight: "4px", paddingBottom: "1mm" }}>รหัสลูกค้า</td>
-                      <td style={{ fontSize: "8pt", paddingRight: "8px", paddingBottom: "1mm" }}>{member.mem_code}</td>
-                      <td style={{ fontSize: "8pt", paddingRight: "8px", paddingBottom: "1mm" }}>เลขประจำตัวผู้เสียภาษี</td>
-                      <td style={{ fontSize: "8pt", paddingBottom: "1mm", whiteSpace: "nowrap" }}>&#9745; สำนักงานใหญ่</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontSize: "8pt", fontWeight: "bold", whiteSpace: "nowrap", paddingBottom: "1mm" }}>นามร้าน</td>
-                      <td colSpan={3} style={{ fontSize: "8pt", paddingBottom: "1mm" }}>{member.mem_name}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontSize: "8pt", fontWeight: "bold", verticalAlign: "top", paddingBottom: "1mm" }}>ที่อยู่</td>
-                      <td colSpan={3} style={{ fontSize: "8pt", paddingBottom: "1mm" }}>{member.address}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ fontSize: "8pt", fontWeight: "bold", whiteSpace: "nowrap", verticalAlign: "top" }}>หมายเหตุ</td>
-                      <td colSpan={3} style={{ fontSize: "8pt" }}>
-                        {[remark, member.route_name].filter(Boolean).join("  ")}
-                        {"  "}QC ........................ / Pack ........................
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </td>
+        <div style={{ display: "flex", gap: "2mm", marginBottom: "2mm" }}>
+          {/* Left block: รหัสลูกค้า */}
+          <div style={{ flex: "0 0 64%", border: "1px solid #000", borderRadius: "6px", overflow: "hidden", padding: "2mm 0" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <tbody>
+                <tr>
+                  <td style={{ fontSize: "8pt", fontWeight: "bold", whiteSpace: "nowrap", padding: "0.4mm 4px 0.4mm 7px" }}>รหัสลูกค้า</td>
+                  <td style={{ fontSize: "8pt", padding: "0.4mm 4px" }}>{member.mem_code}</td>
+                  <td style={{ fontSize: "8pt", padding: "0.4mm 4px" }}>เลขประจำตัวผู้เสียภาษี</td>
+                  <td style={{ fontSize: "8pt", padding: "0.4mm 7px 0.4mm 4px", whiteSpace: "nowrap" }}>&#9745; สำนักงานใหญ่</td>
+                </tr>
+                <tr>
+                  <td style={{ fontSize: "8pt", fontWeight: "bold", whiteSpace: "nowrap", padding: "0.4mm 4px 0.4mm 7px" }}>นามร้าน</td>
+                  <td colSpan={3} style={{ fontSize: "8pt", padding: "0.4mm 7px 0.4mm 4px" }}>{member.mem_name}</td>
+                </tr>
+                <tr>
+                  <td style={{ fontSize: "8pt", fontWeight: "bold", whiteSpace: "nowrap", padding: "0.4mm 4px 0.4mm 7px", verticalAlign: "top" }}>ที่อยู่</td>
+                  <td colSpan={3} style={{ fontSize: "8pt", padding: "0.4mm 7px 0.4mm 4px" }}>{member.address.replace(/&nbsp;/g, "")}</td>
+                </tr>
+                <tr>
+                  <td style={{ fontSize: "8pt", fontWeight: "bold", whiteSpace: "nowrap", padding: "0.4mm 4px 0.4mm 7px", verticalAlign: "top" }}>หมายเหตุ</td>
+                  <td colSpan={3} style={{ fontSize: "8pt", padding: "0.4mm 7px 0.4mm 4px" }}>
+                    {[remark, member.route_name].filter(Boolean).join("  ")}
+                    {"  "}QC ........................ / Pack ........................
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-              {/* Right: Document info */}
-              <td style={{ ...TD, width: "35%", border: "1px solid #000", padding: "3px 7px", verticalAlign: "top" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <tbody>
-                    {[
-                      { label: "วันที่", value: thaiDate(date) },
-                      { label: "เลขที่ใบกำกับ", value: return_receipt_code },
-                      { label: "พนักงานขาย", value: empDisplay },
-                      { label: "กำหนดชำระ", value: member.payment_days ? `${member.payment_days} วัน` : "" },
-                      { label: "ครบกำหนด", value: dueDate && dueDate !== date ? thaiDate(dueDate) : "" },
-                    ].map(({ label, value }) => (
-                      <tr key={label}>
-                        <td style={{ fontSize: "8pt", fontWeight: "bold", whiteSpace: "nowrap", paddingRight: "4px", paddingBottom: "1.5mm" }}>{label}</td>
-                        <td style={{ fontSize: "8pt", paddingBottom: "1.5mm" }}>{value}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+          {/* Right block: วันที่ */}
+          <div style={{ flex: 1, border: "1px solid #000", borderRadius: "6px", overflow: "hidden", padding: "2mm 0" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <tbody>
+                {[
+                  { label: "วันที่", value: thaiDate(date) },
+                  { label: "เลขที่ใบกำกับ", value: return_receipt_code },
+                  { label: "พนักงานขาย", value: empDisplay },
+                  { label: "กำหนดชำระ", value: member.payment_days ? `${member.payment_days} วัน` : "" },
+                  { label: "ครบกำหนด", value: dueDate && dueDate !== date ? thaiDate(dueDate) : "" },
+                ].map(({ label, value }) => (
+                  <tr key={label}>
+                    <td style={{ fontSize: "8pt", fontWeight: "bold", whiteSpace: "nowrap", padding: "0.4mm 4px 0.4mm 7px" }}>{label}</td>
+                    <td style={{ fontSize: "8pt", padding: "0.4mm 7px 0.4mm 4px" }}>{value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
         {/* ══════════════════════════════════════════
             PRODUCT TABLE
         ══════════════════════════════════════════ */}
-        <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "-1px", tableLayout: "fixed" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "-1px", tableLayout: "fixed", borderBottom: "1px solid #000" }}>
           <colgroup>
             <col style={{ width: "3%" }} />
             <col style={{ width: "6%" }} />
@@ -331,14 +322,19 @@ const ReturnReceiptDoc: React.FC<{ payload: ReturnReceiptPayload }> = ({ payload
         {/* ══════════════════════════════════════════
             SUMMARY SECTION
         ══════════════════════════════════════════ */}
-        <div style={{ display: "flex", border: "1px solid #000", marginTop: "-1px" }}>
-          {/* Left: baht text + remarks + QR */}
-          <div style={{ flex: "0 0 68%", borderRight: "1px solid #000", padding: "4px 7px", minHeight: "30mm" }}>
-            <div style={{ fontSize: "8pt", fontWeight: "bold" }}>
-              ยอดเงินสุทธิ : {thaiBahtText(netAmount)}
+        <div style={{ display: "flex", gap: "2mm", marginTop: "2mm" }}>
+          {/* Block 1a + 1b: column */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "2mm" }}>
+            {/* Block 1a: ยอดเงินสุทธิ text */}
+            <div style={{ border: "1px solid #000", borderRadius: "0", padding: "4px 7px" }}>
+              <div style={{ fontSize: "8pt", fontWeight: "bold" }}>
+                ยอดเงินสุทธิ : {thaiBahtText(netAmount)}
+              </div>
             </div>
-            <div style={{ marginTop: "5mm", fontSize: "8pt", fontWeight: "bold" }}>:: หมายเหตุ ::</div>
-            <div style={{ display: "flex", justifyContent: "center", marginTop: "5mm" }}>
+
+            {/* Block 1b: หมายเหตุ + QR */}
+            <div style={{ padding: "4px 7px", minHeight: "25mm", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div style={{ fontSize: "8pt", fontWeight: "bold" }}>:: หมายเหตุ ::</div>
               <div style={{ textAlign: "center" }}>
                 <QRCodeSVG value={return_receipt_code} size={52} />
                 <div style={{ fontSize: "7pt", marginTop: "1mm" }}>Payment</div>
@@ -346,52 +342,61 @@ const ReturnReceiptDoc: React.FC<{ payload: ReturnReceiptPayload }> = ({ payload
             </div>
           </div>
 
-          {/* Right: price breakdown */}
-          <div style={{ flex: "0 0 32%", padding: "4px 8px" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "8pt" }}>
-              <tbody>
-                <tr>
-                  <td style={{ paddingBottom: "1.5mm" }}>ราคาสินค้า</td>
-                  <td style={{ textAlign: "right", paddingBottom: "1.5mm" }}>{fmt(totalAmount)}</td>
-                </tr>
-                <tr>
-                  <td style={{ paddingBottom: "1.5mm" }}>ภาษีมูลค่าเพิ่ม 7%</td>
-                  <td style={{ textAlign: "right", paddingBottom: "1.5mm" }}>{fmt(vatAmount)}</td>
-                </tr>
-                <tr>
-                  <td colSpan={2} style={{ borderTop: "1px solid #000", padding: 0 }}></td>
-                </tr>
-                <tr>
-                  <td style={{ fontWeight: "bold", fontSize: "9pt", paddingTop: "1mm" }}>ยอดเงินสุทธิ</td>
-                  <td style={{ textAlign: "right", fontWeight: "bold", fontSize: "9pt", paddingTop: "1mm" }}>{fmt(netAmount)}</td>
-                </tr>
-              </tbody>
-            </table>
-            <div style={{ textAlign: "right", fontSize: "7pt", marginTop: "5mm", color: "#555" }}>[1/1]</div>
+          {/* Block 2 + 3: column */}
+          <div style={{ flex: "0 0 32%", display: "flex", flexDirection: "column", gap: "2mm" }}>
+            {/* Block 2: ราคาสินค้า + ภาษี */}
+            <div style={{ border: "1px solid #000", borderRadius: "0", padding: "4px 8px" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "8pt" }}>
+                <tbody>
+                  <tr>
+                    <td style={{ paddingBottom: "1.5mm" }}>ราคาสินค้า</td>
+                    <td style={{ textAlign: "right", paddingBottom: "1.5mm" }}>{fmt(totalAmount)}</td>
+                  </tr>
+                  <tr>
+                    <td>ภาษีมูลค่าเพิ่ม 7%</td>
+                    <td style={{ textAlign: "right" }}>{fmt(vatAmount)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Block 3: ยอดเงินสุทธิ */}
+            <div style={{ border: "1px solid #000", borderRadius: "0", padding: "4px 8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: "8pt", fontWeight: "bold" }}>ยอดเงินสุทธิ</div>
+              <div style={{ fontSize: "9pt", fontWeight: "bold" }}>{fmt(netAmount)}</div>
+            </div>
+
+            <div style={{ textAlign: "right", fontSize: "7pt", color: "#555" }}>[1/1]</div>
           </div>
         </div>
 
         {/* ══════════════════════════════════════════
             SIGNATURE SECTION
         ══════════════════════════════════════════ */}
-        <div style={{ display: "flex", border: "1px solid #000", marginTop: "-1px", minHeight: "25mm" }}>
-          {["ผู้อนุมัติ / ลูกค้า", "พนักงานขาย", "ฝ่ายบัญชี", "ผู้ส่งของ"].map((title, i, arr) => (
+        <div style={{ display: "flex", gap: "2mm", marginTop: "2mm" }}>
+          {["ผู้อนุมัติ / ลูกค้า", "พนักงานขาย", "ฝ่ายบัญชี", "ผู้ส่งของ"].map((title) => (
             <div
               key={title}
               style={{
                 flex: 1,
-                borderRight: i < arr.length - 1 ? "1px solid #000" : "none",
+                border: "1px solid #000",
+                borderRadius: "6px",
                 padding: "4px 6px",
                 display: "flex",
                 flexDirection: "column",
+                minHeight: "25mm",
               }}
             >
               <div style={{ fontSize: "8pt", fontWeight: "bold", textAlign: "center" }}>{title}</div>
               <div style={{ flex: 1 }} />
-              <div style={{ borderBottom: "1px solid #000", marginBottom: "2px" }} />
-              <div style={{ fontSize: "8pt", textAlign: "center" }}>( )</div>
-              <div style={{ fontSize: "7pt", textAlign: "center", marginTop: "1mm" }}>
-                วันที่ _______ / _______ / _______
+              <div style={{ paddingBottom: "5mm" }}>
+                <div style={{ borderBottom: "1px solid #000", margin: "0 4px 2px 4px" }} />
+                <div style={{ fontSize: "8pt", textAlign: "center", marginTop: "5mm" }}>
+                  ({"\u00A0".repeat(35)})
+                </div>
+                <div style={{ fontSize: "7pt", textAlign: "center", marginTop: "1mm" }}>
+                  วันที่ _______ / _______ / _______
+                </div>
               </div>
             </div>
           ))}

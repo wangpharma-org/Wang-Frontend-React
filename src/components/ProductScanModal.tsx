@@ -266,7 +266,7 @@ const ProductScanModal: React.FC<Props> = ({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[95vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-[98vw] h-[95vh] flex flex-col overflow-hidden">
 
         {/* ── Header ── */}
         <div className="flex items-center gap-4 px-6 py-4 border-b border-gray-100 flex-shrink-0">
@@ -321,134 +321,128 @@ const ProductScanModal: React.FC<Props> = ({
           </button>
         </div>
 
+        {/* ── Sub-header: Price + Reason ── */}
+        <div className="flex items-center gap-4 px-6 py-3 border-b border-gray-100 bg-gray-50/40 flex-shrink-0">
+          {/* ราคา/หน่วย */}
+          <div className="flex items-center gap-2.5 flex-shrink-0">
+            <span className="text-xs font-semibold text-gray-500 whitespace-nowrap">ราคา / หน่วย</span>
+            <div className="relative">
+              <input
+                type="number"
+                min={0}
+                value={pricePerUnit}
+                onChange={(e) => setPricePerUnit(parseFloat(e.target.value) || 0)}
+                onFocus={(e) => e.target.select()}
+                className="w-36 h-9 pl-3 pr-9 text-right text-base font-bold border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-400 focus:ring-0 transition-colors"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">
+                บาท
+              </span>
+            </div>
+            {data.purchase_history.find((h) => h.type === "ขาย") && (
+              <span className="text-xs text-gray-400">
+                ล่าสุด:{" "}
+                <span className="text-blue-500 font-medium">
+                  {fmt(data.purchase_history.find((h) => h.type === "ขาย")!.priceUnit)}
+                </span>
+              </span>
+            )}
+          </div>
+
+          <div className="w-px h-5 bg-gray-200 flex-shrink-0" />
+
+          {/* เหตุผล */}
+          <div className="flex items-center gap-2 flex-1 flex-wrap">
+            <span className="text-xs font-semibold text-gray-500 whitespace-nowrap">เหตุผล</span>
+            {REASONS.map((r) => {
+              const active = selectedReason === r;
+              return (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setSelectedReason(r)}
+                  className={`px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap ${
+                    active
+                      ? "bg-blue-500 text-white font-medium shadow-sm shadow-blue-200"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  {r}
+                </button>
+              );
+            })}
+            {selectedReason === "อื่นๆ" && (
+              <input
+                type="text"
+                value={customReason}
+                onChange={(e) => setCustomReason(e.target.value)}
+                placeholder="ระบุเหตุผล..."
+                className="h-8 px-3 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-40"
+                autoFocus
+              />
+            )}
+          </div>
+        </div>
+
         {/* ── Body ── */}
         <div className="flex-1 overflow-hidden">
-          <div className="grid grid-cols-[260px_1fr_1fr] h-full">
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)] h-full" style={{ gridTemplateRows: "minmax(0, 1fr)" }}>
 
-            {/* ── Left panel: Reason + Price ── */}
-            <div className="p-5 space-y-5 overflow-y-auto">
-
-              {/* ราคา/หน่วย */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                  ราคา / หน่วย (บาท)
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    min={0}
-                    value={pricePerUnit}
-                    onChange={(e) => setPricePerUnit(parseFloat(e.target.value) || 0)}
-                    onFocus={(e) => e.target.select()}
-                    className="w-full h-11 pl-4 pr-14 text-right text-lg font-bold border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-400 focus:ring-0 transition-colors"
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium pointer-events-none">
-                    บาท
-                  </span>
-                </div>
-                {data.purchase_history.find((h) => h.type === "ขาย") && (
-                  <p className="mt-1 text-xs text-gray-400">
-                    ราคาล่าสุด:{" "}
-                    <span className="text-blue-500 font-medium">
-                      {fmt(data.purchase_history.find((h) => h.type === "ขาย")!.priceUnit)} บาท
-                    </span>
-                  </p>
-                )}
-              </div>
-
-              {/* เหตุผล */}
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                  เหตุผลการคืนสินค้า
-                </p>
-                <div className="space-y-1">
-                  {REASONS.map((r) => {
-                    const active = selectedReason === r;
-                    return (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setSelectedReason(r)}
-                        className={`w-full text-left px-3.5 py-2.5 rounded-xl text-sm transition-all ${
-                          active
-                            ? "bg-blue-500 text-white font-medium shadow-sm shadow-blue-200"
-                            : "bg-gray-50 text-gray-600 hover:bg-gray-100"
-                        }`}
-                      >
-                        {r}
-                      </button>
-                    );
-                  })}
-                </div>
-                {selectedReason === "อื่นๆ" && (
-                  <input
-                    type="text"
-                    value={customReason}
-                    onChange={(e) => setCustomReason(e.target.value)}
-                    placeholder="ระบุเหตุผล..."
-                    className="mt-2 w-full h-10 px-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    autoFocus
-                  />
-                )}
-              </div>
-
-            </div>
-
-            {/* ── Middle panel: Purchase history ── */}
-            <div className="p-5 flex flex-col gap-3 border-l border-gray-100">
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide flex-shrink-0">
-                ประวัติการซื้อขาย ({purchase_history.length})
+            {/* ── Left panel: Purchase history ── */}
+            <div className="p-5 flex flex-col gap-3 border-r border-gray-100 min-h-0">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex-shrink-0">
+                ประวัติการซื้อขาย ({purchase_history.length} รายการ)
               </p>
-              <div className="overflow-auto flex-1 rounded-xl border border-gray-100 text-xs">
-                <table className="w-full">
+              <div className="overflow-auto flex-1 rounded-xl border border-gray-100">
+                <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-50 border-b border-gray-100 sticky top-0">
-                      <th className="px-2 py-2 text-left text-gray-400 font-semibold">วันที่</th>
-                      <th className="px-2 py-2 text-left text-gray-400 font-semibold">เลขที่</th>
-                      <th className="px-2 py-2 text-center text-gray-400 font-semibold">ประเภท</th>
-                      <th className="px-2 py-2 text-center text-gray-400 font-semibold">จำนวน</th>
-                      <th className="px-2 py-2 text-right text-gray-400 font-semibold">ราคา/หน่วย</th>
-                      <th className="px-2 py-2 text-right text-gray-400 font-semibold">รวม</th>
+                    <tr className="bg-gray-50 border-b border-gray-200 sticky top-0">
+                      <th className="px-3 py-2.5 text-left text-gray-500 font-semibold whitespace-nowrap">วันที่</th>
+                      <th className="px-3 py-2.5 text-left text-gray-500 font-semibold">เลขที่บิล</th>
+                      <th className="px-3 py-2.5 text-center text-gray-500 font-semibold whitespace-nowrap">ประเภท</th>
+                      <th className="px-3 py-2.5 text-center text-gray-500 font-semibold whitespace-nowrap">จำนวน</th>
+                      <th className="px-3 py-2.5 text-right text-gray-500 font-semibold whitespace-nowrap">ราคา/หน่วย</th>
+                      <th className="px-3 py-2.5 text-right text-gray-500 font-semibold whitespace-nowrap">รวม (บาท)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {purchase_history.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-2 py-6 text-center text-gray-300">
+                        <td colSpan={6} className="px-3 py-8 text-center text-gray-300 text-sm">
                           ไม่มีประวัติ
                         </td>
                       </tr>
                     ) : (
                       purchase_history.map((h) => (
-                        <tr key={h.id} className="border-b border-gray-50 hover:bg-gray-50">
-                          <td className="px-2 py-2 text-gray-500 whitespace-nowrap">
+                        <tr key={h.id} className="border-b border-gray-50 hover:bg-slate-50 transition-colors">
+                          <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">
                             {h.date_purchased
                               ? new Date(h.date_purchased).toLocaleDateString("th-TH", {
                                   day: "2-digit", month: "2-digit", year: "2-digit",
                                 })
                               : "—"}
                           </td>
-                          <td className="px-2 py-2 text-blue-500 font-mono truncate max-w-[80px]">
+                          <td className="px-3 py-2.5 text-blue-600 font-mono">
                             {h.invoice_number || "—"}
                           </td>
-                          <td className="px-2 py-2 text-center">
+                          <td className="px-3 py-2.5 text-center">
                             <span
-                              className={`px-1.5 py-0.5 rounded font-medium ${
+                              className={`px-2 py-0.5 rounded-lg font-medium text-xs ${
                                 h.type === "รับคืน"
                                   ? "bg-orange-100 text-orange-600"
-                                  : "bg-green-100 text-green-600"
+                                  : "bg-green-100 text-green-700"
                               }`}
                             >
                               {h.type}
                             </span>
                           </td>
-                          <td className="px-2 py-2 text-center text-gray-600">
-                            {h.qty} {h.unit}
+                          <td className="px-3 py-2.5 text-center font-semibold text-gray-700">
+                            {h.qty} <span className="text-gray-400 font-normal text-xs">{h.unit}</span>
                           </td>
-                          <td className="px-2 py-2 text-right text-gray-600">
+                          <td className="px-3 py-2.5 text-right text-gray-700 tabular-nums">
                             {fmt(h.priceUnit)}
                           </td>
-                          <td className="px-2 py-2 text-right font-semibold text-gray-700">
+                          <td className="px-3 py-2.5 text-right font-bold text-gray-800 tabular-nums">
                             {fmt(h.totalPrice)}
                           </td>
                         </tr>
@@ -460,86 +454,88 @@ const ProductScanModal: React.FC<Props> = ({
             </div>
 
             {/* ── Right panel: Lot table (main focus) ── */}
-            <div className="p-5 flex flex-col gap-4 border-l border-gray-100">
+            <div className="flex flex-col border-l border-gray-100 min-h-0">
 
-              {/* Column header labels */}
-              <div className="flex items-center gap-2">
+              {/* Fixed: Column header labels */}
+              <div className="px-5 pt-5 pb-3 flex items-center gap-2 flex-shrink-0 border-b border-gray-50">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex-1">
-                  Lot สินค้า — กรอกจำนวนรับคืน
+                  Lot สินค้า — กรอกจำนวนรับคืน ({lots.length} Lot)
                 </p>
-                <div className="flex items-center gap-4 text-xs font-semibold pr-1">
-                  <span className="text-green-600 w-[120px] text-center">รับคืน (ยาดี)</span>
-                  <span className="text-orange-500 w-[120px] text-center">รับคืน (ยาเสีย)</span>
-                  <span className="text-slate-500 w-[120px] text-center">ไม่รับ</span>
+                <div className="flex items-center gap-3 text-xs font-semibold pr-1">
+                  <span className="text-green-600 w-[130px] text-center">รับคืน (ยาดี)</span>
+                  <span className="text-orange-500 w-[130px] text-center">รับคืน (ยาเสีย)</span>
+                  <span className="text-slate-500 w-[130px] text-center">ไม่รับ</span>
                 </div>
               </div>
 
-              {/* Lot rows */}
-              <div className="flex flex-col gap-2">
-                {lots.length === 0 ? (
-                  <div className="py-12 text-center text-gray-300 border-2 border-dashed border-gray-200 rounded-xl">
-                    ยังไม่มี Lot — กดเพิ่ม Lot ด้านล่าง
-                  </div>
-                ) : (
-                  lots.map((l) => {
-                    const filled = l.receive_good_qty + l.receive_bad_qty + l.not_receive_qty > 0;
-                    return (
-                      <div
-                        key={l.id}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
-                          filled
-                            ? "border-blue-200 bg-blue-50/40"
-                            : "border-gray-100 bg-gray-50/60 hover:border-gray-200"
-                        }`}
-                      >
-                        {/* Lot info */}
-                        <div className="flex-1 min-w-0 grid grid-cols-3 gap-2 text-sm">
-                          <div>
-                            <p className="text-xs text-gray-400 mb-0.5">Lot</p>
-                            <p className="font-mono font-medium text-gray-700 truncate">
-                              {l.lot || <span className="text-gray-300">—</span>}
-                            </p>
+              {/* Scrollable: Lot rows */}
+              <div className="flex-1 overflow-y-auto px-5 py-3">
+                <div className="flex flex-col gap-2">
+                  {lots.length === 0 ? (
+                    <div className="py-12 text-center text-gray-300 border-2 border-dashed border-gray-200 rounded-xl">
+                      ยังไม่มี Lot — กดเพิ่ม Lot ด้านล่าง
+                    </div>
+                  ) : (
+                    lots.map((l) => {
+                      const filled = l.receive_good_qty + l.receive_bad_qty + l.not_receive_qty > 0;
+                      return (
+                        <div
+                          key={l.id}
+                          className={`flex items-center gap-4 px-5 py-3.5 rounded-xl border transition-all ${
+                            filled
+                              ? "border-blue-200 bg-blue-50/40"
+                              : "border-gray-100 bg-gray-50/60 hover:border-gray-200"
+                          }`}
+                        >
+                          {/* Lot info */}
+                          <div className="flex-1 min-w-0 grid grid-cols-3 gap-4 text-sm">
+                            <div>
+                              <p className="text-[11px] text-gray-400 mb-0.5 font-medium">Lot No.</p>
+                              <p className="font-mono font-semibold text-gray-800 break-all">
+                                {l.lot || <span className="text-gray-300">—</span>}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[11px] text-gray-400 mb-0.5 font-medium">วันผลิต (MFG)</p>
+                              <p className="text-gray-700 font-medium">
+                                {l.mfg || <span className="text-gray-300">—</span>}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[11px] text-gray-400 mb-0.5 font-medium">วันหมดอายุ (EXP)</p>
+                              <p className="text-gray-700 font-medium">
+                                {l.exp || <span className="text-gray-300">—</span>}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-xs text-gray-400 mb-0.5">MFG</p>
-                            <p className="text-gray-600 truncate">
-                              {l.mfg || <span className="text-gray-300">—</span>}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-400 mb-0.5">EXP</p>
-                            <p className="text-gray-600 truncate">
-                              {l.exp || <span className="text-gray-300">—</span>}
-                            </p>
-                          </div>
-                        </div>
 
-                        {/* Steppers */}
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {/* ยาดี */}
-                          <Stepper
-                            value={l.receive_good_qty}
-                            onChange={(v) => updateLotQty(l.id, "receive_good_qty", v)}
-                            color="green"
-                          />
-                          {/* ยาเสีย */}
-                          <Stepper
-                            value={l.receive_bad_qty}
-                            onChange={(v) => updateLotQty(l.id, "receive_bad_qty", v)}
-                            color="orange"
-                          />
-                          {/* ไม่รับ */}
-                          <Stepper
-                            value={l.not_receive_qty}
-                            onChange={(v) => updateLotQty(l.id, "not_receive_qty", v)}
-                            color="slate"
-                          />
+                          {/* Steppers */}
+                          <div className="flex items-center gap-3 flex-shrink-0">
+                            <Stepper
+                              value={l.receive_good_qty}
+                              onChange={(v) => updateLotQty(l.id, "receive_good_qty", v)}
+                              color="green"
+                            />
+                            <Stepper
+                              value={l.receive_bad_qty}
+                              onChange={(v) => updateLotQty(l.id, "receive_bad_qty", v)}
+                              color="orange"
+                            />
+                            <Stepper
+                              value={l.not_receive_qty}
+                              onChange={(v) => updateLotQty(l.id, "not_receive_qty", v)}
+                              color="slate"
+                            />
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })
-                )}
+                      );
+                    })
+                  )}
+                </div>
               </div>
+
+              {/* Fixed footer: Add Lot + Summary */}
+              <div className="px-5 pb-5 pt-3 flex-shrink-0 space-y-3 border-t border-gray-50">
 
               {/* Add Lot */}
               {showAddLot ? (
@@ -643,9 +639,10 @@ const ProductScanModal: React.FC<Props> = ({
                   )}
                 </div>
               )}
-            </div>
-          </div>
-        </div>
+              </div>{/* /footer */}
+            </div>{/* /right panel */}
+          </div>{/* /grid */}
+        </div>{/* /body */}
 
         {/* ── Footer ── */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 flex-shrink-0 bg-gray-50/40">
