@@ -906,7 +906,7 @@ const OrderList = () => {
                       style={{ maxHeight: "70vh" }}
                     >
                       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
-                        <p className="text-sm font-semibold text-gray-800">ยาดีรอคืนชั้น</p>
+                        <p className="text-sm font-semibold text-gray-800">ยาคืนขึ้นชั้น</p>
                         <button
                           onClick={() => fetchPendingReturns()}
                           className="text-xs text-blue-500 hover:text-blue-600"
@@ -944,15 +944,15 @@ const OrderList = () => {
                                       ชั้น {item.product_floor}
                                     </span>
                                   )}
-                                  <p className="text-xs font-mono text-gray-400 leading-tight">{item.product_code}</p>
+                                  <p className="text-[13px] font-mono text-gray-400 leading-tight">{item.product_code}</p>
                                   <p className="text-sm font-semibold text-gray-800 leading-tight truncate">{item.product_name}</p>
                                   {item.lot && (
-                                    <p className="text-[11px] text-gray-400 leading-tight">Lot: {item.lot}</p>
+                                    <p className="text-[13px] text-gray-400 leading-tight">Lot: {item.lot}</p>
                                   )}
-                                  <p className="text-[11px] text-gray-500 leading-tight">
+                                  <p className="text-[13px] text-gray-500 leading-tight">
                                     {item.mem_name ?? item.mem_code} · {item.return_receipt_code}
                                   </p>
-                                  <p className="text-xs font-semibold text-emerald-600">รับดี {item.receive_good_qty} ชิ้น</p>
+                                  <p className="text-[14px] font-semibold text-emerald-600">จำนวน {item.receive_good_qty} ชิ้น</p>
                                 </div>
                                 <button
                                   onClick={() => confirmReturn(item.id)}
