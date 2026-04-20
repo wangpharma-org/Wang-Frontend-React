@@ -479,8 +479,8 @@ export default function WorklogPage() {
                   className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-colors"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
+              <div className="grid grid-cols-1">
+                <div className="pr-8">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">เวลาเริ่มต้น</label>
                   <input
                     type="datetime-local"
@@ -489,7 +489,7 @@ export default function WorklogPage() {
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-colors"
                   />
                 </div>
-                <div>
+                <div className="mt-2 pr-8">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">เวลาสิ้นสุด</label>
                   <input
                     type="datetime-local"

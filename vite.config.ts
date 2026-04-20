@@ -6,7 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   server: {
     allowedHosts: [
-      'businesses-province-high-bathrooms.trycloudflare.com',
+      '6ae2-1-47-23-16.ngrok-free.app',
     ],
     host: true
   },

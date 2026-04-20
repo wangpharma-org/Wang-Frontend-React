@@ -3,6 +3,7 @@ import axios from "axios";
 import Swal from "sweetalert2";
 import Navbar from "../components/Navbar";
 import { io } from "socket.io-client";
+import dayjs from "dayjs";
 
 const VITE_API_URL_ORDER = import.meta.env.VITE_API_URL_ORDER as string;
 
@@ -47,8 +48,17 @@ interface DeletedSocketPayload {
   id: number;
 }
 
+// Backend sends Bangkok local time (UTC+7) without timezone suffix
+// Append '+07:00' so JS interprets it correctly regardless of client timezone
+function parseBangkok(dateString: string): Date {
+  const s = dateString.replace(" ", "T");
+  if (s.endsWith("Z") || s.includes("+")) return new Date(s);
+  return new Date(s + "+07:00");
+}
+
 function formatDateTime(dt: string): string {
   return new Date(dt).toLocaleString("th-TH", {
+    timeZone: "Asia/Bangkok",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -69,7 +79,9 @@ function formatDuration(start: string, end: string): string {
 }
 
 function timeAgo(dateString: string): string {
-  const diffMs = Date.now() - new Date(dateString).getTime();
+  const parsed = parseBangkok(dateString);
+  console.log("[timeAgo] raw:", dateString, "| parsed UTC:", parsed.toISOString(), "| now UTC:", new Date().toISOString(), "| diffMs:", Date.now() - parsed.getTime());
+  const diffMs = Date.now() - parsed.getTime();
   const minutes = Math.floor(diffMs / 60000);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
@@ -163,14 +175,14 @@ function TaskCard({ task, onApprove, onReject, actioningId }: TaskCardProps) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <span className="text-gray-400">เริ่ม</span>
-            <span className="font-medium text-gray-700">{formatDateTime(task.start_time)}</span>
+            <span className="font-medium text-gray-700">{dayjs(task.start_time).format("DD/MM/YYYY HH:mm")}</span>
           </span>
           <span className="inline-flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-xl px-3 py-1.5 text-sm text-gray-600">
             <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
             <span className="text-gray-400">สิ้นสุด</span>
-            <span className="font-medium text-gray-700">{formatDateTime(task.end_time)}</span>
+            <span className="font-medium text-gray-700">{dayjs(task.end_time).format("DD/MM/YYYY HH:mm")}</span>
           </span>
           <span className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold ${durationClass}`}>
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
