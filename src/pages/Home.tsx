@@ -73,7 +73,6 @@ const listMenu = [
       imageSrc: returnBox,
       admin: false,
     },
-  },
   {
     id: 10,
     name: "RT-Approval",
