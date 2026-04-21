@@ -43,6 +43,8 @@ import RTApproval from "./pages/RTApproval";
 import WorklogPage from "./pages/WorklogPage";
 import TaskApprovalPage from "./pages/TaskApprovalPage";
 import RecycleBoxBarcode from "./pages/RecycleBoxBarcode";
+import ReturnReceipt from "./pages/ReturnReceipt";
+import ReturnReceiptPrint from "./pages/ReturnReceiptPrint";
 
 function App() {
   useEffect(() => {
@@ -358,6 +360,19 @@ function App() {
             }
           />
           <Route
+            path="/return-receipt"
+            element={
+              <div>
+                <Navbar />
+                <RequireAuth>
+                  <ReturnReceipt />
+                </RequireAuth>
+              </div>
+            }
+          />
+          <Route
+            path="/return-receipt-print"
+            element={<ReturnReceiptPrint />}
             path="/worklog"
             element={
               <RequireAuth>

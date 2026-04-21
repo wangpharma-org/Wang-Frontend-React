@@ -9,6 +9,7 @@ import reportPicking from "../assets/report-picking.png";
 import log from "../assets/log.png";
 import RouteManage from "../assets/evaluation.png";
 import Document from "../assets/document.png";
+import returnBox from "../assets/return-box-home.png";
 import { useNavigate } from "react-router";
 const listMenu = [
   {
@@ -57,23 +58,37 @@ const listMenu = [
     href: "/route-manage",
     imageSrc: RouteManage,
     admin: true,
-  },
+  }
+    ,{
+      id: 8,
+      name: "RT-Approval",
+      href: "/rt-approval",
+      imageSrc: Document,
+      admin: true,
+    },
+    {
+      id: 9,
+      name: "ระบบรับของคืน",
+      href: "/return-receipt",
+      imageSrc: returnBox,
+      admin: false,
+    },
   {
-    id: 8,
+    id: 10,
     name: "RT-Approval",
     href: "/rt-approval",
     imageSrc: Document,
     admin: true,
   },
   {
-    id: 9,
+    id: 11,
     name: "บันทึกการทำงาน",
     href: "/worklog",
     imageSrc: log,
     admin: false,
   },
   {
-    id: 10,
+    id: 12,
     name: "อนุมัติบันทึกการทำงาน",
     href: "/task-approval",
     imageSrc: Document,
