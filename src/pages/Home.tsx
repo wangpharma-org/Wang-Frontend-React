@@ -8,6 +8,7 @@ import barcode from "../assets/barcode-scanner.png"
 import reportPicking from "../assets/report-picking.png";
 import RouteManage from "../assets/evaluation.png";
 import Document from "../assets/document.png";
+import returnBox from "../assets/return-box-home.png";
 import { useNavigate } from "react-router";
 const listMenu = [
   {
@@ -61,9 +62,16 @@ const listMenu = [
       id: 8,
       name: "RT-Approval",
       href: "/rt-approval",
-      imageSrc: Document, // TODO: เปลี่ยน icon ตามความเหมาะสม
+      imageSrc: Document,
       admin: true,
-    }
+    },
+    {
+      id: 9,
+      name: "ระบบรับของคืน",
+      href: "/return-receipt",
+      imageSrc: returnBox,
+      admin: false,
+    },
 ];
 const Home = () => {
   const navigate = useNavigate()

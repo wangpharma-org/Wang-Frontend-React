@@ -118,6 +118,19 @@ const ReturnReceipt: React.FC = () => {
   // Product list (items confirmed from modal)
   const [products, setProducts] = useState<ScannedProduct[]>([]);
 
+  // Autocomplete
+  interface SuggestionProduct {
+    product_code: string;
+    product_name: string;
+    product_unit: string | null;
+    product_barcode: string | null;
+    product_floor: string | null;
+  }
+  const [suggestions, setSuggestions] = useState<SuggestionProduct[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightIdx, setHighlightIdx] = useState(-1);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [scanResult, setScanResult] = useState<ProductScanResult | null>(null);
@@ -163,32 +176,83 @@ const ReturnReceipt: React.FC = () => {
     }
   }, [customerCode, accessToken]);
 
-  // ── Scan barcode ──
-  const handleBarcodeKeyDown = async (
-    e: React.KeyboardEvent<HTMLInputElement>
-  ) => {
-    if (e.key !== "Enter" || !barcodeInput.trim()) return;
+  // ── Scan barcode (core) ──
+  const triggerScan = async (barcode: string) => {
     if (!memberData) {
       alert("กรุณาระบุรหัสลูกค้าก่อนสแกนสินค้า");
       return;
     }
     setScanning(true);
+    setShowSuggestions(false);
+    setSuggestions([]);
     try {
       const res = await axios.get(
         `${import.meta.env.VITE_API_URL_ORDER}/api/return-receipt/product`,
         {
-          params: { barcode: barcodeInput.trim(), mem_code: memberData.mem_code },
+          params: { barcode, mem_code: memberData.mem_code },
           headers: { Authorization: `Bearer ${accessToken}` },
         }
       );
       setScanResult(res.data);
       setModalOpen(true);
     } catch {
-      alert(`ไม่พบสินค้าจาก barcode: ${barcodeInput}`);
+      alert(`ไม่พบสินค้าจาก barcode: ${barcode}`);
     } finally {
       setScanning(false);
       setBarcodeInput("");
       barcodeRef.current?.focus();
+    }
+  };
+
+  // ── Autocomplete search (debounced) ──
+  const handleBarcodeChange = (value: string) => {
+    setBarcodeInput(value);
+    setHighlightIdx(-1);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (!value.trim() || value.trim().length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await axios.get(
+          `${import.meta.env.VITE_API_URL_ORDER}/api/return-receipt/search-product`,
+          {
+            params: { q: value.trim() },
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+        setSuggestions(res.data);
+        setShowSuggestions(res.data.length > 0);
+      } catch {
+        setSuggestions([]);
+      }
+    }, 300);
+  };
+
+  // ── Keyboard navigation for autocomplete ──
+  const handleBarcodeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightIdx((prev) => Math.min(prev + 1, suggestions.length - 1));
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightIdx((prev) => Math.max(prev - 1, -1));
+      return;
+    }
+    if (e.key === "Escape") {
+      setShowSuggestions(false);
+      setHighlightIdx(-1);
+      return;
+    }
+    if (e.key !== "Enter" || !barcodeInput.trim()) return;
+    if (highlightIdx >= 0 && suggestions[highlightIdx]) {
+      triggerScan(suggestions[highlightIdx].product_code);
+    } else {
+      triggerScan(barcodeInput.trim());
     }
   };
 
@@ -594,21 +658,47 @@ const ReturnReceipt: React.FC = () => {
               <span className="text-xs">Barcode</span>
             </div>
 
-            <input
-              ref={barcodeRef}
-              type="text"
-              value={barcodeInput}
-              onChange={(e) => setBarcodeInput(e.target.value)}
-              onKeyDown={handleBarcodeKeyDown}
-              placeholder={
-                memberData
-                  ? "Scan barcode แล้วกด Enter เพื่อค้นหาสินค้า"
-                  : "ระบุรหัสลูกค้าก่อนสแกนสินค้า"
-              }
-              disabled={!memberData || scanning}
-              className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition disabled:bg-gray-50 disabled:text-gray-400"
-              autoFocus
-            />
+            <div className="relative flex-1">
+              <input
+                ref={barcodeRef}
+                type="text"
+                value={barcodeInput}
+                onChange={(e) => handleBarcodeChange(e.target.value)}
+                onKeyDown={handleBarcodeKeyDown}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                placeholder={
+                  memberData
+                    ? "Scan barcode หรือพิมพ์ชื่อ / รหัสสินค้า"
+                    : "ระบุรหัสลูกค้าก่อนสแกนสินค้า"
+                }
+                disabled={!memberData || scanning}
+                className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition disabled:bg-gray-50 disabled:text-gray-400"
+                autoFocus
+              />
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-64 overflow-y-auto">
+                  {suggestions.map((s, idx) => (
+                    <button
+                      key={s.product_code}
+                      onMouseDown={(e) => { e.preventDefault(); triggerScan(s.product_code); }}
+                      className={`w-full px-4 py-2.5 text-left flex items-center gap-3 transition-colors ${
+                        idx === highlightIdx ? "bg-blue-50" : "hover:bg-gray-50"
+                      } ${idx > 0 ? "border-t border-gray-50" : ""}`}
+                    >
+                      <span className="font-mono text-xs text-blue-600 w-24 flex-shrink-0">{s.product_code}</span>
+                      <span className="text-sm text-gray-800 flex-1 truncate">{s.product_name}</span>
+                      {s.product_floor && (
+                        <span className="text-xs text-gray-400 flex-shrink-0">ชั้น {s.product_floor}</span>
+                      )}
+                      {s.product_barcode && (
+                        <span className="text-xs text-gray-400 font-mono flex-shrink-0">{s.product_barcode}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {scanning && (
               <div className="flex items-center gap-2 text-sm text-blue-500">
