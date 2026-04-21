@@ -160,6 +160,14 @@ const OrderList = () => {
     localStorage.setItem("totalOrdersCount", JSON.stringify(totalOrders));
   }, [orderList]);
 
+  // Auto-fetch pending returns on mount + every 2 minutes
+  useEffect(() => {
+    fetchPendingReturns();
+    const interval = setInterval(fetchPendingReturns, 120_000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const togglePopup = (id: string) => {
     if (orderList.find((order) => order.mem_code === id)?.mem_route?.is_active === false) {
       // คำนวณ active routes แบบ real-time แทนการใช้ state routeName

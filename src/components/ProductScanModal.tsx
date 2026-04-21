@@ -161,13 +161,14 @@ const ProductScanModal: React.FC<Props> = ({
   onClose,
 }) => {
   const [lots, setLots] = useState<LotRow[]>([]);
-  const [selectedReason, setSelectedReason] = useState(REASONS[0]);
+  const [selectedReason, setSelectedReason] = useState<string | null>(null);
   const [customReason, setCustomReason] = useState("");
   const [pricePerUnit, setPricePerUnit] = useState(0);
   const [imgError, setImgError] = useState(false);
   const [showAddLot, setShowAddLot] = useState(false);
   const [newLot, setNewLot] = useState({ lot: "", mfg: "", exp: "" });
   const [addingLot, setAddingLot] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const firstInputRef = useRef<HTMLInputElement>(null);
 
@@ -184,7 +185,7 @@ const ProductScanModal: React.FC<Props> = ({
       );
       const latest = data.purchase_history.find((h) => h.type === "ขาย");
       setPricePerUnit(latest?.priceUnit ?? 0);
-      setSelectedReason(REASONS[0]);
+      setSelectedReason(null);
       setCustomReason("");
       setImgError(false);
       setShowAddLot(false);
@@ -236,9 +237,17 @@ const ProductScanModal: React.FC<Props> = ({
     }
   };
 
-  const handleConfirm = () => {
+  const activeLots = lots.filter(
+    (l) => l.receive_good_qty + l.receive_bad_qty + l.not_receive_qty > 0
+  );
+
+  const handleConfirmClick = () => {
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmFinal = () => {
     const reason =
-      selectedReason === "อื่นๆ" ? customReason || "อื่นๆ" : selectedReason;
+      selectedReason === "อื่นๆ" ? customReason || "อื่นๆ" : selectedReason ?? "";
     onConfirm({
       product_code: product.product_code,
       product_name: product.product_name,
@@ -246,11 +255,10 @@ const ProductScanModal: React.FC<Props> = ({
       product_floor: product.product_floor,
       return_rate: product.return_rate,
       price_per_unit: pricePerUnit,
-      lot_items: lots.filter(
-        (l) => l.receive_good_qty + l.receive_bad_qty + l.not_receive_qty > 0
-      ),
+      lot_items: activeLots,
       reason,
     });
+    setShowConfirmDialog(false);
   };
 
   const totalGood = lots.reduce((s, l) => s + l.receive_good_qty, 0);
@@ -268,128 +276,122 @@ const ProductScanModal: React.FC<Props> = ({
     >
       <div className="bg-white rounded-2xl shadow-2xl w-[98vw] h-[95vh] flex flex-col overflow-hidden">
 
-        {/* ── Header ── */}
-        <div className="flex items-center gap-4 px-6 py-4 border-b border-gray-100 flex-shrink-0">
-          {/* Product image (small) */}
-          <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
-            {product.product_image_url && !imgError ? (
-              <img
-                src={
-                  product.product_image_url.startsWith("..")
-                    ? product.product_image_url.replace(/^\.\./, "https://wangpharma.com")
-                    : product.product_image_url
-                }
-                alt={product.product_name}
-                className="w-full h-full object-cover"
-                onError={() => setImgError(true)}
-              />
-            ) : (
-              <FiPackage className="text-blue-400 text-xl" />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-gray-400 font-mono">{product.product_code}</p>
-            <p className="text-base font-semibold text-gray-800 leading-tight truncate">
-              {product.product_name}
-            </p>
-          </div>
-          {/* Badges */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {product.product_floor && (
-              <span className="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-medium rounded-lg">
-                ชั้น {product.product_floor}
-              </span>
-            )}
-            <span
-              className={`px-2.5 py-1 text-xs font-bold rounded-lg ${
-                product.return_rate === 0
-                  ? "bg-red-100 text-red-600"
-                  : "bg-emerald-100 text-emerald-600"
-              }`}
-            >
-              {product.return_rate === 0 ? "ขายขาด" : `คืน ${product.return_rate}%`}
-            </span>
-            <span className="px-2.5 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-lg">
-              {customer.mem_name}
-            </span>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all ml-1"
-          >
-            <FiX size={18} />
-          </button>
-        </div>
-
-        {/* ── Sub-header: Price + Reason ── */}
-        <div className="flex items-center gap-4 px-6 py-3 border-b border-gray-100 bg-gray-50/40 flex-shrink-0">
-          {/* ราคา/หน่วย */}
-          <div className="flex items-center gap-2.5 flex-shrink-0">
-            <span className="text-xs font-semibold text-gray-500 whitespace-nowrap">ราคา / หน่วย</span>
-            <div className="relative">
-              <input
-                type="number"
-                min={0}
-                value={pricePerUnit}
-                onChange={(e) => setPricePerUnit(parseFloat(e.target.value) || 0)}
-                onFocus={(e) => e.target.select()}
-                className="w-36 h-9 pl-3 pr-9 text-right text-base font-bold border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-400 focus:ring-0 transition-colors"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">
-                บาท
-              </span>
-            </div>
-            {data.purchase_history.find((h) => h.type === "ขาย") && (
-              <span className="text-xs text-gray-400">
-                ล่าสุด:{" "}
-                <span className="text-blue-500 font-medium">
-                  {fmt(data.purchase_history.find((h) => h.type === "ขาย")!.priceUnit)}
-                </span>
-              </span>
-            )}
-          </div>
-
-          <div className="w-px h-5 bg-gray-200 flex-shrink-0" />
-
-          {/* เหตุผล */}
-          <div className="flex items-center gap-2 flex-1 flex-wrap">
-            <span className="text-xs font-semibold text-gray-500 whitespace-nowrap">เหตุผล</span>
-            {REASONS.map((r) => {
-              const active = selectedReason === r;
-              return (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setSelectedReason(r)}
-                  className={`px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap ${
-                    active
-                      ? "bg-blue-500 text-white font-medium shadow-sm shadow-blue-200"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                >
-                  {r}
-                </button>
-              );
-            })}
-            {selectedReason === "อื่นๆ" && (
-              <input
-                type="text"
-                value={customReason}
-                onChange={(e) => setCustomReason(e.target.value)}
-                placeholder="ระบุเหตุผล..."
-                className="h-8 px-3 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-40"
-                autoFocus
-              />
-            )}
-          </div>
-        </div>
-
-        {/* ── Body ── */}
+        {/* ── Body: 2-column full-height grid ── */}
         <div className="flex-1 overflow-hidden">
-          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,2.2fr)] h-full" style={{ gridTemplateRows: "minmax(0, 1fr)" }}>
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] h-full" style={{ gridTemplateRows: "minmax(0, 1fr)" }}>
 
-            {/* ── Left panel: Purchase history ── */}
-            <div className="p-5 flex flex-col gap-3 border-r border-gray-100 min-h-0">
+            {/* ── Left panel: product info + price/reason + history ── */}
+            <div className="flex flex-col border-r border-gray-100 min-h-0">
+
+              {/* Product info (flex-shrink-0) */}
+              <div className="flex items-start gap-3 px-5 pt-4 pb-3 border-b border-gray-100 flex-shrink-0">
+                <div className="w-28 h-28 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {product.product_image_url && !imgError ? (
+                    <img
+                      src={
+                        product.product_image_url.startsWith("..")
+                          ? product.product_image_url.replace(/^\.\./, "https://wangpharma.com")
+                          : product.product_image_url
+                      }
+                      alt={product.product_name}
+                      className="w-full h-full object-cover"
+                      onError={() => setImgError(true)}
+                    />
+                  ) : (
+                    <FiPackage className="text-blue-400 text-xl" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-400 font-mono">{product.product_code}</p>
+                  <p className="text-lg font-semibold text-gray-800 leading-snug">
+                    {product.product_name}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {product.product_floor && (
+                      <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-sm font-medium rounded-lg">
+                        ชั้น {product.product_floor}
+                      </span>
+                    )}
+                    <span
+                      className={`px-2 py-0.5 text-sm font-bold rounded-lg ${
+                        product.return_rate === 0
+                          ? "bg-red-100 text-red-600"
+                          : "bg-emerald-100 text-emerald-600"
+                      }`}
+                    >
+                      {product.return_rate === 0 ? "ขายขาด" : `คืน ${product.return_rate}%`}
+                    </span>
+                    <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-sm font-medium rounded-lg">
+                      {customer.mem_name}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={onClose}
+                  className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all flex-shrink-0"
+                >
+                  <FiX size={16} />
+                </button>
+              </div>
+
+              {/* Price + Reason (flex-shrink-0) */}
+              <div className="flex items-center gap-3 px-5 py-2.5 border-b border-gray-100 bg-gray-50/40 flex-shrink-0 flex-wrap">
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-xs font-semibold text-gray-500 whitespace-nowrap">ราคา / หน่วย</span>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={0}
+                      value={pricePerUnit}
+                      onChange={(e) => setPricePerUnit(parseFloat(e.target.value) || 0)}
+                      onFocus={(e) => e.target.select()}
+                      className="w-28 h-8 pl-3 pr-8 text-right text-sm font-bold border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-400 focus:ring-0 transition-colors"
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">
+                      บาท
+                    </span>
+                  </div>
+                  {data.purchase_history.find((h) => h.type === "ขาย") && (
+                    <span className="text-xs text-gray-400">
+                      ล่าสุด: <span className="text-blue-500 font-medium">{fmt(data.purchase_history.find((h) => h.type === "ขาย")!.priceUnit)}</span>{" "}<span className="text-gray-400">/ {data.purchase_history.find((h) => h.type === "ขาย")!.unit ?? product.product_unit ?? ""}</span>
+                    </span>
+                  )}
+                </div>
+                <div className="w-px h-4 bg-gray-200 flex-shrink-0" />
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-base font-semibold text-red-800 whitespace-nowrap">เหตุผล</span>
+                  {REASONS.map((r) => {
+                    const active = selectedReason === r;
+                    return (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setSelectedReason(r)}
+                        className={`px-2.5 py-1 rounded-lg text-sm transition-all whitespace-nowrap ${
+                          active
+                            ? "bg-red-800 text-white font-medium shadow-sm shadow-blue-200"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                      >
+                        {r}
+                      </button>
+                    );
+                  })}
+                  {selectedReason === "อื่นๆ" && (
+                    <input
+                      type="text"
+                      value={customReason}
+                      onChange={(e) => setCustomReason(e.target.value)}
+                      placeholder="ระบุเหตุผล..."
+                      className="h-7 px-2.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-32"
+                      autoFocus
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Purchase history (flex-1 scrollable) */}
+              <div className="flex-1 overflow-hidden p-5 flex flex-col gap-3 min-h-0">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex-shrink-0">
                 ประวัติการซื้อขาย ({purchase_history.length} รายการ)
               </p>
@@ -398,6 +400,7 @@ const ProductScanModal: React.FC<Props> = ({
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200 sticky top-0">
                       <th className="px-3 py-2.5 text-left text-gray-500 font-semibold whitespace-nowrap">วันที่</th>
+                      <th className="px-3 py-2.5 text-center text-gray-500 font-semibold whitespace-nowrap">ห่างวันนี้</th>
                       <th className="px-3 py-2.5 text-left text-gray-500 font-semibold">เลขที่บิล</th>
                       <th className="px-3 py-2.5 text-center text-gray-500 font-semibold whitespace-nowrap">ประเภท</th>
                       <th className="px-3 py-2.5 text-center text-gray-500 font-semibold whitespace-nowrap">จำนวน</th>
@@ -408,7 +411,7 @@ const ProductScanModal: React.FC<Props> = ({
                   <tbody>
                     {purchase_history.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-3 py-8 text-center text-gray-300 text-sm">
+                        <td colSpan={7} className="px-3 py-8 text-center text-gray-300 text-sm">
                           ไม่มีประวัติ
                         </td>
                       </tr>
@@ -421,6 +424,16 @@ const ProductScanModal: React.FC<Props> = ({
                                   day: "2-digit", month: "2-digit", year: "2-digit",
                                 })
                               : "—"}
+                          </td>
+                          <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                            {h.date_purchased ? (() => {
+                              const days = Math.floor((Date.now() - new Date(h.date_purchased).getTime()) / 86400000);
+                              return (
+                                <span className={`text-xs font-semibold tabular-nums ${days <= 30 ? "text-emerald-600" : days <= 90 ? "text-amber-500" : "text-gray-400"}`}>
+                                  {days} วัน
+                                </span>
+                              );
+                            })() : "—"}
                           </td>
                           <td className="px-3 py-2.5 text-blue-600 font-mono">
                             {h.invoice_number || "—"}
@@ -451,7 +464,8 @@ const ProductScanModal: React.FC<Props> = ({
                   </tbody>
                 </table>
               </div>
-            </div>
+            </div>{/* /purchase history */}
+            </div>{/* /left panel */}
 
             {/* ── Right panel: Lot table (main focus) ── */}
             <div className="flex flex-col border-l border-gray-100 min-h-0">
@@ -646,10 +660,12 @@ const ProductScanModal: React.FC<Props> = ({
 
         {/* ── Footer ── */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 flex-shrink-0 bg-gray-50/40">
-          <p className="text-sm text-gray-400">
-            {hasQty
-              ? `เลือก ${lots.filter((l) => l.receive_good_qty + l.receive_bad_qty + l.not_receive_qty > 0).length} Lot`
-              : "กรอกจำนวนรับคืนอย่างน้อย 1 Lot"}
+          <p className="text-lg text-red-800 font-bold">
+            {!hasQty
+              ? "กรอกจำนวนรับคืนอย่างน้อย 1 Lot"
+              : !selectedReason
+              ? "เลือกเหตุผลการส่งคืนก่อนยืนยัน"
+              : `${activeLots.length} Lot · รับดี ${totalGood} · เสีย ${totalBad} · ไม่รับ ${totalNot}`}
           </p>
           <div className="flex gap-3">
             <button
@@ -661,8 +677,8 @@ const ProductScanModal: React.FC<Props> = ({
             </button>
             <button
               type="button"
-              onClick={handleConfirm}
-              disabled={!hasQty}
+              onClick={handleConfirmClick}
+              disabled={!hasQty || !selectedReason || (selectedReason === "อื่นๆ" && !customReason.trim())}
               className="h-10 px-8 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 transition-all font-semibold shadow-sm shadow-blue-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
             >
               ยืนยัน
@@ -670,6 +686,88 @@ const ProductScanModal: React.FC<Props> = ({
           </div>
         </div>
       </div>
+
+      {/* ── Confirmation dialog ── */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <p className="text-sm font-semibold text-gray-800">ยืนยันการรับคืนสินค้า</p>
+              <p className="text-xs text-gray-400 mt-0.5">{data.product.product_name}</p>
+            </div>
+            <div className="px-6 py-4 space-y-2 max-h-72 overflow-y-auto">
+              {activeLots.map((l) => (
+                <div key={l.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-mono text-gray-500">Lot: {l.lot || "—"}</p>
+                    {l.mfg && <p className="text-[11px] text-gray-400">MFG: {l.mfg}</p>}
+                    {l.exp && <p className="text-[11px] text-gray-400">EXP: {l.exp}</p>}
+                  </div>
+                  <div className="flex gap-2 text-xs flex-shrink-0">
+                    {l.receive_good_qty > 0 && (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded-lg font-semibold">
+                        ดี {l.receive_good_qty}
+                      </span>
+                    )}
+                    {l.receive_bad_qty > 0 && (
+                      <span className="px-2 py-1 bg-orange-100 text-orange-600 rounded-lg font-semibold">
+                        เสีย {l.receive_bad_qty}
+                      </span>
+                    )}
+                    {l.not_receive_qty > 0 && (
+                      <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg font-semibold">
+                        ไม่รับ {l.not_receive_qty}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="px-6 py-3 border-t border-gray-100 space-y-2">
+              {/* รวมทั้งหมด */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-green-50 rounded-xl p-2.5 text-center">
+                  <p className="text-[11px] text-green-600 mb-0.5">รวมยาดี</p>
+                  <p className="text-lg font-bold text-green-700">
+                    {activeLots.reduce((s, l) => s + l.receive_good_qty, 0)}
+                  </p>
+                </div>
+                <div className="bg-orange-50 rounded-xl p-2.5 text-center">
+                  <p className="text-[11px] text-orange-500 mb-0.5">รวมยาเสีย</p>
+                  <p className="text-lg font-bold text-orange-600">
+                    {activeLots.reduce((s, l) => s + l.receive_bad_qty, 0)}
+                  </p>
+                </div>
+                <div className="bg-slate-100 rounded-xl p-2.5 text-center">
+                  <p className="text-[11px] text-slate-500 mb-0.5">รวมไม่รับ</p>
+                  <p className="text-lg font-bold text-slate-600">
+                    {activeLots.reduce((s, l) => s + l.not_receive_qty, 0)}
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500">
+                เหตุผล: <span className="font-semibold text-gray-700">{selectedReason === "อื่นๆ" ? customReason : selectedReason}</span>
+              </p>
+            </div>
+            <div className="flex gap-3 px-6 py-4 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowConfirmDialog(false)}
+                className="h-10 px-5 text-sm text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors font-medium"
+              >
+                แก้ไข
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmFinal}
+                className="h-10 px-7 text-sm text-white bg-blue-500 rounded-xl hover:bg-blue-600 transition-all font-semibold shadow-sm shadow-blue-200"
+              >
+                ยืนยัน
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -336,7 +336,7 @@ const ReturnReceiptDoc: React.FC<{ payload: ReturnReceiptPayload }> = ({ payload
             <div style={{ padding: "4px 7px", minHeight: "25mm", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div style={{ fontSize: "8pt", fontWeight: "bold" }}>:: หมายเหตุ ::</div>
               <div style={{ textAlign: "center" }}>
-                <QRCodeSVG value={return_receipt_code} size={52} />
+                <QRCodeSVG value={fmt(netAmount)} size={52} />
                 <div style={{ fontSize: "7pt", marginTop: "1mm" }}>Payment</div>
               </div>
             </div>

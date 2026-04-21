@@ -478,7 +478,7 @@ const ReturnReceipt: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">รับคืน</p>
+                  <p className="text-xs text-gray-400 mb-1">พนักงานที่รับสินค้ามา</p>
                   {receiverName ? (
                     <div className="flex items-center gap-1.5">
                       <div className="flex-1 h-10 px-3 flex items-center bg-blue-50 rounded-xl border border-blue-100">
