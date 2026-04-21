@@ -152,6 +152,7 @@ const OrderList = () => {
   const [pendingReturns, setPendingReturns] = useState<PendingReturn[]>([]);
   const [showReturnPanel, setShowReturnPanel] = useState(false);
   const [loadingReturns, setLoadingReturns] = useState(false);
+  const [confirmTarget, setConfirmTarget] = useState<PendingReturn | null>(null);
   const returnPanelRef = useRef<HTMLDivElement>(null);
   const accessToken = sessionStorage.getItem("access_token");
 
@@ -838,6 +839,7 @@ const OrderList = () => {
     );
   } else {
     return (
+      <>
       <div className="flex flex-col min-h-screen">
         <div>
           <ToastContainer
@@ -963,7 +965,7 @@ const OrderList = () => {
                                   <p className="text-[14px] font-semibold text-emerald-600">จำนวน {item.receive_good_qty} ชิ้น</p>
                                 </div>
                                 <button
-                                  onClick={() => confirmReturn(item.id)}
+                                  onClick={() => setConfirmTarget(item)}
                                   className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-600 flex items-center justify-center transition-colors"
                                   title="ยืนยันคืนชั้นแล้ว"
                                 >
@@ -1800,6 +1802,69 @@ const OrderList = () => {
           </div>
         )}
       </div>
+
+      {/* ── Confirm shelf-return modal ── */}
+      {confirmTarget && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+              <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-emerald-500">
+                  <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-800">ยืนยันนำของขึ้นชั้นแล้ว</p>
+                <p className="text-xs text-gray-400">กรุณาตรวจสอบรายการก่อนยืนยัน</p>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-5 py-4 flex items-center gap-4">
+              {confirmTarget.product_image_url && (
+                <img
+                  src={
+                    confirmTarget.product_image_url.startsWith("..")
+                      ? confirmTarget.product_image_url.replace("..", "https://wangpharma.com")
+                      : confirmTarget.product_image_url
+                  }
+                  alt=""
+                  className="w-16 h-16 rounded-xl object-cover flex-shrink-0 bg-gray-50"
+                />
+              )}
+              <div className="space-y-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-800 truncate">{confirmTarget.product_name}</p>
+                <p className="text-xs text-gray-500">{confirmTarget.product_code}</p>
+                {confirmTarget.product_floor && (
+                  <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-600 text-xs rounded-full font-medium">
+                    ชั้น {confirmTarget.product_floor}
+                  </span>
+                )}
+                <p className="text-xs text-gray-500">{confirmTarget.mem_name ?? confirmTarget.mem_code} · {confirmTarget.return_receipt_code}</p>
+                <p className="text-sm font-bold text-emerald-600">จำนวน {confirmTarget.receive_good_qty} ชิ้น</p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 px-5 py-4 border-t border-gray-50">
+              <button
+                onClick={() => setConfirmTarget(null)}
+                className="flex-1 h-10 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 active:scale-95 transition-all"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={() => { confirmReturn(confirmTarget.id); setConfirmTarget(null); }}
+                className="flex-1 h-10 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 active:scale-95 transition-all shadow-sm shadow-emerald-200"
+              >
+                ยืนยันแล้ว
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      </>
     );
   }
 };
