@@ -372,12 +372,10 @@ function App() {
           />
           <Route
             path="/return-receipt-print"
-            element={<ReturnReceiptPrint />}
-            path="/worklog"
             element={
-              <RequireAuth>
-                <WorklogPage />
-              </RequireAuth>
+            <RequireAuth>
+            <ReturnReceiptPrint />
+            </RequireAuth>
             }
           />
           <Route

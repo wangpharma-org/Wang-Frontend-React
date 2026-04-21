@@ -725,7 +725,7 @@ const ProductScanModal: React.FC<Props> = ({
             </div>
             <div className="px-6 py-3 border-t border-gray-100 space-y-2">
               {/* รวมทั้งหมด */}
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 <div className="bg-green-50 rounded-xl p-2.5 text-center">
                   <p className="text-[11px] text-green-600 mb-0.5">รวมยาดี</p>
                   <p className="text-lg font-bold text-green-700">
@@ -742,6 +742,12 @@ const ProductScanModal: React.FC<Props> = ({
                   <p className="text-[11px] text-slate-500 mb-0.5">รวมไม่รับ</p>
                   <p className="text-lg font-bold text-slate-600">
                     {activeLots.reduce((s, l) => s + l.not_receive_qty, 0)}
+                  </p>
+                </div>
+                <div className="bg-blue-100 rounded-xl p-2.5 text-center">
+                  <p className="text-[11px] text-slate-500 mb-0.5">รวมทั้งหมด</p>
+                  <p className="text-lg font-bold text-slate-600">
+                    {activeLots.reduce((s, l) => s + l.receive_good_qty + l.receive_bad_qty + l.not_receive_qty, 0)}
                   </p>
                 </div>
               </div>
