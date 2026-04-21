@@ -819,11 +819,8 @@ const OrderList = () => {
     }
   };
 
-  const printRecycleBoxBarcode = (uuid: string, name: string) => {
-    window.open(
-      `/recycle-box-barcode?uuid=${uuid}&name=${encodeURIComponent(name)}`,
-      "_blank"
-    );
+  const printRecycleBoxBarcode = async (uuid: string, name: string) => {
+    await printSticker(uuid, null, null, name, null, null, "recycle-box", null, null);
   };
 
   if (featureFlag === false) {

@@ -106,45 +106,52 @@ const StickerPrint = () => {
       if (openedTicketIdRef.current === currentTicket.ticket_id) return;
       openedTicketIdRef.current = currentTicket.ticket_id;
       localStorage.removeItem("print_status");
-      window.open(
-        `/format-sticker?ticketId=${currentTicket.ticket_id}&sh_running=${currentTicket.sh_running
-        }&mem_code=${currentTicket.mem_code}&mem_name=${currentTicket.mem_name
-        }&route_code=${currentTicket.route_code}&route_name=${currentTicket.route_name
-        }&emp_code=${currentTicket.emp_code}&emp_name=${currentTicket.emp_name
-        }${currentTicket.emp_code_request
-          ? `&emp_code_request=${currentTicket.emp_code_request}`
-          : ""
-        }${currentTicket.emp_name_request
-          ? `&emp_name_request=${currentTicket.emp_name_request}`
-          : ""
-        }${currentTicket.floor_count2
-          ? `&floor_count2=${currentTicket.floor_count2}`
-          : ""
-        }${currentTicket.floor_count3
-          ? `&floor_count3=${currentTicket.floor_count3}`
-          : ""
-        }${currentTicket.floor_count4
-          ? `&floor_count4=${currentTicket.floor_count4}`
-          : ""
-        }${currentTicket.floor_count5
-          ? `&floor_count5=${currentTicket.floor_count5}`
-          : ""
-        }${currentTicket.type
-          ? `&type=${currentTicket.type}`
-          : ""
-        }${currentTicket.count
-          ? `&count=${currentTicket.count}`
-          : ""
-        }${currentTicket.floor ? `&floor=${currentTicket.floor}` : ""}
-        ${currentTicket.product_name
-          ? `&product_name=${encodeURIComponent(currentTicket.product_name)}`
-          : ""
-        }${currentTicket.note
-          ? `&note=${encodeURIComponent(currentTicket.note)}`
-          : ""
-        }${countBox ? `&countBox=${countBox}` : ""}`,
-        "_blank"
-      );
+      if (currentTicket.type === "recycle-box") {
+        window.open(
+          `/recycle-box-barcode?uuid=${currentTicket.mem_code}&name=${encodeURIComponent(currentTicket.mem_name)}`,
+          "_blank"
+        );
+      } else {
+        window.open(
+          `/format-sticker?ticketId=${currentTicket.ticket_id}&sh_running=${currentTicket.sh_running
+          }&mem_code=${currentTicket.mem_code}&mem_name=${currentTicket.mem_name
+          }&route_code=${currentTicket.route_code}&route_name=${currentTicket.route_name
+          }&emp_code=${currentTicket.emp_code}&emp_name=${currentTicket.emp_name
+          }${currentTicket.emp_code_request
+            ? `&emp_code_request=${currentTicket.emp_code_request}`
+            : ""
+          }${currentTicket.emp_name_request
+            ? `&emp_name_request=${currentTicket.emp_name_request}`
+            : ""
+          }${currentTicket.floor_count2
+            ? `&floor_count2=${currentTicket.floor_count2}`
+            : ""
+          }${currentTicket.floor_count3
+            ? `&floor_count3=${currentTicket.floor_count3}`
+            : ""
+          }${currentTicket.floor_count4
+            ? `&floor_count4=${currentTicket.floor_count4}`
+            : ""
+          }${currentTicket.floor_count5
+            ? `&floor_count5=${currentTicket.floor_count5}`
+            : ""
+          }${currentTicket.type
+            ? `&type=${currentTicket.type}`
+            : ""
+          }${currentTicket.count
+            ? `&count=${currentTicket.count}`
+            : ""
+          }${currentTicket.floor ? `&floor=${currentTicket.floor}` : ""}
+          ${currentTicket.product_name
+            ? `&product_name=${encodeURIComponent(currentTicket.product_name)}`
+            : ""
+          }${currentTicket.note
+            ? `&note=${encodeURIComponent(currentTicket.note)}`
+            : ""
+          }${countBox ? `&countBox=${countBox}` : ""}`,
+          "_blank"
+        );
+      }
     } else if (currentIndex >= listPrintTicket.length && listPrintTicket.length > 0) {
       setCurrentIndex(0);
     }
