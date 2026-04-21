@@ -4,6 +4,14 @@ import Swal from "sweetalert2";
 import Navbar from "../components/Navbar";
 import Modal from "../components/ModalQC";
 import boxnotfound from "../assets/product-17.png";
+import html2pdf from "html2pdf.js";
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
+import timezone from 'dayjs/plugin/timezone'
+import 'dayjs/locale/th'
+
+dayjs.extend(utc)
+dayjs.extend(timezone)
 
 const VITE_API_URL_ORDER = import.meta.env.VITE_API_URL_ORDER;
 
@@ -74,6 +82,12 @@ interface RTApprovalItem {
       purchase_entry_no: string;
       purchase_entry_date: Date;
     }[]; // เก็บไว้เพื่อ backward compatibility
+    newArrival?: {
+      product_code: string;
+      received_date: string;
+      quantity_received: string;
+      unit: string;
+    };
   };
   member: {
     code: string;
@@ -108,51 +122,51 @@ function statusDisplay(status: string): { label: string; color: string } {
   if (status === "RT-Success") return { label: "จัดแล้ว", color: "text-purple-600" };
   if (status === "NotActive") return { label: "ช่วงปิดระบบ", color: "text-gray-600" };
   if (status === "Rejected") return { label: "ถูกปฏิเสธ", color: "text-red-600" };
-  return { label: "รออนุมัติ", color: "text-yellow-600" }; 
+  return { label: "รออนุมัติ", color: "text-yellow-600" };
 }
 
 function getStatusStyles(status: string): { bgClass: string; textClass: string; borderClass: string; dotClass: string } {
-  if (status === "Approved") return { 
-    bgClass: "bg-green-100", 
-    textClass: "text-green-800", 
-    borderClass: "border-green-200", 
-    dotClass: "bg-green-500" 
+  if (status === "Approved") return {
+    bgClass: "bg-green-100",
+    textClass: "text-green-800",
+    borderClass: "border-green-200",
+    dotClass: "bg-green-500"
   };
-  if (status === "Done") return { 
-    bgClass: "bg-blue-100", 
-    textClass: "text-blue-800", 
-    borderClass: "border-blue-200", 
-    dotClass: "bg-blue-500" 
+  if (status === "Done") return {
+    bgClass: "bg-blue-100",
+    textClass: "text-blue-800",
+    borderClass: "border-blue-200",
+    dotClass: "bg-blue-500"
   };
-  if (status === "Duplicate") return { 
-    bgClass: "bg-orange-100", 
-    textClass: "text-orange-800", 
-    borderClass: "border-orange-200", 
-    dotClass: "bg-orange-500" 
+  if (status === "Duplicate") return {
+    bgClass: "bg-orange-100",
+    textClass: "text-orange-800",
+    borderClass: "border-orange-200",
+    dotClass: "bg-orange-500"
   };
-  if (status === "RT-Success") return { 
-    bgClass: "bg-purple-100", 
-    textClass: "text-purple-800", 
-    borderClass: "border-purple-200", 
-    dotClass: "bg-purple-500" 
+  if (status === "RT-Success") return {
+    bgClass: "bg-purple-100",
+    textClass: "text-purple-800",
+    borderClass: "border-purple-200",
+    dotClass: "bg-purple-500"
   };
-  if (status === "NotActive") return { 
-    bgClass: "bg-gray-100", 
-    textClass: "text-gray-800", 
-    borderClass: "border-gray-200", 
-    dotClass: "bg-gray-500" 
+  if (status === "NotActive") return {
+    bgClass: "bg-gray-100",
+    textClass: "text-gray-800",
+    borderClass: "border-gray-200",
+    dotClass: "bg-gray-500"
   };
-  if (status === "Rejected") return { 
-    bgClass: "bg-red-100", 
-    textClass: "text-red-800", 
-    borderClass: "border-red-200", 
-    dotClass: "bg-red-500" 
+  if (status === "Rejected") return {
+    bgClass: "bg-red-100",
+    textClass: "text-red-800",
+    borderClass: "border-red-200",
+    dotClass: "bg-red-500"
   };
-  return { 
-    bgClass: "bg-yellow-100", 
-    textClass: "text-yellow-800", 
-    borderClass: "border-yellow-200", 
-    dotClass: "bg-yellow-500" 
+  return {
+    bgClass: "bg-yellow-100",
+    textClass: "text-yellow-800",
+    borderClass: "border-yellow-200",
+    dotClass: "bg-yellow-500"
   };
 }
 
@@ -214,6 +228,7 @@ export default function RTApproval() {
   const [error, setError] = useState<string | null>(null);
   const [active, setActive] = useState<boolean>(true);
   const [purchestLoading, setPurchestLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
   const filteredData = (Array.isArray(data) ? data : []).filter((item) => {
     const matchStatus = statusFilter === "all" || item.status === statusFilter;
@@ -326,6 +341,13 @@ export default function RTApproval() {
     return () => { clearInterval(interval); };
   }, [active]);
 
+  // Auto-fetch purchest data when modal opens and purchest data is missing
+  useEffect(() => {
+    if (modalOpen && selectedItem && !selectedItem.product.purchest) {
+      fetchPurchestData(selectedItem.product.code);
+    }
+  }, [modalOpen, selectedItem]);
+
   const checkFeatureFlag = async () => {
     try {
       const res = await axios.get(`${VITE_API_URL_ORDER}/api/feature-flag/check/rt-request`, {
@@ -434,7 +456,6 @@ export default function RTApproval() {
 
   const fetchPurchestDataShow = async (productCode: string) => {
     setPurchestLoading(true);
-    console.log("Fetching purchest data for product code:", productCode);
     try {
       const res = await axios.get(`${VITE_API_URL_ORDER}/api/purchest/history/${productCode}`, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
@@ -459,6 +480,7 @@ export default function RTApproval() {
   };
 
   const fetchPurchestData = async (productCode: string) => {
+    if (!productCode) return;
     setPurchestLoading(true);
     try {
       const res = await axios.post(`${VITE_API_URL_ORDER}/api/purchest/find`, {
@@ -495,7 +517,6 @@ export default function RTApproval() {
   const handleReject = async () => {
     if (!selectedItem) return;
     setRejecting(true);
-    console.log("Rejecting with note:", finalNote);
     try {
       await axios.patch(`${VITE_API_URL_ORDER}/api/rt-request/reject/${selectedItem.ref}`, {
         pro_code: selectedItem.product.code,
@@ -514,10 +535,6 @@ export default function RTApproval() {
         html: `
           <div class="text-center">
             <p class="mb-3">ปฏิเสธคำขอ RT เรียบร้อยแล้ว</p>
-            <div class="bg-gray-100 rounded-lg p-3 inline-block">
-              <p class="text-sm text-gray-600 mb-1">หมายเลขอ้างอิง</p>
-              <p class="font-mono font-bold text-lg">${selectedItem.ref}</p>
-            </div>
           </div>
         `,
         confirmButtonText: 'ตกลง',
@@ -564,10 +581,6 @@ export default function RTApproval() {
         html: `
           <div class="text-center">
             <p class="mb-3">อนุมัติคำขอ RT เรียบร้อยแล้ว</p>
-            <div class="bg-gray-100 rounded-lg p-3 inline-block">
-              <p class="text-sm text-gray-600 mb-1">หมายเลขอ้างอิง</p>
-              <p class="font-mono font-bold text-lg">${selectedItem.ref}</p>
-            </div>
           </div>
         `,
         confirmButtonText: 'ตกลง',
@@ -600,6 +613,141 @@ export default function RTApproval() {
       filteredData;
   const isDuplicateView = statusFilter === "Duplicate";
   const isPendingGroupView = statusFilter === "Pending" && groupedPending.length > 0;
+
+  const exportToPDF = async () => {
+    if (tableData.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'ไม่มีข้อมูลสำหรับ Export',
+        text: 'กรุณาเลือกหรือกรองข้อมูลก่อนทำการ Export',
+        confirmButtonText: 'ตกลง'
+      });
+      return;
+    }
+
+    setExportLoading(true);
+
+    try {
+      // สร้าง HTML content สำหรับ PDF
+      const currentDate = dayjs()
+        .tz('Asia/Bangkok')
+        .locale('th')
+        .format('D MMMM YYYY HH:mm')  
+
+      const filterText = {
+        'All': 'ทั้งหมด',
+        'Pending': 'รออนุมัติ',
+        'Approved': 'อนุมัติแล้ว',
+        'Rejected': 'ปฏิเสธ',
+        'Duplicate': 'รายการซ้ำ',
+        'Done': 'ดำเนินการแล้ว',
+        'NotActive': 'ช่วงปิดระบบ',
+        'all': 'ทั้งหมด'
+      }[statusFilter] || statusFilter;
+
+      const htmlContent = `
+        <div style="font-family: 'Sarabun', Arial, sans-serif; padding: 20px; color: #333;">
+          <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #3b82f6; padding-bottom: 15px;">
+            <h1 style="color: #1e40af; margin: 0; font-size: 24px;">รายงานรายการรออนุมัติการส่ง RT</h1>
+            <p style="color: #6b7280; margin: 5px 0; font-size: 14px;">สถานะ: ${filterText}</p>
+            <p style="color: #6b7280; margin: 5px 0; font-size: 12px;">สร้างเมื่อ: ${currentDate}</p>
+            <p style="color: #6b7280; margin: 5px 0; font-size: 12px;">จำนวนรายการ: ${tableData.length} รายการ</p>
+          </div>
+          
+          <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin: 0;">
+            <thead>
+              <tr style="background: linear-gradient(90deg, #3b82f6, #1d4ed8); color: white;">
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">ลำดับ</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">รหัสร้าน</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">ชื่อร้าน</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">พนักงานขาย</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">รหัสสินค้า</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">ชื่อสินค้า</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">SH</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">จำนวน</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">หมายเหตุ</th>
+                <th style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">วันที่</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableData.map((item, index) => {
+        const rowBg = index % 2 === 0 ? '#ffffff' : '#f9fafb';
+
+        return `
+                  <tr style="background-color: ${rowBg};">
+                    <td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-weight: bold;">${index + 1}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px; font-weight: bold;">${item.member.code}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px; max-width: 120px; word-wrap: break-word;">${item.member.name.trim()}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px;">
+                      <div style="font-weight: bold; margin-bottom: 2px;">${item.member.sales?.code}</div>
+                      <div style="font-size: 8px; color: #6b7280;">${item.member.sales?.name}</div>
+                    </td>
+                    <td style="border: 1px solid #ddd; padding: 6px; font-weight: bold; font-family: monospace;">${item.product.code}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px; max-width: 150px; word-wrap: break-word; font-size: 9px;">${item.product.name}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px; font-weight: bold; font-family: monospace;">${item.sh_running}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-weight: bold;">${item.amount_item.toLocaleString()} ${item.unit_item}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px; max-width: 100px; word-wrap: break-word; font-size: 8px;">${item.note || 'ไม่มีหมายเหตุ'}</td>
+                    <td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-size: 9px;">
+                      <div>${new Date(item.created_at).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
+                      <div style="font-size: 8px; color: #6b7280;">${new Date(item.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</div>
+                    </td>
+                  </tr>
+                `;
+      }).join('')}
+            </tbody>
+          </table>
+          
+          <div style="margin-top: 30px; padding: 15px; background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <p style="margin: 0; font-size: 10px; color: #64748b; text-align: center;">
+              รายงานนี้สร้างโดยระบบ Wang ERP • วันที่ ${currentDate} • รายการทั้งหมด ${tableData.length} รายการ
+            </p>
+          </div>
+        </div>
+      `;
+
+      // ตั้งค่า PDF options
+      const element = document.createElement('div');
+      element.innerHTML = htmlContent;
+
+      const opt = {
+        margin: [10, 10, 10, 10] as [number, number, number, number],
+        filename: `RT_Approval_Report_${statusFilter}_${new Date().toISOString().split('T')[0]}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          letterRendering: true
+        },
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'landscape' as const
+        }
+      };
+
+      // สร้าง PDF
+      await html2pdf().set(opt).from(element).save();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Export สำเร็จ!',
+        text: 'ไฟล์ PDF ถูกดาวน์โหลดแล้ว',
+        confirmButtonText: 'ตกลง',
+        timer: 2000
+      });
+
+    } catch (error) {
+      console.error('Export error:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาด!',
+        text: 'ไม่สามารถ Export PDF ได้ กรุณาลองใหม่อีกครั้ง',
+        confirmButtonText: 'ตกลง'
+      });
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   if (error) {
     return (
@@ -711,6 +859,16 @@ export default function RTApproval() {
               </svg>
               {loading ? "กำลังโหลด..." : error ? "ลองใหม่" : "โหลดใหม่"}
             </button>
+            <button
+              onClick={exportToPDF}
+              disabled={exportLoading || loading}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-blue-300 text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 ${exportLoading ? "animate-pulse" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {exportLoading ? "กำลัง Export..." : "Export PDF"}
+            </button>
             {!error && (
               <button
                 onClick={toggleFeatureFlag}
@@ -732,7 +890,7 @@ export default function RTApproval() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="ค้นหา รหัสอ้างอิง / พนักงาน / ร้าน / รหัสสินค้า / ชื่อสินค้า / ชั้น / SO / SH / จำนวน / หน่วย / ฝ่ายขาย / เส้นทาง / หมายเหตุ..."
+            placeholder="ค้นหา / พนักงาน / ร้าน / รหัสสินค้า / ชื่อสินค้า / ชั้น / SO / SH / จำนวน / หน่วย / ฝ่ายขาย / เส้นทาง / หมายเหตุ..."
             className="flex-1 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
           <div className="flex items-center gap-2">
@@ -755,7 +913,7 @@ export default function RTApproval() {
             {STATUS_FILTERS.map((s) => (
               <button
                 key={s}
-                onClick={() => {setStatusFilter(s); setActive(true)}}
+                onClick={() => { setStatusFilter(s); setActive(true) }}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${statusFilter === s
                   ? "bg-blue-500 text-white"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -809,7 +967,6 @@ export default function RTApproval() {
               <thead>
                 <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
                   <th className="py-4 px-3 text-left font-semibold text-sm">ลำดับ</th>
-                  <th className="py-4 px-3 text-left font-semibold text-sm">อ้างอิง</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">พนักงาน</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">รหัสร้าน</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">ชื่อร้าน</th>
@@ -828,6 +985,7 @@ export default function RTApproval() {
                   <th className="py-4 px-3 text-left font-semibold text-sm">หมายเหตุจาก QC</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">วันที่</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">เวลาที่ผ่านมา</th>
+                  <th className="py-4 px-3 text-left font-semibold text-sm">รายการเข้า</th>
                 </tr>
               </thead>
               <tbody>
@@ -847,11 +1005,6 @@ export default function RTApproval() {
                         <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-xs font-bold">
                           {index + 1}
                         </span>
-                      </td>
-                      <td className="py-4 px-3 text-sm">
-                        <div className="font-mono text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                          {item.ref.slice(-6)}
-                        </div>
                       </td>
                       <td className="py-4 px-3 text-sm max-w-[120px]">
                         <div className="space-y-1">
@@ -1050,15 +1203,38 @@ export default function RTApproval() {
                       </td>
                       <td className="py-4 px-3 text-sm text-center">
                         <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${timeAgo(item.created_at).includes('เพิ่งสร้าง') || timeAgo(item.created_at).includes('นาทีที่แล้ว') ? 'bg-green-100 text-green-700' :
-                            timeAgo(item.created_at).includes('ชั่วโมงที่แล้ว') ? 'bg-yellow-100 text-yellow-700' :
-                              timeAgo(item.created_at).includes('วันที่แล้ว') ? 'bg-orange-100 text-orange-700' :
-                                'bg-red-100 text-red-700'
+                          timeAgo(item.created_at).includes('ชั่วโมงที่แล้ว') ? 'bg-yellow-100 text-yellow-700' :
+                            timeAgo(item.created_at).includes('วันที่แล้ว') ? 'bg-orange-100 text-orange-700' :
+                              'bg-red-100 text-red-700'
                           }`}>
                           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                           </svg>
                           {timeAgo(item.created_at)}
                         </div>
+                      </td>
+                      <td className="py-4 px-3 text-sm text-center">
+                        {item.product.newArrival ? (
+                          <div className="space-y-1">
+                            <div className="flex flex-col  text-white  bg-blue-500 font-semibold rounded-2xl py-1">
+                              <span className="text-lg">
+                                {item.product.newArrival?.quantity_received}
+                              </span>
+                              <span className="text-xs">
+                                {item.product.newArrival?.unit}
+                              </span>
+                            </div>
+
+                            {/* แสดงวันที่ได้รับสินค้า */}
+                            <div className="text-xs text-gray-500">
+                              {item.product.newArrival?.received_date}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center text-gray-400 italic text-xs py-2">
+                            ไม่มีข้อมูล
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );
@@ -1134,7 +1310,6 @@ export default function RTApproval() {
                     ข้อมูลการซื้อขาย
                   </h3>
                   <div>
-
                     <button
                       onClick={() => fetchPurchestData(selectedItem.product.code)}
                       disabled={purchestLoading}
@@ -1146,7 +1321,7 @@ export default function RTApproval() {
                       {purchestLoading ? 'กำลังโหลด...' : 'โหลดข้อมูลล่าสุด'}
                     </button>
                     <p>
-                      <span className="text-xs text-gray-500">{(new Date(selectedItem.product.purchest?.update_at || "-")).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})}</span>
+                      <span className="text-xs text-gray-500">{(new Date(selectedItem.product.purchest?.update_at || "-")).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                     </p>
                   </div>
                 </div>
@@ -1173,7 +1348,7 @@ export default function RTApproval() {
                     {/* ข้อมูลเอกสาร */}
                     <div className="bg-white border border-gray-200 rounded-lg p-4">
                       <h4 className="text-sm font-semibold text-gray-700 mb-3">📋 ข้อมูลเอกสาร</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div className="space-y-4">
 
                         {/* PUR */}
                         {selectedItem.product.purchest.pur && (
@@ -1190,7 +1365,7 @@ export default function RTApproval() {
                         {/* BI */}
                         {selectedItem.product.purchest.bi && (
                           <div className="border border-purple-200 rounded-lg p-3">
-                            <div className="font-medium text-purple-700 mb-2">ใบวิ่ง (BI)</div>
+                            <div className="font-medium text-purple-700 mb-2">การขาย (BI)</div>
                             <div className="space-y-1 text-xs text-gray-600">
                               <div>วันที่: {new Date(selectedItem.product.purchest.bi.bi_date).toLocaleDateString('th-TH')}</div>
                               <div>เลขที่: {selectedItem.product.purchest.bi.bi_invoice}</div>
@@ -1199,8 +1374,79 @@ export default function RTApproval() {
                           </div>
                         )}
 
-                        {/* PO */}
-                        {selectedItem.product.purchest.po && (
+                        {/* PO - Updated to handle array */}
+                        {selectedItem.product.purchest.po && Array.isArray(selectedItem.product.purchest.po) && selectedItem.product.purchest.po.length > 0 && (
+                          <div className="space-y-3">
+                            <div className="font-medium text-orange-700 flex items-center gap-2">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              ใบสั่งซื้อ (PO) - {selectedItem.product.purchest.po.length} รายการ
+                            </div>
+                            {selectedItem.product.purchest.po.map((poItem, index) => (
+                              <div key={poItem.purchest_po_id || index} className="border border-orange-200 rounded-lg">
+                                <div className="bg-orange-50 px-3 py-2 border-b border-orange-200">
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                                    <div>
+                                      <span className="text-gray-500">เลขที่:</span>
+                                      <span className="ml-1 font-medium text-orange-800">{poItem.po_invoice}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-gray-500">วันที่:</span>
+                                      <span className="ml-1 font-medium text-orange-800">
+                                        {poItem.po_date ? dayjs(poItem.po_date).format('DD/MM/YYYY') : '-'}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-gray-500">จำนวน:</span>
+                                      <span className="ml-1 font-medium text-orange-800">{poItem.po_amount || '-'} {poItem.po_unit}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                {/* Tracking Information */}
+                                {poItem.tracking_po && poItem.tracking_po.length > 0 && (
+                                  <div className="p-3">
+                                    <div className="text-xs font-medium text-gray-600 mb-2 flex items-center gap-1">
+                                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                      ประวัติติดตาม ({poItem.tracking_po.length} รายการ)
+                                    </div>
+                                    <div className="max-h-32 overflow-y-auto space-y-2">
+                                      {poItem.tracking_po
+                                        .sort((a: { date: string }, b: { date: string }) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                        .map((track: { tracking_id: string; message: string; emp: string; track_to: string; date: string }, trackIndex: number) => (
+                                        <div key={track.tracking_id || trackIndex} className="bg-gray-50 rounded p-2 border-l-2 border-orange-300">
+                                          <div className="flex items-start justify-between text-xs">
+                                            <div className="flex-1">
+                                              <div className="font-medium text-gray-700 mb-1">{track.message}</div>
+                                              <div className="flex items-center gap-2 text-gray-500">
+                                                <span>พนักงาน: {track.emp}</span>
+                                                <span>•</span>
+                                                <span>{track.track_to}</span>
+                                              </div>
+                                            </div>
+                                            <div className="text-gray-400 text-xs ml-2 flex-shrink-0">
+                                              {new Date(track.date).toLocaleDateString('th-TH', { 
+                                                day: '2-digit', 
+                                                month: '2-digit', 
+                                                year: 'numeric' 
+                                              })}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* PO - Fallback for single object (backward compatibility) */}
+                        {selectedItem.product.purchest.po && !Array.isArray(selectedItem.product.purchest.po) && (
                           <div className="border border-orange-200 rounded-lg p-3">
                             <div className="font-medium text-orange-700 mb-2">ใบสั่งซื้อ (PO)</div>
                             <div className="space-y-1 text-xs text-gray-600">
@@ -1367,7 +1613,7 @@ export default function RTApproval() {
                     ))}
                   </div>
                 ) : (
-                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center">
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center" >
                     <div className="flex flex-col items-center gap-2 py-2">
                       <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -1395,20 +1641,20 @@ export default function RTApproval() {
                 </div>
               </div>
 
-            {/* Note */}
-            <div className="mb-4">
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                หมายเหตุ <span className="text-red-500">*</span>
-              </label>
+              {/* Note */}
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  หมายเหตุ <span className="text-red-500">*</span>
+                </label>
 
-              <div className="space-y-3">
-                {NOTE_OPTIONS.map((option, index) => {
-                  const isSelected = selectedReason === option;
+                <div className="space-y-3">
+                  {NOTE_OPTIONS.map((option, index) => {
+                    const isSelected = selectedReason === option;
 
-                  return (
-                    <label
-                      key={index}
-                      className={`
+                    return (
+                      <label
+                        key={index}
+                        className={`
                         flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer
                         transition-all duration-200 select-none
                         ${isSelected

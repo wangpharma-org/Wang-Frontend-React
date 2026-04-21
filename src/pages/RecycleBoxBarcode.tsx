@@ -7,7 +7,10 @@ const RecycleBoxBarcode = () => {
   const name = queryParams.get("name") || "";
 
   useEffect(() => {
-    window.onafterprint = () => window.close();
+    window.onafterprint = () => {
+      localStorage.setItem("print_status", "done");
+      window.close();
+    };
     window.print();
   }, []);
 
