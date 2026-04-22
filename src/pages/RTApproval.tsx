@@ -632,7 +632,7 @@ export default function RTApproval() {
       const currentDate = dayjs()
         .tz('Asia/Bangkok')
         .locale('th')
-        .format('D MMMM YYYY HH:mm')  
+        .format('D MMMM YYYY HH:mm')
 
       const filterText = {
         'All': 'ทั้งหมด',
@@ -1403,7 +1403,7 @@ export default function RTApproval() {
                                     </div>
                                   </div>
                                 </div>
-                                
+
                                 {/* Tracking Information */}
                                 {poItem.tracking_po && poItem.tracking_po.length > 0 && (
                                   <div className="p-3">
@@ -1417,26 +1417,26 @@ export default function RTApproval() {
                                       {poItem.tracking_po
                                         .sort((a: { date: string }, b: { date: string }) => new Date(b.date).getTime() - new Date(a.date).getTime())
                                         .map((track: { tracking_id: string; message: string; emp: string; track_to: string; date: string }, trackIndex: number) => (
-                                        <div key={track.tracking_id || trackIndex} className="bg-gray-50 rounded p-2 border-l-2 border-orange-300">
-                                          <div className="flex items-start justify-between text-xs">
-                                            <div className="flex-1">
-                                              <div className="font-medium text-gray-700 mb-1">{track.message}</div>
-                                              <div className="flex items-center gap-2 text-gray-500">
-                                                <span>พนักงาน: {track.emp}</span>
-                                                <span>•</span>
-                                                <span>{track.track_to}</span>
+                                          <div key={track.tracking_id || trackIndex} className="bg-gray-50 rounded p-2 border-l-2 border-orange-300">
+                                            <div className="flex items-start justify-between text-xs">
+                                              <div className="flex-1">
+                                                <div className="font-medium text-gray-700 mb-1">{track.message}</div>
+                                                <div className="flex items-center gap-2 text-gray-500">
+                                                  <span>พนักงาน: {track.emp}</span>
+                                                  <span>•</span>
+                                                  <span>{track.track_to}</span>
+                                                </div>
+                                              </div>
+                                              <div className="text-gray-400 text-xs ml-2 flex-shrink-0">
+                                                {new Date(track.date).toLocaleDateString('th-TH', {
+                                                  day: '2-digit',
+                                                  month: '2-digit',
+                                                  year: 'numeric'
+                                                })}
                                               </div>
                                             </div>
-                                            <div className="text-gray-400 text-xs ml-2 flex-shrink-0">
-                                              {new Date(track.date).toLocaleDateString('th-TH', { 
-                                                day: '2-digit', 
-                                                month: '2-digit', 
-                                                year: 'numeric' 
-                                              })}
-                                            </div>
                                           </div>
-                                        </div>
-                                      ))}
+                                        ))}
                                     </div>
                                   </div>
                                 )}
@@ -1611,6 +1611,16 @@ export default function RTApproval() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                ) : purchestLoading ? (
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center" >
+                    <div className="flex flex-col items-center gap-2 py-4">
+                      <svg className="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="text-gray-600 text-sm">กำลังโหลดข้อมูลการซื้อขาย...</span>
+                    </div>
                   </div>
                 ) : (
                   <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center" >
