@@ -180,9 +180,9 @@ function filterLabel(s: StatusFilter): string {
 }
 
 function timeAgo(dateString: string): string {
-  const now = new Date();
-  const date = new Date(dateString);
-  const diffInMs = now.getTime() - date.getTime();
+  const now = dayjs();
+  const date = dayjs(dateString);
+  const diffInMs = now.diff(date);
 
   const seconds = Math.floor(diffInMs / 1000);
   const minutes = Math.floor(seconds / 60);
@@ -283,10 +283,10 @@ export default function RTApproval() {
     return Array.from(groups.values())
       .map((items) => {
 
-        const sortedItems = items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        const sortedItems = items.sort((a, b) => dayjs(b.created_at).valueOf() - dayjs(a.created_at).valueOf());
 
         const oldestItem = items.reduce((oldest, current) =>
-          new Date(current.created_at) < new Date(oldest.created_at) ? current : oldest
+          dayjs(current.created_at).isBefore(dayjs(oldest.created_at)) ? current : oldest
         );
         return {
           ...sortedItems[0],
@@ -688,8 +688,8 @@ export default function RTApproval() {
                     <td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-weight: bold;">${item.amount_item.toLocaleString()} ${item.unit_item}</td>
                     <td style="border: 1px solid #ddd; padding: 6px; max-width: 100px; word-wrap: break-word; font-size: 8px;">${item.note || 'ไม่มีหมายเหตุ'}</td>
                     <td style="border: 1px solid #ddd; padding: 6px; text-align: center; font-size: 9px;">
-                      <div>${new Date(item.created_at).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
-                      <div style="font-size: 8px; color: #6b7280;">${new Date(item.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</div>
+                      <div>${dayjs(item.created_at).locale('th').format('DD/MM/YYYY')}</div>
+                      <div style="font-size: 8px; color: #6b7280;">${dayjs(item.created_at).locale('th').format('HH:mm')}</div>
                     </td>
                   </tr>
                 `;
@@ -711,7 +711,7 @@ export default function RTApproval() {
 
       const opt = {
         margin: [10, 10, 10, 10] as [number, number, number, number],
-        filename: `RT_Approval_Report_${statusFilter}_${new Date().toISOString().split('T')[0]}.pdf`,
+        filename: `RT_Approval_Report_${statusFilter}_${dayjs().toISOString().split('T')[0]}.pdf`,
         image: { type: 'jpeg' as const, quality: 0.98 },
         html2canvas: {
           scale: 2,
@@ -1197,8 +1197,8 @@ export default function RTApproval() {
                       </td>
                       <td className="py-4 px-3 text-sm text-center text-gray-600">
                         <div className="space-y-1">
-                          <div className="font-medium">{new Date(item.created_at).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit' })}</div>
-                          <div className="text-xs">{new Date(item.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</div>
+                          <div className="font-medium">{dayjs(item.created_at).format('DD/MM')}</div>
+                          <div className="text-xs">{dayjs(item.created_at).format('HH:mm')}</div>
                         </div>
                       </td>
                       <td className="py-4 px-3 text-sm text-center">
@@ -1321,7 +1321,7 @@ export default function RTApproval() {
                       {purchestLoading ? 'กำลังโหลด...' : 'โหลดข้อมูลล่าสุด'}
                     </button>
                     <p>
-                      <span className="text-xs text-gray-500">{(new Date(selectedItem.product.purchest?.update_at || "-")).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                      <span className="text-xs text-gray-500">{(dayjs(selectedItem.product.purchest?.update_at || "-")).locale('th').format('DD/MM/YYYY HH:mm')}</span>
                     </p>
                   </div>
                 </div>
@@ -1339,7 +1339,7 @@ export default function RTApproval() {
                         <div>
                           <span className="text-gray-500">อัปเดต:</span>
                           <span className="ml-2 font-medium">
-                            {new Date(selectedItem.product.purchest.product.last_stock_date).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            {dayjs(selectedItem.product.purchest.product.last_stock_date).locale('th').format('DD/MM/YYYY HH:mm')}
                           </span>
                         </div>
                       </div>
@@ -1355,7 +1355,7 @@ export default function RTApproval() {
                           <div className="border border-green-200 rounded-lg p-3">
                             <div className="font-medium text-green-700 mb-2">การซื้อ (PUR)</div>
                             <div className="space-y-1 text-xs text-gray-600">
-                              <div>วันที่: {new Date(selectedItem.product.purchest.pur.pur_date).toLocaleDateString('th-TH')}</div>
+                              <div>วันที่: {dayjs(selectedItem.product.purchest.pur.pur_date).locale('th').format('DD/MM/YYYY')}</div>
                               <div>เลขที่: {selectedItem.product.purchest.pur.pur_invoice}</div>
                               <div>จำนวน: {selectedItem.product.purchest.pur.pur_amount} {selectedItem.product.purchest.pur.pur_unit}</div>
                             </div>
@@ -1367,7 +1367,7 @@ export default function RTApproval() {
                           <div className="border border-purple-200 rounded-lg p-3">
                             <div className="font-medium text-purple-700 mb-2">การขาย (BI)</div>
                             <div className="space-y-1 text-xs text-gray-600">
-                              <div>วันที่: {new Date(selectedItem.product.purchest.bi.bi_date).toLocaleDateString('th-TH')}</div>
+                              <div>วันที่: {dayjs(selectedItem.product.purchest.bi.bi_date).locale('th').format('DD/MM/YYYY')}</div>
                               <div>เลขที่: {selectedItem.product.purchest.bi.bi_invoice}</div>
                               <div>จำนวน: {selectedItem.product.purchest.bi.bi_amount} {selectedItem.product.purchest.bi.bi_unit}</div>
                             </div>
@@ -1415,7 +1415,7 @@ export default function RTApproval() {
                                     </div>
                                     <div className="max-h-32 overflow-y-auto space-y-2">
                                       {poItem.tracking_po
-                                        .sort((a: { date: string }, b: { date: string }) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                        .sort((a: { date: string }, b: { date: string }) => dayjs(b.date, 'DD/MM/YYYY').toDate().getTime() - dayjs(a.date, 'DD/MM/YYYY').toDate().getTime())
                                         .map((track: { tracking_id: string; message: string; emp: string; track_to: string; date: string }, trackIndex: number) => (
                                           <div key={track.tracking_id || trackIndex} className="bg-gray-50 rounded p-2 border-l-2 border-orange-300">
                                             <div className="flex items-start justify-between text-xs">
@@ -1428,11 +1428,7 @@ export default function RTApproval() {
                                                 </div>
                                               </div>
                                               <div className="text-gray-400 text-xs ml-2 flex-shrink-0">
-                                                {new Date(track.date).toLocaleDateString('th-TH', {
-                                                  day: '2-digit',
-                                                  month: '2-digit',
-                                                  year: 'numeric'
-                                                })}
+                                                {dayjs(track.date).locale('th').format('DD/MM/YYYY')}
                                               </div>
                                             </div>
                                           </div>
@@ -1451,7 +1447,7 @@ export default function RTApproval() {
                             <div className="font-medium text-orange-700 mb-2">ใบสั่งซื้อ (PO)</div>
                             <div className="space-y-1 text-xs text-gray-600">
                               {selectedItem.product.purchest.po.po_date && (
-                                <div>วันที่: {new Date(selectedItem.product.purchest.po.po_date).toLocaleDateString('th-TH')}</div>
+                                <div>วันที่: {dayjs(selectedItem.product.purchest.po.po_date).locale('th').format('DD/MM/YYYY')}</div>
                               )}
                               <div>เลขที่: {selectedItem.product.purchest.po.po_invoice}</div>
                               <div>จำนวน: {selectedItem.product.purchest.po.po_amount || '-'} {selectedItem.product.purchest.po.po_unit}</div>
@@ -1464,7 +1460,7 @@ export default function RTApproval() {
                           <div className="border border-yellow-200 rounded-lg p-3">
                             <div className="font-medium text-yellow-700 mb-2">ใบขอซื้อ (PR)</div>
                             <div className="space-y-1 text-xs text-gray-600">
-                              <div>วันที่: {new Date(selectedItem.product.purchest.pr.pr_date!).toLocaleDateString('th-TH')}</div>
+                              <div>วันที่: {dayjs(selectedItem.product.purchest.pr.pr_date!).locale('th').format('DD/MM/YYYY')}</div>
                               <div>เลขที่: {selectedItem.product.purchest.pr.pr_invoice || '-'}</div>
                               <div>จำนวน: {selectedItem.product.purchest.pr.pr_amount || '-'} {selectedItem.product.purchest.pr.pr_unit || '-'}</div>
                             </div>
@@ -1477,7 +1473,7 @@ export default function RTApproval() {
                     {selectedItem.product.purchest.purchestHistory && selectedItem.product.purchest.purchestHistory.length > 0 && (() => {
                       // จัดกลุ่มข้อมูลตามวันที่
                       const groupedHistory = selectedItem.product.purchest.purchestHistory.reduce((acc, history) => {
-                        const date = new Date(history.date).toLocaleDateString('th-TH');
+                        const date = dayjs(history.date).locale('th').format('DD/MM/YYYY');
                         if (!acc[date]) {
                           acc[date] = { SAL: 0, RET: 0, PUR: 0, unit: history.unit };
                         }
@@ -1486,7 +1482,7 @@ export default function RTApproval() {
                       }, {} as Record<string, { SAL: number; RET: number; PUR: number; unit: string }>);
 
                       const sortedDates = Object.keys(groupedHistory).sort((a, b) =>
-                        new Date(b.split('/').reverse().join('-')).getTime() - new Date(a.split('/').reverse().join('-')).getTime()
+                        dayjs(b, 'DD/MM/YYYY').toDate().getTime() - dayjs(a, 'DD/MM/YYYY').toDate().getTime()
                       );
 
                       return (
@@ -1507,7 +1503,7 @@ export default function RTApproval() {
                                 {(() => {
                                   // สร้าง array ของวันที่เรียงจากเก่าไปใหม่สำหรับการคำนวณ running total
                                   const datesSortedOldest = Object.keys(groupedHistory).sort((a, b) =>
-                                    new Date(a.split('/').reverse().join('-')).getTime() - new Date(b.split('/').reverse().join('-')).getTime()
+                                    dayjs(a, 'DD/MM/YYYY').toDate().getTime() - dayjs(b, 'DD/MM/YYYY').toDate().getTime()
                                   );
 
                                   // คำนวณ running total สำหรับแต่ละวัน
@@ -1585,11 +1581,7 @@ export default function RTApproval() {
                           <div className="flex justify-between">
                             <span className="text-gray-500">วันที่สั่งซื้อ:</span>
                             <span className="font-medium text-gray-800">
-                              {new Date(entry.purchase_entry_date).toLocaleDateString('th-TH', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric'
-                              })}
+                              {dayjs(entry.purchase_entry_date).locale('th').format('DD/MM/YYYY')}
                             </span>
                           </div>
                           <div className="flex justify-between">
