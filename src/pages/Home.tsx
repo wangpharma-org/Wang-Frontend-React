@@ -58,14 +58,7 @@ const listMenu = [
     href: "/route-manage",
     imageSrc: RouteManage,
     admin: true,
-  }
-    ,{
-      id: 8,
-      name: "RT-Approval",
-      href: "/rt-approval",
-      imageSrc: Document,
-      admin: true,
-    },
+  },
     {
       id: 9,
       name: "ระบบรับของคืน",

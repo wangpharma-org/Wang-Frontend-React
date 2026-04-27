@@ -377,6 +377,13 @@ export default function TaskApprovalPage() {
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === task.id
+            ? { ...t, approve_status: "approve" as ApproveStatus, approve_time: new Date().toISOString() }
+            : t
+        )
+      );
       Swal.fire({ icon: "success", title: "อนุมัติสำเร็จ", timer: 1500, showConfirmButton: false });
     } catch (err) {
       console.error("Failed to approve task", err);
@@ -410,6 +417,13 @@ export default function TaskApprovalPage() {
         `${VITE_API_URL_ORDER}/api/task-rotation/${task.id}/reject`,
         { reason: result.value || undefined },
         { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === task.id
+            ? { ...t, approve_status: "reject" as ApproveStatus, approve_time: new Date().toISOString(), reject_reason: result.value || null }
+            : t
+        )
       );
       Swal.fire({ icon: "info", title: "บันทึกการไม่อนุมัติแล้ว", timer: 1500, showConfirmButton: false });
     } catch (err) {
