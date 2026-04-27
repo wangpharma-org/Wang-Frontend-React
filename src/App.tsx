@@ -373,6 +373,8 @@ function App() {
           <Route
             path="/return-receipt-print"
             element={<ReturnReceiptPrint />}
+          />
+          <Route  
             path="/worklog"
             element={
               <RequireAuth>

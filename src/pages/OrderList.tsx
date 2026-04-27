@@ -572,39 +572,6 @@ const OrderList = () => {
     }
   };
 
-  const SaveBox = () => {
-    Swal.fire({
-      title: "กรุณาระบุจำนวนลัง",
-      input: "text",
-      inputAttributes: {
-        autocapitalize: "off"
-      },
-      showCancelButton: true,
-      confirmButtonText: "บันทึก",
-      cancelButtonText: "ยกเลิก",
-      showLoaderOnConfirm: true,
-      preConfirm: async (count_save: number) => {
-        try {
-          const githubUrl = `${import.meta.env.VITE_API_URL_ORDER}/api/picking/savebox`;
-
-          const response = await axios.post(githubUrl,
-            {
-              emp_code: userInfo?.emp_code,
-              count_save: count_save
-            });
-          console.log(response.data)
-
-          return response.data;
-        } catch {
-          Swal.showValidationMessage(`
-          กรุณาใส่เฉพาะตัวเลข
-      `);
-        }
-      },
-      allowOutsideClick: () => !Swal.isLoading()
-    })
-  }
-
   const printStickerSelect = (
     type: string,
     mem_code: string,
