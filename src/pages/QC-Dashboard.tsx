@@ -1022,7 +1022,7 @@ const QCDashboard = () => {
     setSh_running(null);
     setIsInputLocked(false);
     setHasnotQC(0);
-    setCountBox(1);
+    setCountBox(0);
     setInputValues(Array(10).fill(""));
     setProductNotHaveBarcode(null);
     setSHRunningArray(null);
@@ -4534,10 +4534,15 @@ const QCDashboard = () => {
                     <div className="mt-5 px-13">
                       {hasNotQC === 0 && dataQC && (
                         <div>
+                          {countBox < 1 && (
+                            <p className="text-center text-red-600 font-bold text-lg mb-2">
+                              กรุณาเพิ่มจำนวนลัง
+                            </p>
+                          )}
                           <div
-                            className="w-full bg-green-500 text-base text-white py-5 p-1 font-bold rounded-sm hover:bg-green-600 select-none cursor-pointer mb-2 flex justify-center items-center"
+                            className={`w-full text-base text-white py-5 p-1 font-bold rounded-sm mb-2 flex justify-center items-center ${countBox < 1 ? "bg-gray-400 cursor-not-allowed" : "bg-green-500 hover:bg-green-600 select-none cursor-pointer"}`}
                             onClick={() => {
-                              if (!loadingPrinting) {
+                              if (!loadingPrinting && countBox >= 1) {
                                 handlePrintStickerBox();
                               }
                             }}
