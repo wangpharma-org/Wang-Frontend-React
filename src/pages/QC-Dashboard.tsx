@@ -361,6 +361,7 @@ const QCDashboard = () => {
   const [loadingSubmit, setLoadingSubmit] = useState<boolean>(false);
 
   const [hasPrintSticker, setHasPrintSticker] = useState<boolean>(false);
+  const [hasFrozenNameChange, setHasFrozenNameChange] = useState<boolean>(false);
 
   const [cannotSubmit, setCannotSubmit] = useState<string | null>(null);
 
@@ -943,7 +944,12 @@ const QCDashboard = () => {
         ? dataQC.every((item) => item.shipping_id != null)
         : dataQC.shipping_id != null;
 
+      const frozenByNameChange = shoppingOrder?.some(
+        (so) => so.nameChangeRequest?.status === "pending"
+      ) ?? false;
+
       setHasPrintSticker(hasPrintSticker);
+      setHasFrozenNameChange(frozenByNameChange);
       setOrder(shoppingOrder);
       console.log(shoppingOrder);
       setHasnotQC(notQC);
@@ -1043,6 +1049,7 @@ const QCDashboard = () => {
 
   const handleClear = () => {
     setCannotSubmit(null);
+    setHasFrozenNameChange(false);
     setSubmitFailed(false);
     setSubmitSucess(false);
     setHasQC(0);
@@ -1619,23 +1626,11 @@ const QCDashboard = () => {
           }
         }
       }
-    } catch (err) {
-      const axiosErr = err as AxiosError<{ message: string }>;
-      const msg = axiosErr.response?.data?.message;
-      if (msg?.includes('รอ Admin อนุมัติการเปลี่ยนชื่อ')) {
-        Swal.fire({
-          icon: "warning",
-          title: "ไม่สามารถ QC ได้",
-          text: msg,
-          confirmButtonText: "รับทราบ",
-          confirmButtonColor: "#d97706",
-        });
-      } else {
-        alert(
-          "มีบางอย่างผิดพลาด กรุณาสแกน QC Code ลูกค้าเจ้าเดิมอีกครั้งเพื่อทำงานต่อ"
-        );
-        handleClear();
-      }
+    } catch {
+      alert(
+        "มีบางอย่างผิดพลาด กรุณาสแกน QC Code ลูกค้าเจ้าเดิมอีกครั้งเพื่อทำงานต่อ"
+      );
+      handleClear();
     } finally {
       setLoadingSubmit(false);
     }
@@ -4809,19 +4804,18 @@ const QCDashboard = () => {
                         หลังจากพิมพ์สติ๊กเกอร์ติดลังกรุณากดเสร็จสิ้นทุกครั้ง
                       </p>
                       <button
-                        // disabled={hasNotQC !== 0 || loadingSubmit || !hasPrintSticker}
-                        className={`w-full flex justify-center items-center  text-base text-white p-3 font-bold rounded-sm  select-none cursor-pointer mt-4 ${hasNotQC !== 0 || loadingSubmit || !hasPrintSticker || countBox === 0
+                        className={`w-full flex justify-center items-center text-base text-white p-3 font-bold rounded-sm select-none cursor-pointer mt-4 ${hasNotQC !== 0 || loadingSubmit || !hasPrintSticker || countBox === 0 || hasFrozenNameChange
                           ? "bg-gray-500 hover:bg-gray-600"
                           : "bg-green-500 hover:bg-green-600"
                           }`}
                         onClick={() => {
+                          if (hasFrozenNameChange) return;
                           if (
                             hasNotQC !== 0 ||
                             loadingSubmit ||
                             !hasPrintSticker ||
                             countBox === 0
                           ) {
-                            // setSubmitFailed(true);
                             setCannotSubmit("ปริ้นสติกเกอร์ก่อนเสร็จสิ้น");
                             return;
                           }
@@ -4834,6 +4828,11 @@ const QCDashboard = () => {
                           "เสร็จสิ้น"
                         )}
                       </button>
+                      {hasFrozenNameChange && (
+                        <p className="mt-2 font-bold text-amber-700 text-sm">
+                          มีสินค้ารอ Admin อนุมัติการเปลี่ยนชื่อ — ไม่สามารถกดเสร็จสิ้นได้
+                        </p>
+                      )}
                       <p className="mt-2 font-bold text-red-700">
                         {submitFailed ? `ยืนยันไม่สำเร็จ ลองอีกครั้ง` : ""}
                       </p>
