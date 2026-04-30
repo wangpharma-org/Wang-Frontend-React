@@ -10,6 +10,7 @@ import log from "../assets/log.png";
 import RouteManage from "../assets/evaluation.png";
 import Document from "../assets/document.png";
 import returnBox from "../assets/return-box-home.png";
+import ChangeName from "../assets/change.png";
 import { useNavigate } from "react-router";
 const listMenu = [
   {
@@ -85,6 +86,13 @@ const listMenu = [
     name: "อนุมัติบันทึกการทำงาน",
     href: "/task-approval",
     imageSrc: Document,
+    admin: true,
+  },
+  {
+    id: 13,
+    name: "ระบบอนุมัติการ QC สินค้าเปลี่ยนชื่อ",
+    href: "/product-name-change-approval",
+    imageSrc: ChangeName,
     admin: true,
   },
 ];

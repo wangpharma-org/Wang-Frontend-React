@@ -38,6 +38,14 @@ export interface Root {
   shipping_id: number | null;
 }
 
+export interface NameChangeRequest {
+  id: number;
+  status: string;
+  old_name: string;
+  new_name: string;
+  old_image_url: string | null;
+}
+
 export interface ShoppingOrder {
   so_running: string;
   so_amount: number;
@@ -52,6 +60,9 @@ export interface ShoppingOrder {
   so_qc_amount: number;
   is_reward: boolean;
   amount_max: number | null;
+  product_name_at_order: string | null;
+  name_change_request_id: number | null;
+  nameChangeRequest: NameChangeRequest | null;
   product: Product;
 }
 
@@ -219,6 +230,10 @@ const QCDashboard = () => {
   const [modalProductRequestOpen, setModalProductRequestOpen] = useState<
     string | null
   >(null);
+
+  // Modal แจ้งเตือนสินค้าถูก freeze (รอ Admin อนุมัติเปลี่ยนชื่อ)
+  const [frozenModalOrder, setFrozenModalOrder] =
+    useState<ShoppingOrder | null>(null);
 
   // Modal Alert Barcode Not Found
   const [modalBarcodeNotFound, setModalBarcodeNotFound] =
@@ -711,6 +726,31 @@ const QCDashboard = () => {
       setFeatureFlag(false);
     });
 
+    newSocket.on(
+      "name_change:resolved",
+      (data: { requestId: number; status: string; productCode: string }) => {
+        setDataQC((prev) => {
+          if (!prev) return prev;
+          const updateOrders = (orders: ShoppingOrder[]): ShoppingOrder[] =>
+            orders.map((o) =>
+              o.name_change_request_id === data.requestId && o.nameChangeRequest
+                ? { ...o, nameChangeRequest: { ...o.nameChangeRequest, status: data.status } }
+                : o
+            );
+          if (Array.isArray(prev)) {
+            return prev.map((head) => ({
+              ...head,
+              shoppingOrders: updateOrders(head.shoppingOrders),
+            }));
+          }
+          return {
+            ...(prev as Root),
+            shoppingOrders: updateOrders((prev as Root).shoppingOrders),
+          };
+        });
+      }
+    );
+
     const prepareEmpData = sessionStorage.getItem("prepare-emp");
     const QCEmpData = sessionStorage.getItem("qc-emp");
     const packedEmpData = sessionStorage.getItem("packed-emp");
@@ -1154,20 +1194,35 @@ const QCDashboard = () => {
   const handleScan = async (barcode: string) => {
     console.log(barcode);
     console.log("order", order);
+
+    const matchBarcode = (o: ShoppingOrder) =>
+      o.product.product_barcode === barcode ||
+      o.product.product_code === barcode ||
+      o.product.product_barcode2 === barcode ||
+      o.product.product_barcode3 === barcode;
+
+    const frozenOrder = order.find(
+      (o) => matchBarcode(o) && o.nameChangeRequest?.status === "pending"
+    );
+    if (frozenOrder) {
+      setFrozenModalOrder(frozenOrder);
+      if (inputBarcode.current) inputBarcode.current.value = "";
+      return;
+    }
+
+    // const rtOrder = order.find(
+    //   (o) => matchBarcode(o) && o.so_already_qc === "RT"
+    // );
+    // if (rtOrder) {
+    //   if (inputBarcode.current) inputBarcode.current.value = "";
+    //   return;
+    // }
+
     const foundOrder = order.find(
       (o) =>
-        (o.product.product_barcode === barcode &&
-          o.so_already_qc !== "Yes" &&
-          o.so_already_qc !== "RT") ||
-        (o.product.product_code === barcode &&
-          o.so_already_qc !== "Yes" &&
-          o.so_already_qc !== "RT") ||
-        (o.product.product_barcode2 === barcode &&
-          o.so_already_qc !== "Yes" &&
-          o.so_already_qc !== "RT") ||
-        (o.product.product_barcode3 === barcode &&
-          o.so_already_qc !== "Yes" &&
-          o.so_already_qc !== "RT")
+        matchBarcode(o) &&
+        o.so_already_qc !== "Yes" &&
+        o.so_already_qc !== "RT"
     );
     if (foundOrder) {
       const so_running = foundOrder.so_running;
@@ -2372,6 +2427,108 @@ const QCDashboard = () => {
                 ยืนยันการลบ
               </button>
             </div>
+          </Modal>
+
+          {/* Modal แจ้งเตือนสินค้ารอ Admin อนุมัติเปลี่ยนชื่อ */}
+          <Modal
+            isOpen={frozenModalOrder !== null}
+            onClose={() => {
+              setFrozenModalOrder(null);
+              inputBarcode.current?.focus();
+            }}
+          >
+            {/* Title */}
+            <div className="flex flex-col items-center gap-1 mb-5">
+              <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mb-1">
+                <svg className="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900">พบการเปลี่ยนชื่อสินค้า</h2>
+              <span className="text-base text-amber-700 font-medium">
+                รหัส {frozenModalOrder?.product?.product_code}
+              </span>
+            </div>
+
+            {/* Before / After */}
+            <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-stretch mb-5">
+              {/* ชื่อเดิม */}
+              <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-gray-200 bg-gray-50 p-4">
+                <span className="text-sm font-bold text-gray-400 uppercase tracking-wider">ชื่อเดิม</span>
+                <div className="w-28 h-28 rounded-xl overflow-hidden border border-gray-200 bg-white flex items-center justify-center shrink-0 shadow-sm">
+                  <img
+                    src={(() => {
+                      const url = frozenModalOrder?.nameChangeRequest?.old_image_url;
+                      if (!url) return boxnotfound;
+                      if (url.startsWith("..")) return `https://www.wangpharma.com${url.slice(2)}`;
+                      return url;
+                    })()}
+                    alt="ชื่อเดิม"
+                    className="w-full h-full object-contain"
+                    onError={(e) => { e.currentTarget.src = boxnotfound; }}
+                  />
+                </div>
+                <p className="text-base font-semibold text-gray-700 text-center leading-snug">
+                  {frozenModalOrder?.nameChangeRequest?.old_name}
+                </p>
+              </div>
+
+              {/* Arrow */}
+              <div className="flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* ชื่อใหม่ */}
+              <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-amber-300 bg-amber-50 p-4">
+                <span className="text-sm font-bold text-amber-500 uppercase tracking-wider">ชื่อใหม่</span>
+                <div className="w-28 h-28 rounded-xl overflow-hidden border border-amber-200 bg-white flex items-center justify-center shrink-0 shadow-sm">
+                  <img
+                    src={(() => {
+                      const url = frozenModalOrder?.product?.product_image_url;
+                      if (!url) return boxnotfound;
+                      if (url.startsWith("..")) return `https://www.wangpharma.com${url.slice(2)}`;
+                      return url;
+                    })()}
+                    alt="ชื่อใหม่"
+                    className="w-full h-full object-contain"
+                    onError={(e) => { e.currentTarget.src = boxnotfound; }}
+                  />
+                </div>
+                <p className="text-base font-bold text-amber-800 text-center leading-snug">
+                  {frozenModalOrder?.nameChangeRequest?.new_name}
+                </p>
+              </div>
+            </div>
+
+            {/* Notice */}
+            <div className="flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-4 mb-5">
+              <svg className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <p className="text-lg font-bold text-amber-800 leading-snug">
+                  ไม่สามารถ QC รายการนี้ได้
+                </p>
+                <p className="text-base text-amber-700 mt-0.5">
+                  กรุณาติดต่อแอดมินเพื่อยืนยันการเปลี่ยนชื่อสินค้า
+                </p>
+              </div>
+            </div>
+
+            {/* Button */}
+            <button
+              className="w-full py-4 text-xl font-bold rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white transition-all cursor-pointer shadow-md"
+              onClick={() => {
+                setFrozenModalOrder(null);
+                inputBarcode.current?.focus();
+              }}
+            >
+              รับทราบ
+            </button>
           </Modal>
 
           <Modal
@@ -3851,15 +4008,21 @@ const QCDashboard = () => {
                               const isApprovedOrDuplicate = rtStatus === "Approved" || rtStatus === "Duplicate";
                               const isPending = rtStatus === "Pending";
 
+                              const isFrozenByNameChange = so.nameChangeRequest?.status === "pending";
+                              const isNameChangeForceRt = so.nameChangeRequest?.status === "force_rt";
                               return (
                                 <tr
-                                  className={`  border-b-2 border-blue-200 ${so.so_already_qc === "Yes"
-                                    ? "bg-green-100 hover:bg-green-100"
-                                    : so.so_already_qc === "RT"
-                                      ? "bg-red-100 hover:bg-red-100"
-                                      : so.so_already_qc === "notComplete"
-                                        ? "bg-yellow-50 hover:bg-yellow-50"
-                                        : "bg-white hover:bg-gray-50"
+                                  className={`  border-b-2 border-blue-200 ${isFrozenByNameChange
+                                    ? "bg-orange-100 hover:bg-orange-100"
+                                    : isNameChangeForceRt
+                                      ? "bg-red-50 hover:bg-red-50"
+                                      : so.so_already_qc === "Yes"
+                                      ? "bg-green-100 hover:bg-green-100"
+                                      : so.so_already_qc === "RT"
+                                        ? "bg-red-100 hover:bg-red-100"
+                                        : so.so_already_qc === "notComplete"
+                                          ? "bg-yellow-50 hover:bg-yellow-50"
+                                          : "bg-white hover:bg-gray-50"
                                     }`}
                                 >
                                   <td className="py-4 text-lg border-r-2 border-blue-200 font-semibold px-2">
@@ -3965,7 +4128,7 @@ const QCDashboard = () => {
                                       <div className="w-full px-3.5">
                                         <div className="border-t-2 border-blue-200 w-full mb-1.5"></div>
                                       </div>
-                                      {so.is_reward && (
+                                      {so.is_reward && !isFrozenByNameChange && (
                                         <div className="flex flex-col items-center gap-1 mb-1">
                                           <p className="text-green-600 font-bold text-base">รายการของแถม</p>
                                           <button
@@ -3985,8 +4148,28 @@ const QCDashboard = () => {
                                         </div>
                                       )}
                                       <p className="text-lg pb-1.5">
-                                        {so?.product?.product_name}
+                                        {so.product_name_at_order ?? so.product?.product_name}
+                                        {isFrozenByNameChange && (
+                                          <span className="ml-1 text-sm font-bold text-orange-600 align-middle">
+                                            🔒
+                                          </span>
+                                        )}
+                                        {isNameChangeForceRt && (
+                                          <span className="ml-1 text-sm font-bold text-red-600 align-middle">
+                                            ↩
+                                          </span>
+                                        )}
                                       </p>
+                                      {isFrozenByNameChange && (
+                                        <p className="text-sm font-bold text-orange-600 mt-1">
+                                          สินค้าโดนเปลี่ยนชื่อ รอ Admin อนุมัติ
+                                        </p>
+                                      )}
+                                      {isNameChangeForceRt && (
+                                        <p className="text-sm font-bold text-red-600 mt-1">
+                                          ส่ง RT แล้ว (ชื่อสินค้าเปลี่ยน)
+                                        </p>
+                                      )}
                                       <div className="w-full px-3.5">
                                         <div className="border-t-2 border-blue-200 w-full mb-1.5"></div>
                                       </div>
