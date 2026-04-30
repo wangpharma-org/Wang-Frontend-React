@@ -79,7 +79,7 @@ export default function ProductBox({
 
   const popUpName = () => {
     Swal.fire({
-      text: `${orderItem.product.product_name}` ,
+      text: `${orderItem.product_name_at_order ?? orderItem.product.product_name}` ,
     });
   }
 
@@ -141,15 +141,15 @@ export default function ProductBox({
             </button>
               <div
                 className="mr-2 bg-gray-500 p-1.5 rounded-[100%] cursor-pointer shadow-md"
-                onClick={() => printStickerSelect("ลัง", orderItem.product.product_name)}
+                onClick={() => printStickerSelect("ลัง", orderItem.product_name_at_order ?? orderItem.product.product_name)}
               >
                 <img src={printBox} className="w-9" />
               </div>
             </div>
-            
+
             <div className="flex justify-between pt-1 px-1">
               <p className="font-bold w-50 truncate ...   select-none">
-                {orderItem.product.product_name}
+                {orderItem.product_name_at_order ?? orderItem.product.product_name}
               </p>
             </div>
             <div className="flex justify-between pt-1 px-1">
