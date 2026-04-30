@@ -1619,11 +1619,25 @@ const QCDashboard = () => {
           }
         }
       }
-    } catch {
-      alert(
-        "มีบางอย่างผิดพลาด กรุณาสแกน QC Code ลูกค้าเจ้าเดิมอีกครั้งเพื่อทำงานต่อ"
-      );
-      handleClear();
+    } catch (err) {
+      const axiosErr = err as AxiosError<{ message: string }>;
+      const msg = axiosErr.response?.data?.message;
+      if (msg?.includes('รอ Admin อนุมัติการเปลี่ยนชื่อ')) {
+        Swal.fire({
+          icon: "warning",
+          title: "ไม่สามารถ QC ได้",
+          text: msg,
+          confirmButtonText: "รับทราบ",
+          confirmButtonColor: "#d97706",
+        });
+      } else {
+        alert(
+          "มีบางอย่างผิดพลาด กรุณาสแกน QC Code ลูกค้าเจ้าเดิมอีกครั้งเพื่อทำงานต่อ"
+        );
+        handleClear();
+      }
+    } finally {
+      setLoadingSubmit(false);
     }
   };
 
