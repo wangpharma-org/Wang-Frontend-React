@@ -192,9 +192,9 @@ const ProductNameChangeApproval = () => {
                   <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-stretch mb-4">
 
                     {/* Old name */}
-                    <div className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                    <div className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 min-w-0">
                       <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">ชื่อเดิม</span>
-                      <div className="w-20 h-20 rounded-lg overflow-hidden border border-gray-200 bg-white flex items-center justify-center shrink-0">
+                      <div className="w-full max-w-[80px] aspect-square rounded-lg overflow-hidden border border-gray-200 bg-white flex items-center justify-center">
                         <img
                           src={resolveImageUrl(req.old_image_url)}
                           alt={req.old_name}
@@ -202,7 +202,7 @@ const ProductNameChangeApproval = () => {
                           onError={(e) => { (e.currentTarget as HTMLImageElement).src = boxnotfound; }}
                         />
                       </div>
-                      <p className="text-sm font-semibold text-gray-800 text-center leading-snug line-clamp-3">
+                      <p className="text-sm font-semibold text-gray-800 text-center leading-snug line-clamp-3 w-full break-words">
                         {req.old_name}
                       </p>
                     </div>
@@ -215,9 +215,9 @@ const ProductNameChangeApproval = () => {
                     </div>
 
                     {/* New name */}
-                    <div className="flex flex-col items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3">
+                    <div className="flex flex-col items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 min-w-0">
                       <span className="text-[11px] font-semibold text-amber-600 uppercase tracking-wide">ชื่อใหม่</span>
-                      <div className="w-20 h-20 rounded-lg overflow-hidden border border-amber-200 bg-white flex items-center justify-center shrink-0">
+                      <div className="w-full max-w-[80px] aspect-square rounded-lg overflow-hidden border border-amber-200 bg-white flex items-center justify-center">
                         <img
                           src={resolveImageUrl(req.current_image_url ?? req.old_image_url)}
                           alt={req.new_name}
@@ -225,7 +225,7 @@ const ProductNameChangeApproval = () => {
                           onError={(e) => { (e.currentTarget as HTMLImageElement).src = boxnotfound; }}
                         />
                       </div>
-                      <p className="text-sm font-bold text-amber-800 text-center leading-snug line-clamp-3">
+                      <p className="text-sm font-bold text-amber-800 text-center leading-snug line-clamp-3 w-full break-words">
                         {req.new_name}
                       </p>
                     </div>
