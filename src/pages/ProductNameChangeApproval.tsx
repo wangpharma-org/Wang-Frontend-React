@@ -16,7 +16,6 @@ const VITE_API_URL_ORDER = import.meta.env.VITE_API_URL_ORDER;
 
 interface NameChangeHistoryEntry {
   name: string;
-  image_url: string | null;
   changed_at: string;
 }
 
@@ -24,7 +23,6 @@ interface PendingRequest {
   id: number;
   product_code: string;
   old_name: string;
-  old_image_url: string | null;
   new_name: string;
   current_image_url: string | null;
   changed_at: string;
@@ -100,7 +98,7 @@ const ProductNameChangeApproval = () => {
   const handleForceRT = async (id: number) => {
     const confirm = await Swal.fire({
       title: "ยืนยัน Force RT",
-      text: "สินค้าคนละตัว — ระบบจะทำ RT รายการที่ยังไม่ QC ทั้งหมด",
+      text: "สินค้าคนละตัว — ระบบจะแจ้งให้พนักงาน QC กดส่ง RT รายการที่ยังไม่ QC ทั้งหมด",
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Force RT",
@@ -196,7 +194,7 @@ const ProductNameChangeApproval = () => {
                       <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">ชื่อเดิม</span>
                       <div className="w-full max-w-[80px] aspect-square rounded-lg overflow-hidden border border-gray-200 bg-white flex items-center justify-center">
                         <img
-                          src={resolveImageUrl(req.old_image_url)}
+                          src={resolveImageUrl(req.current_image_url)}
                           alt={req.old_name}
                           className="w-full h-full object-contain"
                           onError={(e) => { (e.currentTarget as HTMLImageElement).src = boxnotfound; }}
@@ -219,7 +217,7 @@ const ProductNameChangeApproval = () => {
                       <span className="text-[11px] font-semibold text-amber-600 uppercase tracking-wide">ชื่อใหม่</span>
                       <div className="w-full max-w-[80px] aspect-square rounded-lg overflow-hidden border border-amber-200 bg-white flex items-center justify-center">
                         <img
-                          src={resolveImageUrl(req.current_image_url ?? req.old_image_url)}
+                          src={resolveImageUrl(req.current_image_url)}
                           alt={req.new_name}
                           className="w-full h-full object-contain"
                           onError={(e) => { (e.currentTarget as HTMLImageElement).src = boxnotfound; }}

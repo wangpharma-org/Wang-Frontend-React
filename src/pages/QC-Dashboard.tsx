@@ -43,7 +43,6 @@ export interface NameChangeRequest {
   status: string;
   old_name: string;
   new_name: string;
-  old_image_url: string | null;
 }
 
 export interface ShoppingOrder {
@@ -2475,7 +2474,7 @@ const QCDashboard = () => {
                 <div className="w-28 h-28 rounded-xl overflow-hidden border border-gray-200 bg-white flex items-center justify-center shrink-0 shadow-sm">
                   <img
                     src={(() => {
-                      const url = frozenModalOrder?.nameChangeRequest?.old_image_url;
+                      const url = frozenModalOrder?.product?.product_image_url;
                       if (!url) return boxnotfound;
                       if (url.startsWith("..")) return `https://www.wangpharma.com${url.slice(2)}`;
                       return url;
