@@ -167,6 +167,12 @@ function ProductList() {
   }, []);
 
   useEffect(() => {
+    if (listproduct) {
+      console.log("listproduct:", listproduct);
+    }
+  }, [listproduct])
+
+  useEffect(() => {
     if (CanSubmit) {
       submitPicking();
     }
