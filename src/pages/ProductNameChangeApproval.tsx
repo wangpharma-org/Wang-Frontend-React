@@ -194,7 +194,7 @@ const ProductNameChangeApproval = () => {
                       <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">ชื่อเดิม</span>
                       <div className="w-full max-w-[80px] aspect-square rounded-lg overflow-hidden border border-gray-200 bg-white flex items-center justify-center">
                         <img
-                          src={boxnotfound}
+                          src={resolveImageUrl(req.current_image_url)}
                           alt={req.old_name}
                           className="w-full h-full object-contain"
                           onError={(e) => { (e.currentTarget as HTMLImageElement).src = boxnotfound; }}
