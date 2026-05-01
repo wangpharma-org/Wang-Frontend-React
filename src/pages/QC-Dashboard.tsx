@@ -1217,6 +1217,14 @@ const QCDashboard = () => {
       return;
     }
 
+    const forceRtOrder = order.find(
+      (o) => matchBarcode(o) && o.nameChangeRequest?.status === "force_rt" && o.so_already_qc !== "RT"
+    );
+    if (forceRtOrder) {
+      if (inputBarcode.current) inputBarcode.current.value = "";
+      return;
+    }
+
     // const rtOrder = order.find(
     //   (o) => matchBarcode(o) && o.so_already_qc === "RT"
     // );
@@ -4176,7 +4184,7 @@ const QCDashboard = () => {
                                       )}
                                       {isNameChangeForceRt && (
                                         <p className="text-sm font-bold text-red-600 mt-1">
-                                          ส่ง RT แล้ว (ชื่อสินค้าเปลี่ยน)
+                                          รายการนี้บังคับส่ง RT เนื่องจากสินค้าโดนอัปเดตเป็นอีกรายการ
                                         </p>
                                       )}
                                       <div className="w-full px-3.5">
@@ -4362,9 +4370,9 @@ const QCDashboard = () => {
                                         <button
                                           id={`reqItem`}
                                           disabled={
-                                            so.picking_status !== "picking"
+                                            so.picking_status !== "picking" || isFrozenByNameChange || isNameChangeForceRt
                                           }
-                                          className={` p-1 rounded-lg text-base text-white cursor-pointer ${so.picking_status !== "picking"
+                                          className={` p-1 rounded-lg text-base text-white cursor-pointer ${so.picking_status !== "picking" || isFrozenByNameChange || isNameChangeForceRt
                                             ? "bg-gray-500 hover:bg-gray-600"
                                             : "bg-blue-500 hover:bg-blue-600"
                                             } `}
@@ -4382,17 +4390,21 @@ const QCDashboard = () => {
                                         id={`RTItem`}
                                         disabled={
                                           so.so_already_qc === "RT" ||
-                                          so.so_already_qc === "Yes"
+                                          so.so_already_qc === "Yes" ||
+                                          isFrozenByNameChange
                                         }
                                         className={` p-1 rounded-lg text-base text-white cursor-pointer ${so.so_already_qc === "RT" ||
-                                          so.so_already_qc === "Yes"
+                                          so.so_already_qc === "Yes" ||
+                                          isFrozenByNameChange
                                           ? "hover:bg-gray-600 bg-gray-500" : isApprovedOrDuplicate && featureFlagRTRequest === true
                                             ? "hover:bg-green-600 bg-green-500" : isPending && featureFlagRTRequest === true
                                               ? "hover:bg-yellow-600 bg-yellow-500"
                                               : "hover:bg-red-600 bg-red-500"
                                           }`}
                                         onClick={() => {
-                                          if (isApprovedOrDuplicate && featureFlagRTRequest === true) {
+                                          if (isNameChangeForceRt) {
+                                            executeRT(so.so_running);
+                                          } else if (isApprovedOrDuplicate && featureFlagRTRequest === true) {
                                             handleRT(so);
                                           } else if (isPending && featureFlagRTRequest === true) {
                                             handleManualRefresh();
@@ -4414,7 +4426,8 @@ const QCDashboard = () => {
 
                                       <button
                                         id={`Floor1`}
-                                        className={`p-1 rounded-lg text-base text-white cursor-pointer bg-blue-500`}
+                                        disabled={isFrozenByNameChange || isNameChangeForceRt}
+                                        className={`p-1 rounded-lg text-base text-white cursor-pointer ${isFrozenByNameChange || isNameChangeForceRt ? "bg-gray-500 hover:bg-gray-600" : "bg-blue-500 hover:bg-blue-600"}`}
                                         onClick={() => {
                                           setModalProductRequestOpen(
                                             so.so_running
@@ -4428,7 +4441,8 @@ const QCDashboard = () => {
                                       </button>
                                       <button
                                         id={`Floor1`}
-                                        className={`p-1 rounded-lg text-base text-white cursor-pointer bg-blue-500`}
+                                        disabled={isFrozenByNameChange || isNameChangeForceRt}
+                                        className={`p-1 rounded-lg text-base text-white cursor-pointer ${isFrozenByNameChange || isNameChangeForceRt ? "bg-gray-500 hover:bg-gray-600" : "bg-blue-500 hover:bg-blue-600"}`}
                                         onClick={() => {
                                           setModalPrintStickerOpen(
                                             so.so_running
