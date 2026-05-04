@@ -181,11 +181,15 @@ const BoxStickerBlock = () => {
 
         </div>
       </div>
-      <div className="flex justify-center">
-          <p className="text-[26.5px] mt-1 font-bold">
-              {dataPrint?.mem_route?.route_name ?? "อื่นๆ"}
-            </p>
+      <div className="flex justify-between items-end">
+        <p className="text-[26.5px] mt-1 font-bold">
+          {dataPrint?.mem_route?.route_name ?? "อื่นๆ"}
+        </p>
+        <div>
+          <p>รหัสลูกค้า</p>
+          <QRCodeSVG value={mem_code || ""} size={60}></QRCodeSVG>
         </div>
+      </div>
     </div>
   );
 
