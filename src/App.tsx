@@ -45,6 +45,7 @@ import TaskApprovalPage from "./pages/TaskApprovalPage";
 import RecycleBoxBarcode from "./pages/RecycleBoxBarcode";
 import ReturnReceipt from "./pages/ReturnReceipt";
 import ReturnReceiptPrint from "./pages/ReturnReceiptPrint";
+import ProductNameChangeApproval from "./pages/ProductNameChangeApproval";
 
 function App() {
   useEffect(() => {
@@ -356,6 +357,14 @@ function App() {
             element={
               <RequireAuth>
                 <RTApproval />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/product-name-change-approval"
+            element={
+              <RequireAuth>
+                <ProductNameChangeApproval />
               </RequireAuth>
             }
           />

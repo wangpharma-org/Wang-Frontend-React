@@ -32,6 +32,8 @@ export interface ShoppingOrder {
   picking_status: string;
   emp_code_floor_picking: string | null;
   so_picking_time: string | null;
+  product_name_at_order: string | null;
+  name_change_request_id: number | null;
   product: Product;
 }
 
