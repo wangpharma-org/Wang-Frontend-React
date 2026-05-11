@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import reciept from "../assets/receipt.png";
+// import reciept from "../assets/receipt.png";
 import order from "../assets/sent.png";
 // import statistics from "../assets/employees statistics.png";
 // import checklist from "../assets/checklist.png";
