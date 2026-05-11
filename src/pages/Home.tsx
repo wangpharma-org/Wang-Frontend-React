@@ -13,13 +13,13 @@ import returnBox from "../assets/return-box-home.png";
 import ChangeName from "../assets/change.png";
 import { useNavigate } from "react-router";
 const listMenu = [
-  {
-    id: 1,
-    name: "จัดการสินค้า",
-    href: "/product-manage",
-    imageSrc: reciept,
-    admin: true,
-  },
+  // {
+  //   id: 1,
+  //   name: "จัดการสินค้า",
+  //   href: "/product-manage",
+  //   imageSrc: reciept,
+  //   admin: true,
+  // },
   {
     id: 2,
     name: "ระบบตรวจสอบสินค้า (QC)",
