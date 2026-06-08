@@ -273,12 +273,11 @@ const BoxSticker = () => {
         <div className="w-[90%] flex justify-center">
           <div className="flex border rounded-sm justify-start border-gray-800 w-full">
             {/* QR Code แทน triangle — สแกนขึ้นรถในแอปขนส่ง */}
-            <div className="border-r flex flex-col justify-center items-center px-1 border-gray-800">
+            <div className="border-r flex flex-col justify-center items-center p-1 border-gray-800">
               <QRCodeSVG
                 value={`WP|${mem_code}|${sh_running}|${index + 1}|${printCount}`}
-                size={52}
+                size={35}
               />
-              <p className="text-[9px] text-center mt-0.5 font-semibold">ลังที่ {index + 1}/{printCount}</p>
             </div>
             <div className="p-1 flex items-center text-center justify-center w-full">
               <p className="text-center">

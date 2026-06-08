@@ -46,6 +46,7 @@ import RecycleBoxBarcode from "./pages/RecycleBoxBarcode";
 import ReturnReceipt from "./pages/ReturnReceipt";
 import ReturnReceiptPrint from "./pages/ReturnReceiptPrint";
 import ProductNameChangeApproval from "./pages/ProductNameChangeApproval";
+import ScanBox from "./pages/ScanBox";
 
 function App() {
   useEffect(() => {
@@ -396,6 +397,14 @@ function App() {
             element={
               <RequireAuth>
                 <TaskApprovalPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/scan-box"
+            element={
+              <RequireAuth>
+                <ScanBox />
               </RequireAuth>
             }
           />
