@@ -5,6 +5,7 @@ import order from "../assets/sent.png";
 // import statistics from "../assets/employees statistics.png";
 // import checklist from "../assets/checklist.png";
 import barcode from "../assets/barcode-scanner.png"
+import scanBox from "../assets/qr-code.png"
 import reportPicking from "../assets/report-picking.png";
 import log from "../assets/log.png";
 import RouteManage from "../assets/evaluation.png";
@@ -94,6 +95,13 @@ const listMenu = [
     href: "/product-name-change-approval",
     imageSrc: ChangeName,
     admin: true,
+  },
+  {
+    id: 14,
+    name: "สแกนสติกเกอร์บนลัง",
+    href: "/scan-box",
+    imageSrc: scanBox,
+    admin: false,
   },
 ];
 const Home = () => {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Barcode from "react-barcode";
-import triangle from "../assets/bleach.png";
+import { QRCodeSVG } from "qrcode.react";
 import dayjs from "dayjs";
 import axios from "axios";
 import clock from "../assets/clock.png";
@@ -272,10 +272,12 @@ const BoxSticker = () => {
       <div className="flex py-1 justify-center px-1">
         <div className="w-[90%] flex justify-center">
           <div className="flex border rounded-sm justify-start border-gray-800 w-full">
-            <div className="border-r flex justify-center items-center mr-1 border-gray-800">
-              <div className="w-10 p-2 flex justify-center items-center">
-                <img src={triangle} className="m-1"></img>
-              </div>
+            {/* QR Code แทน triangle — สแกนขึ้นรถในแอปขนส่ง */}
+            <div className="border-r flex flex-col justify-center items-center p-1 border-gray-800">
+              <QRCodeSVG
+                value={`WP|${mem_code}|${sh_running}|${index + 1}|${printCount}`}
+                size={35}
+              />
             </div>
             <div className="p-1 flex items-center text-center justify-center w-full">
               <p className="text-center">
