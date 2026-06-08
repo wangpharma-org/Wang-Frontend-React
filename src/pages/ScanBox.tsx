@@ -160,6 +160,7 @@ const ScanBox = () => {
       {/* Hidden inputs */}
       <input
         ref={qrRef}
+        inputMode="none"
         className="absolute opacity-0 w-0 h-0 pointer-events-none"
         value={qrInput}
         onChange={(e) => setQrInput(e.target.value)}
@@ -169,6 +170,7 @@ const ScanBox = () => {
       />
       <input
         ref={billRef}
+        inputMode="none"
         className="absolute opacity-0 w-0 h-0 pointer-events-none"
         value={billInput}
         onChange={(e) => setBillInput(e.target.value)}
