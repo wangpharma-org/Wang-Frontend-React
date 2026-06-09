@@ -195,6 +195,15 @@ const QCDashboard = () => {
   const [dataQC, setDataQC] = useState<ShoppingHead | ShoppingHeadOne | null>(
     null
   );
+  const myUUIDRef = useRef<string>(
+    (() => {
+      const stored = localStorage.getItem("qc_machine_uuid");
+      if (stored) return stored;
+      const newUuid = crypto.randomUUID();
+      localStorage.setItem("qc_machine_uuid", newUuid);
+      return newUuid;
+    })()
+  );
   const [, setLoading] = useState<boolean>(false);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [wantConnect, setWantConnect] = useState<boolean>(false);
@@ -751,6 +760,26 @@ const QCDashboard = () => {
       }
     );
 
+    newSocket.on(
+      "scan_confirm",
+      (data: {
+        mem_code: string;
+        mem_name: string;
+        route_code: string;
+        box_no: number;
+        total_boxes: number;
+        all_sh_running: string;
+        scanned_at: string;
+        target_uuid: string | null;
+      }) => {
+        if (data.target_uuid && data.target_uuid !== myUUIDRef.current) return;
+        window.open(
+          `/scan-confirm-sticker?mem_code=${encodeURIComponent(data.mem_code)}&mem_name=${encodeURIComponent(data.mem_name)}&route_code=${encodeURIComponent(data.route_code)}&box_no=${data.box_no}&total_boxes=${data.total_boxes}&all_sh_running=${encodeURIComponent(data.all_sh_running)}&scanned_at=${encodeURIComponent(data.scanned_at)}`,
+          "_blank"
+        );
+      }
+    );
+
     const prepareEmpData = sessionStorage.getItem("prepare-emp");
     const QCEmpData = sessionStorage.getItem("qc-emp");
     const packedEmpData = sessionStorage.getItem("packed-emp");
@@ -838,6 +867,7 @@ const QCDashboard = () => {
           sh_running: null,
           sh_running_array: null,
           addShRunningArray: null,
+          uuid: myUUIDRef.current,
         });
         setLoading(true);
       } else if (sh_running) {
@@ -847,6 +877,7 @@ const QCDashboard = () => {
           sh_running,
           sh_running_array: null,
           addShRunningArray: null,
+          uuid: myUUIDRef.current,
         });
         setLoading(true);
       } else if (sh_running_array) {
@@ -856,6 +887,7 @@ const QCDashboard = () => {
           sh_running: null,
           addShRunningArray: null,
           sh_running_array,
+          uuid: myUUIDRef.current,
         });
         setLoading(true);
       } else if (addShRunningArray) {
@@ -865,6 +897,7 @@ const QCDashboard = () => {
           sh_running: null,
           sh_running_array: null,
           addShRunningArray,
+          uuid: myUUIDRef.current,
         });
       }
     }
@@ -2138,6 +2171,7 @@ const QCDashboard = () => {
         sh_running: null,
         sh_running_array: null,
         addShRunningArray: updatedArray,
+        uuid: myUUIDRef.current,
       });
     }
 
