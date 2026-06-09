@@ -27,6 +27,7 @@ import { useNavigate } from "react-router";
 import Swal from "sweetalert2";
 import ManualPicture from "../assets/manual_sticker.png";
 import Reportproblem from "../components/Reportproblem";
+import correct from "../assets/correct.png";
 
 const TAB_KEY = "qc-dashboard";
 
@@ -204,6 +205,15 @@ const QCDashboard = () => {
       return newUuid;
     })()
   );
+  const [stickerPrintData, setStickerPrintData] = useState<{
+    mem_code: string;
+    mem_name: string;
+    route_code: string;
+    box_no: number;
+    total_boxes: number;
+    all_sh_running: string;
+    scanned_at: string;
+  } | null>(null);
   const [, setLoading] = useState<boolean>(false);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [wantConnect, setWantConnect] = useState<boolean>(false);
@@ -773,10 +783,15 @@ const QCDashboard = () => {
         target_uuid: string | null;
       }) => {
         if (data.target_uuid && data.target_uuid !== myUUIDRef.current) return;
-        window.open(
-          `/scan-confirm-sticker?mem_code=${encodeURIComponent(data.mem_code)}&mem_name=${encodeURIComponent(data.mem_name)}&route_code=${encodeURIComponent(data.route_code)}&box_no=${data.box_no}&total_boxes=${data.total_boxes}&all_sh_running=${encodeURIComponent(data.all_sh_running)}&scanned_at=${encodeURIComponent(data.scanned_at)}`,
-          "_blank"
-        );
+        setStickerPrintData({
+          mem_code: data.mem_code,
+          mem_name: data.mem_name,
+          route_code: data.route_code,
+          box_no: data.box_no,
+          total_boxes: data.total_boxes,
+          all_sh_running: data.all_sh_running,
+          scanned_at: data.scanned_at,
+        });
       }
     );
 
@@ -806,6 +821,24 @@ const QCDashboard = () => {
       newSocket.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    if (!stickerPrintData) return;
+    document.body.classList.add("printing-scan-sticker");
+    const timer = setTimeout(() => {
+      window.print();
+    }, 300);
+    const handleAfterPrint = () => {
+      document.body.classList.remove("printing-scan-sticker");
+      setStickerPrintData(null);
+    };
+    window.addEventListener("afterprint", handleAfterPrint);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("afterprint", handleAfterPrint);
+      document.body.classList.remove("printing-scan-sticker");
+    };
+  }, [stickerPrintData]);
 
   useEffect(() => {
     if (mem_code && socket) {
@@ -5042,6 +5075,87 @@ const QCDashboard = () => {
             </div>
           </div>
         )}
+      {stickerPrintData && createPortal(
+        <div id="scan-confirm-sticker-print" style={{ display: "none" }}>
+          <div
+            style={{
+              width: "98mm",
+              height: "98mm",
+              margin: "auto",
+              fontFamily: '"Fahkwang", sans-serif',
+              pageBreakInside: "avoid",
+            }}
+            className="p-2 text-sm"
+          >
+            <div className="flex justify-between">
+              <p className="font-bold text-[18px] rotate-[-12deg] mt-2">Wangpharma</p>
+              <p className="font-semibold text-[22px] mt-3">
+                {stickerPrintData.box_no} / {stickerPrintData.total_boxes}
+              </p>
+              <div className="flex flex-col justify-center items-center">
+                <p className="font-bold text-[17px]">{stickerPrintData.route_code || "อื่นๆ"}</p>
+                <p className="font-bold text-[16px]">
+                  <span className="text-[12px] font-bold">รหัสลูกค้า </span>
+                  {stickerPrintData.mem_code}
+                </p>
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px]">23 ซ.พัฒโน ถ.อนุสรณ์อาจารย์ทอง ต.หาดใหญ่ อ.หาดใหญ่ จ.สงขลา 90110</p>
+              <p className="text-[10px]">074-366681-5 www.wangpharma.com Line ID : orderwangpharma</p>
+            </div>
+            <div className="border-t">
+              <div className="flex justify-between">
+                <div className="w-[65%] flex justify-center items-center mt-4">
+                  <p className="font-semibold text-[18px]">{stickerPrintData.mem_name}</p>
+                </div>
+                <div className="w-[35%] flex flex-col justify-center items-center mt-1">
+                  <Barcode
+                    value={stickerPrintData.mem_code}
+                    format="CODE128"
+                    width={1.4}
+                    height={25}
+                    displayValue={false}
+                    background="transparent"
+                    fontSize={7}
+                    margin={0}
+                  />
+                </div>
+              </div>
+            </div>
+            {(() => {
+              const soList = stickerPrintData.all_sh_running
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean);
+              return (
+                <div className="flex justify-center items-center border-t border-b py-0.5">
+                  <p className={soList.join(", ").length > 66 ? "text-[9px]" : "text-[12px]"}>
+                    {soList.join(" , ")}
+                  </p>
+                </div>
+              );
+            })()}
+            {(() => {
+              const formattedDate = stickerPrintData.scanned_at
+                ? `${dayjs(stickerPrintData.scanned_at).locale("th").format("dddd D/MMM")}/${(dayjs(stickerPrintData.scanned_at).year() + 543).toString().slice(-2)} ${dayjs(stickerPrintData.scanned_at).format("HH:mm")} น.`
+                : "";
+              return (
+                <div className="flex justify-center items-center border-b">
+                  <div className="w-full h-12 flex flex-col justify-center items-center gap-0.5">
+                    <div className="flex items-center gap-1">
+                      <img src={correct} className="w-5" />
+                      <p className="text-[13px] font-bold">สแกนบิลครบแล้ว</p>
+                    </div>
+                    <p className="text-[10px] text-center leading-tight">{formattedDate}</p>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>,
+        document.body
+      )}
       </div>
     );
   }
