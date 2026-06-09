@@ -47,6 +47,7 @@ import ReturnReceipt from "./pages/ReturnReceipt";
 import ReturnReceiptPrint from "./pages/ReturnReceiptPrint";
 import ProductNameChangeApproval from "./pages/ProductNameChangeApproval";
 import ScanBox from "./pages/ScanBox";
+import ScanConfirmSticker from "./pages/ScanConfirmSticker";
 
 function App() {
   useEffect(() => {
@@ -407,6 +408,10 @@ function App() {
                 <ScanBox />
               </RequireAuth>
             }
+          />
+          <Route
+            path="/scan-confirm-sticker"
+            element={<ScanConfirmSticker />}
           />
         </Routes>
       </Router>

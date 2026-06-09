@@ -195,6 +195,15 @@ const QCDashboard = () => {
   const [dataQC, setDataQC] = useState<ShoppingHead | ShoppingHeadOne | null>(
     null
   );
+  const myUUIDRef = useRef<string>(
+    (() => {
+      const stored = localStorage.getItem("qc_machine_uuid");
+      if (stored) return stored;
+      const newUuid = crypto.randomUUID();
+      localStorage.setItem("qc_machine_uuid", newUuid);
+      return newUuid;
+    })()
+  );
   const [, setLoading] = useState<boolean>(false);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [wantConnect, setWantConnect] = useState<boolean>(false);
@@ -748,6 +757,26 @@ const QCDashboard = () => {
             shoppingOrders: updateOrders((prev as Root).shoppingOrders),
           };
         });
+      }
+    );
+
+    newSocket.on(
+      "scan_confirm",
+      (data: {
+        mem_code: string;
+        mem_name: string;
+        route_code: string;
+        box_no: number;
+        total_boxes: number;
+        all_sh_running: string;
+        scanned_at: string;
+        target_uuid: string | null;
+      }) => {
+        if (data.target_uuid && data.target_uuid !== myUUIDRef.current) return;
+        window.open(
+          `/scan-confirm-sticker?mem_code=${encodeURIComponent(data.mem_code)}&mem_name=${encodeURIComponent(data.mem_name)}&route_code=${encodeURIComponent(data.route_code)}&box_no=${data.box_no}&total_boxes=${data.total_boxes}&all_sh_running=${encodeURIComponent(data.all_sh_running)}&scanned_at=${encodeURIComponent(data.scanned_at)}`,
+          "_blank"
+        );
       }
     );
 
@@ -1887,6 +1916,7 @@ const QCDashboard = () => {
             room: myRoom,
             sh_running: shRunningArray,
             box_amount: countBox,
+            qc_machine_uuid: myUUIDRef.current,
           }
         );
         if (response.status === 201) {
@@ -1905,6 +1935,7 @@ const QCDashboard = () => {
             room: myRoom,
             sh_running: shRunningArray,
             box_amount: countBox,
+            qc_machine_uuid: myUUIDRef.current,
           }
         );
         if (response.status === 201) {
@@ -1926,6 +1957,7 @@ const QCDashboard = () => {
             room: myRoom,
             sh_running: shRunningArray,
             box_amount: countBox,
+            qc_machine_uuid: myUUIDRef.current,
           }
         );
         if (response.status === 201) {

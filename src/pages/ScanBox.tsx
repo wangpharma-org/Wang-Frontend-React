@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import dayjs from "dayjs";
+import "dayjs/locale/th";
+import "../css/print.css";
+dayjs.locale("th");
 
 interface MemberInfo {
   mem_code: string;
@@ -29,6 +33,8 @@ const ScanBox = () => {
   const [billInput, setBillInput] = useState("");
   const [lastScanned, setLastScanned] = useState<string | null>(null);
   const [errorSO, setErrorSO] = useState<string | null>(null);
+  const [scanCompletedAt, setScanCompletedAt] = useState<string | null>(null);
+  const [printing, setPrinting] = useState(false);
   const qrRef = useRef<HTMLInputElement>(null);
   const billRef = useRef<HTMLInputElement>(null);
 
@@ -121,16 +127,20 @@ const ScanBox = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      const newSoList = scanState.soList.map((s) =>
+        s.sh_running === scanned ? { ...s, found: true } : s
+      );
+      const isComplete = newSoList.every((s) => s.found);
+
       setLastScanned(scanned);
       setScanState((prev) => {
         if (!prev) return prev;
-        return {
-          ...prev,
-          soList: prev.soList.map((s) =>
-            s.sh_running === scanned ? { ...s, found: true } : s
-          ),
-        };
+        return { ...prev, soList: newSoList };
       });
+
+      if (isComplete && !scanCompletedAt) {
+        setScanCompletedAt(new Date().toISOString());
+      }
     } catch {
       toast.error("บันทึกไม่สำเร็จ กรุณาลองใหม่");
     }
@@ -144,7 +154,34 @@ const ScanBox = () => {
     setBillInput("");
     setLastScanned(null);
     setErrorSO(null);
+    setScanCompletedAt(null);
+    setPrinting(false);
     setTimeout(() => qrRef.current?.focus(), 50);
+  };
+
+  const handlePrintConfirm = async () => {
+    if (!scanState) return;
+    setPrinting(true);
+    try {
+      await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/box-scan/print-confirm`,
+        {
+          mem_code: scanState.mem_code,
+          mem_name: scanState.memberInfo?.mem_name ?? scanState.mem_code,
+          route_code: scanState.memberInfo?.route_code ?? "",
+          box_no: scanState.box_no,
+          total_boxes: scanState.total_boxes,
+          all_sh_running: scanState.all_sh_running.join(","),
+          scanned_at: scanCompletedAt ?? new Date().toISOString(),
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success("ส่งคำสั่งปริ้นไปที่เครื่อง QC แล้ว");
+    } catch {
+      toast.error("ส่งคำสั่งปริ้นไม่สำเร็จ กรุณาลองใหม่");
+    } finally {
+      setPrinting(false);
+    }
   };
 
   return (
@@ -296,12 +333,21 @@ const ScanBox = () => {
               <p className="text-blue-600 text-sm font-medium">พร้อมรับการสแกน Barcode บิล</p>
             </div>
           ) : (
-            <button
-              onClick={handleReset}
-              className="w-full bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-white font-bold rounded-2xl py-4 text-lg shadow-lg transition-all duration-200"
-            >
-              สแกนลังถัดไป
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handlePrintConfirm}
+                disabled={printing}
+                className="w-full bg-blue-500 hover:bg-blue-400 active:scale-95 disabled:opacity-60 text-white font-bold rounded-2xl py-4 text-lg shadow-lg transition-all duration-200"
+              >
+                {printing ? "กำลังส่ง..." : "ปริ้นสติกเกอร์"}
+              </button>
+              <button
+                onClick={handleReset}
+                className="w-full bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-white font-bold rounded-2xl py-4 text-lg shadow-lg transition-all duration-200"
+              >
+                สแกนลังถัดไป
+              </button>
+            </div>
           )}
 
           <button
