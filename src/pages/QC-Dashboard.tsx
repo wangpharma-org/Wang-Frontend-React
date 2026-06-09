@@ -867,7 +867,6 @@ const QCDashboard = () => {
           sh_running: null,
           sh_running_array: null,
           addShRunningArray: null,
-          uuid: myUUIDRef.current,
         });
         setLoading(true);
       } else if (sh_running) {
@@ -877,7 +876,6 @@ const QCDashboard = () => {
           sh_running,
           sh_running_array: null,
           addShRunningArray: null,
-          uuid: myUUIDRef.current,
         });
         setLoading(true);
       } else if (sh_running_array) {
@@ -887,7 +885,6 @@ const QCDashboard = () => {
           sh_running: null,
           addShRunningArray: null,
           sh_running_array,
-          uuid: myUUIDRef.current,
         });
         setLoading(true);
       } else if (addShRunningArray) {
@@ -897,7 +894,6 @@ const QCDashboard = () => {
           sh_running: null,
           sh_running_array: null,
           addShRunningArray,
-          uuid: myUUIDRef.current,
         });
       }
     }
@@ -1920,6 +1916,7 @@ const QCDashboard = () => {
             room: myRoom,
             sh_running: shRunningArray,
             box_amount: countBox,
+            qc_machine_uuid: myUUIDRef.current,
           }
         );
         if (response.status === 201) {
@@ -1938,6 +1935,7 @@ const QCDashboard = () => {
             room: myRoom,
             sh_running: shRunningArray,
             box_amount: countBox,
+            qc_machine_uuid: myUUIDRef.current,
           }
         );
         if (response.status === 201) {
@@ -1959,6 +1957,7 @@ const QCDashboard = () => {
             room: myRoom,
             sh_running: shRunningArray,
             box_amount: countBox,
+            qc_machine_uuid: myUUIDRef.current,
           }
         );
         if (response.status === 201) {
@@ -2171,7 +2170,6 @@ const QCDashboard = () => {
         sh_running: null,
         sh_running_array: null,
         addShRunningArray: updatedArray,
-        uuid: myUUIDRef.current,
       });
     }
 
