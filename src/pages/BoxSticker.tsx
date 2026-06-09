@@ -276,7 +276,7 @@ const BoxSticker = () => {
             <div className="border-r flex flex-col justify-center items-center p-1 border-gray-800">
               <QRCodeSVG
                 value={`WP|${mem_code}|${sh_running}|${index + 1}|${printCount}`}
-                size={35}
+                size={45}
               />
             </div>
             <div className="p-1 flex items-center text-center justify-center w-full">
