@@ -12,6 +12,11 @@ import RouteManage from "../assets/evaluation.png";
 import Document from "../assets/document.png";
 import returnBox from "../assets/return-box-home.png";
 import ChangeName from "../assets/change.png";
+import employeeStats from "../assets/employees statistics.png";
+import printerIcon from "../assets/print.png";
+import routeDashboardIcon from "../assets/truck-side.png";
+import updateStockIcon from "../assets/shopping-cart-add.png";
+import chartIcon from "../assets/chat-arrow-grow.png";
 import { useNavigate } from "react-router";
 const listMenu = [
   // {
@@ -101,6 +106,41 @@ const listMenu = [
     name: "สแกนสติกเกอร์บนลัง",
     href: "/scan-box",
     imageSrc: scanBox,
+    admin: false,
+  },
+  {
+    id: 15,
+    name: "พิมพ์สติกเกอร์",
+    href: "/print-sticker",
+    imageSrc: printerIcon,
+    admin: false,
+  },
+  {
+    id: 16,
+    name: "Dashboard เส้นทาง",
+    href: "/dashboard-route",
+    imageSrc: routeDashboardIcon,
+    admin: false,
+  },
+  {
+    id: 17,
+    name: "อัปโหลดสต็อกสินค้า",
+    href: "/update-stock",
+    imageSrc: updateStockIcon,
+    admin: true,
+  },
+  {
+    id: 18,
+    name: "กราฟสถิติ",
+    href: "/charts",
+    imageSrc: chartIcon,
+    admin: true,
+  },
+  {
+    id: 19, 
+    name: "Dashboard KPI",
+    href: "/dashboard-kpi",
+    imageSrc: employeeStats,
     admin: false,
   },
 ];
