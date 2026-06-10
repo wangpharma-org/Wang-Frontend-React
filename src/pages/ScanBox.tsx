@@ -25,6 +25,7 @@ interface ScanState {
   all_sh_running: string[];
   soList: SoStatus[];
   memberInfo: MemberInfo | null;
+  isBillFirst?: boolean;
 }
 
 const ScanBox = () => {
@@ -35,6 +36,7 @@ const ScanBox = () => {
   const [errorSO, setErrorSO] = useState<string | null>(null);
   const [scanCompletedAt, setScanCompletedAt] = useState<string | null>(null);
   const [printing, setPrinting] = useState(false);
+  const [billFirstQrDone, setBillFirstQrDone] = useState(false);
   const qrRef = useRef<HTMLInputElement>(null);
   const billRef = useRef<HTMLInputElement>(null);
 
@@ -52,6 +54,23 @@ const ScanBox = () => {
       billRef.current?.focus();
     }
   }, [scanState, allFound]);
+
+  // bill-first: เมื่อสแกนบิลครบ ให้ focus กลับไปรับ QR ลัง
+  useEffect(() => {
+    if (scanState?.isBillFirst && allFound && !billFirstQrDone) {
+      qrRef.current?.focus();
+    }
+  }, [scanState, allFound, billFirstQrDone]);
+
+  // ตรวจว่า input เป็น QR ลัง (WP|...) หรือ barcode บิล
+  const handleFirstScan = (raw: string) => {
+    const parts = raw.trim().split("|");
+    if (parts.length === 5 && parts[0] === "WP") {
+      void handleQrScan(raw);
+    } else {
+      void handleBillFirstLookup(raw.trim());
+    }
+  };
 
   const handleQrScan = async (raw: string) => {
     const parts = raw.trim().split("|");
@@ -93,6 +112,62 @@ const ScanBox = () => {
     setQrInput("");
   };
 
+  // bill-first: สแกนบิลใบแรก → lookup จาก box_print_log
+  const handleBillFirstLookup = async (sh_running: string) => {
+    try {
+      const res = await axios.get(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/box-scan/bills-in-box`,
+        {
+          params: { sh_running },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const data = res.data as {
+        mem_code: string;
+        mem_name: string;
+        route_code: string;
+        all_sh_running: string;
+        total_boxes: number;
+      };
+
+      const allBills = data.all_sh_running
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      if (!allBills.includes(sh_running)) {
+        toast.error(`เลข SO ${sh_running} ไม่อยู่ในรายการ`);
+        setQrInput("");
+        return;
+      }
+
+      setScanState({
+        mem_code: data.mem_code,
+        box_no: 0,
+        total_boxes: data.total_boxes,
+        all_sh_running: allBills,
+        soList: allBills.map((sh) => ({
+          sh_running: sh,
+          found: sh === sh_running,
+        })),
+        memberInfo: {
+          mem_code: data.mem_code,
+          mem_name: data.mem_name,
+          route_code: data.route_code,
+        },
+        isBillFirst: true,
+      });
+      setLastScanned(sh_running);
+
+      const isComplete = allBills.length === 1;
+      if (isComplete) setScanCompletedAt(new Date().toISOString());
+    } catch {
+      toast.error(`ไม่พบข้อมูลบิล: ${sh_running}`);
+    }
+
+    setQrInput("");
+  };
+
   const handleBillScan = async (raw: string) => {
     if (!scanState) return;
 
@@ -114,38 +189,96 @@ const ScanBox = () => {
 
     setErrorSO(null);
 
-    try {
-      await axios.post(
-        `${import.meta.env.VITE_API_URL_ORDER}/api/box-scan/log`,
-        {
-          mem_code: scanState.mem_code,
-          sh_running: scanned,
-          all_sh_running: scanState.all_sh_running.join(","),
-          box_no: scanState.box_no,
-          total_boxes: scanState.total_boxes,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      const newSoList = scanState.soList.map((s) =>
-        s.sh_running === scanned ? { ...s, found: true } : s
-      );
-      const isComplete = newSoList.every((s) => s.found);
-
-      setLastScanned(scanned);
-      setScanState((prev) => {
-        if (!prev) return prev;
-        return { ...prev, soList: newSoList };
-      });
-
-      if (isComplete && !scanCompletedAt) {
-        setScanCompletedAt(new Date().toISOString());
+    if (!scanState.isBillFirst) {
+      // OPHMBC-121: save log ทันที (box_no รู้แล้ว)
+      try {
+        await axios.post(
+          `${import.meta.env.VITE_API_URL_ORDER}/api/box-scan/log`,
+          {
+            mem_code: scanState.mem_code,
+            sh_running: scanned,
+            all_sh_running: scanState.all_sh_running.join(","),
+            box_no: scanState.box_no,
+            total_boxes: scanState.total_boxes,
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } catch {
+        toast.error("บันทึกไม่สำเร็จ กรุณาลองใหม่");
       }
+    }
+
+    const newSoList = scanState.soList.map((s) =>
+      s.sh_running === scanned ? { ...s, found: true } : s
+    );
+    const isComplete = newSoList.every((s) => s.found);
+
+    setLastScanned(scanned);
+    setScanState((prev) => {
+      if (!prev) return prev;
+      return { ...prev, soList: newSoList };
+    });
+
+    if (isComplete && !scanCompletedAt && !scanState.isBillFirst) {
+      setScanCompletedAt(new Date().toISOString());
+    }
+
+    setBillInput("");
+  };
+
+  // bill-first: สแกน QR ลัง เพื่อยืนยันและ save log
+  const handleQrVerify = async (raw: string) => {
+    if (!scanState) return;
+
+    const parts = raw.trim().split("|");
+    if (parts.length !== 5 || parts[0] !== "WP") {
+      toast.error("QR ไม่ถูกต้อง");
+      setQrInput("");
+      return;
+    }
+
+    const [, mem_code_qr, sh_raw, box_no_str, total_boxes_str] = parts;
+    const qrBills = sh_raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const box_no = parseInt(box_no_str);
+    const total_boxes = parseInt(total_boxes_str);
+
+    const sessionSorted = [...scanState.all_sh_running].sort().join(",");
+    const qrSorted = [...qrBills].sort().join(",");
+
+    if (mem_code_qr !== scanState.mem_code || sessionSorted !== qrSorted) {
+      toast.error("QR ไม่ตรงกับบิลที่สแกน!");
+      setQrInput("");
+      return;
+    }
+
+    const completedAt = new Date().toISOString();
+    try {
+      for (const sh of scanState.all_sh_running) {
+        await axios.post(
+          `${import.meta.env.VITE_API_URL_ORDER}/api/box-scan/log`,
+          {
+            mem_code: scanState.mem_code,
+            sh_running: sh,
+            all_sh_running: scanState.all_sh_running.join(","),
+            box_no,
+            total_boxes,
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      }
+      setScanState((prev) =>
+        prev ? { ...prev, box_no, total_boxes } : prev
+      );
+      setScanCompletedAt(completedAt);
+      setBillFirstQrDone(true);
     } catch {
       toast.error("บันทึกไม่สำเร็จ กรุณาลองใหม่");
     }
 
-    setBillInput("");
+    setQrInput("");
   };
 
   const handleReset = () => {
@@ -156,6 +289,7 @@ const ScanBox = () => {
     setErrorSO(null);
     setScanCompletedAt(null);
     setPrinting(false);
+    setBillFirstQrDone(false);
     setTimeout(() => qrRef.current?.focus(), 50);
   };
 
@@ -184,11 +318,16 @@ const ScanBox = () => {
     }
   };
 
+  const showScanQrPrompt =
+    scanState?.isBillFirst && allFound && !billFirstQrDone;
+  const showDoneButtons = !scanState?.isBillFirst || billFirstQrDone;
+
   return (
     <div
       className="min-h-screen bg-gradient-to-br from-sky-100 via-blue-100 to-blue-200 flex flex-col items-center justify-center p-4"
       onClick={() => {
         if (!scanState) qrRef.current?.focus();
+        else if (showScanQrPrompt) qrRef.current?.focus();
         else if (!allFound) billRef.current?.focus();
       }}
     >
@@ -202,7 +341,13 @@ const ScanBox = () => {
         value={qrInput}
         onChange={(e) => setQrInput(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter" && qrInput.trim()) handleQrScan(qrInput);
+          if (e.key === "Enter" && qrInput.trim()) {
+            if (!scanState) {
+              handleFirstScan(qrInput);
+            } else if (showScanQrPrompt) {
+              void handleQrVerify(qrInput);
+            }
+          }
         }}
       />
       <input
@@ -216,7 +361,7 @@ const ScanBox = () => {
         }}
       />
 
-      {/* Phase 1: รอสแกน QR */}
+      {/* Phase 1: รอสแกน */}
       {!scanState && (
         <div className="flex flex-col items-center gap-6 w-full max-w-sm">
           <div className="flex flex-col items-center gap-2">
@@ -229,7 +374,9 @@ const ScanBox = () => {
               </svg>
             </div>
             <h1 className="text-2xl font-bold text-blue-800 tracking-wide">สแกนสติกเกอร์บนลัง</h1>
-            <p className="text-blue-500 text-base text-center">นำเครื่องสแกนไปสแกน QR Code<br />บนสติกเกอร์ที่ติดอยู่บนลัง</p>
+            <p className="text-blue-500 text-base text-center">
+              สแกน QR บนสติกเกอร์ที่ติดบนลัง<br />หรือสแกน Barcode บิล
+            </p>
           </div>
 
           <div className="w-full bg-white border border-blue-200 rounded-2xl p-6 flex flex-col items-center gap-3 shadow-md">
@@ -249,17 +396,29 @@ const ScanBox = () => {
 
           {/* Status Banner */}
           <div className={`rounded-2xl px-5 py-4 flex items-center gap-3 shadow-lg ${
-            allFound
+            showScanQrPrompt
+              ? "bg-indigo-500 text-white"
+              : allFound
               ? "bg-emerald-500 text-white"
               : "bg-amber-400 text-amber-900"
           }`}>
-            <span className="text-2xl">{allFound ? "✅" : "🔍"}</span>
+            <span className="text-2xl">
+              {showScanQrPrompt ? "📦" : allFound ? "✅" : "🔍"}
+            </span>
             <div>
               <p className="font-bold text-lg leading-tight">
-                {allFound ? "พบบิลครบแล้ว!" : "กำลังค้นหาบิล..."}
+                {showScanQrPrompt
+                  ? "สแกนบิลครบแล้ว!"
+                  : allFound
+                  ? "พบบิลครบแล้ว!"
+                  : "กำลังค้นหาบิล..."}
               </p>
               <p className="text-sm opacity-80">
-                {allFound ? "ใส่บิลลงในลังได้เลย" : `พบแล้ว ${foundCount} / ${totalCount} ใบ`}
+                {showScanQrPrompt
+                  ? "นำเครื่องสแกน QR บนลัง"
+                  : allFound
+                  ? "ใส่บิลลงในลังได้เลย"
+                  : `พบแล้ว ${foundCount} / ${totalCount} ใบ`}
               </p>
             </div>
           </div>
@@ -274,7 +433,12 @@ const ScanBox = () => {
               {scanState.memberInfo?.route_code && (
                 <span>เส้นทาง: {scanState.memberInfo.route_code}</span>
               )}
-              <span>ลังที่ {scanState.box_no} / {scanState.total_boxes}</span>
+              {scanState.box_no > 0 && (
+                <span>ลังที่ {scanState.box_no} / {scanState.total_boxes}</span>
+              )}
+              {scanState.box_no === 0 && (
+                <span>ทั้งหมด {scanState.total_boxes} ลัง</span>
+              )}
             </div>
           </div>
 
@@ -322,7 +486,7 @@ const ScanBox = () => {
             ))}
           </div>
 
-          {/* Status scan */}
+          {/* Action area */}
           {!allFound ? (
             <div className="bg-white border border-blue-200 rounded-2xl px-5 py-4 flex items-center gap-3 shadow-md">
               <div className="flex gap-1 items-center shrink-0">
@@ -332,7 +496,16 @@ const ScanBox = () => {
               </div>
               <p className="text-blue-600 text-sm font-medium">พร้อมรับการสแกน Barcode บิล</p>
             </div>
-          ) : (
+          ) : showScanQrPrompt ? (
+            <div className="bg-white border border-indigo-200 rounded-2xl px-5 py-4 flex items-center gap-3 shadow-md">
+              <div className="flex gap-1 items-center shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+              </div>
+              <p className="text-indigo-600 text-sm font-medium">สแกน QR Code บนลัง เพื่อยืนยัน</p>
+            </div>
+          ) : showDoneButtons ? (
             <div className="flex flex-col gap-3">
               <button
                 onClick={handlePrintConfirm}
@@ -348,7 +521,7 @@ const ScanBox = () => {
                 สแกนลังถัดไป
               </button>
             </div>
-          )}
+          ) : null}
 
           <button
             onClick={handleReset}
