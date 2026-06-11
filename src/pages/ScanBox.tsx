@@ -410,15 +410,15 @@ const ScanBox = () => {
                 {showScanQrPrompt
                   ? "สแกนบิลครบแล้ว!"
                   : allFound
-                  ? "พบบิลครบแล้ว!"
-                  : "กำลังค้นหาบิล..."}
+                  ? "สแกนบิลครบแล้ว!"
+                  : "รายการ SO ที่อ้างอิงบิลนั้น"}
               </p>
               <p className="text-sm opacity-80">
                 {showScanQrPrompt
                   ? "นำเครื่องสแกน QR บนลัง"
                   : allFound
                   ? "ใส่บิลลงในลังได้เลย"
-                  : `พบแล้ว ${foundCount} / ${totalCount} ใบ`}
+                  : "กรุณาสแกนบิลให้ครบ"}
               </p>
             </div>
           </div>
@@ -455,10 +455,19 @@ const ScanBox = () => {
           )}
 
           {/* Progress bar */}
+          <div className="flex justify-between items-center text-sm px-0.5 mb-0.5">
+            <span className="text-blue-500 font-medium">สแกนแล้ว</span>
+            <span className="text-blue-700 font-bold">{foundCount} / {totalCount} ใบ</span>
+          </div>
           <div className="bg-blue-100 rounded-full h-2.5 overflow-hidden shadow-inner">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${allFound ? "bg-emerald-500" : "bg-blue-500"}`}
-              style={{ width: totalCount > 0 ? `${(foundCount / totalCount) * 100}%` : "0%" }}
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: totalCount > 0 ? `${(foundCount / totalCount) * 100}%` : "0%",
+                backgroundColor: totalCount > 0
+                  ? `hsl(${Math.round((foundCount / totalCount) * 120)}, 85%, 45%)`
+                  : "hsl(0, 85%, 45%)",
+              }}
             />
           </div>
 
@@ -476,7 +485,7 @@ const ScanBox = () => {
                     : "bg-blue-50/50 border border-blue-100"
                 }`}
               >
-                <span className={`font-mono text-sm font-medium ${s.found ? "text-emerald-700" : "text-blue-700"}`}>
+                <span className={`font-mono text-base font-semibold ${s.found ? "text-emerald-700" : "text-blue-700"}`}>
                   {s.sh_running}
                 </span>
                 <span className={`text-lg font-bold ${s.found ? "text-emerald-500" : "text-blue-200"}`}>

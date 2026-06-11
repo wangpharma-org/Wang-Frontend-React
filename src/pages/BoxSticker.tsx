@@ -118,6 +118,7 @@ const BoxSticker = () => {
       className="w-full p-2 text-sm break-after-page"
       style={styles.container}
     >
+      <p className="text-[9px] text-center text-gray-500">ขอได้รับความขอบคุณจากวังเภสัช</p>
       <div className="flex justify-between">
         <p className="font-bold text-[18px] rotate-[-12deg] mt-2">Wangpharma</p>
         <p className="font-semibold text-[22px] mt-3">
@@ -252,7 +253,7 @@ const BoxSticker = () => {
           {index === 0 ? (
             <div className="flex justify-center items-center">
               <img src={correct} className="w-7"></img>
-              <p className="text-[14px] p-2 mt-1">ลังนี้มีบิล</p>
+              <p className="text-[10px] p-1.5 font-bold text-center">เอกสารบิล <br />อยู่ในซองนี้</p>
             </div>
           ) : (
             <p className="text-[16px] p-2 text-center font-extrabold">-</p>
