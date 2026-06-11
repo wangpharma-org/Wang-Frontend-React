@@ -47,6 +47,7 @@ import ReturnReceiptPrint from "./pages/ReturnReceiptPrint";
 import ProductNameChangeApproval from "./pages/ProductNameChangeApproval";
 import ScanBox from "./pages/ScanBox";
 import ScanConfirmSticker from "./pages/ScanConfirmSticker";
+import LogisticDriverReport from "./pages/LogisticDriverReport";
 
 function App() {
   useEffect(() => {
@@ -401,6 +402,10 @@ function App() {
           <Route
             path="/scan-confirm-sticker"
             element={<ScanConfirmSticker />}
+          />
+          <Route
+            path="/delivery-report"
+            element={<LogisticDriverReport />}
           />
         </Routes>
       </Router>
