@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import axios from "axios";
@@ -88,25 +89,25 @@ function Photo({ url, label }: { url: string; label: string }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="relative flex-shrink-0 rounded-lg overflow-hidden border border-gray-100"
-        style={{ width: 72, height: 72 }}
+        className="relative flex-shrink-0 rounded-lg overflow-hidden border border-gray-200 hover:opacity-90 transition-opacity"
+        style={{ width: 76, height: 76 }}
       >
         <img src={url} alt={label} className="w-full h-full object-cover" />
-        <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] font-semibold text-center py-0.5">
+        <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] font-semibold text-center py-1 tracking-wide">
           {label}
         </div>
       </button>
 
       {open && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 flex flex-col"
+          className="fixed inset-0 z-50 bg-black/95 flex flex-col"
           onClick={() => setOpen(false)}
         >
-          <div className="flex items-center justify-between px-4 py-3">
-            <span className="text-white text-sm font-semibold">{label}</span>
-            <button className="text-white text-2xl leading-none">✕</button>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+            <span className="text-white text-sm font-semibold tracking-wide">{label}</span>
+            <button className="text-white/70 hover:text-white text-xl leading-none transition-colors">✕</button>
           </div>
-          <div className="flex-1 flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="flex-1 flex items-center justify-center p-6" onClick={(e) => e.stopPropagation()}>
             <img src={url} alt={label} className="max-w-full max-h-full rounded-xl object-contain" />
           </div>
         </div>
@@ -115,22 +116,52 @@ function Photo({ url, label }: { url: string; label: string }) {
   );
 }
 
-// ─── Stat chip ────────────────────────────────────────────────────────────────
+// ─── Stat card ────────────────────────────────────────────────────────────────
 
-function StatChip({
+function StatCard({
   label, stores, bills, boxes,
-  bg, text, icon,
+  bg, borderColor, labelColor, valueColor,
+  dot,
 }: {
   label: string; stores: number; bills: number; boxes: number;
-  bg: string; text: string; icon: string;
+  bg: string; borderColor: string; labelColor: string; valueColor: string;
+  dot: string;
 }) {
   return (
-    <div className={`flex-1 rounded-xl p-3 ${bg}`}>
-      <div className={`text-xs font-bold ${text} flex items-center gap-1 mb-1`}>
-        <span>{icon}</span> {label}
+    <div className={`flex-1 rounded-xl p-3 border ${bg} ${borderColor}`}>
+      <div className="flex items-center gap-1.5 mb-2">
+        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dot}`} />
+        <span className={`text-xs font-bold tracking-wide ${labelColor}`}>{label}</span>
       </div>
-      <div className={`text-2xl font-black ${text}`}>{stores} ร้าน</div>
-      <div className={`text-xs ${text} opacity-75`}>{bills} บิล · {boxes} ลัง</div>
+      <div className={`text-2xl font-black leading-none ${valueColor}`}>{stores}</div>
+      <div className={`text-xs mt-0.5 ${labelColor} opacity-70`}>ร้าน</div>
+      <div className={`text-[11px] mt-1.5 ${labelColor} opacity-60`}>{bills} บิล · {boxes} ลัง</div>
+    </div>
+  );
+}
+
+// ─── Time cell ────────────────────────────────────────────────────────────────
+
+function TimeCell({ label, value, color, icon }: { label: string; value: string; color: string; icon: React.ReactNode }) {
+  return (
+    <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
+      <div className={`flex items-center justify-center mb-1 ${color} opacity-70`}>{icon}</div>
+      <div className="text-[11px] text-gray-400 mb-1 font-medium">{label}</div>
+      <div className={`text-base font-black ${color}`}>{value}</div>
+    </div>
+  );
+}
+
+// ─── Section header ───────────────────────────────────────────────────────────
+
+function SectionHeader({ title, count, color, icon }: { title: string; count?: number; color: string; icon: React.ReactNode }) {
+  return (
+    <div className={`flex items-center gap-2 mb-4 pb-3 border-b border-gray-100`}>
+      <div className={`p-1.5 rounded-lg ${color}`}>{icon}</div>
+      <span className="text-sm font-bold text-gray-800">{title}</span>
+      {count !== undefined && (
+        <span className="ml-auto text-xs font-semibold text-gray-400">{count} ร้าน</span>
+      )}
     </div>
   );
 }
@@ -146,53 +177,58 @@ function DeliveryCard({ d, index }: { d: Delivery; index: number }) {
 
   return (
     <div className="flex gap-3">
-      {/* timeline dot */}
-      <div className="flex flex-col items-center">
-        <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+      {/* timeline */}
+      <div className="flex flex-col items-center pt-1">
+        <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 shadow-sm">
           {index + 1}
         </div>
-        <div className="w-0.5 flex-1 bg-gray-200 mt-1" />
+        <div className="w-px flex-1 bg-gray-150 mt-1.5 bg-gray-200" />
       </div>
 
       {/* card */}
-      <div className="flex-1 pb-4">
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <div>
-              <div className="font-bold text-sm text-gray-900 leading-tight">{d.mem_name}</div>
-              <div className="text-xs text-gray-400">{d.mem_code}</div>
+      <div className="flex-1 pb-3">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="font-bold text-sm text-gray-900 leading-snug truncate">{d.mem_name}</div>
+                <div className="text-[11px] text-gray-400 mt-0.5 font-mono">{d.mem_code}</div>
+              </div>
+              <div className="flex-shrink-0 text-right">
+                <div className="text-emerald-600 font-black text-base tabular-nums">{fmtTime(d.shipping_finish_time)}</div>
+                <div className="text-[11px] text-gray-400">{d.bill_count} บิล · {d.box_amount} ลัง</div>
+              </div>
             </div>
-            <div className="flex-shrink-0 text-right">
-              <div className="text-green-600 font-black text-base">{fmtTime(d.shipping_finish_time)}</div>
-              <div className="text-xs text-gray-400">{d.bill_count} บิล · {d.box_amount} ลัง</div>
+
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              {d.receiver_type && (
+                <span className="inline-flex items-center bg-emerald-50 text-emerald-700 text-[10px] font-semibold px-2 py-0.5 rounded-md border border-emerald-100">
+                  {d.receiver_type}
+                </span>
+              )}
+              {d.forwarding_fee != null && (
+                <span className="inline-flex items-center bg-amber-50 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded-md border border-amber-100">
+                  ฝากส่ง {d.forwarding_fee.toFixed(0)} บาท
+                </span>
+              )}
+              {d.lat && d.lng && (
+                <a
+                  href={mapsUrl(d.lat, d.lng)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 bg-blue-50 text-blue-600 text-[10px] font-semibold px-2 py-0.5 rounded-md border border-blue-100 hover:bg-blue-100 transition-colors"
+                >
+                  <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                  </svg>
+                  แผนที่
+                </a>
+              )}
             </div>
           </div>
 
-          {d.receiver_type && (
-            <span className="inline-block bg-green-50 text-green-700 text-[10px] font-semibold px-2 py-0.5 rounded-full mb-2">
-              {d.receiver_type}
-            </span>
-          )}
-
-          {d.forwarding_fee != null && (
-            <div className="text-xs text-orange-600 font-semibold mb-2">
-              💸 ฝากส่ง {d.forwarding_fee.toFixed(0)} บาท
-            </div>
-          )}
-
-          {d.lat && d.lng && (
-            <a
-              href={mapsUrl(d.lat, d.lng)}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-1 text-xs text-blue-500 mb-2"
-            >
-              📍 {d.lat}, {d.lng}
-            </a>
-          )}
-
           {photos.length > 0 && (
-            <div className="flex gap-2 mt-2 flex-wrap">
+            <div className="px-3 pb-3 flex gap-2 flex-wrap border-t border-gray-50 pt-2.5 mt-0.5">
               {photos.map((p) => (
                 <Photo key={p.label} url={p.url} label={p.label} />
               ))}
@@ -213,32 +249,36 @@ function BackCard({ b, index }: { b: Back; index: number }) {
 
   return (
     <div className="flex gap-3">
-      <div className="flex flex-col items-center">
-        <div className="w-7 h-7 rounded-full bg-red-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+      <div className="flex flex-col items-center pt-1">
+        <div className="w-6 h-6 rounded-full bg-red-400 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 shadow-sm">
           {index + 1}
         </div>
-        <div className="w-0.5 flex-1 bg-gray-200 mt-1" />
+        <div className="w-px flex-1 bg-gray-200 mt-1.5" />
       </div>
 
-      <div className="flex-1 pb-4">
-        <div className="bg-white rounded-xl border border-red-100 shadow-sm p-3">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <div>
-              <div className="font-bold text-sm text-gray-900 leading-tight">{b.mem_name}</div>
-              <div className="text-xs text-gray-400">{b.mem_code}</div>
+      <div className="flex-1 pb-3">
+        <div className="bg-white rounded-xl border border-red-100 shadow-sm overflow-hidden">
+          <div className="p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="font-bold text-sm text-gray-900 leading-snug truncate">{b.mem_name}</div>
+                <div className="text-[11px] text-gray-400 mt-0.5 font-mono">{b.mem_code}</div>
+              </div>
+              <div className="flex-shrink-0 text-right">
+                <div className="text-red-500 font-black text-base tabular-nums">{fmtTime(b.shipping_finish_time)}</div>
+                <div className="text-[11px] text-gray-400">{b.bill_count} บิล · {b.box_amount} ลัง</div>
+              </div>
             </div>
-            <div className="flex-shrink-0 text-right">
-              <div className="text-red-500 font-black text-base">{fmtTime(b.shipping_finish_time)}</div>
-              <div className="text-xs text-gray-400">{b.bill_count} บิล · {b.box_amount} ลัง</div>
-            </div>
+
+            {b.reason && (
+              <div className="mt-2 text-[11px] text-red-500 bg-red-50 rounded-lg px-2.5 py-1.5 border border-red-100">
+                {b.reason}
+              </div>
+            )}
           </div>
 
-          {b.reason && (
-            <div className="text-xs text-red-600 italic mb-2">{b.reason}</div>
-          )}
-
           {photos.length > 0 && (
-            <div className="flex gap-2 mt-2 flex-wrap">
+            <div className="px-3 pb-3 flex gap-2 flex-wrap border-t border-gray-50 pt-2.5 mt-0.5">
               {photos.map((p) => (
                 <Photo key={p.label} url={p.url} label={p.label} />
               ))}
@@ -277,8 +317,8 @@ export default function LogisticDriverReport() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <div className="text-gray-500 text-sm">กำลังโหลด...</div>
+          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <div className="text-gray-400 text-sm">กำลังโหลด...</div>
         </div>
       </div>
     );
@@ -288,8 +328,12 @@ export default function LogisticDriverReport() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center p-8">
-          <div className="text-4xl mb-3">😕</div>
-          <div className="text-gray-600">{error ?? "ไม่พบข้อมูล"}</div>
+          <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div className="text-gray-500 text-sm">{error ?? "ไม่พบข้อมูล"}</div>
         </div>
       </div>
     );
@@ -301,112 +345,179 @@ export default function LogisticDriverReport() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+
       {/* Header */}
-      <div className="bg-blue-700 text-white px-4 pt-10 pb-6">
-        <div className="flex items-start justify-between">
+      <div className="bg-gradient-to-br from-slate-800 to-slate-700 text-white px-5 pt-10 pb-8">
+        <div className="flex items-start justify-between mb-4">
           <div>
-            <div className="text-2xl font-black leading-tight">🚗 {data.emp_name}</div>
-            <div className="text-blue-200 text-sm mt-1">
+            <div className="text-xs text-slate-400 font-medium tracking-widest uppercase mb-1">รายงานการจัดส่ง</div>
+            <div className="text-xl font-black leading-tight text-white">{data.emp_name}</div>
+            <div className="text-slate-400 text-sm mt-1">
               {data.car_number ? `ทะเบียน ${data.car_number}` : "ไม่มีข้อมูลรถ"}
             </div>
-            <div className="text-blue-300 text-xs mt-1">
-              {totalStores} ร้าน · {totalBoxes} ลัง
-            </div>
           </div>
-          <div className="text-blue-200 text-sm text-right">🕐 {now}</div>
+          <div className="text-right">
+            <div className="text-xs text-slate-400">อัปเดต</div>
+            <div className="text-slate-300 text-sm font-semibold tabular-nums">{now}</div>
+          </div>
+        </div>
+
+        {/* Summary pill */}
+        <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2 w-fit">
+          <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+          <span className="text-sm text-slate-200 font-semibold">{totalStores} ร้าน · {totalBoxes} ลัง</span>
         </div>
       </div>
 
-      <div className="px-4 -mt-3 space-y-4 pb-10">
+      <div className="px-4 -mt-2 space-y-3 pb-12">
 
         {/* Stats */}
-        <div className="bg-white rounded-2xl shadow-sm p-4">
-          <div className="flex gap-3">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <div className="flex gap-2.5">
             {data.in_progress.store_count > 0 && (
-              <StatChip
+              <StatCard
                 label="กำลังส่ง"
                 stores={data.in_progress.store_count}
                 bills={data.in_progress.bill_count}
                 boxes={data.in_progress.box_count}
-                bg="bg-blue-50"
-                text="text-blue-700"
-                icon="🚚"
+                bg="bg-blue-50/60"
+                borderColor="border-blue-100"
+                labelColor="text-blue-700"
+                valueColor="text-blue-800"
+                dot="bg-blue-500"
               />
             )}
-            <StatChip
+            <StatCard
               label="ส่งแล้ว"
               stores={data.done.store_count}
               bills={data.done.bill_count}
               boxes={data.done.box_count}
-              bg="bg-green-50"
-              text="text-green-700"
-              icon="✅"
+              bg="bg-emerald-50/60"
+              borderColor="border-emerald-100"
+              labelColor="text-emerald-700"
+              valueColor="text-emerald-800"
+              dot="bg-emerald-500"
             />
             {data.back.store_count > 0 && (
-              <StatChip
+              <StatCard
                 label="ส่งไม่ได้"
                 stores={data.back.store_count}
                 bills={data.back.bill_count}
                 boxes={data.back.box_count}
-                bg="bg-red-50"
-                text="text-red-700"
-                icon="❌"
+                bg="bg-red-50/60"
+                borderColor="border-red-100"
+                labelColor="text-red-600"
+                valueColor="text-red-700"
+                dot="bg-red-400"
               />
             )}
           </div>
         </div>
 
         {/* Times */}
-        <div className="bg-white rounded-2xl shadow-sm p-4">
-          <div className="text-xs font-bold text-orange-600 mb-3 flex items-center gap-1">
-            ⏱️ เวลา
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { icon: "🚀", label: "ออกรถ", value: fmtTime(data.shipping_out_time), color: "text-orange-600" },
-              { icon: "🏪", label: "ร้านแรก", value: fmtTime(data.done.first_finish_time), color: "text-green-600" },
-              { icon: "🔄", label: "ล่าสุด", value: fmtTime(data.done.last_finish_time), color: "text-blue-600" },
-              { icon: "🏁", label: "จบงาน", value: data.shift_end ? fmtTime(data.shift_end.shift_end_time) : "-", color: "text-purple-600" },
-            ].map(({ icon, label, value, color }) => (
-              <div key={label} className="bg-gray-50 rounded-xl p-3 text-center">
-                <div className="text-lg">{icon}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{label}</div>
-                <div className={`text-base font-black ${color}`}>{value}</div>
-              </div>
-            ))}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <SectionHeader
+            title="ไทม์ไลน์"
+            color="bg-orange-50"
+            icon={
+              <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            }
+          />
+          <div className="grid grid-cols-2 gap-2.5">
+            <TimeCell
+              label="ออกรถ"
+              value={fmtTime(data.shipping_out_time)}
+              color="text-orange-600"
+              icon={
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                </svg>
+              }
+            />
+            <TimeCell
+              label="ร้านแรก"
+              value={fmtTime(data.done.first_finish_time)}
+              color="text-emerald-600"
+              icon={
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              }
+            />
+            <TimeCell
+              label="ร้านล่าสุด"
+              value={fmtTime(data.done.last_finish_time)}
+              color="text-blue-600"
+              icon={
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              }
+            />
+            <TimeCell
+              label="จบงาน"
+              value={data.shift_end ? fmtTime(data.shift_end.shift_end_time) : "-"}
+              color="text-purple-600"
+              icon={
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              }
+            />
           </div>
         </div>
 
         {/* Routes */}
         {data.routes.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm p-4">
-            <div className="text-xs font-bold text-indigo-600 mb-3">🛣️ เส้นทาง</div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            <SectionHeader
+              title="เส้นทาง"
+              color="bg-indigo-50"
+              icon={
+                <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+              }
+            />
             <div className="space-y-2">
               {data.routes.map((r) => (
-                <div key={r.route_code} className="flex items-center justify-between bg-indigo-50 rounded-xl px-3 py-2">
-                  <div>
-                    <span className="text-xs font-bold text-indigo-800">{r.route_code}</span>
-                    <span className="text-xs text-indigo-600 ml-2">{r.route_name}</span>
+                <div key={r.route_code} className="flex items-center justify-between bg-indigo-50/50 border border-indigo-100 rounded-xl px-3 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md">{r.route_code}</span>
+                    <span className="text-xs text-gray-600">{r.route_name}</span>
                   </div>
-                  <span className="text-xs font-semibold text-indigo-700">{r.store_count} ร้าน · {r.box_count} ลัง</span>
+                  <span className="text-xs font-semibold text-gray-500">{r.store_count} ร้าน · {r.box_count} ลัง</span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Distance summary */}
+        {/* Distance */}
         {data.distance && data.distance.total_km > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm p-4">
-            <div className="text-xs font-bold text-purple-600 mb-3">📍 ระยะทาง</div>
-            <div className="flex gap-3">
-              <div className="flex-1 bg-purple-50 rounded-xl p-3 text-center">
-                <div className="text-xs text-purple-500">รวมระยะทาง</div>
-                <div className="text-xl font-black text-purple-700">{data.distance.total_km_text}</div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            <SectionHeader
+              title="ระยะทาง"
+              color="bg-purple-50"
+              icon={
+                <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              }
+            />
+            <div className="flex gap-2.5">
+              <div className="flex-1 bg-purple-50/60 border border-purple-100 rounded-xl p-3 text-center">
+                <div className="text-[11px] text-purple-500 font-medium mb-1">รวมระยะทาง</div>
+                <div className="text-xl font-black text-purple-800">{data.distance.total_km_text}</div>
               </div>
-              <div className="flex-1 bg-indigo-50 rounded-xl p-3 text-center">
-                <div className="text-xs text-indigo-500">รวมเวลา</div>
-                <div className="text-xl font-black text-indigo-700">{data.distance.total_time_text}</div>
+              <div className="flex-1 bg-indigo-50/60 border border-indigo-100 rounded-xl p-3 text-center">
+                <div className="text-[11px] text-indigo-500 font-medium mb-1">รวมเวลา</div>
+                <div className="text-xl font-black text-indigo-800">{data.distance.total_time_text}</div>
               </div>
             </div>
 
@@ -415,9 +526,13 @@ export default function LogisticDriverReport() {
                 href={mapsUrl(data.done.latest_lat, data.done.latest_lng)}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-3 flex items-center justify-center gap-2 bg-blue-50 text-blue-600 rounded-xl py-2.5 text-sm font-semibold"
+                className="mt-3 flex items-center justify-center gap-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl py-2.5 text-sm font-semibold hover:bg-slate-100 transition-colors"
               >
-                🗺️ ดูตำแหน่งล่าสุด
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                ดูตำแหน่งล่าสุด
               </a>
             )}
           </div>
@@ -425,10 +540,17 @@ export default function LogisticDriverReport() {
 
         {/* Deliveries */}
         {data.deliveries.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm p-4">
-            <div className="text-xs font-bold text-green-700 mb-4">
-              ✅ รายการส่งแล้ว ({data.deliveries.length} ร้าน)
-            </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            <SectionHeader
+              title="รายการส่งแล้ว"
+              count={data.deliveries.length}
+              color="bg-emerald-50"
+              icon={
+                <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              }
+            />
             <div>
               {data.deliveries.map((d, i) => (
                 <DeliveryCard key={`${d.mem_code}-${i}`} d={d} index={i} />
@@ -439,10 +561,17 @@ export default function LogisticDriverReport() {
 
         {/* Backs */}
         {data.backs.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm p-4">
-            <div className="text-xs font-bold text-red-600 mb-4">
-              ❌ ส่งไม่ได้ ({data.backs.length} ร้าน)
-            </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            <SectionHeader
+              title="ส่งไม่ได้"
+              count={data.backs.length}
+              color="bg-red-50"
+              icon={
+                <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              }
+            />
             <div>
               {data.backs.map((b, i) => (
                 <BackCard key={`${b.mem_code}-${i}`} b={b} index={i} />
@@ -451,11 +580,15 @@ export default function LogisticDriverReport() {
           </div>
         )}
 
-        {/* No data */}
+        {/* Empty state */}
         {data.deliveries.length === 0 && data.backs.length === 0 && (
-          <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
-            <div className="text-4xl mb-2">📭</div>
-            <div className="text-gray-500 text-sm">ยังไม่มีรายการส่งวันนี้</div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center">
+            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+              </svg>
+            </div>
+            <div className="text-gray-400 text-sm">ยังไม่มีรายการส่งวันนี้</div>
           </div>
         )}
 
