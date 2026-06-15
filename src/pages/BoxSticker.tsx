@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import Barcode from "react-barcode";
 import { QRCodeSVG } from "qrcode.react";
 import dayjs from "dayjs";
 import axios from "axios";
@@ -148,18 +147,10 @@ const BoxSticker = () => {
             <p className="font-semibold text-[18px]">{dataPrint?.mem_name}</p>
           </div>
           <div className="w-[35%] flex flex-col justify-center items-center mt-1">
-            <div className="scale-100">
-              <Barcode
-                value={`WP|${mem_code}|${sh_running}|${index + 1}|${printCount}`}
-                format="CODE128"
-                width={1.4}
-                height={25}
-                displayValue={false}
-                background="transparent"
-                fontSize={7}
-                margin={0}
-              />
-            </div>
+            <QRCodeSVG
+              value={`WP|${mem_code}|${sh_running}|${index + 1}|${printCount}`}
+              size={45}
+            />
           </div>
         </div>
         <div className="w-[100%] flex justify-between mt-1 pr-1">
