@@ -142,32 +142,36 @@ const BoxSticker = () => {
         </p>
       </div>
       <div className="border-t">
-        <div className="flex justify-between ">
-          <div className="w-[65%] flex justify-center mt-5">
+        <div className="flex justify-between">
+          <div className="w-[65%] mt-1">
             <p className="font-semibold text-[18px]">{dataPrint?.mem_name}</p>
-          </div>
-        </div>
-        <div className="w-[100%] mt-1 pr-1">
-          <p className="text-[12px] line-clamp-2">
-            {`${cleanText(dataPrint?.address_line1)} ${cleanText(
-              dataPrint?.address_line2
-            )} ต.${cleanText(dataPrint?.sub_district)}`}{" "}
-            อ.{cleanText(dataPrint?.district)} จ.
-            {cleanText(dataPrint?.province)}{" "}
-            {cleanText(dataPrint?.postal_code)}
-          </p>
-          <div className="flex items-center gap-1 mt-0.5">
-            <img src={phone} className="w-2.5 h-2.5"></img>
-            <p className="text-[9px]">
-              {dataPrint?.mem_tel ?? "-"} <span>(ลูกค้า)</span>
+            <p className="text-[12px] line-clamp-2 mt-1">
+              {`${cleanText(dataPrint?.address_line1)} ${cleanText(
+                dataPrint?.address_line2
+              )} ต.${cleanText(dataPrint?.sub_district)}`}{" "}
+              อ.{cleanText(dataPrint?.district)} จ.
+              {cleanText(dataPrint?.province)}{" "}
+              {cleanText(dataPrint?.postal_code)}
             </p>
-          </div>
-          {dataPrint?.emp?.emp_tel && (
             <div className="flex items-center gap-1 mt-0.5">
               <img src={phone} className="w-2.5 h-2.5"></img>
-              <p className="text-[9px]">{dataPrint?.emp?.emp_tel} <span>(ฝ่ายขาย)</span></p>
+              <p className="text-[9px]">
+                {dataPrint?.mem_tel ?? "-"} <span>(ลูกค้า)</span>
+              </p>
             </div>
-          )}
+            {dataPrint?.emp?.emp_tel && (
+              <div className="flex items-center gap-1 mt-0.5">
+                <img src={phone} className="w-2.5 h-2.5"></img>
+                <p className="text-[9px]">{dataPrint?.emp?.emp_tel} <span>(ฝ่ายขาย)</span></p>
+              </div>
+            )}
+          </div>
+          <div className="w-[35%] flex justify-center items-center">
+            <QRCodeSVG
+              value={`WP|${mem_code}|${sh_running}|${index + 1}|${printCount}`}
+              size={60}
+            />
+          </div>
         </div>
         <div className="flex justify-between mt-1 border-t-1 border-b-1 py-1 px-26">
           <div className="flex items-center gap-1">
@@ -249,14 +253,7 @@ const BoxSticker = () => {
       </div>
       <div className="flex py-1 justify-center px-1">
         <div className="w-[90%] flex justify-center">
-          <div className="flex border rounded-sm justify-start border-gray-800 w-full">
-            {/* QR Code แทน triangle — สแกนขึ้นรถในแอปขนส่ง */}
-            <div className="border-r flex flex-col justify-center items-center p-1 border-gray-800">
-              <QRCodeSVG
-                value={`WP|${mem_code}|${sh_running}|${index + 1}|${printCount}`}
-                size={45}
-              />
-            </div>
+          <div className="flex border rounded-sm justify-center border-gray-800 w-full">
             <div className="p-1 flex items-center text-center justify-center w-full">
               <p className="text-center">
                 {dataPrint?.mem_shipping_note !== "" &&
