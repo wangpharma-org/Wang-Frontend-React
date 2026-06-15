@@ -122,7 +122,8 @@ const BoxSticker = () => {
       <div className="flex justify-between">
         <p className="font-bold text-[18px] rotate-[-12deg] mt-2">Wangpharma</p>
         <p className="font-semibold text-[22px] mt-3">
-          {index === 0 ? "บิล" : `${index + 1} / ${printCount}`}
+          {index + 1} / {printCount}
+          {/* 999 / 999 */}
         </p>
         <div className="flex flex-col justify-center items-center">
           <p className="font-bold text-[17px]">
@@ -150,7 +151,7 @@ const BoxSticker = () => {
           <div className="w-[35%] flex flex-col justify-center items-center mt-1">
             <div className="scale-100">
               <Barcode
-                value={`WP|${mem_code}|${sh_running}|${index + 1}|${printCount}`}
+                value={mem_code || ""}
                 format="CODE128"
                 width={1.4}
                 height={25}
