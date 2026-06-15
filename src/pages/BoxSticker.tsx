@@ -146,41 +146,28 @@ const BoxSticker = () => {
           <div className="w-[65%] flex justify-center mt-5">
             <p className="font-semibold text-[18px]">{dataPrint?.mem_name}</p>
           </div>
-          <div className="w-[35%] flex flex-col justify-center items-center mt-1">
-            <QRCodeSVG
-              value={`WP|${mem_code}|${sh_running}|${index + 1}|${printCount}`}
-              size={45}
-            />
-          </div>
         </div>
-        <div className="w-[100%] flex justify-between mt-1 pr-1">
-          <div className="w-[65%]">
-            <p className="text-[12px] line-clamp-2">
-              {`${cleanText(dataPrint?.address_line1)} ${cleanText(
-                dataPrint?.address_line2
-              )} ต.${cleanText(dataPrint?.sub_district)}`}{" "}
-              อ.{cleanText(dataPrint?.district)} จ.
-              {cleanText(dataPrint?.province)}{" "}
-              {cleanText(dataPrint?.postal_code)}
+        <div className="w-[100%] mt-1 pr-1">
+          <p className="text-[12px] line-clamp-2">
+            {`${cleanText(dataPrint?.address_line1)} ${cleanText(
+              dataPrint?.address_line2
+            )} ต.${cleanText(dataPrint?.sub_district)}`}{" "}
+            อ.{cleanText(dataPrint?.district)} จ.
+            {cleanText(dataPrint?.province)}{" "}
+            {cleanText(dataPrint?.postal_code)}
+          </p>
+          <div className="flex items-center gap-1 mt-0.5">
+            <img src={phone} className="w-2.5 h-2.5"></img>
+            <p className="text-[9px]">
+              {dataPrint?.mem_tel ?? "-"} <span>(ลูกค้า)</span>
             </p>
           </div>
-          <div className="ml-1 w-[35%]">
-            <div className="flex items-center justify-center">
+          {dataPrint?.emp?.emp_tel && (
+            <div className="flex items-center gap-1 mt-0.5">
               <img src={phone} className="w-2.5 h-2.5"></img>
-              <p className="text-[9px] ml-0.5">
-                {dataPrint?.mem_tel ?? "-"} <span>(ลูกค้า)</span>
-              </p>
+              <p className="text-[9px]">{dataPrint?.emp?.emp_tel} <span>(ฝ่ายขาย)</span></p>
             </div>
-            {dataPrint?.emp?.emp_tel && (
-              <div className="flex items-center justify-center mt-0.5">
-                <img src={phone} className="w-2.5 h-2.5"></img>
-                <p className="text-[10px] ml-0.5">{dataPrint?.emp?.emp_tel ?? "-"} <span>(ฝ่ายขาย)</span></p>
-                {/* <p className="text-[9px] ml-0.5">
-                0863249595 <span>(ฝ่ายขาย)</span>
-              </p> */}
-              </div>
-            )}
-          </div>
+          )}
         </div>
         <div className="flex justify-between mt-1 border-t-1 border-b-1 py-1 px-26">
           <div className="flex items-center gap-1">
