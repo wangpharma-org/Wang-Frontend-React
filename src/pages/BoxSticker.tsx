@@ -114,7 +114,7 @@ const BoxSticker = () => {
   const renderSticker = (index: number) => (
     <div
       key={index}
-      className="w-full p-2 text-sm break-after-page"
+      className="w-full p-2 text-sm break-after-page border"
       style={styles.container}
     >
       <p className="text-[9px] text-center text-gray-500">ขอได้รับความขอบคุณจากวังเภสัช</p>
@@ -153,18 +153,20 @@ const BoxSticker = () => {
               {cleanText(dataPrint?.province)}{" "}
               {cleanText(dataPrint?.postal_code)}
             </p>
-            <div className="flex items-center gap-1 mt-0.5">
-              <img src={phone} className="w-2.5 h-2.5"></img>
-              <p className="text-[9px]">
-                {dataPrint?.mem_tel ?? "-"} <span>(ลูกค้า)</span>
-              </p>
-            </div>
-            {dataPrint?.emp?.emp_tel && (
-              <div className="flex items-center gap-1 mt-0.5">
+            <div className="flex items-center gap-2 mt-0.5">
+              <div className="flex items-center gap-1">
                 <img src={phone} className="w-2.5 h-2.5"></img>
-                <p className="text-[9px]">{dataPrint?.emp?.emp_tel} <span>(ฝ่ายขาย)</span></p>
+                <p className="text-[9px]">
+                  {dataPrint?.mem_tel ?? "-"} <span>(ลูกค้า)</span>
+                </p>
               </div>
-            )}
+              {dataPrint?.emp?.emp_tel && (
+                <div className="flex items-center gap-1">
+                  <img src={phone} className="w-2.5 h-2.5"></img>
+                  <p className="text-[9px]">{dataPrint?.emp?.emp_tel} <span>(ฝ่ายขาย)</span></p>
+                </div>
+              )}
+            </div>
           </div>
           <div className="w-[35%] flex justify-center items-center">
             <QRCodeSVG
@@ -251,10 +253,10 @@ const BoxSticker = () => {
           <p className="text-[12px]">ขนส่งวังเภสัช</p>
         </div>
       </div>
-      <div className="flex py-1 justify-center px-1">
-        <div className="w-[90%] flex justify-center">
-          <div className="flex border rounded-sm justify-center border-gray-800 w-full">
-            <div className="p-1 flex items-center text-center justify-center w-full">
+      <div className="flex py-0.5 justify-center">
+        <div className="flex w-[100%] justify-center">
+          <div className="flex w-[100%] justify-center border-b">
+            <div className="flex p-0.5 items-center text-center justify-center w-full">
               <p className="text-center">
                 {dataPrint?.mem_shipping_note !== "" &&
                   dataPrint?.mem_shipping_note !== null
@@ -265,6 +267,13 @@ const BoxSticker = () => {
           </div>
         </div>
       </div>
+      {index === 0 && (
+        <div className="flex justify-center px-1">
+          <p className="text-[9px] leading-tight text-center font-bold border-gray-800 rounded-sm px-1 py-0.5 w-[90%]">
+            ⚠ กรุณาอย่ารับสินค้า หากซองนี้ถูกเปิดก่อนที่ท่านจะรับสินค้า
+          </p>
+        </div>
+      )}
     </div>
   );
 
