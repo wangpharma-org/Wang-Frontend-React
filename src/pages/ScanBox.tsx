@@ -37,8 +37,19 @@ const ScanBox = () => {
   const [scanCompletedAt, setScanCompletedAt] = useState<string | null>(null);
   const [printing, setPrinting] = useState(false);
   const [billFirstQrDone, setBillFirstQrDone] = useState(false);
+  // OPHMBC-141: บางคนถือ PDA กลับหัว — หมุนจอ 180° ให้อ่านได้ทั้งสองท่าถือ
+  const [flipped, setFlipped] = useState(
+    () => localStorage.getItem("scanbox_flipped") === "1"
+  );
   const qrRef = useRef<HTMLInputElement>(null);
   const billRef = useRef<HTMLInputElement>(null);
+
+  const toggleFlip = () =>
+    setFlipped((prev) => {
+      const next = !prev;
+      localStorage.setItem("scanbox_flipped", next ? "1" : "0");
+      return next;
+    });
 
   const token = sessionStorage.getItem("access_token");
   const allFound = scanState?.soList.every((s) => s.found) ?? false;
@@ -333,6 +344,24 @@ const ScanBox = () => {
     >
       <ToastContainer position="top-center" autoClose={2500} />
 
+      {/* OPHMBC-141: ปุ่มหมุนจอ 180° สำหรับคนถือ PDA กลับหัว */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleFlip();
+        }}
+        aria-label="หมุนจอ 180 องศา"
+        className={`fixed top-3 right-3 z-50 w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${
+          flipped ? "bg-blue-600 text-white" : "bg-white/90 text-blue-600 border border-blue-200"
+        }`}
+      >
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+            d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+      </button>
+
       {/* Hidden inputs */}
       <input
         ref={qrRef}
@@ -361,6 +390,10 @@ const ScanBox = () => {
         }}
       />
 
+      <div
+        className="w-full flex flex-col items-center transition-transform duration-300"
+        style={{ transform: flipped ? "rotate(180deg)" : undefined }}
+      >
       {/* Phase 1: รอสแกน */}
       {!scanState && (
         <div className="flex flex-col items-center gap-6 w-full max-w-sm">
@@ -540,6 +573,7 @@ const ScanBox = () => {
           </button>
         </div>
       )}
+      </div>
     </div>
   );
 };
