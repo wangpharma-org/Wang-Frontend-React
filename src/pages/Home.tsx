@@ -95,6 +95,13 @@ const listMenu = [
     imageSrc: ChangeName,
     admin: true,
   },
+  {
+    id: 14,
+    name: "รายงาน Daily IP Logs",
+    href: "/daily-ip-logs",
+    imageSrc: log,
+    admin: true,
+  },
 ];
 const Home = () => {
   const navigate = useNavigate()

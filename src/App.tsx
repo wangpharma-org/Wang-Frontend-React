@@ -46,6 +46,7 @@ import RecycleBoxBarcode from "./pages/RecycleBoxBarcode";
 import ReturnReceipt from "./pages/ReturnReceipt";
 import ReturnReceiptPrint from "./pages/ReturnReceiptPrint";
 import ProductNameChangeApproval from "./pages/ProductNameChangeApproval";
+import DailyIpLogsPage from "./pages/DailyIpLogsPage";
 
 function App() {
   useEffect(() => {
@@ -397,6 +398,17 @@ function App() {
               <RequireAuth>
                 <TaskApprovalPage />
               </RequireAuth>
+            }
+          />
+          <Route
+            path="/daily-ip-logs"
+            element={
+              <div>
+                <Navbar />
+                <RequireAuth>
+                  <DailyIpLogsPage />
+                </RequireAuth>
+              </div>
             }
           />
         </Routes>
