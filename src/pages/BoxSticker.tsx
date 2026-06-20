@@ -114,7 +114,7 @@ const BoxSticker = () => {
   const renderSticker = (index: number) => (
     <div
       key={index}
-      className="w-full p-2 text-sm break-after-page border"
+      className="w-full p-2 text-sm break-after-page"
       style={styles.container}
     >
       <p className="text-[9px] text-center text-gray-500">ขอได้รับความขอบคุณจากวังเภสัช</p>
