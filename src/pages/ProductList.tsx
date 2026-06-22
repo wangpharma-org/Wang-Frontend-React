@@ -899,7 +899,7 @@ function ProductList() {
                           })
                           .sort((a, b) =>
                             a.product.product_code.localeCompare(
-                              b.product.product_shelf,
+                              b.product.product_code,
                               "th",
                               {
                                 numeric: true,

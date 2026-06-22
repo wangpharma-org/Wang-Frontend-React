@@ -8,7 +8,8 @@ export default defineConfig({
     allowedHosts: [
       '6ae2-1-47-23-16.ngrok-free.app',
     ],
-    host: true
+    host: true,
+    port: 5174,
   },
   plugins: [react(), tailwindcss(),],
 })
