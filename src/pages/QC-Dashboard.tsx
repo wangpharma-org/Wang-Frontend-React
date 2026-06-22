@@ -900,6 +900,7 @@ const QCDashboard = () => {
           sh_running: null,
           sh_running_array: null,
           addShRunningArray: null,
+          emp_code: QCEmp?.dataEmp?.emp_code,
         });
         setLoading(true);
       } else if (sh_running) {
@@ -909,6 +910,7 @@ const QCDashboard = () => {
           sh_running,
           sh_running_array: null,
           addShRunningArray: null,
+          emp_code: QCEmp?.dataEmp?.emp_code,
         });
         setLoading(true);
       } else if (sh_running_array) {
@@ -918,6 +920,7 @@ const QCDashboard = () => {
           sh_running: null,
           addShRunningArray: null,
           sh_running_array,
+          emp_code: QCEmp?.dataEmp?.emp_code,
         });
         setLoading(true);
       } else if (addShRunningArray) {
@@ -927,6 +930,7 @@ const QCDashboard = () => {
           sh_running: null,
           sh_running_array: null,
           addShRunningArray,
+          emp_code: QCEmp?.dataEmp?.emp_code,
         });
       }
     }
@@ -937,6 +941,7 @@ const QCDashboard = () => {
     wantConnect,
     sh_running_array,
     addShRunningArray,
+    QCEmp?.dataEmp?.emp_code,
   ]);
 
   useEffect(() => {
@@ -1158,6 +1163,7 @@ const QCDashboard = () => {
             sh_running: null,
             sh_running_array: null,
             addShRunningArray: null,
+            emp_code: QCEmp?.dataEmp?.emp_code,
           });
           setLoading(true);
         } else if (sh_running) {
@@ -1167,6 +1173,7 @@ const QCDashboard = () => {
             sh_running,
             sh_running_array: null,
             addShRunningArray: null,
+            emp_code: QCEmp?.dataEmp?.emp_code,
           });
           setLoading(true);
         } else if (sh_running_array) {
@@ -1176,6 +1183,7 @@ const QCDashboard = () => {
             sh_running: null,
             addShRunningArray: null,
             sh_running_array,
+            emp_code: QCEmp?.dataEmp?.emp_code,
           });
           setLoading(true);
         } else if (addShRunningArray) {
@@ -1185,6 +1193,7 @@ const QCDashboard = () => {
             sh_running: null,
             sh_running_array: null,
             addShRunningArray,
+            emp_code: QCEmp?.dataEmp?.emp_code,
           });
         }
         // Also refresh urgent data
