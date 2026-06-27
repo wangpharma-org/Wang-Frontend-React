@@ -102,6 +102,13 @@ const listMenu = [
     imageSrc: log,
     admin: true,
   },
+  {
+    id: 15,
+    name: "ประวัติการเข้าถึง IP (Access IP Log)",
+    href: "/access-ip-logs",
+    imageSrc: log,
+    admin: true,
+  },
 ];
 const Home = () => {
   const navigate = useNavigate()
