@@ -154,6 +154,10 @@ const OrderList = () => {
   const [loadingReturns, setLoadingReturns] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState<PendingReturn | null>(null);
   const returnPanelRef = useRef<HTMLDivElement>(null);
+  const orderListRef = useRef<orderList[]>([]);
+  const trackingProbesRef = useRef<
+    Map<string, { mem_code: string; expires_at: number }>
+  >(new Map());
   const accessToken = sessionStorage.getItem("access_token");
 
   useEffect(() => {
@@ -288,12 +292,54 @@ const OrderList = () => {
 
     newSocket.on("listorder:get", (data) => {
       // console.log("Data " + JSON.stringify(data));
-      setOrderList(data.memberOrderWithAllShRunning);
+      const nextOrders: orderList[] = data.memberOrderWithAllShRunning;
+      orderListRef.current = nextOrders;
+      setOrderList(nextOrders);
+
+      const visibleShRunning = new Set(
+        nextOrders.flatMap((member) => member.all_sh_running)
+      );
+      const now = Date.now();
+      trackingProbesRef.current.forEach((probe, shRunning) => {
+        if (probe.expires_at < now) {
+          trackingProbesRef.current.delete(shRunning);
+        } else if (!visibleShRunning.has(shRunning)) {
+          newSocket.emit("listorder:client-missing", {
+            sh_running: shRunning,
+            mem_code: probe.mem_code,
+            observed_at: new Date().toISOString(),
+          });
+          trackingProbesRef.current.delete(shRunning);
+        }
+      });
       setLatestTimes(data.lastestDate);
       setRequestProduct(data.requestProduct);
       console.log("time", data.lastestDate);
       setLoading(false);
     });
+
+    newSocket.on(
+      "listorder:tracking-probe",
+      (probe: { sh_running: string; mem_code: string; expires_at: number }) => {
+        const visibleShRunning = new Set(
+          orderListRef.current.flatMap((member) => member.all_sh_running)
+        );
+
+        if (!visibleShRunning.has(probe.sh_running)) {
+          newSocket.emit("listorder:client-missing", {
+            sh_running: probe.sh_running,
+            mem_code: probe.mem_code,
+            observed_at: new Date().toISOString(),
+          });
+          return;
+        }
+
+        trackingProbesRef.current.set(probe.sh_running, {
+          mem_code: probe.mem_code,
+          expires_at: probe.expires_at,
+        });
+      }
+    );
 
     newSocket.on("connect_error", (error) => {
       console.log(error);
