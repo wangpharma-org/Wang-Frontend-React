@@ -336,7 +336,7 @@ const QCDashboard = () => {
     useState<Product | null>(null);
 
   // State เก็บไอดีห้องของการต่อ WebSocket
-  const [myRoom, setMyRoom] = useState<string | null>(null);
+  const [myRoom, setMyRoom] = useState<string[]>([]);
 
   const [errMessagePrintBox, setErrMsgPrintBox] = useState<string | null>(null);
 
@@ -1891,6 +1891,7 @@ const QCDashboard = () => {
         );
         if (response.status === 201) {
           console.log("Update Success");
+          setHasPrintSticker(true);
           window.open(
             `/box-sticker-block?print=${countBox}&mem_code=${mem_code}&sh_running=${shRunningArray}&emp_qc=${QCEmp?.dataEmp.emp_code}`
           );
@@ -1909,6 +1910,7 @@ const QCDashboard = () => {
         );
         if (response.status === 201) {
           console.log("Update Success");
+          setHasPrintSticker(true);
           window.open(
             `/box-sticker-a?print=${countBox}&mem_code=${mem_code}&sh_running=${shRunningArray}`
           );
@@ -1930,6 +1932,7 @@ const QCDashboard = () => {
         );
         if (response.status === 201) {
           console.log("Update Success");
+          setHasPrintSticker(true);
           window.open(
             `/box-sticker?print=${countBox}&mem_code=${mem_code}&sh_running=${shRunningArray}`
           );
