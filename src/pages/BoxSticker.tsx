@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import Barcode from "react-barcode";
-import triangle from "../assets/bleach.png";
+import { QRCodeSVG } from "qrcode.react";
 import dayjs from "dayjs";
 import axios from "axios";
 import clock from "../assets/clock.png";
@@ -118,11 +117,11 @@ const BoxSticker = () => {
       className="w-full p-2 text-sm break-after-page"
       style={styles.container}
     >
+      <p className="text-[9px] text-center text-gray-500">ขอได้รับความขอบคุณจากวังเภสัช</p>
       <div className="flex justify-between">
         <p className="font-bold text-[18px] rotate-[-12deg] mt-2">Wangpharma</p>
         <p className="font-semibold text-[22px] mt-3">
-          {index + 1} / {printCount}
-          {/* 999 / 999 */}
+          {index === 0 ? "บิล" : `${index + 1} / ${printCount}`}
         </p>
         <div className="flex flex-col justify-center items-center">
           <p className="font-bold text-[17px]">
@@ -143,28 +142,10 @@ const BoxSticker = () => {
         </p>
       </div>
       <div className="border-t">
-        <div className="flex justify-between ">
-          <div className="w-[65%] flex justify-center mt-5">
+        <div className="flex justify-between">
+          <div className="w-[65%] mt-1">
             <p className="font-semibold text-[18px]">{dataPrint?.mem_name}</p>
-          </div>
-          <div className="w-[35%] flex flex-col justify-center items-center mt-1">
-            <div className="scale-100">
-              <Barcode
-                value={mem_code || ""}
-                format="CODE128"
-                width={1.4}
-                height={25}
-                displayValue={false}
-                background="transparent"
-                fontSize={7}
-                margin={0}
-              />
-            </div>
-          </div>
-        </div>
-        <div className="w-[100%] flex justify-between mt-1 pr-1">
-          <div className="w-[65%]">
-            <p className="text-[12px] line-clamp-2">
+            <p className="text-[12px] line-clamp-2 mt-1">
               {`${cleanText(dataPrint?.address_line1)} ${cleanText(
                 dataPrint?.address_line2
               )} ต.${cleanText(dataPrint?.sub_district)}`}{" "}
@@ -172,23 +153,26 @@ const BoxSticker = () => {
               {cleanText(dataPrint?.province)}{" "}
               {cleanText(dataPrint?.postal_code)}
             </p>
-          </div>
-          <div className="ml-1 w-[35%]">
-            <div className="flex items-center justify-center">
-              <img src={phone} className="w-2.5 h-2.5"></img>
-              <p className="text-[9px] ml-0.5">
-                {dataPrint?.mem_tel ?? "-"} <span>(ลูกค้า)</span>
-              </p>
-            </div>
-            {dataPrint?.emp?.emp_tel && (
-              <div className="flex items-center justify-center mt-0.5">
+            <div className="flex items-center gap-2 mt-0.5">
+              <div className="flex items-center gap-1">
                 <img src={phone} className="w-2.5 h-2.5"></img>
-                <p className="text-[10px] ml-0.5">{dataPrint?.emp?.emp_tel ?? "-"} <span>(ฝ่ายขาย)</span></p>
-                {/* <p className="text-[9px] ml-0.5">
-                0863249595 <span>(ฝ่ายขาย)</span>
-              </p> */}
+                <p className="text-[9px]">
+                  {dataPrint?.mem_tel ?? "-"} <span>(ลูกค้า)</span>
+                </p>
               </div>
-            )}
+              {dataPrint?.emp?.emp_tel && (
+                <div className="flex items-center gap-1">
+                  <img src={phone} className="w-2.5 h-2.5"></img>
+                  <p className="text-[9px]">{dataPrint?.emp?.emp_tel} <span>(ฝ่ายขาย)</span></p>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="w-[35%] flex justify-center items-center">
+            <QRCodeSVG
+              value={`WP|${mem_code}|${sh_running}|${index + 1}|${printCount}`}
+              size={60}
+            />
           </div>
         </div>
         <div className="flex justify-between mt-1 border-t-1 border-b-1 py-1 px-26">
@@ -252,7 +236,7 @@ const BoxSticker = () => {
           {index === 0 ? (
             <div className="flex justify-center items-center">
               <img src={correct} className="w-7"></img>
-              <p className="text-[14px] p-2 mt-1">ลังนี้มีบิล</p>
+              <p className="text-[10px] p-1.5 font-bold text-center">เอกสารบิล <br />อยู่ในซองนี้</p>
             </div>
           ) : (
             <p className="text-[16px] p-2 text-center font-extrabold">-</p>
@@ -269,15 +253,10 @@ const BoxSticker = () => {
           <p className="text-[12px]">ขนส่งวังเภสัช</p>
         </div>
       </div>
-      <div className="flex py-1 justify-center px-1">
-        <div className="w-[90%] flex justify-center">
-          <div className="flex border rounded-sm justify-start border-gray-800 w-full">
-            <div className="border-r flex justify-center items-center mr-1 border-gray-800">
-              <div className="w-10 p-2 flex justify-center items-center">
-                <img src={triangle} className="m-1"></img>
-              </div>
-            </div>
-            <div className="p-1 flex items-center text-center justify-center w-full">
+      <div className="flex py-0.5 justify-center">
+        <div className="flex w-[100%] justify-center">
+          <div className="flex w-[100%] justify-center border-b">
+            <div className="flex p-0.5 items-center text-center justify-center w-full">
               <p className="text-center">
                 {dataPrint?.mem_shipping_note !== "" &&
                   dataPrint?.mem_shipping_note !== null
@@ -288,6 +267,13 @@ const BoxSticker = () => {
           </div>
         </div>
       </div>
+      {index === 0 && (
+        <div className="flex justify-center px-1">
+          <p className="text-[9px] leading-tight text-center font-bold border-gray-800 rounded-sm px-1 py-0.5 w-[90%]">
+            ⚠ กรุณาอย่ารับสินค้า หากซองนี้ถูกเปิดก่อนที่ท่านจะรับสินค้า
+          </p>
+        </div>
+      )}
     </div>
   );
 
