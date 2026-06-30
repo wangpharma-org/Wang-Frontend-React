@@ -28,6 +28,7 @@ import Swal from "sweetalert2";
 import ManualPicture from "../assets/manual_sticker.png";
 import Reportproblem from "../components/Reportproblem";
 import correct from "../assets/correct.png";
+import WaitingRTWidget from "../components/WaitingRTWidget";
 
 const TAB_KEY = "qc-dashboard";
 
@@ -2400,6 +2401,7 @@ const QCDashboard = () => {
   } else {
     return (
       <div>
+        <WaitingRTWidget socket={socket} emp_code={QCEmp?.dataEmp?.emp_code} />
         <div>
           <Modal
             isOpen={modalStationInfo}
