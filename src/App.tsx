@@ -46,6 +46,7 @@ import ReturnReceipt from "./pages/ReturnReceipt";
 import ReturnReceiptPrint from "./pages/ReturnReceiptPrint";
 import ProductNameChangeApproval from "./pages/ProductNameChangeApproval";
 import DailyIpLogsPage from "./pages/DailyIpLogsPage";
+import AccessIpLogPage from "./pages/AccessIpLogPage";
 import ScanBox from "./pages/ScanBox";
 import ScanConfirmSticker from "./pages/ScanConfirmSticker";
 import LogisticDriverReport from "./pages/LogisticDriverReport";
@@ -399,6 +400,17 @@ function App() {
                 <Navbar />
                 <RequireAuth>
                   <DailyIpLogsPage />
+                </RequireAuth>
+              </div>
+            }
+          />
+          <Route
+            path="/access-ip-logs"
+            element={
+              <div>
+                <Navbar />
+                <RequireAuth>
+                  <AccessIpLogPage />
                 </RequireAuth>
               </div>
             }
