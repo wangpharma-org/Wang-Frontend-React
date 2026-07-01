@@ -341,12 +341,12 @@ export default function RTApproval() {
     return () => { clearInterval(interval); };
   }, [active]);
 
-  // Auto-fetch purchest data when modal opens and purchest data is missing
-  useEffect(() => {
-    if (modalOpen && selectedItem && !selectedItem.product.purchest) {
-      fetchPurchestData(selectedItem.product.code);
-    }
-  }, [modalOpen, selectedItem]);
+  // // Auto-fetch purchest data when modal opens and purchest data is missing
+  // useEffect(() => {
+  //   if (modalOpen && selectedItem && !selectedItem.product.purchest) {
+  //     fetchPurchestData(selectedItem.product.code);
+  //   }
+  // }, [modalOpen, selectedItem]);
 
   const checkFeatureFlag = async () => {
     try {

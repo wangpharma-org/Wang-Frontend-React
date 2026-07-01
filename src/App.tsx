@@ -16,7 +16,6 @@ import FormatSticker from "./pages/FormatSticker";
 import EmployeeStatisticsPage from "./pages/EmployeeStatisticsPage";
 import VerifyOrder from "./pages/VerifyOrder";
 import ReportEmployee from "./pages/ReportEmployee";
-import FormatLogReport from "./pages/FormatLogReport";
 import QCDashboard from "./pages/QC-Dashboard";
 import FragilePrint from "./components/FragilePrint";
 import SpecialExpressPrint from "./pages/SpecialExpress";
@@ -28,9 +27,9 @@ import BoxSticker from "./pages/BoxSticker";
 import BoxStickerBlock from "./pages/BoxStickerBlock";
 import BoxStickerA from "./pages/BoxStickerA";
 import ProductManage from "./pages/ProductManage";
-import Welcome from "./pages/OpenTicket/Welcome";
-import Ticket from "./pages/OpenTicket/Ticket";
-import StatusTicket from "./pages/OpenTicket/StatusTicket";
+// import Welcome from "./pages/OpenTicket/Welcome";
+// import Ticket from "./pages/OpenTicket/Ticket";
+// import StatusTicket from "./pages/OpenTicket/StatusTicket";
 import RequestProduct from "./pages/RequestProduct";
 import RouteManage from "./pages/RouteManage";
 import DashboardRoute from "./pages/DashboardRoute";
@@ -48,6 +47,9 @@ import ReturnReceiptPrint from "./pages/ReturnReceiptPrint";
 import ProductNameChangeApproval from "./pages/ProductNameChangeApproval";
 import DailyIpLogsPage from "./pages/DailyIpLogsPage";
 import AccessIpLogPage from "./pages/AccessIpLogPage";
+import ScanBox from "./pages/ScanBox";
+import ScanConfirmSticker from "./pages/ScanConfirmSticker";
+import LogisticDriverReport from "./pages/LogisticDriverReport";
 
 function App() {
   useEffect(() => {
@@ -251,16 +253,6 @@ function App() {
             }
           />
           <Route
-            path="/log-report"
-            element={
-              <div>
-                <RequireAuth>
-                  <FormatLogReport />
-                </RequireAuth>
-              </div>
-            }
-          />
-          <Route
             path="/qc-dashboard"
             element={
               <div>
@@ -281,7 +273,7 @@ function App() {
               </div>
             }
           />
-          <Route
+          {/* <Route
             path="/ticket-welcome"
             element={
               <div>
@@ -306,7 +298,7 @@ function App() {
                 <StatusTicket />
               </div>
             }
-          />
+          /> */}
           <Route
             path="/route-manage"
             element={
@@ -422,6 +414,22 @@ function App() {
                 </RequireAuth>
               </div>
             }
+          />
+          <Route
+            path="/scan-box"
+            element={
+              <RequireAuth>
+                <ScanBox />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/scan-confirm-sticker"
+            element={<ScanConfirmSticker />}
+          />
+          <Route
+            path="/delivery-report"
+            element={<LogisticDriverReport />}
           />
         </Routes>
       </Router>
