@@ -111,9 +111,9 @@ const BoxSticker = () => {
   const cleanText = (text?: string | null) =>
     (text ?? "").replace(/&nbsp;/g, "").trim();
 
-  const renderSticker = (index: number) => (
+  const renderSticker = (index: number, isBill: boolean = false) => (
     <div
-      key={index}
+      key={isBill ? "bill" : index}
       className="w-full p-2 text-sm break-after-page"
       style={styles.container}
     >
@@ -121,7 +121,7 @@ const BoxSticker = () => {
       <div className="flex justify-between">
         <p className="font-bold text-[18px] rotate-[-12deg] mt-2">Wangpharma</p>
         <p className="font-semibold text-[22px] mt-3">
-          {index === 0 ? "บิล" : `${index} / ${printCount}`}
+          {isBill ? "บิล" : `${index + 1} / ${printCount}`}
         </p>
         <div className="flex flex-col justify-center items-center">
           <p className="font-bold text-[17px]">
@@ -170,7 +170,7 @@ const BoxSticker = () => {
           </div>
           <div className="w-[35%] flex justify-center items-center">
             <QRCodeSVG
-              value={`WP|${mem_code}|${sh_running}|${index + 1}|${printCount + 1}`}
+              value={`WP|${mem_code}|${sh_running}|${index + 1}|${printCount}`}
               size={60}
             />
           </div>
@@ -233,7 +233,7 @@ const BoxSticker = () => {
       </div>
       <div className="flex justify-center items-center border-b">
         <div className="w-[33%] border-r h-10 ">
-          {index === 0 ? (
+          {isBill ? (
             <div className="flex justify-center items-center">
               <img src={correct} className="w-7"></img>
               <p className="text-[10px] p-1.5 font-bold text-center">เอกสารบิล <br />อยู่ในซองนี้</p>
@@ -279,7 +279,10 @@ const BoxSticker = () => {
 
   return (
     <>
-      {Array.from({ length: printCount + 1 }).map((_, index) =>
+      {/* OPHMBC-159: สติกเกอร์ "บิล" ต้องออกทุกครั้งแยกจากกล่อง เดิม index 0 ถูกแทนที่ด้วย "บิล" ทำให้กล่อง 1/N หายไป
+          จึงแยกพิมพ์ "บิล" ต่างหาก ส่วน loop กล่อง 1..N ใช้สูตรเดิม (barcode/QR ไม่เปลี่ยน) */}
+      {renderSticker(0, true)}
+      {Array.from({ length: printCount }).map((_, index) =>
         renderSticker(index)
       )}
     </>
