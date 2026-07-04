@@ -170,7 +170,7 @@ const BoxSticker = () => {
           </div>
           <div className="w-[35%] flex justify-center items-center">
             <QRCodeSVG
-              value={`WP|${mem_code}|${sh_running}|${index === 0 ? 1 : index}|${printCount}`}
+              value={`WP|${mem_code}|${sh_running}|${index + 1}|${printCount}`}
               size={60}
             />
           </div>
