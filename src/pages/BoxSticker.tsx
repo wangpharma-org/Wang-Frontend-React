@@ -121,7 +121,7 @@ const BoxSticker = () => {
       <div className="flex justify-between">
         <p className="font-bold text-[18px] rotate-[-12deg] mt-2">Wangpharma</p>
         <p className="font-semibold text-[22px] mt-3">
-          {index === 0 ? "บิล" : `${index + 1} / ${printCount}`}
+          {index === 0 ? "บิล" : `${index} / ${printCount}`}
         </p>
         <div className="flex flex-col justify-center items-center">
           <p className="font-bold text-[17px]">
@@ -170,7 +170,7 @@ const BoxSticker = () => {
           </div>
           <div className="w-[35%] flex justify-center items-center">
             <QRCodeSVG
-              value={`WP|${mem_code}|${sh_running}|${index + 1}|${printCount}`}
+              value={`WP|${mem_code}|${sh_running}|${index === 0 ? 1 : index}|${printCount}`}
               size={60}
             />
           </div>
@@ -279,7 +279,7 @@ const BoxSticker = () => {
 
   return (
     <>
-      {Array.from({ length: printCount }).map((_, index) =>
+      {Array.from({ length: printCount + 1 }).map((_, index) =>
         renderSticker(index)
       )}
     </>
