@@ -155,7 +155,7 @@ const listMenu = [
     name: "Report ขนส่ง",
     href: "/report-logistic",
     imageSrc: routeDashboardIcon,
-    admin: true,
+    admin: false,
   },
 ];
 const Home = () => {
