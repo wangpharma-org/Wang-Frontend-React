@@ -150,6 +150,13 @@ const listMenu = [
     imageSrc: log,
     admin: true,
   },
+  {
+    id: 21,
+    name: "Report ขนส่ง",
+    href: "/report-logistic",
+    imageSrc: routeDashboardIcon,
+    admin: true,
+  },
 ];
 const Home = () => {
   const navigate = useNavigate()
