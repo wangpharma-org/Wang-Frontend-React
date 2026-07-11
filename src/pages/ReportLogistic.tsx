@@ -101,6 +101,10 @@ const mapsUrl = (lat: string, lng: string) => `https://maps.google.com/maps?q=${
 const fmtBaht = (n: number | null) =>
   n == null ? "-" : n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+// แบบไม่มีทศนิยม — ใช้ในการ์ด/KPI ที่พื้นที่แคบ กันตัวเลขล้นกรอบ
+const fmtBahtInt = (n: number | null) =>
+  n == null ? "-" : n.toLocaleString("th-TH", { maximumFractionDigits: 0 });
+
 // ─── Photo + lightbox ─────────────────────────────────────────────────────────
 
 function Photo({ url, label, size = 54 }: { url: string; label: string; size?: number }) {
@@ -139,15 +143,17 @@ function Photo({ url, label, size = 54 }: { url: string; label: string; size?: n
 
 // ─── KPI tile (บน header สีฟ้า) ───────────────────────────────────────────────
 
-function Kpi({ label, value, sub, icon }: { label: string; value: string; sub?: string; icon: React.ReactNode }) {
+function Kpi({ label, value, sub, icon, accent = false }: {
+  label: string; value: string; sub?: string; icon: React.ReactNode; accent?: boolean;
+}) {
   return (
-    <div className="rounded-xl bg-white/15 px-3.5 py-3">
-      <div className="flex items-center gap-1.5 text-xs font-medium text-blue-50/80">
-        <span className="text-blue-100">{icon}</span>
+    <div className={`rounded-xl px-3.5 py-3 min-w-0 ${accent ? "bg-emerald-400/25 ring-1 ring-emerald-300/50" : "bg-white/15"}`}>
+      <div className={`flex items-center gap-1.5 text-xs font-medium ${accent ? "text-emerald-50" : "text-blue-50/80"}`}>
+        <span className={accent ? "text-emerald-200" : "text-blue-100"}>{icon}</span>
         {label}
       </div>
-      <div className="text-xl font-extrabold text-white leading-none tabular-nums mt-1.5">{value}</div>
-      {sub && <div className="text-xs text-blue-50/70 mt-1">{sub}</div>}
+      <div className={`text-xl font-extrabold leading-none tabular-nums mt-1.5 truncate ${accent ? "text-emerald-100" : "text-white"}`}>{value}</div>
+      {sub && <div className={`text-xs mt-1 ${accent ? "text-emerald-50/80" : "text-blue-50/70"}`}>{sub}</div>}
     </div>
   );
 }
@@ -172,18 +178,18 @@ function CountUnit({ n, label }: { n: number; label: string }) {
 
 // ─── Overview summary card ────────────────────────────────────────────────────
 
-function SummaryCard({ label, value, unit, sub, icon, tint }: {
-  label: string; value: string | number; unit?: string; sub?: string; icon: React.ReactNode; tint: string;
+function SummaryCard({ label, value, unit, sub, icon, tint, accent = false }: {
+  label: string; value: string | number; unit?: string; sub?: string; icon: React.ReactNode; tint: string; accent?: boolean;
 }) {
   return (
-    <div className="rounded-2xl bg-white ring-1 ring-blue-100 shadow-sm p-4">
+    <div className={`rounded-2xl shadow-sm p-4 min-w-0 ${accent ? "bg-emerald-600 ring-1 ring-emerald-500" : "bg-white ring-1 ring-blue-100"}`}>
       <span className={`w-10 h-10 rounded-xl grid place-items-center ${tint}`}>{icon}</span>
-      <div className="mt-3 flex items-baseline gap-1">
-        <span className="text-2xl font-extrabold text-slate-800 tabular-nums leading-none">{value}</span>
-        {unit && <span className="text-sm text-slate-400 font-medium">{unit}</span>}
+      <div className="mt-3 flex items-baseline gap-1 min-w-0">
+        <span className={`text-2xl font-extrabold tabular-nums leading-none truncate ${accent ? "text-white" : "text-slate-800"}`}>{value}</span>
+        {unit && <span className={`text-sm font-medium flex-shrink-0 ${accent ? "text-emerald-100" : "text-slate-400"}`}>{unit}</span>}
       </div>
-      <div className="text-sm text-slate-500 mt-1 font-medium">{label}</div>
-      {sub && <div className="text-xs text-slate-400 mt-0.5">{sub}</div>}
+      <div className={`text-sm mt-1 font-medium ${accent ? "text-emerald-50" : "text-slate-500"}`}>{label}</div>
+      {sub && <div className={`text-xs mt-0.5 ${accent ? "text-emerald-100/80" : "text-slate-400"}`}>{sub}</div>}
     </div>
   );
 }
@@ -265,7 +271,7 @@ function DriverCard({ r }: { r: DriverReport }) {
           <Kpi label="ทั้งหมด" value={`${totalStores} ร้าน`} sub={`${totalBoxes} ลัง`} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>} />
           <Kpi label="ส่งแล้ว" value={`${r.done.store_count} ร้าน`} sub={`${r.done.box_count} ลัง`} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>} />
           <Kpi label="ตีกลับ" value={`${r.back.store_count} ร้าน`} sub={`${r.back.box_count} ลัง`} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>} />
-          <Kpi label="มูลค่าส่งแล้ว" value={r.done.total_price != null ? fmtBaht(r.done.total_price) : "-"} sub="บาท" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
+          <Kpi label="มูลค่าส่งแล้ว" value={fmtBahtInt(r.done.total_price)} sub="บาท" accent icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
           <Kpi label="ขึ้นของแรก" value={fmtTime(r.first_load_time)} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" /></svg>} />
           <Kpi label="ออกรถ" value={fmtTime(r.shipping_out_time)} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>} />
           <Kpi label="จบงาน" value={r.shift_end ? fmtTime(r.shift_end.shift_end_time) : "-"} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
@@ -285,10 +291,10 @@ function DriverCard({ r }: { r: DriverReport }) {
                 <col className="w-[108px]" />
                 <col className="w-[13%]" />
                 <col className="w-[104px]" />
-                <col className="w-[150px]" />
                 <col className="w-[88px]" />
                 <col className="w-[18%]" />
                 <col className="w-[14%]" />
+                <col className="w-[150px]" />
               </colgroup>
               <thead>
                 <tr className="bg-blue-50 text-blue-700 text-xs">
@@ -297,10 +303,10 @@ function DriverCard({ r }: { r: DriverReport }) {
                   <th className="text-left font-bold px-4 py-3">สถานะ</th>
                   <th className="text-left font-bold px-4 py-3">ผู้เซ็น</th>
                   <th className="text-center font-bold px-4 py-3">ลัง · บิล</th>
-                  <th className="text-right font-bold px-4 py-3">มูลค่า (บาท)</th>
                   <th className="text-center font-bold px-4 py-3">แผนที่</th>
                   <th className="text-left font-bold px-4 py-3">หลักฐานการส่ง</th>
                   <th className="text-left font-bold px-4 py-3">หมายเหตุ</th>
+                  <th className="text-right font-bold px-4 py-3 text-emerald-700">มูลค่า (บาท)</th>
                 </tr>
               </thead>
               <tbody>
@@ -346,26 +352,6 @@ function DriverCard({ r }: { r: DriverReport }) {
                           <CountUnit n={row.bill_count} label="บิล" />
                         </div>
                       </td>
-                      {/* มูลค่า + แยกรายบิล */}
-                      <td className="px-4 py-4">
-                        {row.total_price != null ? (
-                          <div>
-                            <div className="text-right font-extrabold text-slate-800 tabular-nums text-[14px]">{fmtBaht(row.total_price)}</div>
-                            {row.bills.length > 0 && (
-                              <div className="mt-1.5 space-y-0.5 border-t border-blue-50 pt-1.5">
-                                {row.bills.map((b) => (
-                                  <div key={b.sh_running} className="flex items-baseline justify-between gap-2 text-[11px] tabular-nums">
-                                    <span className="font-mono text-slate-400">{b.sh_running}</span>
-                                    <span className="text-slate-500">{fmtBaht(b.price)}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="text-right text-slate-300">-</div>
-                        )}
-                      </td>
                       {/* แผนที่ */}
                       <td className="px-4 py-4 text-center">
                         {row.lat && row.lng ? (
@@ -393,6 +379,26 @@ function DriverCard({ r }: { r: DriverReport }) {
                           <span className={`text-[13px] break-words ${done ? "text-slate-600" : "text-rose-600 font-medium"}`}>{row.note}</span>
                         ) : (
                           <span className="text-slate-300">-</span>
+                        )}
+                      </td>
+                      {/* มูลค่า + แยกรายบิล */}
+                      <td className="px-3 py-4">
+                        {row.total_price != null ? (
+                          <div className="rounded-xl bg-emerald-50 ring-1 ring-emerald-200 px-2.5 py-2">
+                            <div className="text-right font-extrabold text-emerald-700 tabular-nums text-[15px]">{fmtBaht(row.total_price)}</div>
+                            {row.bills.length > 0 && (
+                              <div className="mt-1.5 space-y-0.5 border-t border-emerald-200/60 pt-1.5">
+                                {row.bills.map((b) => (
+                                  <div key={b.sh_running} className="flex items-baseline justify-between gap-2 text-[11px] tabular-nums">
+                                    <span className="font-mono text-emerald-600/70">{b.sh_running}</span>
+                                    <span className="text-emerald-700/80 font-semibold">{fmtBaht(b.price)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-right text-slate-300 px-2.5">-</div>
                         )}
                       </td>
                     </tr>
@@ -545,7 +551,7 @@ export default function ReportLogistic() {
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} />
               <SummaryCard label="อัตราส่งสำเร็จ" value={agg.successRate} unit="%" sub={`จาก ${agg.attempted} ร้าน`} tint="bg-indigo-50 text-indigo-600"
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>} />
-              <SummaryCard label="มูลค่าส่งสำเร็จ" value={fmtBaht(agg.donePrice)} unit="บาท" tint="bg-amber-50 text-amber-600"
+              <SummaryCard label="มูลค่าส่งสำเร็จ" value={fmtBahtInt(agg.donePrice)} unit="บาท" accent tint="bg-white/20 text-white"
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
             </div>
             {filtered.length === 0 ? (
