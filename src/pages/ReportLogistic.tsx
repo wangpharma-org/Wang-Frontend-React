@@ -476,7 +476,7 @@ export default function ReportLogistic() {
     <div className="min-h-screen bg-[#eaf1fe]">
       {/* Top bar */}
       <div className="bg-white/90 backdrop-blur border-b border-blue-100 sticky top-0 z-20">
-        <div className="max-w-[1160px] mx-auto px-4 py-3 flex flex-wrap items-center gap-4">
+        <div className="max-w-[1600px] mx-auto px-4 py-3 flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white shadow-md shadow-blue-600/25">
               {TruckIcon}
@@ -519,7 +519,7 @@ export default function ReportLogistic() {
         </div>
       </div>
 
-      <div className="max-w-[1160px] mx-auto px-4 py-5 space-y-5">
+      <div className="max-w-[1600px] mx-auto px-4 py-5 space-y-5">
         {loading ? (
           <div className="flex items-center justify-center py-24">
             <div className="w-10 h-10 border-[3px] border-blue-600 border-t-transparent rounded-full animate-spin" />
