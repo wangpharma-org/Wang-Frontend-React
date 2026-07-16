@@ -1860,8 +1860,10 @@ const QCDashboard = () => {
   };
 
   const handlePrintStickerBox = async () => {
-    if (dataQC) {
-      setLoadingPrinting(true);
+    if (!dataQC) return;
+    setLoadingPrinting(true);
+    setErrMsgPrintBox(null);
+    try {
       const block_credit = await axios.post(
         `${import.meta.env.VITE_API_URL_ORDER}/api/picking/check-credit`,
         {
@@ -1942,6 +1944,10 @@ const QCDashboard = () => {
         console.log("memRoute : ", memRoute);
         OtherShipping();
       }
+    } catch (error) {
+      console.error("Error printing sticker box:", error);
+    } finally {
+      setLoadingPrinting(false);
     }
   };
 
