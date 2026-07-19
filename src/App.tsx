@@ -49,6 +49,7 @@ import DailyIpLogsPage from "./pages/DailyIpLogsPage";
 import ScanBox from "./pages/ScanBox";
 import ScanConfirmSticker from "./pages/ScanConfirmSticker";
 import LogisticDriverReport from "./pages/LogisticDriverReport";
+import ReportLogistic from "./pages/ReportLogistic";
 
 function App() {
   useEffect(() => {
@@ -418,6 +419,10 @@ function App() {
           <Route
             path="/delivery-report"
             element={<LogisticDriverReport />}
+          />
+          <Route
+            path="/report-logistic"
+            element={<RequireAuth><ReportLogistic /></RequireAuth>}
           />
         </Routes>
       </Router>

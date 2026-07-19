@@ -121,7 +121,7 @@ const BoxSticker = () => {
       <div className="flex justify-between">
         <p className="font-bold text-[18px] rotate-[-12deg] mt-2">Wangpharma</p>
         <p className="font-semibold text-[22px] mt-3">
-          {index === 0 ? "บิล" : `${index + 1} / ${printCount}`}
+          {`${index + 1} / ${printCount}`}
         </p>
         <div className="flex flex-col justify-center items-center">
           <p className="font-bold text-[17px]">
