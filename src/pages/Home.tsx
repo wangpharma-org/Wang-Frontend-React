@@ -157,6 +157,13 @@ const listMenu = [
     imageSrc: routeDashboardIcon,
     admin: false,
   },
+  {
+    id: 22,
+    name: "จัดตารางเส้นทางขนส่ง",
+    href: "/route-schedule",
+    imageSrc: routeDashboardIcon,
+    admin: true,
+  },
 ];
 const Home = () => {
   const navigate = useNavigate()
