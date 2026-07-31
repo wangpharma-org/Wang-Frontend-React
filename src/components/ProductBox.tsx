@@ -14,6 +14,7 @@ interface ProductBoxProps {
   prepareScan: string | null;
   setPrepareScan: Dispatch<SetStateAction<string | null>>;
   printStickerSelect: (type: string, product_name: string) => void;
+  handleLightOn?: (orderItem: ShoppingOrder) => void;
 }
 
 // Removed from the top level and will be added inside the component
@@ -25,6 +26,7 @@ export default function ProductBox({
   prepareScan,
   setPrepareScan,
   printStickerSelect,
+  handleLightOn,
 }: ProductBoxProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -37,6 +39,9 @@ export default function ProductBox({
       setIsFocused(false);
     } else {
       setPrepareScan(so_running);
+      if (handleLightOn) {
+        handleLightOn(orderItem);
+      }
     }
   };
 
@@ -67,6 +72,9 @@ export default function ProductBox({
         inputRef.current.focus();
         setIsFocused(true);
         setInputValue("");
+      }
+      if (handleLightOn) {
+        handleLightOn(orderItem);
       }
     } else {
       if (inputRef.current) {

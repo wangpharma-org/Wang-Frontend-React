@@ -93,6 +93,7 @@ function ProductList() {
   // const handleDoubleClick = useDoubleClick();
 
   const [prepareScan, setPrepareScan] = useState<string | null>(null);
+  const [activations, setActivations] = useState<Record<string, string>>({});
 
   const checkFlag = async () => {
     const flag = await axios.get(
@@ -153,6 +154,15 @@ function ProductList() {
     newSocket.on("listproduct:get", (data) => {
       setListproduct(data);
       setLoading(false);
+    });
+
+    newSocket.on("listproduct:light_on_result", (data: { so_running: string; activation_id: string | null }) => {
+      if (data?.so_running && data?.activation_id) {
+        setActivations((prev) => ({
+          ...prev,
+          [data.so_running]: data.activation_id!,
+        }));
+      }
     });
 
     newSocket.on("connect_error", (error) => {
@@ -244,7 +254,19 @@ function ProductList() {
     setAPIRoute(route.data);
   };
 
+  const handleLightOn = (orderItem: ShoppingOrder) => {
+    const productCode = orderItem?.product?.product_code || (orderItem as { so_procode?: string })?.so_procode;
+    console.log("handleLightOn trigger:", productCode, "socket connected:", socket?.connected);
+    if (socket?.connected && productCode) {
+      socket.emit("listproduct:light_on", {
+        product_code: productCode,
+        so_running: orderItem.so_running,
+      });
+    }
+  };
+
   const handleClick = (orderItem: ShoppingOrder, status: string) => {
+    const activation_id = activations[orderItem.so_running];
     if (orderItem.picking_status !== "pending") {
       if (socket?.connected) {
         console.log("orderItem to unpick : ", orderItem);
@@ -255,12 +277,15 @@ function ProductList() {
         });
       }
     } else {
+      
       if (socket?.connected) {
+        
         socket?.emit("listproduct:picked", {
           so_running: orderItem.so_running,
           mem_code: mem_code,
           status: status,
           sh_running: orderItem.sh_running,
+          activation_id: activation_id,
         });
       }
     }
@@ -278,6 +303,8 @@ function ProductList() {
       clickCountRef.current = 0;
       console.log("Double clicked on Picking Function");
 
+      const activation_id = activations[orderItem.so_running];
+
       if (orderItem.picking_status !== "pending") {
         if (socket?.connected) {
           console.log("orderItem to unpick : ", orderItem);
@@ -294,6 +321,7 @@ function ProductList() {
             mem_code: mem_code,
             status: status,
             sh_running: orderItem.sh_running,
+            activation_id: activation_id,
           });
         }
       }
@@ -919,6 +947,7 @@ function ProductList() {
                                   handleDoubleClick={handleDoubleClick}
                                   handleClick={handleClick}
                                   printStickerSelect={printStickerSelect}
+                                  handleLightOn={handleLightOn}
                                 />
                               );
                             }
