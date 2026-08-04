@@ -13,6 +13,55 @@ interface UrgentCustomer {
     mem_name: string;
 }
 
+type PickingRuleMode = "normal" | "floor" | "person";
+
+interface PickingRuleTransition {
+    retiring: {
+        mode: PickingRuleMode;
+        target_floor: string | null;
+        target_emp_code: string | null;
+        occupancy: number;
+    };
+    queued: {
+        mode: PickingRuleMode;
+        target_floor: string | null;
+        target_emp_code: string | null;
+        pick_limit: number | null;
+    } | null;
+}
+
+interface PickingRuleStatus {
+    id: string | null;
+    mode: PickingRuleMode;
+    target_floor: string | null;
+    target_emp_code: string | null;
+    target_emp_nickname: string | null;
+    pick_limit: number | null;
+    occupancy: number;
+    transition: PickingRuleTransition | null;
+}
+
+interface PickerEmployee {
+    emp_code: string;
+    emp_nickname: string;
+    emp_floor: string | null;
+}
+
+interface PickerOptions {
+    employees: PickerEmployee[];
+    floors: string[];
+}
+
+const describePickingTarget = (target: {
+    mode: PickingRuleMode;
+    target_floor: string | null;
+    target_emp_code: string | null;
+}): string => {
+    if (target.mode === "floor") return `ชั้น ${target.target_floor ?? "-"}`;
+    if (target.mode === "person") return `พนักงาน ${target.target_emp_code ?? "-"}`;
+    return "โหมดปกติ";
+};
+
 const RouteManage = () => {
     const [routes, setRoutes] = useState<Route[]>([]);
     const [searchTerm, setSearchTerm] = useState<string>("");
@@ -26,10 +75,84 @@ const RouteManage = () => {
     const userAuth = sessionStorage.getItem("user_info")
     const admin = userAuth ? JSON.parse(userAuth).manage_product == "Yes" : false;
 
+    const [pickingRule, setPickingRule] = useState<PickingRuleStatus | null>(null);
+    const [pickerOptions, setPickerOptions] = useState<PickerOptions | null>(null);
+    const [formMode, setFormMode] = useState<PickingRuleMode>("normal");
+    const [formFloor, setFormFloor] = useState<string>("");
+    const [formEmpCode, setFormEmpCode] = useState<string>("");
+    const [formLimit, setFormLimit] = useState<string>("");
+    const [savingRule, setSavingRule] = useState<boolean>(false);
+
     useEffect(() => {
         handleGetRoutes();
         fetchUrgentCustomers();
+        fetchPickingRule();
+        fetchPickerOptions();
     }, []);
+
+    const fetchPickingRule = async () => {
+        try {
+            const res = await axios.get<PickingRuleStatus>(
+                `${import.meta.env.VITE_API_URL_ORDER}/api/picking-rule/active`
+            );
+            setPickingRule(res.data);
+            setFormMode(res.data.mode);
+            setFormFloor(res.data.target_floor ?? "");
+            setFormEmpCode(res.data.target_emp_code ?? "");
+            setFormLimit(res.data.pick_limit ? String(res.data.pick_limit) : "");
+        } catch (error) {
+            console.error('Error fetching picking rule:', error);
+        }
+    };
+
+    const fetchPickerOptions = async () => {
+        try {
+            const res = await axios.get<PickerOptions>(
+                `${import.meta.env.VITE_API_URL_ORDER}/api/picking-rule/options`
+            );
+            setPickerOptions(res.data);
+        } catch (error) {
+            console.error('Error fetching picker options:', error);
+        }
+    };
+
+    const handleSavePickingRule = async () => {
+        setSavingRule(true);
+        try {
+            const payload: {
+                mode: PickingRuleMode;
+                target_floor?: string;
+                target_emp_code?: string;
+                pick_limit?: number;
+            } = { mode: formMode };
+            if (formMode === "floor") {
+                payload.target_floor = formFloor;
+                payload.pick_limit = Number(formLimit);
+            } else if (formMode === "person") {
+                payload.target_emp_code = formEmpCode;
+                payload.pick_limit = Number(formLimit);
+            }
+            await axios.post(
+                `${import.meta.env.VITE_API_URL_ORDER}/api/picking-rule`,
+                payload,
+                {
+                    headers: {
+                        Authorization: `Bearer ${sessionStorage.getItem("access_token")}`,
+                    },
+                }
+            );
+            await fetchPickingRule();
+            Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ' });
+        } catch (error) {
+            const message =
+                axios.isAxiosError(error) && error.response?.data?.message
+                    ? (error.response.data.message as string)
+                    : 'บันทึกไม่สำเร็จ';
+            Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: message });
+        } finally {
+            setSavingRule(false);
+        }
+    };
 
     // Filter routes based on search term and active status
     useEffect(() => {
@@ -359,6 +482,130 @@ const RouteManage = () => {
                                 <p className="text-gray-500">เพิ่มรหัสลูกค้าด่วนด้านบนเพื่อเริ่มต้นใช้งาน</p>
                             </div>
                         )}
+                    </div>
+                </div>
+
+                {/* Picking Rule Management Section */}
+                <div className="mt-12">
+                    <h2 className="text-2xl font-bold mb-6 text-gray-800">กำหนดประเภทการกดเริ่มจัด</h2>
+
+                    <div className="bg-white rounded-lg shadow-lg p-6">
+                        {pickingRule && (
+                            <div className="mb-4 px-4 py-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800">
+                                <p className="font-semibold">
+                                    รูปแบบปัจจุบัน: {describePickingTarget(pickingRule)}
+                                    {pickingRule.mode === "person" && pickingRule.target_emp_nickname
+                                        ? ` (${pickingRule.target_emp_nickname})`
+                                        : ""}
+                                </p>
+                                {pickingRule.mode !== "normal" && (
+                                    <p className="text-sm mt-1">
+                                        กำลังจัดอยู่ {pickingRule.occupancy}/{pickingRule.pick_limit ?? "-"} ร้าน
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
+                        {pickingRule?.transition && (
+                            <div className="mb-4 px-4 py-3 rounded-lg bg-amber-50 border border-amber-300 text-amber-800">
+                                <p className="font-semibold">⏳ กำลังรอเปลี่ยนรูปแบบ</p>
+                                <p className="text-sm mt-1">
+                                    {describePickingTarget(pickingRule.transition.retiring)} เหลืออีก{" "}
+                                    {pickingRule.transition.retiring.occupancy} ร้านที่ยังจัดไม่เสร็จ —
+                                    ต้องจัดให้หมดก่อน{" "}
+                                    {pickingRule.transition.queued
+                                        ? describePickingTarget(pickingRule.transition.queued)
+                                        : "รูปแบบใหม่"}{" "}
+                                    ถึงจะเริ่มจัดได้
+                                </p>
+                            </div>
+                        )}
+
+                        <div className="flex flex-col gap-3">
+                            <label className="text-sm font-medium text-gray-700">ประเภทการกดเริ่มจัด</label>
+                            <div className="flex gap-4">
+                                <label className="flex items-center gap-2">
+                                    <input
+                                        type="radio"
+                                        name="pickingRuleMode"
+                                        checked={formMode === "normal"}
+                                        onChange={() => setFormMode("normal")}
+                                    />
+                                    ปกติ (ไม่จำกัด)
+                                </label>
+                                <label className="flex items-center gap-2">
+                                    <input
+                                        type="radio"
+                                        name="pickingRuleMode"
+                                        checked={formMode === "floor"}
+                                        onChange={() => setFormMode("floor")}
+                                    />
+                                    ตามชั้น
+                                </label>
+                                <label className="flex items-center gap-2">
+                                    <input
+                                        type="radio"
+                                        name="pickingRuleMode"
+                                        checked={formMode === "person"}
+                                        onChange={() => setFormMode("person")}
+                                    />
+                                    ตามพนักงาน
+                                </label>
+                            </div>
+
+                            {formMode === "floor" && (
+                                <select
+                                    value={formFloor}
+                                    onChange={(e) => setFormFloor(e.target.value)}
+                                    className="border border-gray-300 rounded-lg px-3 py-2"
+                                >
+                                    <option value="">เลือกชั้น</option>
+                                    {pickerOptions?.floors.map((floor) => (
+                                        <option key={floor} value={floor}>
+                                            ชั้น {floor}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+
+                            {formMode === "person" && (
+                                <select
+                                    value={formEmpCode}
+                                    onChange={(e) => setFormEmpCode(e.target.value)}
+                                    className="border border-gray-300 rounded-lg px-3 py-2"
+                                >
+                                    <option value="">เลือกพนักงาน</option>
+                                    {pickerOptions?.employees.map((employee) => (
+                                        <option key={employee.emp_code} value={employee.emp_code}>
+                                            {employee.emp_code} - {employee.emp_nickname}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+
+                            {formMode !== "normal" && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        จำนวนร้านที่จัดพร้อมกันได้ (limit)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        value={formLimit}
+                                        onChange={(e) => setFormLimit(e.target.value)}
+                                        className="border border-gray-300 rounded-lg px-3 py-2 w-40"
+                                    />
+                                </div>
+                            )}
+
+                            <button
+                                onClick={handleSavePickingRule}
+                                disabled={savingRule}
+                                className="mt-2 bg-blue-600 text-white rounded-lg px-4 py-2 disabled:opacity-50 w-fit"
+                            >
+                                {savingRule ? "กำลังบันทึก..." : "บันทึก"}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
