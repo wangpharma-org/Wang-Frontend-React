@@ -510,15 +510,16 @@ const RouteManage = () => {
 
                         {pickingRule?.transition && (
                             <div className="mb-4 px-4 py-3 rounded-lg bg-amber-50 border border-amber-300 text-amber-800">
-                                <p className="font-semibold">⏳ กำลังรอเปลี่ยนรูปแบบ</p>
-                                <p className="text-sm mt-1">
-                                    {describePickingTarget(pickingRule.transition.retiring)} เหลืออีก{" "}
-                                    {pickingRule.transition.retiring.occupancy} ร้านที่ยังจัดไม่เสร็จ —
-                                    ต้องจัดให้หมดก่อน{" "}
+                                <p className="font-semibold">
+                                    ⏳ รูปแบบถัดไป:{" "}
                                     {pickingRule.transition.queued
                                         ? describePickingTarget(pickingRule.transition.queued)
-                                        : "รูปแบบใหม่"}{" "}
-                                    ถึงจะเริ่มจัดได้
+                                        : "ยังไม่ได้กำหนด"}
+                                </p>
+                                <p className="text-sm mt-1">
+                                    รอ{describePickingTarget(pickingRule.transition.retiring)}จัดร้านที่เหลืออีก{" "}
+                                    {pickingRule.transition.retiring.occupancy} ร้านให้เสร็จก่อน
+                                    ถึงจะเริ่มใช้รูปแบบถัดไปได้
                                 </p>
                             </div>
                         )}
