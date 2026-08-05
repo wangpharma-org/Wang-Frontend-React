@@ -15,12 +15,20 @@ interface UrgentCustomer {
 
 type PickingRuleMode = "normal" | "floor" | "person";
 
+interface PickingRuleOccupant {
+    mem_code: string;
+    mem_name: string;
+    emp_code: string | null;
+    emp_nickname: string | null;
+}
+
 interface PickingRuleTransition {
     retiring: {
         mode: PickingRuleMode;
         target_floor: string | null;
         target_emp_code: string | null;
         occupancy: number;
+        stores: PickingRuleOccupant[];
     };
     queued: {
         mode: PickingRuleMode;
@@ -521,6 +529,17 @@ const RouteManage = () => {
                                     {pickingRule.transition.retiring.occupancy} ร้านให้เสร็จก่อน
                                     ถึงจะเริ่มใช้รูปแบบถัดไปได้
                                 </p>
+                                {pickingRule.transition.retiring.stores.length > 0 && (
+                                    <ul className="text-sm mt-2 list-disc list-inside space-y-0.5">
+                                        {pickingRule.transition.retiring.stores.map((store) => (
+                                            <li key={store.mem_code}>
+                                                {store.mem_code} - {store.mem_name} — จัดโดย{" "}
+                                                {store.emp_code ?? "-"}
+                                                {store.emp_nickname ? ` (${store.emp_nickname})` : ""}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
                             </div>
                         )}
 
