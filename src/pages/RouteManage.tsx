@@ -61,6 +61,7 @@ interface PickerOptions {
 }
 
 const PICKABLE_FLOORS = ["2", "3", "4", "5"];
+const PICKING_RULE_REFRESH_SECONDS = 60;
 
 const describePickingTarget = (target: {
     mode: PickingRuleMode;
@@ -92,24 +93,45 @@ const RouteManage = () => {
     const [formEmpCode, setFormEmpCode] = useState<string>("");
     const [formLimit, setFormLimit] = useState<string>("");
     const [savingRule, setSavingRule] = useState<boolean>(false);
+    const [pickingRuleRefreshCountdown, setPickingRuleRefreshCountdown] = useState<number>(
+        PICKING_RULE_REFRESH_SECONDS
+    );
 
     useEffect(() => {
         handleGetRoutes();
         fetchUrgentCustomers();
-        fetchPickingRule();
+        fetchPickingRule(true);
         fetchPickerOptions();
     }, []);
 
-    const fetchPickingRule = async () => {
+    // Auto-refresh สถานะรูปแบบการจัดทุก 1 นาที พร้อมนับถอยหลังให้เห็น
+    // ไม่ sync ฟอร์มระหว่าง auto-refresh กันทับค่าที่ admin กำลังกรอกอยู่
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setPickingRuleRefreshCountdown((prev) => {
+                if (prev <= 1) {
+                    fetchPickingRule(false);
+                    return PICKING_RULE_REFRESH_SECONDS;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(interval);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const fetchPickingRule = async (syncForm: boolean) => {
         try {
             const res = await axios.get<PickingRuleStatus>(
                 `${import.meta.env.VITE_API_URL_ORDER}/api/picking-rule/active`
             );
             setPickingRule(res.data);
-            setFormMode(res.data.mode);
-            setFormFloor(res.data.target_floor ?? "");
-            setFormEmpCode(res.data.target_emp_code ?? "");
-            setFormLimit(res.data.pick_limit ? String(res.data.pick_limit) : "");
+            if (syncForm) {
+                setFormMode(res.data.mode);
+                setFormFloor(res.data.target_floor ?? "");
+                setFormEmpCode(res.data.target_emp_code ?? "");
+                setFormLimit(res.data.pick_limit ? String(res.data.pick_limit) : "");
+            }
         } catch (error) {
             console.error('Error fetching picking rule:', error);
         }
@@ -151,7 +173,8 @@ const RouteManage = () => {
                     },
                 }
             );
-            await fetchPickingRule();
+            await fetchPickingRule(true);
+            setPickingRuleRefreshCountdown(PICKING_RULE_REFRESH_SECONDS);
             Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ' });
         } catch (error) {
             const message =
@@ -497,7 +520,12 @@ const RouteManage = () => {
 
                 {/* Picking Rule Management Section */}
                 <div className="mt-12">
-                    <h2 className="text-2xl font-bold mb-6 text-gray-800">กำหนดประเภทการกดเริ่มจัด</h2>
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-2xl font-bold text-gray-800">กำหนดประเภทการกดเริ่มจัด</h2>
+                        <span className="text-xs text-gray-400">
+                            รีเฟรชอัตโนมัติในอีก {pickingRuleRefreshCountdown} วินาที
+                        </span>
+                    </div>
 
                     <div className="bg-white rounded-lg shadow-lg p-6">
                         {pickingRule && (
