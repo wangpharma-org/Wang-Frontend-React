@@ -52,6 +52,8 @@ interface PickerOptions {
     floors: string[];
 }
 
+const PICKABLE_FLOORS = ["2", "3", "4", "5"];
+
 const describePickingTarget = (target: {
     mode: PickingRuleMode;
     target_floor: string | null;
@@ -560,7 +562,7 @@ const RouteManage = () => {
                                     className="border border-gray-300 rounded-lg px-3 py-2"
                                 >
                                     <option value="">เลือกชั้น</option>
-                                    {pickerOptions?.floors.map((floor) => (
+                                    {PICKABLE_FLOORS.map((floor) => (
                                         <option key={floor} value={floor}>
                                             ชั้น {floor}
                                         </option>
@@ -569,18 +571,30 @@ const RouteManage = () => {
                             )}
 
                             {formMode === "person" && (
-                                <select
-                                    value={formEmpCode}
-                                    onChange={(e) => setFormEmpCode(e.target.value)}
-                                    className="border border-gray-300 rounded-lg px-3 py-2"
-                                >
-                                    <option value="">เลือกพนักงาน</option>
-                                    {pickerOptions?.employees.map((employee) => (
-                                        <option key={employee.emp_code} value={employee.emp_code}>
-                                            {employee.emp_code} - {employee.emp_nickname}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div>
+                                    <input
+                                        type="text"
+                                        list="picking-rule-employee-options"
+                                        value={formEmpCode}
+                                        onChange={(e) => setFormEmpCode(e.target.value)}
+                                        placeholder="ค้นหารหัสหรือชื่อพนักงาน..."
+                                        className="border border-gray-300 rounded-lg px-3 py-2 w-64"
+                                    />
+                                    <datalist id="picking-rule-employee-options">
+                                        {pickerOptions?.employees.map((employee) => (
+                                            <option key={employee.emp_code} value={employee.emp_code}>
+                                                {employee.emp_code} - {employee.emp_nickname}
+                                            </option>
+                                        ))}
+                                    </datalist>
+                                    {formEmpCode && (
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            {pickerOptions?.employees.find((e) => e.emp_code === formEmpCode)
+                                                ? `เลือก: ${formEmpCode} - ${pickerOptions?.employees.find((e) => e.emp_code === formEmpCode)?.emp_nickname}`
+                                                : "ยังไม่พบพนักงานตามรหัสนี้"}
+                                        </p>
+                                    )}
+                                </div>
                             )}
 
                             {formMode !== "normal" && (
