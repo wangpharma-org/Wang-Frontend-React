@@ -9,7 +9,7 @@ export default defineConfig({
       '6ae2-1-47-23-16.ngrok-free.app',
     ],
     host: true,
-    port: 5174,
+    port: 5176,
   },
   plugins: [react(), tailwindcss(),],
 })

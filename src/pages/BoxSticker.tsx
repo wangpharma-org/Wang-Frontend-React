@@ -53,6 +53,7 @@ const styles = {
     margin: "auto",
     fontFamily: '"Fahkwang", sans-serif',
     pageBreakInside: "avoid" as const,
+    border: "1px solid black",
   },
 };
 
