@@ -47,6 +47,31 @@ interface Back {
   total_price: number | null;
 }
 
+interface UnresolvedBack {
+  shipping_id: number;
+  mem_code: string;
+  mem_name: string;
+  address: string | null;
+  tel: string | null;
+  route_code: string | null;
+  route_name: string | null;
+  emp_code: string | null;
+  emp_name: string | null;
+  car_number: string | null;
+  box_amount: number;
+  bill_count: number;
+  sh_runnings: string[];
+  back_since: string | null;
+  days_stuck: number | null;
+  return_confirmed_at: string | null;
+  return_photo_url: string | null;
+  undelivery_reason_id: number | null;
+  back_number: number | null;
+  reason: string | null;
+  photo_url: string | null;
+  report_image_url: string | null;
+}
+
 interface DriverReport {
   emp_code: string;
   emp_name: string;
@@ -104,6 +129,43 @@ const fmtBaht = (n: number | null) =>
 // แบบไม่มีทศนิยม — ใช้ในการ์ด/KPI ที่พื้นที่แคบ กันตัวเลขล้นกรอบ
 const fmtBahtInt = (n: number | null) =>
   n == null ? "-" : n.toLocaleString("th-TH", { maximumFractionDigits: 0 });
+
+// เลขบิลขึ้นต้นด้วย "I" = ใบวางบิล (เอกสารอย่างเดียว ไม่มีสินค้า) ต่างจากบิลสินค้าทั่วไป
+const isBillNote = (shRunning: string) => shRunning.trim().toUpperCase().startsWith("I");
+
+function BillNoteTag() {
+  return (
+    <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200 text-[10px] font-bold px-1.5 py-[1px] rounded-full whitespace-nowrap">
+      ใบวางบิล
+    </span>
+  );
+}
+
+// ─── กดคัดลอกเบอร์โทร (แทนกดโทรออก) ──────────────────────────────────────────
+
+function CopyPhone({ tel }: { tel: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(tel);
+    } catch {
+      // เบราว์เซอร์เก่า/ไม่รองรับ clipboard API — เงียบไว้ ไม่บล็อก UI
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      title="คัดลอกเบอร์โทร"
+      className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-semibold mt-0.5"
+    >
+      📞 {tel}
+      {copied && <span className="text-emerald-600 font-bold">คัดลอกแล้ว</span>}
+    </button>
+  );
+}
 
 // ─── Photo + lightbox ─────────────────────────────────────────────────────────
 
@@ -390,7 +452,10 @@ function DriverCard({ r }: { r: DriverReport }) {
                               <div className="mt-1.5 space-y-0.5 border-t border-emerald-200/60 pt-1.5">
                                 {row.bills.map((b) => (
                                   <div key={b.sh_running} className="flex items-baseline justify-between gap-2 text-[11px] tabular-nums">
-                                    <span className="font-mono text-emerald-600/70">{b.sh_running}</span>
+                                    <span className="flex items-center gap-1 font-mono text-emerald-600/70">
+                                      {b.sh_running}
+                                      {isBillNote(b.sh_running) && <BillNoteTag />}
+                                    </span>
                                     <span className="text-emerald-700/80 font-semibold">{fmtBaht(b.price)}</span>
                                   </div>
                                 ))}
@@ -413,6 +478,123 @@ function DriverCard({ r }: { r: DriverReport }) {
   );
 }
 
+// ─── Unresolved backs modal (ร้านตีกลับค้าง ไม่จำกัดวัน) ──────────────────────
+
+function UnresolvedBacksModal({
+  items,
+  loading,
+  onClose,
+}: {
+  items: UnresolvedBack[];
+  loading: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[85vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-5 py-4 border-b border-rose-100 flex items-center justify-between bg-rose-50 flex-shrink-0">
+          <div>
+            <div className="text-lg font-extrabold text-rose-700">ร้านที่ตีกลับค้าง ยังไม่ได้ส่งต่อ</div>
+            <div className="text-sm text-rose-500/80">ไม่จำกัดวัน — เรียงจากค้างนานสุดไปหาล่าสุด</div>
+          </div>
+          <button onClick={onClose} className="text-rose-400 hover:text-rose-600 text-sm font-semibold">
+            ปิด
+          </button>
+        </div>
+        <div className="overflow-y-auto flex-1">
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="w-8 h-8 border-[3px] border-rose-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : items.length === 0 ? (
+            <div className="py-16 text-center text-slate-400">ไม่มีร้านที่ตีกลับค้างอยู่ 🎉</div>
+          ) : (
+            <table className="w-full text-[13px]">
+              <thead className="sticky top-0 bg-rose-50 text-rose-700 text-xs">
+                <tr>
+                  <th className="text-left font-bold px-4 py-3">ค้างมา</th>
+                  <th className="text-left font-bold px-4 py-3">ร้าน</th>
+                  <th className="text-left font-bold px-4 py-3">เส้นทาง / คนขับ</th>
+                  <th className="text-left font-bold px-4 py-3">บิล</th>
+                  <th className="text-left font-bold px-4 py-3">เหตุผลตีกลับ</th>
+                  <th className="text-left font-bold px-4 py-3">นำกลับบริษัท</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((it) => (
+                  <tr key={it.shipping_id} className="border-t border-rose-50 hover:bg-rose-50/40 align-top">
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center font-extrabold px-2.5 py-1 rounded-full text-xs whitespace-nowrap ${
+                          (it.days_stuck ?? 0) >= 3
+                            ? "bg-rose-600 text-white"
+                            : "bg-rose-100 text-rose-700"
+                        }`}
+                      >
+                        {it.days_stuck ?? "-"} วัน
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-bold text-slate-800">{it.mem_name}</div>
+                      <div className="text-xs text-slate-400 font-mono">{it.mem_code}</div>
+                      {it.address && <div className="text-xs text-slate-500 mt-0.5">{it.address}</div>}
+                      {it.tel && <CopyPhone tel={it.tel} />}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-slate-700">
+                        {it.route_code} {it.route_name}
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        {it.emp_name} ({it.emp_code}){it.car_number ? ` · ${it.car_number}` : ""}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-1 text-xs text-slate-600 font-mono">
+                        {it.sh_runnings.map((sh) => (
+                          <span key={sh} className="inline-flex items-center gap-1">
+                            {sh}
+                            {isBillNote(sh) && <BillNoteTag />}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        {it.box_amount} ลัง · {it.bill_count} บิล
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-rose-600 font-medium">{it.reason ?? "-"}</div>
+                      {it.photo_url && (
+                        <div className="mt-1.5">
+                          <Photo url={it.photo_url} label="หลักฐานตีกลับ" size={44} />
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {it.return_confirmed_at ? (
+                        <span className="text-emerald-600 font-semibold text-xs">
+                          นำกลับแล้ว {fmtTime(it.return_confirmed_at)}
+                        </span>
+                      ) : (
+                        <span className="text-amber-600 font-semibold text-xs">ยังไม่ได้นำกลับ</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ReportLogistic() {
@@ -422,6 +604,27 @@ export default function ReportLogistic() {
   const [error, setError] = useState<string | null>(null);
   const [empQuery, setEmpQuery] = useState("");
   const [routeFilter, setRouteFilter] = useState(""); // "" = ทุกเส้นทาง
+
+  // ร้านตีกลับค้าง — ไม่จำกัดวัน ต่างจากรายงานหลักที่ตัดตามวันที่เลือก
+  const [unresolvedBacks, setUnresolvedBacks] = useState<UnresolvedBack[]>([]);
+  const [unresolvedLoading, setUnresolvedLoading] = useState(false);
+  const [unresolvedOpen, setUnresolvedOpen] = useState(false);
+
+  const loadUnresolvedBacks = useCallback(async () => {
+    setUnresolvedLoading(true);
+    try {
+      const res = await axios.get<UnresolvedBack[]>(`${API}/api/logistic/report/unresolved-backs`, {
+        headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
+      });
+      setUnresolvedBacks(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      // เงียบไว้ — ไม่บล็อกหน้ารายงานหลัก
+    } finally {
+      setUnresolvedLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadUnresolvedBacks(); }, [loadUnresolvedBacks]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -515,9 +718,28 @@ export default function ReportLogistic() {
               className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl px-5 py-2 shadow-sm shadow-blue-600/25 transition">
               รีเฟรช
             </button>
+            <button
+              onClick={() => setUnresolvedOpen(true)}
+              className="relative bg-rose-50 hover:bg-rose-100 text-rose-600 ring-1 ring-rose-200 text-sm font-semibold rounded-xl px-4 py-2 transition"
+            >
+              ตีกลับค้าง
+              {unresolvedBacks.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-rose-600 text-white text-[11px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {unresolvedBacks.length}
+                </span>
+              )}
+            </button>
           </div>
         </div>
       </div>
+
+      {unresolvedOpen && (
+        <UnresolvedBacksModal
+          items={unresolvedBacks}
+          loading={unresolvedLoading}
+          onClose={() => setUnresolvedOpen(false)}
+        />
+      )}
 
       <div className="max-w-[1300px] mx-auto px-4 py-5 space-y-5">
         {loading ? (
