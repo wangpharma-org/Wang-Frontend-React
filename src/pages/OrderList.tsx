@@ -69,6 +69,7 @@ interface orderList {
   mem_name: string;
   urgent: boolean;
   picking_status: string;
+  picking_time_start: string | null;
   province: string;
   shoppingHeads: ShoppingHead[];
   mem_route: MemRoute;
@@ -1261,6 +1262,16 @@ const OrderList = () => {
                             : 2;
                         const tierDiff = tier(a) - tier(b);
                         if (tierDiff !== 0) return tierDiff;
+                        if (tier(a) <= 1) {
+                          // ทั้ง 2 tier นี้คือ picking_status === "picking" ให้ร้านที่เพิ่งกดเริ่มจัดล่าสุดขึ้นบนสุด
+                          const startA = a.picking_time_start
+                            ? new Date(a.picking_time_start).getTime()
+                            : 0;
+                          const startB = b.picking_time_start
+                            ? new Date(b.picking_time_start).getTime()
+                            : 0;
+                          return startB - startA;
+                        }
                         const maxA = Math.max(
                           ...a.shoppingHeads.map((sh) =>
                             new Date(sh.sh_datetime).getTime()
@@ -1507,7 +1518,9 @@ const OrderList = () => {
                                       )}
                                     {order?.picking_status === "picking" &&
                                       order?.emp_code_picking ===
-                                      userInfo?.emp_code && (
+                                      userInfo?.emp_code &&
+                                      pickingRuleStatus?.mode !== "floor" &&
+                                      pickingRuleStatus?.mode !== "person" && (
                                         <div className="pr-1">
                                           <button
                                             className="border rounded-sm px-2 py-1 bg-amber-400 text-white shadow-xl border-gray-300 cursor-pointer z-50"
