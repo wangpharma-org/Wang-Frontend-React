@@ -84,7 +84,10 @@ const RouteManage = () => {
 
     const [urgentLoading, setUrgentLoading] = useState<boolean>(false);
     const userAuth = sessionStorage.getItem("user_info")
-    const admin = userAuth ? JSON.parse(userAuth).manage_product == "Yes" : false;
+    const parsedUserAuth = userAuth ? JSON.parse(userAuth) : null;
+    const admin = parsedUserAuth
+      ? parsedUserAuth.manage_product == "Yes" || parsedUserAuth.manage_route == "Yes"
+      : false;
 
     const [pickingRule, setPickingRule] = useState<PickingRuleStatus | null>(null);
     const [pickerOptions, setPickerOptions] = useState<PickerOptions | null>(null);
