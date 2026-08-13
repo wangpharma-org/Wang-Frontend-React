@@ -83,8 +83,16 @@ const RouteManage = () => {
     const [urgentCustomers, setUrgentCustomers] = useState<UrgentCustomer[]>([]);
 
     const [urgentLoading, setUrgentLoading] = useState<boolean>(false);
+    const [urgentLimit, setUrgentLimit] = useState<number | null>(null);
+    const [urgentLimitInput, setUrgentLimitInput] = useState<string>("");
+    const [savingUrgentLimit, setSavingUrgentLimit] = useState<boolean>(false);
     const userAuth = sessionStorage.getItem("user_info")
-    const admin = userAuth ? JSON.parse(userAuth).manage_product == "Yes" : false;
+    const parsedUserAuth = userAuth ? JSON.parse(userAuth) : null;
+    const admin = parsedUserAuth
+      ? parsedUserAuth.manage_product == "Yes" || parsedUserAuth.manage_route == "Yes"
+      : false;
+    // จำกัด limit ร้านด่วนได้เฉพาะ admin เต็มรูปแบบเท่านั้น (ไม่รวม manage_route)
+    const isFullAdmin = parsedUserAuth ? parsedUserAuth.manage_product == "Yes" : false;
 
     const [pickingRule, setPickingRule] = useState<PickingRuleStatus | null>(null);
     const [pickerOptions, setPickerOptions] = useState<PickerOptions | null>(null);
@@ -100,6 +108,7 @@ const RouteManage = () => {
     useEffect(() => {
         handleGetRoutes();
         fetchUrgentCustomers();
+        fetchUrgentLimit();
         fetchPickingRule(true);
         fetchPickerOptions();
     }, []);
@@ -285,11 +294,67 @@ const RouteManage = () => {
                 text: `รหัสลูกค้า ${inputMemCode.trim()} มีอยู่ในรายการลูกค้าด่วนแล้ว`,
             });
             setInputMemCode("");
+        } else if (res.data && res.data.error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'เพิ่มร้านด่วนไม่ได้',
+                text: res.data.message ?? 'เกิดข้อผิดพลาด',
+            });
         } else {
             setUrgentCustomers([...urgentCustomers, res.data]);
             setInputMemCode("");
         }
         setUrgentLoading(false);
+    };
+
+    const handleCancelUrgent = async (mem_code: string) => {
+        setUrgentLoading(true);
+        try {
+            await axios.delete(`${import.meta.env.VITE_API_URL_ORDER}/api/member/urgent/${mem_code}`);
+            setUrgentCustomers(urgentCustomers.filter((c) => c.mem_code !== mem_code));
+        } catch (error) {
+            console.error('Error cancelling urgent customer:', error);
+            Swal.fire({ icon: 'error', title: 'ยกเลิกด่วนไม่สำเร็จ' });
+        } finally {
+            setUrgentLoading(false);
+        }
+    };
+
+    const fetchUrgentLimit = async () => {
+        try {
+            const res = await axios.get<{ max_urgent_count: number }>(
+                `${import.meta.env.VITE_API_URL_ORDER}/api/urgent-setting`
+            );
+            setUrgentLimit(res.data.max_urgent_count);
+            setUrgentLimitInput(String(res.data.max_urgent_count));
+        } catch (error) {
+            console.error('Error fetching urgent limit:', error);
+        }
+    };
+
+    const handleSaveUrgentLimit = async () => {
+        setSavingUrgentLimit(true);
+        try {
+            const res = await axios.put<{ max_urgent_count: number }>(
+                `${import.meta.env.VITE_API_URL_ORDER}/api/urgent-setting`,
+                { max_urgent_count: Number(urgentLimitInput) },
+                {
+                    headers: {
+                        Authorization: `Bearer ${sessionStorage.getItem("access_token")}`,
+                    },
+                }
+            );
+            setUrgentLimit(res.data.max_urgent_count);
+            Swal.fire({ icon: 'success', title: 'บันทึก limit สำเร็จ' });
+        } catch (error) {
+            const message =
+                axios.isAxiosError(error) && error.response?.data?.message
+                    ? (error.response.data.message as string)
+                    : 'บันทึกไม่สำเร็จ';
+            Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: message });
+        } finally {
+            setSavingUrgentLimit(false);
+        }
     };
     if (!admin) {
         return (
@@ -457,10 +522,35 @@ const RouteManage = () => {
                         </p>
                     </div>
 
+                    {isFullAdmin && (
+                        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                จำนวนร้านด่วนสูงสุด (limit)
+                            </label>
+                            <div className="flex gap-4 items-end">
+                                <input
+                                    type="number"
+                                    min={1}
+                                    className="w-40 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    value={urgentLimitInput}
+                                    onChange={(e) => setUrgentLimitInput(e.target.value)}
+                                    disabled={savingUrgentLimit}
+                                />
+                                <button
+                                    onClick={handleSaveUrgentLimit}
+                                    disabled={savingUrgentLimit}
+                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                                >
+                                    {savingUrgentLimit ? "กำลังบันทึก..." : "บันทึก limit"}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="bg-white rounded-lg shadow-lg overflow-hidden">
                         <div className="px-6 py-4 bg-red-50 border-b border-red-200">
                             <h3 className="text-lg font-semibold text-red-800">
-                                🚨 รายการลูกค้าด่วน ({urgentCustomers.length} รายการ)
+                                🚨 รายการลูกค้าด่วน ({urgentCustomers.length}{urgentLimit !== null ? ` / ${urgentLimit}` : ""} รายการ)
                             </h3>
                         </div>
 
@@ -485,6 +575,9 @@ const RouteManage = () => {
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 ชื่อร้าน
                                             </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                จัดการ
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
@@ -502,6 +595,15 @@ const RouteManage = () => {
                                                     <span className="text-sm text-gray-900">
                                                         {customer.mem_name}
                                                     </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <button
+                                                        onClick={() => handleCancelUrgent(customer.mem_code)}
+                                                        disabled={urgentLoading}
+                                                        className="px-3 py-1 text-sm bg-gray-100 text-red-600 rounded-md hover:bg-red-100 disabled:opacity-50"
+                                                    >
+                                                        ยกเลิกด่วน
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))}

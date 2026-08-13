@@ -18,6 +18,7 @@ interface UserInfo {
   nickname?: string;
   manage_qc?: string;
   manage_product?: string;
+  manage_route?: string;
   user_role?: string;
   allowUsed: boolean;
 }
@@ -86,6 +87,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         nickname: payload.nickname,
         manage_qc: payload.manage_qc,
         manage_product: payload.manage_product,
+        manage_route: payload.manage_route,
         user_role: payload.user_role,
         allowUsed: payload.allowUsed,
       };
