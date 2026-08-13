@@ -458,6 +458,29 @@ const OrderList = () => {
     }
   };
 
+  // OPHMBC-220: จัดครบทุกชั้น (ไม่เหลือ pending) แล้ว ให้ auto กด "ยืนยัน" แทนพนักงาน
+  const autoSubmittedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    orderList.forEach((order) => {
+      const allItems = order.shoppingHeads.flatMap((h) => h.shoppingOrders);
+      const allPicked =
+        allItems.length > 0 &&
+        allItems.every((so) => so.picking_status !== "pending");
+      const isMine =
+        order.picking_status === "picking" &&
+        order.emp_code_picking === userInfo?.emp_code;
+
+      if (isMine && allPicked) {
+        if (!autoSubmittedRef.current.has(order.mem_code)) {
+          autoSubmittedRef.current.add(order.mem_code);
+          handleSubmit(order.mem_code, order.all_sh_running);
+        }
+      } else {
+        autoSubmittedRef.current.delete(order.mem_code);
+      }
+    });
+  }, [orderList, userInfo?.emp_code]);
+
   const changeToPicking = (mem_code: string) => {
     console.log("socket status", socket?.connected);
     if (socket?.connected) {
