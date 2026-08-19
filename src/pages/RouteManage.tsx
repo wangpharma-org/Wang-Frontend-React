@@ -1,12 +1,63 @@
 import axios from "axios";
 import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
+import {
+    DndContext,
+    closestCenter,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+    SortableContext,
+    verticalListSortingStrategy,
+    arrayMove,
+} from "@dnd-kit/sortable";
+import RouteBatchSortableCard, { type EditorGroup } from "../components/RouteBatchSortableCard";
 
 export interface Route {
     route_code: string;
     route_name: string;
     is_active: boolean;
 }
+
+type RouteBatchMode = "normal" | "batch";
+
+interface RouteBatchGroupRoute {
+    route_code: string;
+    route_name: string;
+    is_active: boolean;
+    remaining: number;
+}
+
+interface RouteBatchGroupStatus {
+    id: number;
+    position: number;
+    name: string | null;
+    min_remaining: number;
+    departure_time: string | null;
+    opened: boolean;
+    opened_at: string | null;
+    routes: RouteBatchGroupRoute[];
+}
+
+interface RouteBatchSetting {
+    mode: RouteBatchMode;
+    switch_max_threshold: number | null;
+}
+
+const authHeaders = () => ({
+    headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
+});
+
+const makeEditorGroup = (): EditorGroup => ({
+    key: `new-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    name: "",
+    min_remaining: "",
+    departure_time: "",
+    route_codes: [],
+});
 
 interface UrgentCustomer {
     mem_code: string;
@@ -105,12 +156,25 @@ const RouteManage = () => {
         PICKING_RULE_REFRESH_SECONDS
     );
 
+    // เปิดทีละชุด (Batch Mode)
+    const [routeBatchSetting, setRouteBatchSetting] = useState<RouteBatchSetting | null>(null);
+    const [routeBatchGroups, setRouteBatchGroups] = useState<RouteBatchGroupStatus[]>([]);
+    const [editorGroups, setEditorGroups] = useState<EditorGroup[]>([]);
+    const [thresholdInput, setThresholdInput] = useState<string>("");
+    const [loadingGroups, setLoadingGroups] = useState<boolean>(true);
+    const [savingBatchMode, setSavingBatchMode] = useState<boolean>(false);
+    const [savingGroups, setSavingGroups] = useState<boolean>(false);
+    const [savingThreshold, setSavingThreshold] = useState<boolean>(false);
+    const dndSensors = useSensors(useSensor(PointerSensor));
+
     useEffect(() => {
         handleGetRoutes();
         fetchUrgentCustomers();
         fetchUrgentLimit();
         fetchPickingRule(true);
         fetchPickerOptions();
+        fetchRouteBatchMode();
+        fetchRouteBatchGroups();
     }, []);
 
     // Auto-refresh สถานะรูปแบบการจัดทุก 1 นาที พร้อมนับถอยหลังให้เห็น
@@ -255,6 +319,193 @@ const RouteManage = () => {
         }
     };
 
+    // ---------- เปิดทีละชุด (Batch Mode) ----------
+
+    const fetchRouteBatchMode = async () => {
+        try {
+            const res = await axios.get<RouteBatchSetting>(
+                `${import.meta.env.VITE_API_URL_ORDER}/api/route-batch/mode`
+            );
+            setRouteBatchSetting(res.data);
+            setThresholdInput(res.data.switch_max_threshold ? String(res.data.switch_max_threshold) : "");
+        } catch (error) {
+            console.error("Error fetching route batch mode:", error);
+        }
+    };
+
+    const fetchRouteBatchGroups = async () => {
+        try {
+            setLoadingGroups(true);
+            const res = await axios.get<RouteBatchGroupStatus[]>(
+                `${import.meta.env.VITE_API_URL_ORDER}/api/route-batch/groups`
+            );
+            const sorted = Array.isArray(res.data)
+                ? [...res.data].sort((a, b) => a.position - b.position)
+                : [];
+            setRouteBatchGroups(sorted);
+            setEditorGroups(
+                sorted.map((g) => ({
+                    key: String(g.id),
+                    name: g.name ?? "",
+                    min_remaining: String(g.min_remaining),
+                    departure_time: g.departure_time ?? "",
+                    route_codes: g.routes.map((r) => r.route_code),
+                }))
+            );
+        } catch (error) {
+            console.error("Error fetching route batch groups:", error);
+            setRouteBatchGroups([]);
+        } finally {
+            setLoadingGroups(false);
+        }
+    };
+
+    const handleSetRouteBatchMode = async (mode: RouteBatchMode) => {
+        if (mode === "batch") {
+            const confirm = await Swal.fire({
+                icon: "warning",
+                title: "เปิดโหมดเปิดทีละชุด?",
+                text: "ระบบจะรีเซ็ตทุกชุดเป็นยังไม่เปิด แล้วเปิดเฉพาะชุดแรกเท่านั้น ชุดถัดไปจะเปิดอัตโนมัติเมื่อของในชุดปัจจุบันจัดจนเหลือถึง min",
+                showCancelButton: true,
+                confirmButtonText: "เปิดโหมดนี้",
+                cancelButtonText: "ยกเลิก",
+            });
+            if (!confirm.isConfirmed) return;
+        }
+        setSavingBatchMode(true);
+        try {
+            const res = await axios.put<RouteBatchSetting>(
+                `${import.meta.env.VITE_API_URL_ORDER}/api/route-batch/mode`,
+                { mode },
+                authHeaders()
+            );
+            setRouteBatchSetting(res.data);
+            await fetchRouteBatchGroups();
+            Swal.fire({ icon: "success", title: "บันทึกสำเร็จ" });
+        } catch (error) {
+            const message =
+                axios.isAxiosError(error) && error.response?.data?.message
+                    ? (error.response.data.message as string)
+                    : "บันทึกไม่สำเร็จ";
+            Swal.fire({ icon: "error", title: "เกิดข้อผิดพลาด", text: message });
+        } finally {
+            setSavingBatchMode(false);
+        }
+    };
+
+    const handleSaveThreshold = async () => {
+        setSavingThreshold(true);
+        try {
+            const res = await axios.put<RouteBatchSetting>(
+                `${import.meta.env.VITE_API_URL_ORDER}/api/route-batch/switch-threshold`,
+                { threshold: Number(thresholdInput) },
+                authHeaders()
+            );
+            setRouteBatchSetting(res.data);
+            Swal.fire({ icon: "success", title: "บันทึก max สำเร็จ" });
+        } catch (error) {
+            const message =
+                axios.isAxiosError(error) && error.response?.data?.message
+                    ? (error.response.data.message as string)
+                    : "บันทึกไม่สำเร็จ";
+            Swal.fire({ icon: "error", title: "เกิดข้อผิดพลาด", text: message });
+        } finally {
+            setSavingThreshold(false);
+        }
+    };
+
+    const handleAddGroup = () => {
+        setEditorGroups((prev) => [...prev, makeEditorGroup()]);
+    };
+
+    const handleRemoveGroup = (index: number) => {
+        setEditorGroups((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleGroupFieldChange = (
+        index: number,
+        field: "name" | "min_remaining" | "departure_time",
+        value: string
+    ) => {
+        setEditorGroups((prev) =>
+            prev.map((g, i) => (i === index ? { ...g, [field]: value } : g))
+        );
+    };
+
+    const handleToggleRouteInGroup = (index: number, route_code: string) => {
+        setEditorGroups((prev) =>
+            prev.map((g, i) => {
+                if (i === index) {
+                    const has = g.route_codes.includes(route_code);
+                    return {
+                        ...g,
+                        route_codes: has
+                            ? g.route_codes.filter((c) => c !== route_code)
+                            : [...g.route_codes, route_code],
+                    };
+                }
+                // เอาออกจากกลุ่มอื่นเสมอ — 1 เส้นทางอยู่ได้แค่ 1 ชุด
+                return { ...g, route_codes: g.route_codes.filter((c) => c !== route_code) };
+            })
+        );
+    };
+
+    const handleGroupDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+        setEditorGroups((prev) => {
+            const oldIndex = prev.findIndex((g) => g.key === active.id);
+            const newIndex = prev.findIndex((g) => g.key === over.id);
+            return arrayMove(prev, oldIndex, newIndex);
+        });
+    };
+
+    const handleSaveGroups = async () => {
+        for (const group of editorGroups) {
+            if (group.route_codes.length === 0) {
+                Swal.fire({
+                    icon: "error",
+                    title: "บันทึกไม่สำเร็จ",
+                    text: `ชุด "${group.name || "(ไม่มีชื่อ)"}" ต้องมีอย่างน้อย 1 เส้นทาง`,
+                });
+                return;
+            }
+            if (group.min_remaining === "" || Number(group.min_remaining) < 0) {
+                Swal.fire({
+                    icon: "error",
+                    title: "บันทึกไม่สำเร็จ",
+                    text: `กรุณาระบุ min ของชุด "${group.name || "(ไม่มีชื่อ)"}"`,
+                });
+                return;
+            }
+        }
+
+        setSavingGroups(true);
+        try {
+            await axios.put(
+                `${import.meta.env.VITE_API_URL_ORDER}/api/route-batch/groups`,
+                {
+                    groups: editorGroups.map((g) => ({
+                        name: g.name || undefined,
+                        min_remaining: Number(g.min_remaining),
+                        departure_time: g.departure_time || undefined,
+                        route_codes: g.route_codes,
+                    })),
+                },
+                authHeaders()
+            );
+            await fetchRouteBatchGroups();
+            Swal.fire({ icon: "success", title: "บันทึกการจัดกลุ่มสำเร็จ" });
+        } catch (error) {
+            const message =
+                axios.isAxiosError(error) && error.response?.data?.message
+                    ? (error.response.data.message as string)
+                    : "บันทึกไม่สำเร็จ";
+            Swal.fire({ icon: "error", title: "เกิดข้อผิดพลาด", text: message });
+        } finally {
+            setSavingGroups(false);
+        }
+    };
 
     const handleUrgentKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
@@ -372,127 +623,299 @@ const RouteManage = () => {
             <div>
                 <h1 className="text-3xl font-bold mb-6">จัดการเส้นทาง</h1>
 
-                <div className="flex gap-4 mb-6">
-                    <div className="flex-1">
-                        <input
-                            type="text"
-                            placeholder="ค้นหารหัสเส้นทางหรือชื่อเส้นทาง..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:outline-none focus:border-blue-500"
-                        />
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="checkbox"
-                            id="showActiveOnly"
-                            checked={showActiveOnly}
-                            onChange={(e) => setShowActiveOnly(e.target.checked)}
-                            className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <label htmlFor="showActiveOnly" className="text-lg font-medium">
-                            แสดงเฉพาะเส้นทางที่เปิดใช้งาน
+                {/* โหมดการเปิดเส้นทาง — ตัวควบคุมหลักของทั้งหน้า */}
+                <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">โหมดการเปิดเส้นทาง</label>
+                    <div className="flex gap-4 mb-2">
+                        <label className="flex items-center gap-2">
+                            <input
+                                type="radio"
+                                name="routeBatchMode"
+                                checked={routeBatchSetting?.mode !== "batch"}
+                                disabled={savingBatchMode || !routeBatchSetting}
+                                onChange={() => handleSetRouteBatchMode("normal")}
+                            />
+                            โหมดปกติ (เปิด/ปิดทีละเส้นทางเอง)
+                        </label>
+                        <label className="flex items-center gap-2">
+                            <input
+                                type="radio"
+                                name="routeBatchMode"
+                                checked={routeBatchSetting?.mode === "batch"}
+                                disabled={savingBatchMode || !routeBatchSetting || routeBatchGroups.length === 0}
+                                onChange={() => handleSetRouteBatchMode("batch")}
+                            />
+                            เปิดทีละชุด
                         </label>
                     </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                    <div className="bg-blue-100 p-4 rounded-lg text-center">
-                        <p className="text-2xl font-bold text-blue-800">{routes.length}</p>
-                        <p className="text-blue-600">เส้นทางทั้งหมด</p>
-                    </div>
-                    <div className="bg-green-100 p-4 rounded-lg text-center">
-                        <p className="text-2xl font-bold text-green-800">
-                            {routes.filter((route) => route.is_active === true).length}
-                        </p>
-                        <p className="text-green-600">เส้นทางที่เปิดใช้งาน</p>
-                    </div>
-                    <div className="bg-red-100 p-4 rounded-lg text-center">
-                        <p className="text-2xl font-bold text-red-800">
-                            {routes.filter((route) => route.is_active === false).length}
-                        </p>
-                        <p className="text-red-600">เส้นทางที่ปิดใช้งาน</p>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full table-auto">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-4 text-left text-lg font-semibold text-gray-700 border-b">
-                                        รหัสเส้นทาง
-                                    </th>
-                                    <th className="px-6 py-4 text-left text-lg font-semibold text-gray-700 border-b">
-                                        ชื่อเส้นทาง
-                                    </th>
-                                    <th className="px-6 py-4 text-center text-lg font-semibold text-gray-700 border-b">
-                                        สถานะการใช้งาน
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan={3} className="px-6 py-12 text-center">
-                                            <div className="flex justify-center items-center">
-                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                                                <span className="ml-2">กำลังโหลดข้อมูล...</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    Array.isArray(filteredRoutes) && filteredRoutes.map((route, index) => (
-                                        <tr
-                                            key={route.route_code}
-                                            className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                                                } hover:bg-blue-50 transition-colors`}
-                                        >
-                                            <td className="px-6 py-4 text-lg font-medium text-gray-900 border-b">
-                                                {route.route_code}
-                                            </td>
-                                            <td className="px-6 py-4 text-lg text-gray-700 border-b">
-                                                {route.route_name}
-                                            </td>
-                                            <td className="px-6 py-4 text-center border-b">
-                                                <div className="flex items-center justify-center">
-                                                    <label className="relative inline-flex items-center cursor-pointer">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={route.is_active}
-                                                            onChange={() => handleActiveToggle(route.route_code)}
-                                                            className="sr-only peer"
-                                                        />
-                                                        <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                                        <span className="ml-3 text-sm font-medium text-gray-900">
-                                                            {route.is_active ? (
-                                                                <span className="text-green-600 font-semibold">เปิดใช้งาน</span>
-                                                            ) : (
-                                                                <span className="text-red-600 font-semibold">ปิดใช้งาน</span>
-                                                            )}
-                                                        </span>
-                                                    </label>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {!loading && Array.isArray(filteredRoutes) && filteredRoutes.length === 0 && (
-                        <div className="text-center py-12">
-                            <p className="text-xl text-gray-500">ไม่พบข้อมูลเส้นทางที่ตรงกับการค้นหา</p>
-                        </div>
+                    {routeBatchGroups.length === 0 && (
+                        <p className="text-xs text-amber-600">ต้องตั้งค่าชุดเส้นทางอย่างน้อย 1 ชุดก่อนถึงจะเปิดโหมดนี้ได้ (เลื่อนลงไปตั้งค่าด้านล่าง)</p>
                     )}
+
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                        <label className="text-sm font-medium text-gray-700 mb-1 block">
+                            max รวมระบบ (auto switch เข้าโหมดชุดอัตโนมัติเมื่อออเดอร์ค้างทั้งระบบถึงค่านี้)
+                        </label>
+                        <div className="flex gap-3 items-center">
+                            <input
+                                type="number"
+                                min={1}
+                                value={thresholdInput}
+                                onChange={(e) => setThresholdInput(e.target.value)}
+                                disabled={savingThreshold || routeBatchGroups.length === 0}
+                                placeholder={routeBatchGroups.length === 0 ? "ตั้งค่าชุดก่อน" : "ไม่บังคับ"}
+                                className="w-40 px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-50"
+                            />
+                            <button
+                                onClick={handleSaveThreshold}
+                                disabled={savingThreshold || routeBatchGroups.length === 0 || thresholdInput === ""}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
+                            >
+                                {savingThreshold ? "กำลังบันทึก..." : "บันทึก max"}
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                {(searchTerm || showActiveOnly) && Array.isArray(filteredRoutes) && Array.isArray(routes) ? (
-                    <div className="mt-4 text-gray-600 text-lg">
-                        แสดงผลลัพธ์ {filteredRoutes.length} รายการ จากทั้งหมด {routes.length} รายการ
+                {/* ตั้งค่าชุดเส้นทางสำหรับโหมดเปิดทีละชุด — แก้ไขได้เฉพาะตอนอยู่โหมดปกติ */}
+                {routeBatchSetting?.mode !== "batch" && (
+                    <div className="mb-8">
+                        <h2 className="text-xl font-bold mb-4 text-gray-800">ตั้งค่าชุดเส้นทาง (สำหรับโหมดเปิดทีละชุด)</h2>
+                        <div className="bg-white rounded-lg shadow-lg p-6">
+                            {loadingGroups ? (
+                                <div className="flex items-center text-gray-500">
+                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500 mr-3"></div>
+                                    กำลังโหลดข้อมูล...
+                                </div>
+                            ) : (
+                                <>
+                                    <DndContext
+                                        sensors={dndSensors}
+                                        collisionDetection={closestCenter}
+                                        onDragEnd={handleGroupDragEnd}
+                                    >
+                                        <SortableContext
+                                            items={editorGroups.map((g) => g.key)}
+                                            strategy={verticalListSortingStrategy}
+                                        >
+                                            {editorGroups.map((group, index) => (
+                                                <RouteBatchSortableCard
+                                                    key={group.key}
+                                                    group={group}
+                                                    index={index}
+                                                    allRoutes={routes}
+                                                    assignedElsewhere={
+                                                        new Set(
+                                                            editorGroups
+                                                                .filter((_, i) => i !== index)
+                                                                .flatMap((g) => g.route_codes)
+                                                        )
+                                                    }
+                                                    onChange={handleGroupFieldChange}
+                                                    onToggleRoute={handleToggleRouteInGroup}
+                                                    onRemove={handleRemoveGroup}
+                                                />
+                                            ))}
+                                        </SortableContext>
+                                    </DndContext>
+
+                                    {(() => {
+                                        const assignedRouteCodes = new Set(editorGroups.flatMap((g) => g.route_codes));
+                                        const unassignedRoutes = routes.filter((r) => !assignedRouteCodes.has(r.route_code));
+                                        return unassignedRoutes.length > 0 ? (
+                                            <p className="text-xs text-amber-600 mb-3">
+                                                ยังไม่ได้จัดกลุ่ม {unassignedRoutes.length} เส้นทาง:{" "}
+                                                {unassignedRoutes.map((r) => r.route_code).join(", ")}
+                                            </p>
+                                        ) : null;
+                                    })()}
+
+                                    <div className="flex gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={handleAddGroup}
+                                            className="px-4 py-2 border-2 border-dashed border-gray-300 text-gray-600 rounded-lg hover:border-blue-400 hover:text-blue-600"
+                                        >
+                                            + เพิ่มชุด
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleSaveGroups}
+                                            disabled={savingGroups}
+                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
+                                        >
+                                            {savingGroups ? "กำลังบันทึก..." : "บันทึกการจัดกลุ่ม"}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     </div>
-                ) : null}
+                )}
+
+                {routeBatchSetting?.mode === "batch" ? (
+                    /* โหมดเปิดทีละชุด — ไม่แสดงตารางเปิด/ปิดรายเส้นทางแบบเดิมเลย */
+                    <div className="bg-white rounded-lg shadow-lg p-6">
+                        <p className="text-sm text-gray-500 mb-4">
+                            กำลังใช้งานโหมดเปิดทีละชุด — ต้องเปลี่ยนกลับเป็นโหมดปกติก่อนถึงจะแก้ไขชุดเส้นทางได้
+                        </p>
+                        {routeBatchGroups.map((group) => (
+                            <div
+                                key={group.id}
+                                className={`border-2 rounded-lg p-4 mb-3 ${group.opened ? "border-green-400 bg-green-50" : "border-gray-200"
+                                    }`}
+                            >
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="font-semibold">
+                                        #{group.position} {group.name || "(ไม่มีชื่อ)"}
+                                        {group.departure_time ? ` — ออกรถ ${group.departure_time}` : ""}
+                                    </span>
+                                    <span
+                                        className={`text-xs font-semibold px-2 py-1 rounded ${group.opened ? "bg-green-600 text-white" : "bg-gray-300 text-gray-700"
+                                            }`}
+                                    >
+                                        {group.opened ? "เปิดแล้ว" : "รอเปิด"}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-gray-500 mb-2">min = {group.min_remaining}</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {group.routes.map((route) => (
+                                        <span
+                                            key={route.route_code}
+                                            className="text-sm px-2 py-1 rounded border border-gray-300 bg-white"
+                                        >
+                                            {route.route_code} - {route.route_name}: เหลือ {route.remaining}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <>
+                        <div className="flex gap-4 mb-6">
+                            <div className="flex-1">
+                                <input
+                                    type="text"
+                                    placeholder="ค้นหารหัสเส้นทางหรือชื่อเส้นทาง..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:outline-none focus:border-blue-500"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    id="showActiveOnly"
+                                    checked={showActiveOnly}
+                                    onChange={(e) => setShowActiveOnly(e.target.checked)}
+                                    className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                />
+                                <label htmlFor="showActiveOnly" className="text-lg font-medium">
+                                    แสดงเฉพาะเส้นทางที่เปิดใช้งาน
+                                </label>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4 mb-6">
+                            <div className="bg-blue-100 p-4 rounded-lg text-center">
+                                <p className="text-2xl font-bold text-blue-800">{routes.length}</p>
+                                <p className="text-blue-600">เส้นทางทั้งหมด</p>
+                            </div>
+                            <div className="bg-green-100 p-4 rounded-lg text-center">
+                                <p className="text-2xl font-bold text-green-800">
+                                    {routes.filter((route) => route.is_active === true).length}
+                                </p>
+                                <p className="text-green-600">เส้นทางที่เปิดใช้งาน</p>
+                            </div>
+                            <div className="bg-red-100 p-4 rounded-lg text-center">
+                                <p className="text-2xl font-bold text-red-800">
+                                    {routes.filter((route) => route.is_active === false).length}
+                                </p>
+                                <p className="text-red-600">เส้นทางที่ปิดใช้งาน</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full table-auto">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-6 py-4 text-left text-lg font-semibold text-gray-700 border-b">
+                                                รหัสเส้นทาง
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-lg font-semibold text-gray-700 border-b">
+                                                ชื่อเส้นทาง
+                                            </th>
+                                            <th className="px-6 py-4 text-center text-lg font-semibold text-gray-700 border-b">
+                                                สถานะการใช้งาน
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {loading ? (
+                                            <tr>
+                                                <td colSpan={3} className="px-6 py-12 text-center">
+                                                    <div className="flex justify-center items-center">
+                                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                                        <span className="ml-2">กำลังโหลดข้อมูล...</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            Array.isArray(filteredRoutes) && filteredRoutes.map((route, index) => (
+                                                <tr
+                                                    key={route.route_code}
+                                                    className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                                                        } hover:bg-blue-50 transition-colors`}
+                                                >
+                                                    <td className="px-6 py-4 text-lg font-medium text-gray-900 border-b">
+                                                        {route.route_code}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-lg text-gray-700 border-b">
+                                                        {route.route_name}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center border-b">
+                                                        <div className="flex items-center justify-center">
+                                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={route.is_active}
+                                                                    onChange={() => handleActiveToggle(route.route_code)}
+                                                                    className="sr-only peer"
+                                                                />
+                                                                <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                                <span className="ml-3 text-sm font-medium text-gray-900">
+                                                                    {route.is_active ? (
+                                                                        <span className="text-green-600 font-semibold">เปิดใช้งาน</span>
+                                                                    ) : (
+                                                                        <span className="text-red-600 font-semibold">ปิดใช้งาน</span>
+                                                                    )}
+                                                                </span>
+                                                            </label>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {!loading && Array.isArray(filteredRoutes) && filteredRoutes.length === 0 && (
+                                <div className="text-center py-12">
+                                    <p className="text-xl text-gray-500">ไม่พบข้อมูลเส้นทางที่ตรงกับการค้นหา</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {(searchTerm || showActiveOnly) && Array.isArray(filteredRoutes) && Array.isArray(routes) ? (
+                            <div className="mt-4 text-gray-600 text-lg">
+                                แสดงผลลัพธ์ {filteredRoutes.length} รายการ จากทั้งหมด {routes.length} รายการ
+                            </div>
+                        ) : null}
+                    </>
+                )}
             </div>
             <div>
                 {/* Urgent Customers Management Section */}
