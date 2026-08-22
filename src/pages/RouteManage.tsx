@@ -23,6 +23,7 @@ const RouteManage = () => {
     const [urgentCustomers, setUrgentCustomers] = useState<UrgentCustomer[]>([]);
 
     const [urgentLoading, setUrgentLoading] = useState<boolean>(false);
+    const [bulkLoading, setBulkLoading] = useState<boolean>(false);
     const userAuth = sessionStorage.getItem("user_info")
     const admin = userAuth ? JSON.parse(userAuth).manage_product == "Yes" : false;
 
@@ -90,6 +91,38 @@ const RouteManage = () => {
         }
     };
 
+    // Open / close every route currently shown in the table
+    const handleToggleAll = async (activate: boolean) => {
+        const targets = filteredRoutes.filter((route) => route.is_active !== activate);
+
+        if (targets.length === 0) {
+            Swal.fire({
+                icon: 'info',
+                title: activate ? 'เส้นทางเปิดใช้งานอยู่แล้วทั้งหมด' : 'เส้นทางปิดใช้งานอยู่แล้วทั้งหมด',
+            });
+            return;
+        }
+
+        const confirm = await Swal.fire({
+            icon: 'question',
+            title: activate ? 'เปิดใช้งานเส้นทางทั้งหมด?' : 'ปิดใช้งานเส้นทางทั้งหมด?',
+            text: `จะ${activate ? 'เปิด' : 'ปิด'}ใช้งานเส้นทางจำนวน ${targets.length} เส้นทาง`,
+            showCancelButton: true,
+            confirmButtonText: 'ยืนยัน',
+            cancelButtonText: 'ยกเลิก',
+        });
+
+        if (!confirm.isConfirmed) return;
+
+        try {
+            setBulkLoading(true);
+            await Promise.all(targets.map((route) => updateRoute(route.route_code)));
+            await handleGetRoutes();
+        } finally {
+            setBulkLoading(false);
+        }
+    };
+
 
     const handleUrgentKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
@@ -135,6 +168,9 @@ const RouteManage = () => {
         }
         setUrgentLoading(false);
     };
+    // Every route currently shown is already active -> button turns into "close all"
+    const allActive = filteredRoutes.length > 0 && filteredRoutes.every((route) => route.is_active);
+
     if (!admin) {
         return (
             <div className="flex justify-center items-center h-screen">
@@ -211,6 +247,33 @@ const RouteManage = () => {
                                 </tr>
                             </thead>
                             <tbody>
+                                {/* Bulk action for every route shown in the table */}
+                                <tr className="bg-amber-50 border-y-2 border-amber-300">
+                                    <td colSpan={3} className="px-6 py-3">
+                                        <div className="flex flex-wrap items-center justify-between gap-3">
+                                            <span className="text-sm font-semibold text-amber-800">
+                                                ⚡ ดำเนินการกับเส้นทางทั้งหมด ({filteredRoutes.length} รายการ)
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleToggleAll(!allActive)}
+                                                disabled={loading || bulkLoading || filteredRoutes.length === 0}
+                                                className={`px-4 py-2 rounded-lg text-white text-sm font-semibold shadow-md active:scale-95 focus:outline-none focus:ring-4 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 ${allActive
+                                                    ? "bg-red-600 hover:bg-red-700 focus:ring-red-300 disabled:hover:bg-red-600"
+                                                    : "bg-green-600 hover:bg-green-700 focus:ring-green-300 disabled:hover:bg-green-600"
+                                                    }`}
+                                            >
+                                                {allActive ? "ปิดใช้งานทั้งหมด" : "เปิดใช้งานทั้งหมด"}
+                                            </button>
+                                        </div>
+                                        {bulkLoading && (
+                                            <div className="flex items-center mt-2 text-sm text-amber-700">
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-600 mr-2"></div>
+                                                กำลังอัปเดตเส้นทาง...
+                                            </div>
+                                        )}
+                                    </td>
+                                </tr>
                                 {loading ? (
                                     <tr>
                                         <td colSpan={3} className="px-6 py-12 text-center">
