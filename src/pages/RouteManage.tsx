@@ -247,12 +247,11 @@ const RouteManage = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {/* Bulk action for every route shown in the table */}
                                 <tr className="bg-amber-50 border-y-2 border-amber-300">
                                     <td colSpan={3} className="px-6 py-3">
                                         <div className="flex flex-wrap items-center justify-between gap-3">
                                             <span className="text-sm font-semibold text-amber-800">
-                                                ⚡ ดำเนินการกับเส้นทางทั้งหมด ({filteredRoutes.length} รายการ)
+                                                ดำเนินการกับเส้นทางทั้งหมด ({filteredRoutes.length} รายการ)
                                             </span>
                                             <button
                                                 type="button"
