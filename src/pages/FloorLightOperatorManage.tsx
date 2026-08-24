@@ -10,6 +10,7 @@ export default function FloorLightOperatorManage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [search, setSearch] = useState<Record<string, string>>({});
+  const [openFloor, setOpenFloor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingFloor, setSavingFloor] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -77,16 +78,25 @@ export default function FloorLightOperatorManage() {
                 <h2 className="text-lg font-semibold text-slate-800">ชั้น {floor}</h2>
                 <span className={assignment ? "rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700" : "rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500"}>{assignment ? "กำหนดแล้ว" : "ยังไม่กำหนด"}</span>
               </div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">ค้นหาพนักงาน</label>
-              <input value={search[floor] ?? ""} onChange={(event) => setSearch((current) => ({ ...current, [floor]: event.target.value }))} placeholder="พิมพ์รหัสหรือชื่อพนักงาน" className="mb-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" disabled={loading || busy} />
-              <select value={selected[floor] ?? ""} onChange={(event) => setSelected((current) => ({ ...current, [floor]: event.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" disabled={loading || busy}>
-                <option value="">เลือกพนักงาน</option>
-                {employees.filter((employee) => {
-                  const keyword = (search[floor] ?? "").trim().toLowerCase();
-                  const assignedFloor = assignments.find((item) => item.emp_code === employee.emp_code)?.floor_code;
-                  return (!assignedFloor || assignedFloor === floor) && (!keyword || `${employee.emp_code} ${employee.emp_nickname ?? ""}`.toLowerCase().includes(keyword));
-                }).map((employee) => <option key={employee.emp_code} value={employee.emp_code}>{employee.emp_code} {employee.emp_nickname ? `- ${employee.emp_nickname}` : ""}</option>)}
-              </select>
+              <label className="mb-2 block text-sm font-medium text-slate-700">พนักงานผู้ดูแล</label>
+              <div className="relative">
+                <input
+                  value={openFloor === floor ? (search[floor] ?? "") : (selected[floor] ? `${selected[floor]} - ${employees.find((employee) => employee.emp_code === selected[floor])?.emp_nickname ?? ""}` : "")}
+                  onFocus={() => { setOpenFloor(floor); setSearch((current) => ({ ...current, [floor]: "" })); }}
+                  onChange={(event) => { setOpenFloor(floor); setSearch((current) => ({ ...current, [floor]: event.target.value })); }}
+                  placeholder="พิมพ์รหัสหรือชื่อพนักงาน"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  disabled={loading || busy}
+                />
+                {openFloor === floor && <div className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                  {employees.filter((employee) => {
+                    const keyword = (search[floor] ?? "").trim().toLowerCase();
+                    const assignedFloor = assignments.find((item) => item.emp_code === employee.emp_code)?.floor_code;
+                    return (!assignedFloor || assignedFloor === floor) && (!keyword || `${employee.emp_code} ${employee.emp_nickname ?? ""}`.toLowerCase().includes(keyword));
+                  }).map((employee) => <button type="button" key={employee.emp_code} onMouseDown={() => { setSelected((current) => ({ ...current, [floor]: employee.emp_code })); setSearch((current) => ({ ...current, [floor]: "" })); setOpenFloor(null); }} className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-blue-50">{employee.emp_code} {employee.emp_nickname ? `- ${employee.emp_nickname}` : ""}</button>)}
+                  {employees.filter((employee) => { const keyword = (search[floor] ?? "").trim().toLowerCase(); const assignedFloor = assignments.find((item) => item.emp_code === employee.emp_code)?.floor_code; return (!assignedFloor || assignedFloor === floor) && (!keyword || `${employee.emp_code} ${employee.emp_nickname ?? ""}`.toLowerCase().includes(keyword)); }).length === 0 && <p className="px-3 py-2 text-sm text-slate-500">ไม่พบพนักงานที่เลือกได้</p>}
+                </div>}
+              </div>
               <p className="mt-2 text-xs text-slate-500">พนักงาน 1 คนรับผิดชอบได้เพียง 1 ชั้น</p>
               <div className="mt-4 flex gap-3">
                 <button onClick={() => void save(floor)} disabled={loading || busy} className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-slate-300">{busy ? "กำลังบันทึก..." : "บันทึก"}</button>
