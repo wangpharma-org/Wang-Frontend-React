@@ -64,6 +64,7 @@ interface RouteButton {
 
 function ProductList() {
   const [socket, setSocket] = useState<Socket | null>(null);
+  const lightSessionMemCodeRef = useRef<string | null>(null);
   const [listproduct, setListproduct] = useState<PickingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [CanSubmit, setCanSubmit] = useState(false);
@@ -115,6 +116,7 @@ function ProductList() {
   }, [selectroute, changeRoute])
 
   useEffect(() => {
+    lightSessionMemCodeRef.current = null;
     handleGetRoute();
     const token = sessionStorage.getItem("access_token");
     console.log(token);
@@ -148,12 +150,20 @@ function ProductList() {
     newSocket.on("connect", () => {
       console.log("✅ Connected to WebSocket");
       newSocket.emit("join_room", mem_code);
-      newSocket.emit("listproduct:enter_store", { mem_code });
     });
 
     newSocket.on("listproduct:get", (data) => {
       setListproduct(data);
       setLoading(false);
+
+      if (mem_code && lightSessionMemCodeRef.current !== mem_code) {
+        newSocket.emit("listproduct:enter_store", { mem_code });
+        lightSessionMemCodeRef.current = mem_code;
+      }
+    });
+
+    newSocket.on("disconnect", () => {
+      lightSessionMemCodeRef.current = null;
     });
 
     newSocket.on("connect_error", (error) => {
@@ -164,9 +174,10 @@ function ProductList() {
 
     return () => {
       if (newSocket.connected) newSocket.emit("listproduct:leave_store");
+      lightSessionMemCodeRef.current = null;
       newSocket.disconnect();
     };
-  }, []);
+  }, [mem_code]);
 
   useEffect(() => {
     if (CanSubmit) {
