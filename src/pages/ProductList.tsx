@@ -148,6 +148,7 @@ function ProductList() {
     newSocket.on("connect", () => {
       console.log("✅ Connected to WebSocket");
       newSocket.emit("join_room", mem_code);
+      newSocket.emit("listproduct:enter_store", { mem_code });
     });
 
     newSocket.on("listproduct:get", (data) => {
@@ -162,6 +163,7 @@ function ProductList() {
     });
 
     return () => {
+      if (newSocket.connected) newSocket.emit("listproduct:leave_store");
       newSocket.disconnect();
     };
   }, []);
