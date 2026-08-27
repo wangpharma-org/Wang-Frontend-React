@@ -155,6 +155,17 @@ function ProductList() {
       setLoading(false);
     });
 
+    newSocket.on(
+      "listproduct:picked:denied",
+      (data: { reason?: string; message?: string }) => {
+        Swal.fire({
+          icon: "warning",
+          title: "ไม่สามารถจัดสินค้าได้",
+          text: data.message ?? "คุณไม่มีสิทธิ์จัดสินค้ารายการนี้",
+        });
+      }
+    );
+
     newSocket.on("connect_error", (error) => {
       console.error("❌ Failed to connect to server:", error.message);
       setListproduct(null);
@@ -919,6 +930,7 @@ function ProductList() {
                                   handleDoubleClick={handleDoubleClick}
                                   handleClick={handleClick}
                                   printStickerSelect={printStickerSelect}
+                                  empFloor={userInfo?.floor_picking}
                                 />
                               );
                             }
