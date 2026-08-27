@@ -13,6 +13,11 @@ interface UrgentCustomer {
     mem_name: string;
 }
 
+interface RouteActivationUpdate {
+    route_codes: string[];
+    is_active: boolean;
+}
+
 const RouteManage = () => {
     const [routes, setRoutes] = useState<Route[]>([]);
     const [searchTerm, setSearchTerm] = useState<string>("");
@@ -91,6 +96,10 @@ const RouteManage = () => {
         }
     };
 
+    const updateRouteActivation = async (data: RouteActivationUpdate) => {
+        await axios.put(`${import.meta.env.VITE_API_URL_ORDER}/api/route/set-activate`, data);
+    };
+
     // Open / close every route currently shown in the table
     const handleToggleAll = async (activate: boolean) => {
         const targets = filteredRoutes.filter((route) => route.is_active !== activate);
@@ -116,7 +125,10 @@ const RouteManage = () => {
 
         try {
             setBulkLoading(true);
-            await Promise.all(targets.map((route) => updateRoute(route.route_code)));
+            await updateRouteActivation({
+                route_codes: targets.map((route) => route.route_code),
+                is_active: activate,
+            });
             await handleGetRoutes();
         } finally {
             setBulkLoading(false);
