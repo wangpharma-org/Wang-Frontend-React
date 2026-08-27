@@ -109,6 +109,13 @@ const listMenu = [
     admin: false,
   },
   {
+    id: 23,
+    name: "สแกนนับตะกร้า",
+    href: "/scan-basket",
+    imageSrc: scanBox,
+    admin: false,
+  },
+  {
     id: 15,
     name: "พิมพ์สติกเกอร์",
     href: "/print-sticker",
