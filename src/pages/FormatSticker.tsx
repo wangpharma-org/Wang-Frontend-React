@@ -225,7 +225,16 @@ const FormatSticker = () => {
       <div className="flex justify-between align-top mx-4">
         <div className="flex items-start justify-center mt-1">
           {printData.mem_code && (
-            <QRCodeSVG value={printData.mem_code} size={60} />
+            <QRCodeSVG
+              value={
+                printData.type === "ตะกร้า" && ticketId
+                  ? `WPK|${printData.mem_code}|${printData.floor}|${printData.count}|${ticketId}`
+                  : printData.type === "ลัง" && ticketId
+                  ? `WPL|${printData.mem_code}|${printData.floor}|${printData.count}|${ticketId}`
+                  : printData.mem_code
+              }
+              size={60}
+            />
           )}
         </div>
 

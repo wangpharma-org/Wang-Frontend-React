@@ -1079,6 +1079,16 @@ const QCDashboard = () => {
     console.log("cleaned:", JSON.stringify(some_value_debug));
     console.log(socket?.connected);
     if (socket?.connected) {
+      if (some_value.startsWith("WPK|") || some_value.startsWith("WPL|")) {
+        // OPHMBC-249: สติ๊กเกอร์ตะกร้า/ลังมี QR แบบ WPK|WPL|mem_code|floor|count|ticket_id — ดึงเฉพาะ mem_code มาทำงานเหมือนสแกน mem_code ตรงๆ
+        const [, mem_code] = some_value.split("|");
+        setInputMemCode(mem_code);
+        setSh_running(null);
+        setSh_running_array(null);
+        setIsInputLocked(true);
+        setWantConnect(true);
+        return;
+      }
       if (some_value.includes(",")) {
         const parts = some_value.split(",");
         setSh_running_array(parts);

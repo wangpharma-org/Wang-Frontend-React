@@ -48,6 +48,7 @@ import ReturnReceiptPrint from "./pages/ReturnReceiptPrint";
 import ProductNameChangeApproval from "./pages/ProductNameChangeApproval";
 import DailyIpLogsPage from "./pages/DailyIpLogsPage";
 import ScanBox from "./pages/ScanBox";
+import ScanBasket from "./pages/ScanBasket";
 import ScanConfirmSticker from "./pages/ScanConfirmSticker";
 import LogisticDriverReport from "./pages/LogisticDriverReport";
 import ReportLogistic from "./pages/ReportLogistic";
@@ -421,6 +422,14 @@ function App() {
             element={
               <RequireAuth>
                 <ScanBox />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/scan-basket"
+            element={
+              <RequireAuth>
+                <ScanBasket />
               </RequireAuth>
             }
           />
