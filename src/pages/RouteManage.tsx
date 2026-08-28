@@ -64,6 +64,11 @@ interface UrgentCustomer {
     mem_name: string;
 }
 
+interface RouteActivationUpdate {
+    route_codes: string[];
+    is_active: boolean;
+}
+
 type PickingRuleMode = "normal" | "floor" | "person";
 
 interface PickingRuleOccupant {
@@ -134,6 +139,7 @@ const RouteManage = () => {
     const [urgentCustomers, setUrgentCustomers] = useState<UrgentCustomer[]>([]);
 
     const [urgentLoading, setUrgentLoading] = useState<boolean>(false);
+    const [bulkLoading, setBulkLoading] = useState<boolean>(false);
     const [urgentLimit, setUrgentLimit] = useState<number | null>(null);
     const [urgentLimitInput, setUrgentLimitInput] = useState<string>("");
     const [savingUrgentLimit, setSavingUrgentLimit] = useState<boolean>(false);
@@ -316,6 +322,66 @@ const RouteManage = () => {
             await axios.put(`${import.meta.env.VITE_API_URL_ORDER}/api/route/toggle-activate/${routeCode}`);
         } catch (error) {
             console.error('Error updating route:', error);
+        }
+    };
+
+    const updateRouteActivation = async (data: RouteActivationUpdate) => {
+        await axios.put(
+            `${import.meta.env.VITE_API_URL_ORDER}/api/route/set-activate`,
+            data,
+            authHeaders()
+        );
+    };
+
+    const handleToggleAll = async (activate: boolean) => {
+        const routesForBulkAction =
+            routeBatchSetting?.mode === "batch" ? routes : filteredRoutes;
+        const targets = routesForBulkAction.filter((route) => route.is_active !== activate);
+
+        if (targets.length === 0) {
+            Swal.fire({
+                icon: "info",
+                title: activate
+                    ? "เส้นทางเปิดใช้งานอยู่แล้วทั้งหมด"
+                    : "เส้นทางปิดใช้งานอยู่แล้วทั้งหมด",
+            });
+            return;
+        }
+
+        const batchModeIsActive = routeBatchSetting?.mode === "batch";
+        const confirm = await Swal.fire({
+            icon: batchModeIsActive ? "warning" : "question",
+            title: batchModeIsActive
+                ? "ปิด Batch Mode และดำเนินการต่อ?"
+                : activate
+                    ? "เปิดใช้งานเส้นทางทั้งหมด?"
+                    : "ปิดใช้งานเส้นทางทั้งหมด?",
+            text: batchModeIsActive
+                ? `การยืนยันจะปิดการใช้งาน Batch Mode แล้ว${activate ? "เปิด" : "ปิด"}เส้นทาง ${targets.length} รายการ`
+                : `จะ${activate ? "เปิด" : "ปิด"}ใช้งานเส้นทางจำนวน ${targets.length} เส้นทาง`,
+            showCancelButton: true,
+            confirmButtonText: "ยืนยัน",
+            cancelButtonText: "ยกเลิก",
+        });
+
+        if (!confirm.isConfirmed) return;
+
+        try {
+            setBulkLoading(true);
+            await updateRouteActivation({
+                route_codes: targets.map((route) => route.route_code),
+                is_active: activate,
+            });
+            await Promise.all([
+                handleGetRoutes(),
+                fetchRouteBatchMode(),
+                fetchRouteBatchGroups(),
+            ]);
+        } catch (error) {
+            console.error("Error updating all route activation:", error);
+            Swal.fire({ icon: "error", title: "อัปเดตเส้นทางไม่สำเร็จ" });
+        } finally {
+            setBulkLoading(false);
         }
     };
 
@@ -607,6 +673,13 @@ const RouteManage = () => {
             setSavingUrgentLimit(false);
         }
     };
+
+    const routesForBulkAction =
+        routeBatchSetting?.mode === "batch" ? routes : filteredRoutes;
+    const allActive =
+        routesForBulkAction.length > 0 &&
+        routesForBulkAction.every((route) => route.is_active);
+
     if (!admin) {
         return (
             <div className="flex justify-center items-center h-screen">
@@ -756,6 +829,33 @@ const RouteManage = () => {
                 {routeBatchSetting?.mode === "batch" ? (
                     /* โหมดเปิดทีละชุด — ไม่แสดงตารางเปิด/ปิดรายเส้นทางแบบเดิมเลย */
                     <div className="bg-white rounded-lg shadow-lg p-6">
+                        <div className="flex flex-wrap items-center justify-between gap-3 mb-4 pb-4 border-b border-amber-200">
+                            <div>
+                                <p className="text-sm font-semibold text-amber-800">
+                                    คำสั่งเปิด/ปิดทั้งหมด ({routes.length} รายการ)
+                                </p>
+                                <p className="text-xs text-amber-700 mt-1">
+                                    การยืนยันจะปิดการใช้งาน Batch Mode
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => handleToggleAll(!allActive)}
+                                disabled={loading || bulkLoading || routes.length === 0}
+                                className={`px-4 py-2 rounded-lg text-white text-sm font-semibold shadow-md active:scale-95 focus:outline-none focus:ring-4 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 ${allActive
+                                    ? "bg-red-600 hover:bg-red-700 focus:ring-red-300 disabled:hover:bg-red-600"
+                                    : "bg-green-600 hover:bg-green-700 focus:ring-green-300 disabled:hover:bg-green-600"
+                                    }`}
+                            >
+                                {allActive ? "ปิดใช้งานทั้งหมด" : "เปิดใช้งานทั้งหมด"}
+                            </button>
+                        </div>
+                        {bulkLoading && (
+                            <div className="flex items-center mb-4 text-sm text-amber-700">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-600 mr-2"></div>
+                                กำลังอัปเดตเส้นทาง...
+                            </div>
+                        )}
                         <p className="text-sm text-gray-500 mb-4">
                             กำลังใช้งานโหมดเปิดทีละชุด — ต้องเปลี่ยนกลับเป็นโหมดปกติก่อนถึงจะแก้ไขชุดเส้นทางได้
                         </p>
@@ -853,6 +953,32 @@ const RouteManage = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
+                                        <tr className="bg-amber-50 border-y-2 border-amber-300">
+                                            <td colSpan={3} className="px-6 py-3">
+                                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                                    <span className="text-sm font-semibold text-amber-800">
+                                                        ดำเนินการกับเส้นทางทั้งหมด ({filteredRoutes.length} รายการ)
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleToggleAll(!allActive)}
+                                                        disabled={loading || bulkLoading || filteredRoutes.length === 0}
+                                                        className={`px-4 py-2 rounded-lg text-white text-sm font-semibold shadow-md active:scale-95 focus:outline-none focus:ring-4 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 ${allActive
+                                                            ? "bg-red-600 hover:bg-red-700 focus:ring-red-300 disabled:hover:bg-red-600"
+                                                            : "bg-green-600 hover:bg-green-700 focus:ring-green-300 disabled:hover:bg-green-600"
+                                                            }`}
+                                                    >
+                                                        {allActive ? "ปิดใช้งานทั้งหมด" : "เปิดใช้งานทั้งหมด"}
+                                                    </button>
+                                                </div>
+                                                {bulkLoading && (
+                                                    <div className="flex items-center mt-2 text-sm text-amber-700">
+                                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-600 mr-2"></div>
+                                                        กำลังอัปเดตเส้นทาง...
+                                                    </div>
+                                                )}
+                                            </td>
+                                        </tr>
                                         {loading ? (
                                             <tr>
                                                 <td colSpan={3} className="px-6 py-12 text-center">
