@@ -352,12 +352,12 @@ const RouteManage = () => {
         const confirm = await Swal.fire({
             icon: batchModeIsActive ? "warning" : "question",
             title: batchModeIsActive
-                ? "ปิด Batch Mode และดำเนินการต่อ?"
+                ? "ปิดโหมดเซ็ตและดำเนินการต่อ?"
                 : activate
                     ? "เปิดใช้งานเส้นทางทั้งหมด?"
                     : "ปิดใช้งานเส้นทางทั้งหมด?",
             text: batchModeIsActive
-                ? `การยืนยันจะปิดการใช้งาน Batch Mode แล้ว${activate ? "เปิด" : "ปิด"}เส้นทาง ${targets.length} รายการ`
+                ? `การยืนยันจะปิดการใช้งานโหมดเซ็ตแล้ว${activate ? "เปิด" : "ปิด"}เส้นทาง ${targets.length} รายการ`
                 : `จะ${activate ? "เปิด" : "ปิด"}ใช้งานเส้นทางจำนวน ${targets.length} เส้นทาง`,
             showCancelButton: true,
             confirmButtonText: "ยืนยัน",
