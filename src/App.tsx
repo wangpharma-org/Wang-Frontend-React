@@ -33,6 +33,7 @@ import ProductManage from "./pages/ProductManage";
 import RequestProduct from "./pages/RequestProduct";
 import RouteManage from "./pages/RouteManage";
 import RouteSchedule from "./pages/RouteSchedule";
+import FloorLightOperatorManage from "./pages/FloorLightOperatorManage";
 import DashboardRoute from "./pages/DashboardRoute";
 import LoopDashBoard from "./pages/LoopDashboard";
 import StackedAreaChart from "./pages/Charts";
@@ -324,6 +325,9 @@ function App() {
             }
           />
           <Route
+            path="/floor-light-operators"
+            element={<div><Navbar /><RequireAuth><FloorLightOperatorManage /></RequireAuth></div>}
+          />          <Route
             path="/loop-dashboard"
             element={
               <div>
