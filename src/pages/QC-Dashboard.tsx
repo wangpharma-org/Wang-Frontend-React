@@ -1079,6 +1079,16 @@ const QCDashboard = () => {
     console.log("cleaned:", JSON.stringify(some_value_debug));
     console.log(socket?.connected);
     if (socket?.connected) {
+      if (some_value.startsWith("WPK|") || some_value.startsWith("WPL|")) {
+        // OPHMBC-249: สติ๊กเกอร์ตะกร้า/ลังมี QR แบบ WPK|WPL|mem_code|floor|count|ticket_id — ดึงเฉพาะ mem_code มาทำงานเหมือนสแกน mem_code ตรงๆ
+        const [, mem_code] = some_value.split("|");
+        setInputMemCode(mem_code);
+        setSh_running(null);
+        setSh_running_array(null);
+        setIsInputLocked(true);
+        setWantConnect(true);
+        return;
+      }
       if (some_value.includes(",")) {
         const parts = some_value.split(",");
         setSh_running_array(parts);
@@ -1337,34 +1347,26 @@ const QCDashboard = () => {
     try {
       console.log("UUIDStationQC33:", UUIDStationQC);
       if (type_emp === "qc-emp" && !UUIDStationQC) {
+        const stationOptions = Array.from({ length: 15 }, (_, i) => i + 1).reduce(
+          (options, num) => ({ ...options, [num]: `Station ${num}` }),
+          {} as Record<number, string>
+        );
         Swal.fire({
-          title: "กรุณาป้อนรหัสสถานี QC",
-          input: "number",
-          inputAttributes: {
-            autocapitalize: "off",
-            min: "1",
-            step: "1"
-          },
+          title: "กรุณาเลือกรหัสสถานี QC",
+          input: "select",
+          inputOptions: stationOptions,
           inputLabel: "Station QC",
-          inputPlaceholder: "กรุณาป้อนรหัสสถานี QC...",
+          inputPlaceholder: "กรุณาเลือกรหัสสถานี QC...",
           confirmButtonText: "ยืนยัน",
           inputValidator: (value) => {
             if (!value) {
-              return "กรุณาป้อนรหัสสถานี QC";
+              return "กรุณาเลือกรหัสสถานี QC";
             }
-            const numValue = Number(value);
-            if (isNaN(numValue)) {
-              return "กรุณาป้อนรหัสสถานี QC เป็นตัวเลขเท่านั้น";
-            }
-            if (numValue < 1) {
-              return "รหัสสถานี QC ต้องเป็นค่าบวกและไม่ต่ำกว่า 1";
-            }
-            console.log("Station QC Input:", value);
           }
         }).then((result) => {
           if (result.isConfirmed) {
             console.log("Station QC:", result.value);
-            sendStationQC(result.value.trim());
+            sendStationQC(Number(result.value));
           }
         });
         return;
@@ -2408,7 +2410,7 @@ const QCDashboard = () => {
             <div className="flex flex-col text-center justify-center mb-4">
               <p className="text-3xl font-bold">ข้อมูล Station QC ทั้งหมด</p>
               <p className="text-lg text-red-600 font-semibold mt-2">
-                การใช้งานร่วมกันสูงสุดไม่เกิน 10 เครื่อง
+                การใช้งานร่วมกันสูงสุดไม่เกิน 15 เครื่อง
               </p>
             </div>
 

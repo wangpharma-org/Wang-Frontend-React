@@ -14,6 +14,7 @@ interface ProductBoxProps {
   prepareScan: string | null;
   setPrepareScan: Dispatch<SetStateAction<string | null>>;
   printStickerSelect: (type: string, product_name: string) => void;
+  empFloor?: number;
 }
 
 // Removed from the top level and will be added inside the component
@@ -25,10 +26,29 @@ export default function ProductBox({
   prepareScan,
   setPrepareScan,
   printStickerSelect,
+  empFloor,
 }: ProductBoxProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [inputValue, setInputValue] = useState("");
+
+  // สินค้าชั้น 1 จัดได้ทุกคน ชั้นอื่นต้องตรงกับ emp_floor ของพนักงาน
+  const productFloor = orderItem.product.product_floor || "1";
+  const canPick =
+    productFloor === "1" || String(empFloor ?? "") === productFloor;
+  const blocked = orderItem.picking_status === "pending" && !canPick;
+
+  const attemptPick = (action: () => void) => {
+    if (orderItem.picking_status === "pending" && !canPick) {
+      Swal.fire({
+        icon: "warning",
+        title: "ไม่สามารถจัดสินค้าได้",
+        text: `สินค้านี้อยู่ชั้น ${productFloor} คุณจัดได้เฉพาะชั้นของตัวเองเท่านั้น`,
+      });
+      return;
+    }
+    action();
+  };
   const handleScan = (so_running: string) => {
     console.log("handleScan");
     console.log("boolean : ", so_running === prepareScan);
@@ -100,7 +120,7 @@ export default function ProductBox({
           if (orderItem?.picking_status === "picking") {
             handleDoubleClick(orderItem, "picking");
           } else {
-            handleScan(orderItem.so_running);
+            attemptPick(() => handleScan(orderItem.so_running));
           }
           //   handleDoubleClick(orderItem, "picking");
         }}
@@ -129,12 +149,15 @@ export default function ProductBox({
             <div className="flex justify-between">
               <button
               id={`buttonpicking`}
-              className="text-white rounded-sm shadow-md bg-gray-500 py-2 px-3"
+              className={`text-white rounded-sm shadow-md bg-gray-500 py-2 px-3 ${blocked ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               onClick={(e) => {
                 e.stopPropagation();
-                handleDoubleClick(orderItem, "picking");
-                setIsFocused(false);
-                setPrepareScan(null);
+                attemptPick(() => {
+                  handleDoubleClick(orderItem, "picking");
+                  setIsFocused(false);
+                  setPrepareScan(null);
+                });
               }}
             >
               จัดแบบไม่สแกน
@@ -193,8 +216,11 @@ export default function ProductBox({
               </div>
             )}
             <div className="flex justify-between pt-1 px-1">
-              <div className="flex font-semibold text-violet-600 text-[13px] select-none">
-                <p>F{orderItem.product.product_floor || "1"}</p>&nbsp;
+              <div
+                className={`flex font-semibold text-[13px] select-none ${blocked ? "text-red-600" : "text-violet-600"
+                  }`}
+              >
+                <p>F{productFloor}</p>&nbsp;
                 <p>/</p>&nbsp;
                 <p>{orderItem.product.product_addr}</p>
               </div>
@@ -211,10 +237,10 @@ export default function ProductBox({
                 key={idx}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDoubleClick(orderItem, label);
+                  attemptPick(() => handleDoubleClick(orderItem, label));
                 }}
                 className={`text-white rounded-sm shadow-md bg-amber-500 py-2 px-3 ${orderItem.picking_status === label ? "bg-red-500" : ""
-                  }`}
+                  } ${blocked ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 {label}
               </button>

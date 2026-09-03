@@ -32,6 +32,7 @@ import ProductManage from "./pages/ProductManage";
 // import StatusTicket from "./pages/OpenTicket/StatusTicket";
 import RequestProduct from "./pages/RequestProduct";
 import RouteManage from "./pages/RouteManage";
+import RouteSchedule from "./pages/RouteSchedule";
 import FloorLightOperatorManage from "./pages/FloorLightOperatorManage";
 import DashboardRoute from "./pages/DashboardRoute";
 import LoopDashBoard from "./pages/LoopDashboard";
@@ -48,6 +49,7 @@ import ReturnReceiptPrint from "./pages/ReturnReceiptPrint";
 import ProductNameChangeApproval from "./pages/ProductNameChangeApproval";
 import DailyIpLogsPage from "./pages/DailyIpLogsPage";
 import ScanBox from "./pages/ScanBox";
+import ScanBasket from "./pages/ScanBasket";
 import ScanConfirmSticker from "./pages/ScanConfirmSticker";
 import LogisticDriverReport from "./pages/LogisticDriverReport";
 import ReportLogistic from "./pages/ReportLogistic";
@@ -312,6 +314,17 @@ function App() {
             }
           />
           <Route
+            path="/route-schedule"
+            element={
+              <div>
+                <Navbar />
+                <RequireAuth>
+                  <RouteSchedule />
+                </RequireAuth>
+              </div>
+            }
+          />
+          <Route
             path="/floor-light-operators"
             element={<div><Navbar /><RequireAuth><FloorLightOperatorManage /></RequireAuth></div>}
           />          <Route
@@ -413,6 +426,14 @@ function App() {
             element={
               <RequireAuth>
                 <ScanBox />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/scan-basket"
+            element={
+              <RequireAuth>
+                <ScanBasket />
               </RequireAuth>
             }
           />

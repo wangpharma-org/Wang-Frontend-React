@@ -69,6 +69,7 @@ interface orderList {
   mem_name: string;
   urgent: boolean;
   picking_status: string;
+  picking_time_start: string | null;
   province: string;
   shoppingHeads: ShoppingHead[];
   mem_route: MemRoute;
@@ -78,6 +79,22 @@ interface MemRoute {
   route_code: string;
   route_name: string;
   is_active: boolean;
+}
+
+type PickingRuleMode = "normal" | "floor" | "person";
+
+interface PickingRuleStatus {
+  id: string | null;
+  mode: PickingRuleMode;
+  target_floor: string | null;
+  target_emp_code: string | null;
+  target_emp_nickname: string | null;
+  pick_limit: number | null;
+  occupancy: number;
+  transition: {
+    retiring: { mode: PickingRuleMode; target_floor: string | null; target_emp_code: string | null; occupancy: number };
+    queued: { mode: PickingRuleMode; target_floor: string | null; target_emp_code: string | null; pick_limit: number | null } | null;
+  } | null;
 }
 
 type PickingTime = {
@@ -155,6 +172,8 @@ const OrderList = () => {
   const [confirmTarget, setConfirmTarget] = useState<PendingReturn | null>(null);
   const returnPanelRef = useRef<HTMLDivElement>(null);
   const accessToken = sessionStorage.getItem("access_token");
+  const [pickingRuleStatus, setPickingRuleStatus] = useState<PickingRuleStatus | null>(null);
+  const [viewingMemCodes, setViewingMemCodes] = useState<string[]>([]);
 
   useEffect(() => {
     const totalOrders = orderList?.length;
@@ -291,9 +310,23 @@ const OrderList = () => {
       setOrderList(data.memberOrderWithAllShRunning);
       setLatestTimes(data.lastestDate);
       setRequestProduct(data.requestProduct);
+      setPickingRuleStatus(data.pickingRule ?? null);
+      setViewingMemCodes(data.viewingMemCodes ?? []);
       console.log("time", data.lastestDate);
       setLoading(false);
     });
+
+    newSocket.on(
+      "listorder:picking:denied",
+      (data: { reason?: string; message?: string }) => {
+        setLoadingOrder(null);
+        Swal.fire({
+          icon: "warning",
+          title: "ไม่สามารถเริ่มจัดได้",
+          text: data.message ?? "ไม่มีสิทธิ์เริ่มจัดร้านนี้ในขณะนี้",
+        });
+      }
+    );
 
     newSocket.on("connect_error", (error) => {
       console.log(error);
@@ -425,6 +458,29 @@ const OrderList = () => {
     }
   };
 
+  // OPHMBC-220: จัดครบทุกชั้น (ไม่เหลือ pending) แล้ว ให้ auto กด "ยืนยัน" แทนพนักงาน
+  const autoSubmittedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    orderList.forEach((order) => {
+      const allItems = order.shoppingHeads.flatMap((h) => h.shoppingOrders);
+      const allPicked =
+        allItems.length > 0 &&
+        allItems.every((so) => so.picking_status !== "pending");
+      const isMine =
+        order.picking_status === "picking" &&
+        order.emp_code_picking === userInfo?.emp_code;
+
+      if (isMine && allPicked) {
+        if (!autoSubmittedRef.current.has(order.mem_code)) {
+          autoSubmittedRef.current.add(order.mem_code);
+          handleSubmit(order.mem_code, order.all_sh_running);
+        }
+      } else {
+        autoSubmittedRef.current.delete(order.mem_code);
+      }
+    });
+  }, [orderList, userInfo?.emp_code]);
+
   const changeToPicking = (mem_code: string) => {
     console.log("socket status", socket?.connected);
     if (socket?.connected) {
@@ -435,6 +491,22 @@ const OrderList = () => {
     } else {
       throw new Error("can not emit change to picking");
     }
+  };
+
+  const iAmAllowedToStartPicking = (): boolean => {
+    if (!pickingRuleStatus) return true;
+    if (pickingRuleStatus.transition) return false;
+    if (pickingRuleStatus.mode === "normal") return true;
+    if (pickingRuleStatus.mode === "floor") {
+      return (
+        !!userInfo?.floor_picking &&
+        String(userInfo.floor_picking) === pickingRuleStatus.target_floor
+      );
+    }
+    if (pickingRuleStatus.mode === "person") {
+      return userInfo?.emp_code === pickingRuleStatus.target_emp_code;
+    }
+    return true;
   };
 
   const filteredData = orderList?.filter((order) => {
@@ -852,6 +924,27 @@ const OrderList = () => {
                 &nbsp;<p>|</p>&nbsp;
                 <p>กำลังจัด {totalPicking} รายการ</p>
               </div>
+              {pickingRuleStatus && (
+                <div className="flex justify-center text-sm">
+                  {pickingRuleStatus.transition ? (
+                    <p className="bg-amber-400 text-black rounded-sm px-2 py-0.5 font-bold">
+                      รอเปลี่ยนรูปแบบ — จัดร้านค้างให้เสร็จก่อน
+                    </p>
+                  ) : pickingRuleStatus.mode === "normal" ? (
+                    <p>โหมด: ปกติ (ไม่จำกัด)</p>
+                  ) : pickingRuleStatus.mode === "floor" ? (
+                    <p>
+                      โหมด: ชั้น {pickingRuleStatus.target_floor} (
+                      {pickingRuleStatus.occupancy}/{pickingRuleStatus.pick_limit})
+                    </p>
+                  ) : (
+                    <p>
+                      โหมด: {pickingRuleStatus.target_emp_nickname ?? pickingRuleStatus.target_emp_code} (
+                      {pickingRuleStatus.occupancy}/{pickingRuleStatus.pick_limit})
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <div className="flex gap-2 items-center">
@@ -1184,6 +1277,24 @@ const OrderList = () => {
                       .sort((a, b) => {
                         if (a.urgent && !b.urgent) return -1;
                         if (!a.urgent && b.urgent) return 1;
+                        const tier = (o: orderList) =>
+                          o.picking_status === "picking" && viewingMemCodes.includes(o.mem_code)
+                            ? 0
+                            : o.picking_status === "picking"
+                            ? 1
+                            : 2;
+                        const tierDiff = tier(a) - tier(b);
+                        if (tierDiff !== 0) return tierDiff;
+                        if (tier(a) <= 1) {
+                          // ทั้ง 2 tier นี้คือ picking_status === "picking" ให้ร้านที่เพิ่งกดเริ่มจัดล่าสุดขึ้นบนสุด
+                          const startA = a.picking_time_start
+                            ? new Date(a.picking_time_start).getTime()
+                            : 0;
+                          const startB = b.picking_time_start
+                            ? new Date(b.picking_time_start).getTime()
+                            : 0;
+                          return startB - startA;
+                        }
                         const maxA = Math.max(
                           ...a.shoppingHeads.map((sh) =>
                             new Date(sh.sh_datetime).getTime()
@@ -1220,6 +1331,9 @@ const OrderList = () => {
                             // console.log("order.product.product_floor", order.product.product_floor);
                             return acc;
                           }, {} as Record<string, { total: number; remaining: number }>);
+                        const isYellow =
+                          order.picking_status === "picking" &&
+                          viewingMemCodes.includes(order.mem_code);
                         return (
                           <div
                             key={order.mem_id}
@@ -1228,7 +1342,9 @@ const OrderList = () => {
                             <div
                               id={`orderlist${order.mem_code}`}
                               onClick={() => togglePopup(order.mem_code)}
-                              className={`w-full p-2 rounded-sm shadow-xl text-[12px] text-[#444444] ${order.picking_status === "picking"
+                              className={`w-full p-2 rounded-sm shadow-xl text-[12px] text-[#444444] ${isYellow
+                                ? "bg-yellow-400"
+                                : order.picking_status === "picking"
                                 ? "bg-green-400"
                                 : "bg-gray-400"
                                 } ${order.mem_route?.is_active === false
@@ -1237,7 +1353,9 @@ const OrderList = () => {
                                 } cursor-pointer hover:scale-[1.02] transition-transform duration-100 ease-in-out`}
                             >
                               <div
-                                className={`p-1 rounded-sm ${order.picking_status === "picking"
+                                className={`p-1 rounded-sm ${isYellow
+                                  ? "bg-yellow-100"
+                                  : order.picking_status === "picking"
                                   ? "bg-green-100"
                                   : "bg-white"
                                   }`}
@@ -1423,7 +1541,9 @@ const OrderList = () => {
                                       )}
                                     {order?.picking_status === "picking" &&
                                       order?.emp_code_picking ===
-                                      userInfo?.emp_code && (
+                                      userInfo?.emp_code &&
+                                      pickingRuleStatus?.mode !== "floor" &&
+                                      pickingRuleStatus?.mode !== "person" && (
                                         <div className="pr-1">
                                           <button
                                             className="border rounded-sm px-2 py-1 bg-amber-400 text-white shadow-xl border-gray-300 cursor-pointer z-50"
@@ -1440,7 +1560,8 @@ const OrderList = () => {
                                           </button>
                                         </div>
                                       )}
-                                    {order?.picking_status === "pending" && (
+                                    {order?.picking_status === "pending" &&
+                                      iAmAllowedToStartPicking() && (
                                       <div className="pr-1">
                                         <button
                                           className="border rounded-sm px-2 py-1 bg-green-500 text-white shadow-xl border-gray-300 flex justify-center w-20"

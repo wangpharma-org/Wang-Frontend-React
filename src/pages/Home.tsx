@@ -110,6 +110,13 @@ const listMenu = [
     admin: false,
   },
   {
+    id: 23,
+    name: "สแกนนับตะกร้า",
+    href: "/scan-basket",
+    imageSrc: scanBox,
+    admin: false,
+  },
+  {
     id: 15,
     name: "พิมพ์สติกเกอร์",
     href: "/print-sticker",
@@ -160,6 +167,13 @@ const listMenu = [
   },
   {
     id: 22,
+    name: "จัดตารางเส้นทางขนส่ง",
+    href: "/route-schedule",
+    imageSrc: routeDashboardIcon,
+    admin: true,
+  },
+  {
+    id: 23,
     name: "ตั้งค่าระบบไฟ",
     href: "/floor-light-operators",
     imageSrc: settingsIcon,
@@ -178,7 +192,10 @@ const Home = () => {
 
   const [visibilityMap, setVisibilityMap] = useState<Record<number, boolean>>(defaultVisibility);
   const userAuth = sessionStorage.getItem("user_info")
-  const admin = userAuth ? JSON.parse(userAuth).manage_product == "Yes" : false;
+  const parsedUserAuth = userAuth ? JSON.parse(userAuth) : null;
+  const admin = parsedUserAuth ? parsedUserAuth.manage_product == "Yes" : false;
+  // manage_route: เห็นได้แค่เมนู "จัดการOrder" (/route-manage) ไม่เห็นเมนู admin อื่น
+  const canManageRoute = parsedUserAuth ? parsedUserAuth.manage_route == "Yes" : false;
 
   useEffect(() => {
     // โหลดสถานะของแต่ละปุ่ม (แมพจาก listMenu.id)
@@ -240,15 +257,19 @@ const Home = () => {
             ))}
         </div>
 
-        {/* เมนูสำหรับผู้ดูแล (แสดงเฉพาะเมื่อเป็น admin) */}
-        {admin && (
+        {/* เมนูสำหรับผู้ดูแล (แสดงเฉพาะเมื่อเป็น admin หรือมีสิทธิ์ manage_route) */}
+        {(admin || canManageRoute) && (
           <div className="mt-12">
             <h2 className="text-2xl font-bold tracking-tight text-gray-900">
               เมนูสำหรับผู้ดูแล
             </h2>
             <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
               {listMenu
-                .filter((menu) => menu.admin && visibilityMap[menu.id] !== false) // แสดงเฉพาะเมนู admin
+                .filter((menu) =>
+                  visibilityMap[menu.id] !== false &&
+                  // manage_route ที่ไม่ใช่ admin เต็ม เห็นได้แค่เมนู route-manage (id 7)
+                  (admin ? menu.admin : menu.id === 7)
+                ) // แสดงเฉพาะเมนู admin
                 .map((menu) => (
                   <a
                     id={`${menu.name}`}
