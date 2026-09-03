@@ -11,7 +11,6 @@ import { useNavigate } from "react-router";
 
 const navigation = [
   { name: "หน้าหลัก", href: "/", exact: true, current: false },
-  { name: "ตั้งค่าระบบไฟ", href: "/floor-light-operators", exact: false, current: false },
 ];
 
 function classNames(...classes: string[]) {
