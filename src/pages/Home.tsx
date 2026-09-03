@@ -17,6 +17,7 @@ import printerIcon from "../assets/print.png";
 import routeDashboardIcon from "../assets/truck-side.png";
 import updateStockIcon from "../assets/shopping-cart-add.png";
 import chartIcon from "../assets/chat-arrow-grow.png";
+import settingsIcon from "../assets/settings.png";
 import { useNavigate } from "react-router";
 const listMenu = [
   // {
@@ -156,6 +157,13 @@ const listMenu = [
     href: "/report-logistic",
     imageSrc: routeDashboardIcon,
     admin: false,
+  },
+  {
+    id: 22,
+    name: "ตั้งค่าระบบไฟ",
+    href: "/floor-light-operators",
+    imageSrc: settingsIcon,
+    admin: true,
   },
 ];
 const Home = () => {
