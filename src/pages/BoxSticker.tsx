@@ -103,7 +103,7 @@ const BoxSticker = () => {
 
   const handleGet = async () => {
     const data = await axios.get(
-      `${import.meta.env.VITE_API_URL_ORDER}/api/qc/get-address/${mem_code}`
+      `${import.meta.env.VITE_API_URL_ORDER}/api/qc/get-address/${mem_code}`,
     );
     console.log(data);
     setDataPrint(data.data);
@@ -111,6 +111,9 @@ const BoxSticker = () => {
 
   const cleanText = (text?: string | null) =>
     (text ?? "").replace(/&nbsp;/g, "").trim();
+
+  const getBoxQrValue = (index: number) =>
+    `WP|${mem_code}|${sh_running}|${index + 1}|${printCount}`;
 
   const renderSticker = (index: number) => (
     <div
@@ -148,7 +151,7 @@ const BoxSticker = () => {
             <p className="font-semibold text-[18px]">{dataPrint?.mem_name}</p>
             <p className="text-[12px] line-clamp-2 mt-1">
               {`${cleanText(dataPrint?.address_line1)} ${cleanText(
-                dataPrint?.address_line2
+                dataPrint?.address_line2,
               )} ต.${cleanText(dataPrint?.sub_district)}`}{" "}
               อ.{cleanText(dataPrint?.district)} จ.
               {cleanText(dataPrint?.province)}{" "}
@@ -171,7 +174,7 @@ const BoxSticker = () => {
           </div>
           <div className="w-[35%] flex justify-center items-center">
             <QRCodeSVG
-              value={`WP|${mem_code}|${sh_running}|${index + 1}|${printCount}`}
+              value={getBoxQrValue(index)}
               size={60}
             />
           </div>
@@ -188,70 +191,80 @@ const BoxSticker = () => {
         </div>
         <div className="flex justify-center items-center border-b-1 mt-0.5">
           <p
-            className={`${sh_running && sh_running?.length > 66 ? "text-[9px]" : "text-[12px]"
-              }`}
+            className={`${
+              sh_running && sh_running?.length > 66
+                ? "text-[9px]"
+                : "text-[12px]"
+            }`}
           >
             {sh_running?.replace(/,/g, " , ")}
           </p>
         </div>
       </div>
-      <div className="flex justify-center items-center border-b">
-        <div className="w-[100%] grid grid-cols-3 justify-center items-center">
-          <div className="col-span-2 grid grid-cols-3 grid-rows-2">
-            <p className="col-span-1">
-              <p className="text-[12px] mt-1">เตรียม</p>
-            </p>
-            <p className="col-span-1">
-              <p className="text-[12px] mt-1">ตรวจ</p>
-            </p>
-            <p className="col-span-1">
-              <p className="text-[12px] mt-1">แพ็ค</p>
-            </p>
+      <div className="flex border-b">
+        <div className="w-[20%] shrink-0 border-r flex justify-center items-center p-1">
+          <QRCodeSVG value={getBoxQrValue(index)} size={60} />
+        </div>
+        <div className="w-[80%]">
+          <div className="flex justify-center items-center border-b">
+            <div className="w-[100%] grid grid-cols-3 justify-center items-center">
+              <div className="col-span-2 grid grid-cols-3 grid-rows-2">
+                <p className="col-span-1">
+                  <p className="text-[12px] mt-1">เตรียม</p>
+                </p>
+                <p className="col-span-1">
+                  <p className="text-[12px] mt-1">ตรวจ</p>
+                </p>
+                <p className="col-span-1">
+                  <p className="text-[12px] mt-1">แพ็ค</p>
+                </p>
 
-            <p className="text-[12px] col-span-1">
-              [{JSONprepareEmpData?.dataEmp.emp_code}]{" "}
-              {JSONprepareEmpData?.dataEmp?.emp_nickname}
-            </p>
-            <p className="text-[12px] col-span-1">
-              [{JSONQCEmpData?.dataEmp?.emp_code}] {" "}
-              {JSONQCEmpData?.dataEmp?.emp_nickname}
-            </p>
-            <p className="text-[12px] col-span-1">
-              [{JSONpackedEmpData?.dataEmp.emp_code}]{" "}
-              {JSONpackedEmpData?.dataEmp.emp_nickname}
-            </p>
-          </div>
-          <div className="col-span-1">
-            <p className="text-[12px] pb-1 mt-1 font-bold">
-              {`${dayjs().locale("th").format("dddd D/MMM")}/${(
-                dayjs().year() + 543
-              )
-                .toString()
-                .slice(-2)} ${dayjs().format("HH:mm")} น.`}
-            </p>
-          </div>
-        </div>
-      </div>
-      <div className="flex justify-center items-center border-b">
-        <div className="w-[33%] border-r h-10 ">
-          {index === 0 ? (
-            <div className="flex justify-center items-center">
-              <img src={correct} className="w-7"></img>
-              <p className="text-[10px] p-1.5 font-bold text-center">เอกสารบิล <br />อยู่ในซองนี้</p>
+                <p className="text-[12px] col-span-1">
+                  [{JSONprepareEmpData?.dataEmp.emp_code}]{" "}
+                  {JSONprepareEmpData?.dataEmp?.emp_nickname}
+                </p>
+                <p className="text-[12px] col-span-1">
+                  [{JSONQCEmpData?.dataEmp?.emp_code}]{" "}
+                  {JSONQCEmpData?.dataEmp?.emp_nickname}
+                </p>
+                <p className="text-[12px] col-span-1">
+                  [{JSONpackedEmpData?.dataEmp.emp_code}]{" "}
+                  {JSONpackedEmpData?.dataEmp.emp_nickname}
+                </p>
+              </div>
+              <div className="col-span-1">
+                <p className="text-[12px] pb-1 mt-1 font-bold">
+                  {`${dayjs().locale("th").format("dddd D/MMM")}/${(
+                    dayjs().year() + 543
+                  )
+                    .toString()
+                    .slice(-2)} ${dayjs().format("HH:mm")} น.`}
+                </p>
+              </div>
             </div>
-          ) : (
-            <p className="text-[16px] p-2 text-center font-extrabold">-</p>
-          )}
-        </div>
-        <div className="w-[33%] flex flex-col justify-center items-center border-r h-10">
-          <p className="text-[12px]">สายรถ</p>
-          <p className="text-[12px]">
-            หาดใหญ่ - {dataPrint?.mem_route?.route_name ?? "อื่นๆ"}
-          </p>
-        </div>
-        <div className="w-[33%] flex flex-col justify-center items-center h-10">
-          <p className="text-[12px]">จัดส่ง</p>
-          <p className="text-[12px]">ขนส่งวังเภสัช</p>
+          </div>
+          <div className="flex justify-center items-center">
+            <div className="w-[33%] border-r h-10 ">
+              {index === 0 ? (
+                <div className="flex justify-center items-center">
+                  <img src={correct} className="w-7"></img>
+                  <p className="text-[10px] p-1.5 font-bold text-center">เอกสารบิล <br />อยู่ในซองนี้</p>
+                </div>
+              ) : (
+                <p className="text-[16px] p-2 text-center font-extrabold">-</p>
+              )}
+            </div>
+            <div className="w-[33%] flex flex-col justify-center items-center border-r h-10">
+              <p className="text-[12px]">สายรถ</p>
+              <p className="text-[12px]">
+                หาดใหญ่ - {dataPrint?.mem_route?.route_name ?? "อื่นๆ"}
+              </p>
+            </div>
+            <div className="w-[33%] flex flex-col justify-center items-center h-10">
+              <p className="text-[12px]">จัดส่ง</p>
+              <p className="text-[12px]">ขนส่งวังเภสัช</p>
+            </div>
+          </div>
         </div>
       </div>
       <div className="flex py-0.5 justify-center">
@@ -260,7 +273,7 @@ const BoxSticker = () => {
             <div className="flex p-0.5 items-center text-center justify-center w-full">
               <p className="text-center">
                 {dataPrint?.mem_shipping_note !== "" &&
-                  dataPrint?.mem_shipping_note !== null
+                dataPrint?.mem_shipping_note !== null
                   ? dataPrint?.mem_shipping_note
                   : "-"}
               </p>
