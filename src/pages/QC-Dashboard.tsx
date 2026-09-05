@@ -165,6 +165,69 @@ export interface ShoppingOrderPrint {
   basket_count: number;
   box_count: number;
   total_items: number;
+  floor_scan_summary?: FloorScanSummary[];
+  scan_total?: TicketScanProgress;
+}
+
+
+interface TicketScanProgress {
+  expected: number;
+  scanned: number;
+  remaining: number;
+}
+
+interface FloorScanSummary {
+  floor: number;
+  baskets: TicketScanProgress;
+  boxes: TicketScanProgress;
+}
+
+function ScanCountLine({
+  label,
+  count,
+  progress,
+}: {
+  label: string;
+  count: number;
+  progress: TicketScanProgress;
+}) {
+  if (progress.expected === 0) {
+    return <div>{count} {label}</div>;
+  }
+
+  if (progress.scanned >= progress.expected) {
+    return <div>{progress.scanned}/{progress.expected} {label} (ครบ)</div>;
+  }
+
+  return <div>{progress.scanned}/{progress.expected} {label} (ขาด {progress.remaining})</div>;
+}
+
+function FloorBasketScanCard({
+  floor,
+  basketCount,
+  boxCount,
+  summary,
+  className,
+}: {
+  floor: number;
+  basketCount: number;
+  boxCount: number;
+  summary?: FloorScanSummary;
+  className: string;
+}) {
+  return (
+    <div className={`rounded-lg border-2 py-3 ${className}`}>
+      <div className="text-2xl mb-1">F{floor}</div>
+      {summary ? (
+        <>
+          <ScanCountLine label="ตะกร้า" count={basketCount} progress={summary.baskets} />
+          <ScanCountLine label="ลัง" count={boxCount} progress={summary.boxes} />
+        </>
+      ) : (
+        <><div>{basketCount} ตะกร้า</div><div>{boxCount} ลัง</div></>
+      )}
+    </div>
+  );
 }
 
 interface AllStations {
@@ -3755,6 +3818,14 @@ const QCDashboard = () => {
               basketDataForPrint.length > 0 &&
               (() => {
                 const data = basketDataForPrint[0];
+                const totalBasketProgress = data.floor_scan_summary?.reduce<TicketScanProgress>(
+                  (total, item) => ({ expected: total.expected + item.baskets.expected, scanned: total.scanned + item.baskets.scanned, remaining: total.remaining + item.baskets.remaining }),
+                  { expected: 0, scanned: 0, remaining: 0 },
+                );
+                const totalBoxProgress = data.floor_scan_summary?.reduce<TicketScanProgress>(
+                  (total, item) => ({ expected: total.expected + item.boxes.expected, scanned: total.scanned + item.boxes.scanned, remaining: total.remaining + item.boxes.remaining }),
+                  { expected: 0, scanned: 0, remaining: 0 },
+                );
 
                 return (
                   <div className="bg-white text-black my-2 py-3 px-4 rounded shadow">
@@ -3763,33 +3834,42 @@ const QCDashboard = () => {
                     </p>
 
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center font-bold text-xl">
-                      <div className="rounded-lg border-2 border-yellow-400 bg-yellow-100 text-yellow-800 py-3">
-                        <div className="text-2xl mb-1">F2</div>
-                        <div>{data.basket_floor_2} ตะกร้า</div>
-                        <div>{data.box_floor_2} ลัง</div>
-                      </div>
-
-                      <div className="rounded-lg border-2 border-blue-400 bg-blue-100 text-blue-800 py-3">
-                        <div className="text-2xl mb-1">F3</div>
-                        <div>{data.basket_floor_3} ตะกร้า</div>
-                        <div>{data.box_floor_3} ลัง</div>
-                      </div>
-
-                      <div className="rounded-lg border-2 border-red-400 bg-red-100 text-red-800 py-3">
-                        <div className="text-2xl mb-1">F4</div>
-                        <div>{data.basket_floor_4} ตะกร้า</div>
-                        <div>{data.box_floor_4} ลัง</div>
-                      </div>
-
-                      <div className="rounded-lg border-2 border-green-400 bg-green-100 text-green-800 py-3">
-                        <div className="text-2xl mb-1">F5</div>
-                        <div>{data.basket_floor_5} ตะกร้า</div>
-                        <div>{data.box_floor_5} ลัง</div>
-                      </div>
+                      <FloorBasketScanCard
+                        floor={2}
+                        basketCount={data.basket_floor_2}
+                        boxCount={data.box_floor_2}
+                        summary={data.floor_scan_summary?.find((item) => item.floor === 2)}
+                        className="border-yellow-400 bg-yellow-100 text-yellow-800"
+                      />
+                      <FloorBasketScanCard
+                        floor={3}
+                        basketCount={data.basket_floor_3}
+                        boxCount={data.box_floor_3}
+                        summary={data.floor_scan_summary?.find((item) => item.floor === 3)}
+                        className="border-blue-400 bg-blue-100 text-blue-800"
+                      />
+                      <FloorBasketScanCard
+                        floor={4}
+                        basketCount={data.basket_floor_4}
+                        boxCount={data.box_floor_4}
+                        summary={data.floor_scan_summary?.find((item) => item.floor === 4)}
+                        className="border-red-400 bg-red-100 text-red-800"
+                      />
+                      <FloorBasketScanCard
+                        floor={5}
+                        basketCount={data.basket_floor_5}
+                        boxCount={data.box_floor_5}
+                        summary={data.floor_scan_summary?.find((item) => item.floor === 5)}
+                        className="border-green-400 bg-green-100 text-green-800"
+                      />
                       <div className="rounded-lg border-2 border-amber-500 bg-amber-100 text-amber-800 py-3">
                         <div className="text-2xl mb-1">รวม</div>
-                        <div>{data.basket_count} ตะกร้า</div>
-                        <div>{data.box_count} ลัง</div>
+                        {totalBasketProgress ? (
+                          <ScanCountLine label="ตะกร้า" count={data.basket_count} progress={totalBasketProgress} />
+                        ) : <div>{data.basket_count} ตะกร้า</div>}
+                        {totalBoxProgress ? (
+                          <ScanCountLine label="ลัง" count={data.box_count} progress={totalBoxProgress} />
+                        ) : <div>{data.box_count} ลัง</div>}
                       </div>
                     </div>
                   </div>
