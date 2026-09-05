@@ -779,6 +779,10 @@ const QCDashboard = () => {
       setError(false);
     });
 
+    newSocket.on("qc:refresh", () => {
+      newSocket.emit("refresh_qc_room");
+    });
+
     newSocket.on("connect_error", (error) => {
       console.log(error);
       console.error("❌ Failed to connect to server:", error.message);
