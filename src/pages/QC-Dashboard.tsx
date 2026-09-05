@@ -8,6 +8,7 @@ import { io, Socket } from "socket.io-client";
 import Modal from "../components/ModalQC";
 import Barcode from "react-barcode";
 import axios, { AxiosError } from "axios";
+import Marquee from "react-fast-marquee";
 import prepareIcon from "../assets/received.png";
 import QCIcon from "../assets/quality-control.png";
 import PackingIcon from "../assets/package-delivered.png";
@@ -144,6 +145,12 @@ export interface urgent {
   amount: string;
 }
 
+interface QcUnblockAlert {
+  mem_code: string;
+  mem_name: string | null;
+  created_at: string;
+}
+
 export interface ProductNotFoundBarCode {
   pro_code: string;
   pro_name: string;
@@ -193,6 +200,7 @@ interface RecycleBox {
 
 const QCDashboard = () => {
   const [urgent, setUrgent] = useState<urgent[] | null>(null);
+  const [unblockAlerts, setUnblockAlerts] = useState<QcUnblockAlert[]>([]);
   const [dataQC, setDataQC] = useState<ShoppingHead | ShoppingHeadOne | null>(
     null
   );
@@ -701,6 +709,10 @@ const QCDashboard = () => {
     newSocket.on("urgent", (data) => {
       console.log("urgent", data);
       setUrgent(data);
+    });
+
+    newSocket.on("qc:unblock-alerts", (data: QcUnblockAlert[]) => {
+      setUnblockAlerts(Array.isArray(data) ? data : []);
     });
 
     // newSocket.on("data_updated", (data) => {
@@ -3713,6 +3725,21 @@ const QCDashboard = () => {
           , document.body)}
 
           <div className="text-center">
+            {unblockAlerts.length > 0 && (
+              <div
+                role="status"
+                className="w-full overflow-hidden border-y-2 border-red-800 bg-red-600 py-3 text-left text-xl font-bold text-white shadow-sm"
+              >
+                <Marquee speed={45} gradient={false} pauseOnHover>
+                  {unblockAlerts.map((alert) => (
+                    <span key={alert.mem_code} className="mx-10 whitespace-nowrap">
+                      ! แจ้งเตือน การปลดบล็อก รหัส {alert.mem_code}{" "}
+                      {alert.mem_name ?? "ไม่พบชื่อร้าน"}
+                    </span>
+                  ))}
+                </Marquee>
+              </div>
+            )}
             <h1 className="text-2xl font-bold text-center mt-7">
               เส้นทางที่สามารถทำงานได้
             </h1>
