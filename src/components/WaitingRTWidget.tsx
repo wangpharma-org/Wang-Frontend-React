@@ -180,15 +180,17 @@ const WaitingRTWidget = ({ socket, emp_code }: WaitingRTWidgetProps) => {
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            type="button"
-            onClick={handleManualRefresh}
-            disabled={refreshing}
-            title="ดึงข้อมูลล่าสุด"
-            className="p-1.5 rounded-md bg-white/20 hover:bg-white/30 transition-colors disabled:opacity-60"
-          >
-            <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
-          </button>
+          {apiMode && (
+            <button
+              type="button"
+              onClick={handleManualRefresh}
+              disabled={refreshing}
+              title="ดึงข้อมูลล่าสุด"
+              className="p-1.5 rounded-md bg-white/20 hover:bg-white/30 transition-colors disabled:opacity-60"
+            >
+              <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+            </button>
+          )}
           <span className="text-xs font-bold bg-white/20 px-2 py-1 rounded-md">
             {collapsed ? "แสดง" : "ซ่อน"}
           </span>
