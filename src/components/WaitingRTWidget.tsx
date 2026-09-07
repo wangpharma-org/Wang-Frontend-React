@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Socket } from "socket.io-client";
 import axios from "axios";
-import { CheckCircle2, Copy, Check } from "lucide-react";
+import { CheckCircle2, Copy, Check, RefreshCw } from "lucide-react";
 
 interface WaitingRTItem {
   sh_running: string;
@@ -42,6 +42,8 @@ const WaitingRTWidget = ({ socket, emp_code }: WaitingRTWidgetProps) => {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   // Missing/unreachable flag defaults to socket mode (pre-existing behavior).
   const [apiMode, setApiMode] = useState<boolean | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const fetchRef = useRef<() => void>(() => {});
 
   const copyMemCode = (mem_code: string) => {
     navigator.clipboard.writeText(mem_code);
@@ -76,6 +78,7 @@ const WaitingRTWidget = ({ socket, emp_code }: WaitingRTWidgetProps) => {
 
     if (apiMode) {
       const fetchWaitingRt = () => {
+        setRefreshing(true);
         axios
           .get<WaitingRTMember[]>(
             `${import.meta.env.VITE_API_URL_ORDER}/api/rt-request/waiting/${emp_code}`,
@@ -86,9 +89,11 @@ const WaitingRTWidget = ({ socket, emp_code }: WaitingRTWidgetProps) => {
             }
           )
           .then((res) => setMembers(res.data))
-          .catch(() => {});
+          .catch(() => {})
+          .finally(() => setRefreshing(false));
       };
 
+      fetchRef.current = fetchWaitingRt;
       fetchWaitingRt();
       const timer = setInterval(fetchWaitingRt, REFRESH_INTERVAL_MS);
       return () => clearInterval(timer);
@@ -101,14 +106,19 @@ const WaitingRTWidget = ({ socket, emp_code }: WaitingRTWidgetProps) => {
 
     const handleWaitingRtData = (data: WaitingRTMember[]) => {
       setMembers(data);
+      setRefreshing(false);
     };
 
     socket.on("waiting_rt:get", handleWaitingRtData);
 
     const requestWaitingRt = () => {
+      setRefreshing(true);
       socket.emit("waiting_rt:get", { emp_code });
+      // safety net in case the server never answers (e.g. flag mismatch)
+      setTimeout(() => setRefreshing(false), 5000);
     };
 
+    fetchRef.current = requestWaitingRt;
     requestWaitingRt();
     const timer = setInterval(requestWaitingRt, REFRESH_INTERVAL_MS);
 
@@ -117,6 +127,11 @@ const WaitingRTWidget = ({ socket, emp_code }: WaitingRTWidgetProps) => {
       clearInterval(timer);
     };
   }, [socket, emp_code, apiMode]);
+
+  const handleManualRefresh = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    fetchRef.current();
+  };
 
   if (members.length === 0) {
     return null;
@@ -127,10 +142,14 @@ const WaitingRTWidget = ({ socket, emp_code }: WaitingRTWidgetProps) => {
 
   return (
     <div className="fixed top-4 left-4 z-[100] w-80 rounded-xl border-2 border-orange-400 bg-white shadow-2xl ring-4 ring-orange-200 overflow-hidden">
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setCollapsed((prev) => !prev)}
-        className="w-full flex items-center justify-between gap-2 bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 text-white px-4 py-3"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") setCollapsed((prev) => !prev);
+        }}
+        className="w-full flex items-center justify-between gap-2 bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 text-white px-4 py-3 cursor-pointer select-none"
       >
         <div className="flex items-center gap-2 min-w-0">
           {pendingMemberCount > 0 && (
@@ -148,10 +167,21 @@ const WaitingRTWidget = ({ socket, emp_code }: WaitingRTWidgetProps) => {
             )}
           </div>
         </div>
-        <span className="shrink-0 text-xs font-bold bg-white/20 px-2 py-1 rounded-md">
-          {collapsed ? "แสดง" : "ซ่อน"}
-        </span>
-      </button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={handleManualRefresh}
+            disabled={refreshing}
+            title="ดึงข้อมูลล่าสุด"
+            className="p-1.5 rounded-md bg-white/20 hover:bg-white/30 transition-colors disabled:opacity-60"
+          >
+            <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+          </button>
+          <span className="text-xs font-bold bg-white/20 px-2 py-1 rounded-md">
+            {collapsed ? "แสดง" : "ซ่อน"}
+          </span>
+        </div>
+      </div>
 
       {!collapsed && (
         <ul
