@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Socket } from "socket.io-client";
 import axios from "axios";
 import { CheckCircle2, Copy, Check, RefreshCw } from "lucide-react";
@@ -43,7 +43,6 @@ const WaitingRTWidget = ({ socket, emp_code }: WaitingRTWidgetProps) => {
   // Missing/unreachable flag defaults to socket mode (pre-existing behavior).
   const [apiMode, setApiMode] = useState<boolean | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const fetchRef = useRef<() => void>(() => {});
 
   const copyMemCode = (mem_code: string) => {
     navigator.clipboard.writeText(mem_code);
@@ -93,7 +92,6 @@ const WaitingRTWidget = ({ socket, emp_code }: WaitingRTWidgetProps) => {
           .finally(() => setRefreshing(false));
       };
 
-      fetchRef.current = fetchWaitingRt;
       fetchWaitingRt();
       const timer = setInterval(fetchWaitingRt, REFRESH_INTERVAL_MS);
       return () => clearInterval(timer);
@@ -118,7 +116,6 @@ const WaitingRTWidget = ({ socket, emp_code }: WaitingRTWidgetProps) => {
       setTimeout(() => setRefreshing(false), 5000);
     };
 
-    fetchRef.current = requestWaitingRt;
     requestWaitingRt();
     const timer = setInterval(requestWaitingRt, REFRESH_INTERVAL_MS);
 
@@ -128,9 +125,24 @@ const WaitingRTWidget = ({ socket, emp_code }: WaitingRTWidgetProps) => {
     };
   }, [socket, emp_code, apiMode]);
 
+  // Manual refresh always hits the real REST endpoint directly, regardless
+  // of whether the background auto-refresh is currently on socket or API mode.
   const handleManualRefresh = (e: React.MouseEvent) => {
     e.stopPropagation();
-    fetchRef.current();
+    if (!emp_code || refreshing) return;
+    setRefreshing(true);
+    axios
+      .get<WaitingRTMember[]>(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/rt-request/waiting/${emp_code}`,
+        {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("access_token")}`,
+          },
+        }
+      )
+      .then((res) => setMembers(res.data))
+      .catch(() => {})
+      .finally(() => setRefreshing(false));
   };
 
   if (members.length === 0) {
