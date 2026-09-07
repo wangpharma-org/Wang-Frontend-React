@@ -34,7 +34,6 @@ const StickerPrint = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [updatedAt, setUpdatedAt] = useState("");
   const [countBox, setCountBox] = useState(0);
-  const [lastNotePrint, setLastNotePrint] = useState<string | null>(null);
   const openedTicketIdRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -98,7 +97,7 @@ const StickerPrint = () => {
   }, [selectFloor, data]);
 
   useEffect(() => {
-    if (listPrintTicket.length > 0 && currentIndex < listPrintTicket.length && (!listPrintTicket[currentIndex].note ? updatedAt !== listPrintTicket[currentIndex].update_at : true) && (lastNotePrint ? listPrintTicket[currentIndex].note !== lastNotePrint : true)) {
+    if (listPrintTicket.length > 0 && currentIndex < listPrintTicket.length && (!listPrintTicket[currentIndex].note ? updatedAt !== listPrintTicket[currentIndex].update_at : true)) {
       const currentTicket = listPrintTicket[currentIndex];
       console.log("Current Ticket:", currentTicket);
       console.log(`Current Index: ${currentIndex}`);
@@ -172,11 +171,6 @@ const StickerPrint = () => {
           openedTicketIdRef.current = null;
           setCurrentIndex((prev) => prev + 1);
           setUpdatedAt(printedTicket.update_at);
-          if (printedTicket.type === "ลัง") {
-            setLastNotePrint(printedTicket.note || null);
-          } else {
-            setLastNotePrint(null);
-          }
         }
       }
     };
