@@ -207,10 +207,7 @@ const BoxSticker = () => {
         <div className="w-[80%]">
           <div className="flex justify-center items-center border-b">
             <div className="w-[100%] grid grid-cols-3 justify-center items-center">
-              <div className="col-span-2 grid grid-cols-3 grid-rows-2">
-                <p className="col-span-1">
-                  <p className="text-[12px] mt-1">เตรียม</p>
-                </p>
+              <div className="col-span-2 grid grid-cols-2 grid-rows-2">
                 <p className="col-span-1">
                   <p className="text-[12px] mt-1">ตรวจ</p>
                 </p>
@@ -218,10 +215,6 @@ const BoxSticker = () => {
                   <p className="text-[12px] mt-1">แพ็ค</p>
                 </p>
 
-                <p className="text-[12px] col-span-1">
-                  [{JSONprepareEmpData?.dataEmp.emp_code}]{" "}
-                  {JSONprepareEmpData?.dataEmp?.emp_nickname}
-                </p>
                 <p className="text-[12px] col-span-1">
                   [{JSONQCEmpData?.dataEmp?.emp_code}]{" "}
                   {JSONQCEmpData?.dataEmp?.emp_nickname}
