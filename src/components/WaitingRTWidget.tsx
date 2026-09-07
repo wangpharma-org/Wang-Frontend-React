@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Socket } from "socket.io-client";
+import axios from "axios";
 import { CheckCircle2, Copy, Check } from "lucide-react";
 
 interface WaitingRTItem {
@@ -39,6 +40,8 @@ const WaitingRTWidget = ({ socket, emp_code }: WaitingRTWidgetProps) => {
   const [hoveredMemCode, setHoveredMemCode] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  // Missing/unreachable flag defaults to socket mode (pre-existing behavior).
+  const [apiMode, setApiMode] = useState<boolean | null>(null);
 
   const copyMemCode = (mem_code: string) => {
     navigator.clipboard.writeText(mem_code);
@@ -47,7 +50,51 @@ const WaitingRTWidget = ({ socket, emp_code }: WaitingRTWidgetProps) => {
   };
 
   useEffect(() => {
-    if (!socket || !emp_code) {
+    let cancelled = false;
+    axios
+      .get(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/waiting_rt_api_mode`
+      )
+      .then((res) => {
+        if (!cancelled) setApiMode(res.data?.status === true);
+      })
+      .catch(() => {
+        if (!cancelled) setApiMode(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // OPHMBC-156: `waiting_rt_api_mode` feature flag switches this widget
+  // between socket push (default) and REST polling without a redeploy.
+  useEffect(() => {
+    if (!emp_code || apiMode === null) {
+      setMembers([]);
+      return;
+    }
+
+    if (apiMode) {
+      const fetchWaitingRt = () => {
+        axios
+          .get<WaitingRTMember[]>(
+            `${import.meta.env.VITE_API_URL_ORDER}/api/rt-request/waiting/${emp_code}`,
+            {
+              headers: {
+                Authorization: `Bearer ${sessionStorage.getItem("access_token")}`,
+              },
+            }
+          )
+          .then((res) => setMembers(res.data))
+          .catch(() => {});
+      };
+
+      fetchWaitingRt();
+      const timer = setInterval(fetchWaitingRt, REFRESH_INTERVAL_MS);
+      return () => clearInterval(timer);
+    }
+
+    if (!socket) {
       setMembers([]);
       return;
     }
@@ -69,7 +116,7 @@ const WaitingRTWidget = ({ socket, emp_code }: WaitingRTWidgetProps) => {
       socket.off("waiting_rt:get", handleWaitingRtData);
       clearInterval(timer);
     };
-  }, [socket, emp_code]);
+  }, [socket, emp_code, apiMode]);
 
   if (members.length === 0) {
     return null;
