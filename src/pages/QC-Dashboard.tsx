@@ -268,6 +268,12 @@ const QCDashboard = () => {
   const [dataQC, setDataQC] = useState<ShoppingHead | ShoppingHeadOne | null>(
     null
   );
+  // [] เป็น truthy ใน JS — ต้องเช็ค length ด้วย ไม่งั้นเคส "ลูกค้าไม่มีบิลค้าง QC เหลือแล้ว" (backend คืน [])
+  // จะถูกนับว่า "มีข้อมูล" ทั้งที่จริงๆ ไม่มี
+  const hasQcData = (
+    data: ShoppingHead | ShoppingHeadOne | null
+  ): data is ShoppingHead | ShoppingHeadOne =>
+    !!data && (!Array.isArray(data) || data.length > 0);
   const myUUIDRef = useRef<string>(
     (() => {
       const stored = localStorage.getItem("qc_machine_uuid");
@@ -449,6 +455,7 @@ const QCDashboard = () => {
   const [loadingPrinting, setLoadingPrinting] = useState<boolean>(false);
 
   const [loadingSubmit, setLoadingSubmit] = useState<boolean>(false);
+  const loadingSubmitRef = useRef(false);
 
   const [hasPrintSticker, setHasPrintSticker] = useState<boolean>(false);
   const [hasFrozenNameChange, setHasFrozenNameChange] = useState<boolean>(false);
@@ -702,6 +709,10 @@ const QCDashboard = () => {
   }, [prepareEmp]);
 
   useEffect(() => {
+    loadingSubmitRef.current = loadingSubmit;
+  }, [loadingSubmit]);
+
+  useEffect(() => {
     if (QCEmp?.dataEmp?.emp_code) {
       setInputQC(
         `${QCEmp.dataEmp.emp_code} ${QCEmp.dataEmp.emp_nickname || ""}`
@@ -793,6 +804,9 @@ const QCDashboard = () => {
     });
 
     newSocket.on("qc:refresh", () => {
+      // ระหว่างที่เรากำลัง submit อยู่ ไม่ต้อง refresh ตัวเอง กัน dataQC ถูกเซ็ตเป็น null
+      // แทรกกลางจอก่อน handleClear() ของ submit จะทำงาน (จอกระพริบ/ค้างข้อมูลครึ่งๆ กลางๆ)
+      if (loadingSubmitRef.current) return;
       newSocket.emit("refresh_qc_room");
     });
 
@@ -1025,7 +1039,7 @@ const QCDashboard = () => {
   ]);
 
   useEffect(() => {
-    if (dataQC) {
+    if (hasQcData(dataQC)) {
       let sortedData = [];
 
       if (Array.isArray(dataQC)) {
@@ -1051,9 +1065,13 @@ const QCDashboard = () => {
       setSHRunningArray(sortedData.map((bill) => bill.sh_running));
 
       socket?.emit("get_my_room");
+    } else {
+      // dataQC ว่าง ต้องเคลียร์ช่องหมายเลขบิลที่ค้างไว้ด้วย ไม่งั้นกด Enter ซ้ำจะยังดึงข้อมูลด้วยเลขบิลเก่าได้
+      setInputValues(Array(10).fill(""));
+      setSHRunningArray(null);
     }
 
-    if (dataQC) {
+    if (hasQcData(dataQC)) {
       console.log("Data QC : ", dataQC);
       const mem_code = Array.isArray(dataQC)
         ? dataQC[0]?.members?.mem_code
@@ -1110,6 +1128,18 @@ const QCDashboard = () => {
       );
       setMemRoute(memRoute);
       setMem_code(mem_code);
+    } else {
+      // dataQC ว่าง (เช่น บิลถูก QC ไปแล้วโดยคนอื่น/ที่อื่นก่อนเรา refresh)
+      // ต้องเคลียร์ order/ตัวนับตามด้วย ไม่งั้นตารางค้างข้อมูลเก่าทั้งที่ข้อความแจ้งว่าไม่มีข้อมูลแล้ว
+      setOrder([]);
+      setHasnotQC(0);
+      setHasQC(0);
+      setHasPicked(0);
+      setHasNotPicked(0);
+      setInComplete(0);
+      setRT(0);
+      setHasPrintSticker(false);
+      setHasFrozenNameChange(false);
     }
     if (dataQC) {
       if (Array.isArray(dataQC) && dataQC.length > 0) {
@@ -1673,7 +1703,7 @@ const QCDashboard = () => {
         emp_prepare: prepareEmp?.dataEmp?.emp_code,
         mem_code: mem_code,
       });
-      if (prepareEmp && QCEmp && packedEMP && dataQC && hasNotQC === 0) {
+      if (prepareEmp && QCEmp && packedEMP && hasQcData(dataQC) && hasNotQC === 0) {
         console.log({
           amount: { sum: countBox },
           sh_running: shRunningArray,
@@ -2013,7 +2043,7 @@ const QCDashboard = () => {
   };
 
   const handlePrintStickerBox = async () => {
-    if (dataQC) {
+    if (hasQcData(dataQC)) {
       setLoadingPrinting(true);
       const block_credit = await axios.post(
         `${import.meta.env.VITE_API_URL_ORDER}/api/picking/check-credit`,
@@ -4653,12 +4683,12 @@ const QCDashboard = () => {
                         )}
                       </tbody>
                     </table>
-                    {!dataQC && submitSuccess ? (
+                    {!hasQcData(dataQC) && submitSuccess ? (
                       <div className="w-full flex justify-center text-3xl mt-5 text-green-700 font-bold">
                         <p>ยืนยันการตรวจสอบรายการสำเร็จ</p>
                       </div>
                     ) : (
-                      !dataQC && (
+                      !hasQcData(dataQC) && (
                         <div>
                           <p className="w-full flex justify-center text-3xl mt-5 text-red-700 font-bold">
                             กรุณากรอกรหัสพนักงานและรหัสลูกค้าหรือเลขบิลให้เรียบร้อย
@@ -4926,7 +4956,7 @@ const QCDashboard = () => {
                     </div>
 
                     <div className="mt-5 px-13">
-                      {hasNotQC === 0 && dataQC && (
+                      {hasNotQC === 0 && hasQcData(dataQC) && (
                         <div>
                           {countBox < 1 && (
                             <p className="text-center text-red-600 font-bold text-lg mb-2">
