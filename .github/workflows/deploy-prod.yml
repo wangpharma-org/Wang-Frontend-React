@@ -65,6 +65,16 @@ jobs:
 
           kubectl -n "${K8S_NAMESPACE}" rollout status deploy/"${DEPLOYMENT_NAME}" --timeout=600s
 
+      # หลักฐานชั้น "ยืนยัน" ของระบบมองเห็นงาน (NNRB-1525) — วางหลัง rollout status
+      # จึงบันทึกก็ต่อเมื่อ pod ขึ้นจริงแล้ว ไม่ใช่แค่สั่ง set image สำเร็จ
+      # step นี้ไม่ทำให้ job พังไม่ว่ากรณีไหน (ไม่มี token/ยิงไม่ผ่าน = warning แล้วไปต่อ)
+      - name: บันทึก deploy เข้าระบบมองเห็นงาน
+        if: success()
+        uses: wangpharma-org/actions/record-deploy@v1
+        with:
+          token: ${{ secrets.DEPLOY_EVENTS_TOKEN }}
+          version: ${{ env.TAG }}
+
       - name: Show status
         run: |
           kubectl -n "${K8S_NAMESPACE}" get deploy "${DEPLOYMENT_NAME}" -o wide
