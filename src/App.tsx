@@ -33,6 +33,7 @@ import ProductManage from "./pages/ProductManage";
 import RequestProduct from "./pages/RequestProduct";
 import RouteManage from "./pages/RouteManage";
 import RouteSchedule from "./pages/RouteSchedule";
+import TransportDailyEvents from "./pages/TransportDailyEvents";
 import FloorLightOperatorManage from "./pages/FloorLightOperatorManage";
 import DashboardRoute from "./pages/DashboardRoute";
 import LoopDashBoard from "./pages/LoopDashboard";
@@ -86,6 +87,10 @@ function App() {
     <>
       <Router>
         <Routes>
+          <Route
+            path="/transport-daily-events"
+            element={<><Navbar /><RequireAuth><TransportDailyEvents /></RequireAuth></>}
+          />
           <Route
             path="/"
             element={

@@ -20,6 +20,13 @@ import chartIcon from "../assets/chat-arrow-grow.png";
 import settingsIcon from "../assets/settings.png";
 import { useNavigate } from "react-router";
 const listMenu = [
+  {
+    id: 24,
+    name: "เหตุการณ์ระหว่างวัน",
+    href: "/transport-daily-events",
+    imageSrc: routeDashboardIcon,
+    admin: true,
+  },
   // {
   //   id: 1,
   //   name: "จัดการสินค้า",

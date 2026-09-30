@@ -2,7 +2,7 @@ import accept from "../assets/accept.png";
 import incorect from "../assets/incorrect.png";
 import warning from "../assets/warning.png";
 import box from "../assets/return-box.png";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { io, Socket } from "socket.io-client";
 import Modal from "../components/ModalQC";
@@ -759,6 +759,7 @@ const QCDashboard = () => {
 
   useEffect(() => {
     checkFlagDeleteBill();
+    checkFlagGenQr();
     handleCheckFlagRequest();
     console.log(`${import.meta.env.VITE_API_URL_ORDER}/socket/qc/dashboard`);
     const newSocket = io(
@@ -2268,6 +2269,83 @@ const QCDashboard = () => {
     );
     console.log("Res setFlagDeleteBill", res.data.status);
     setFlagDeleteBill(res.data.status);
+  };
+
+  // ยังไม่มี flag ใน DB ให้ถือว่าเปิด — พฤติกรรมเดิมก่อนมี flag นี้
+  const [flagGenQr, setFlagGenQr] = useState<boolean>(true);
+  const [flagGenQrLoading, setFlagGenQrLoading] = useState<boolean>(false);
+  const canManageFlagGenQr = useMemo(() => {
+    try {
+      const userInfo = JSON.parse(sessionStorage.getItem("user_info") || "{}");
+      return userInfo?.manage_product === "Yes";
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const checkFlagGenQr = async (): Promise<boolean> => {
+    try {
+      const res = await axios.get(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/check/qc-gen-qr`
+      );
+      const enabled = res.data?.status !== false;
+      setFlagGenQr(enabled);
+      return enabled;
+    } catch {
+      return flagGenQr;
+    }
+  };
+
+  // เช็ค flag ทุกครั้งที่กด เพราะหน้า QC เปิดค้างทั้งวัน และ flag นี้ไม่มี socket แจ้ง
+  const openProductQrCode = async (product: Product) => {
+    const enabled = await checkFlagGenQr();
+    if (!enabled) return;
+    setProductNotHaveBarcode(product);
+    inputBarcode.current?.focus();
+  };
+
+  const toggleFlagGenQr = async () => {
+    const newStatus = !flagGenQr;
+    const action = newStatus ? "เปิดใช้งาน" : "ปิดใช้งาน";
+    const result = await Swal.fire({
+      title: `${action}การแสดง QR Code สินค้า`,
+      text: "การดำเนินการนี้จะส่งผลต่อหน้า QC ทุกเครื่อง",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: newStatus ? "#10b981" : "#ef4444",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: `ยืนยัน${action}`,
+      cancelButtonText: "ยกเลิก",
+      reverseButtons: true,
+    });
+    if (!result.isConfirmed) return;
+
+    setFlagGenQrLoading(true);
+    try {
+      await axios.post(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/feature-flag/send`,
+        {
+          module: "qc-gen-qr",
+          status: newStatus,
+          msg: `QC gen QR feature ${newStatus ? "enabled" : "disabled"} by user`,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${sessionStorage.getItem("access_token")}`,
+          },
+        }
+      );
+      setFlagGenQr(newStatus);
+      if (!newStatus) setProductNotHaveBarcode(null);
+    } catch {
+      Swal.fire({
+        title: "เกิดข้อผิดพลาด",
+        text: "ไม่สามารถปรับสถานะได้ กรุณาลองใหม่",
+        icon: "error",
+      });
+    } finally {
+      setFlagGenQrLoading(false);
+    }
   };
 
   const removeBill = async (index: number) => {
@@ -3957,6 +4035,24 @@ const QCDashboard = () => {
                       จัดการใบเบิก
                     </button>
                   )}
+                  {/* backend feature-flag/send อนุญาตเฉพาะ manage_product */}
+                  {canManageFlagGenQr && (
+                    <button
+                      className={`inline-flex items-center gap-1.5 mt-2 p-2 px-4 rounded-lg border cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${flagGenQr
+                        ? "bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
+                        : "bg-red-50 border-red-300 text-red-700 hover:bg-red-100"
+                        }`}
+                      onClick={() => void toggleFlagGenQr()}
+                      disabled={flagGenQrLoading}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${flagGenQr ? "bg-green-500" : "bg-red-500"}`} />
+                      {flagGenQrLoading
+                        ? "กำลังปรับปรุง..."
+                        : flagGenQr
+                          ? "QR สินค้า เปิด"
+                          : "QR สินค้า ปิด"}
+                    </button>
+                  )}
                   {Array.from({ length: 10 }).map((_, index) => {
                     const bill = Array.isArray(dataQC)
                       ? dataQC[index]
@@ -4289,8 +4385,7 @@ const QCDashboard = () => {
                                         id={`pro_code ${index + 1}`}
                                         className="text-lg cursor-pointer select-none hover:underline"
                                         onDoubleClick={() => {
-                                          setProductNotHaveBarcode(so.product);
-                                          inputBarcode.current?.focus();
+                                          void openProductQrCode(so.product);
                                         }}
                                       >
                                         {so?.product?.product_code}
@@ -4310,16 +4405,14 @@ const QCDashboard = () => {
                                               ? "กำลังขอเพิ่ม"
                                               : so?.picking_status}
                                       </p>
-                                      {!so.product.product_barcode &&
+                                      {flagGenQr &&
+                                        !so.product.product_barcode &&
                                         !so.product.product_barcode2 &&
                                         !so.product.product_barcode3 && (
                                           <button
                                             className="mt-2 text-sm font-bold bg-green-500 text-white p-1 rounded-sm hover:bg-green-600 cursor-pointer"
                                             onClick={() => {
-                                              setProductNotHaveBarcode(
-                                                so.product
-                                              );
-                                              inputBarcode.current?.focus();
+                                              void openProductQrCode(so.product);
                                             }}
                                           >
                                             แสดง QR Code

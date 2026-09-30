@@ -15,6 +15,8 @@ import {
     arrayMove,
 } from "@dnd-kit/sortable";
 import RouteBatchSortableCard, { type EditorGroup } from "../components/RouteBatchSortableCard";
+import EmployeeLoadingLimitSection from "../components/EmployeeLoadingLimitSection";
+import OrderPauseScheduleSection from "../components/OrderPauseScheduleSection";
 
 export interface Route {
     route_code: string;
@@ -1044,6 +1046,11 @@ const RouteManage = () => {
                 )}
             </div>
             <div>
+                {/* backend จำกัดสิทธิ์ manage_product เหมือน feature-flag/send */}
+                {isFullAdmin && <OrderPauseScheduleSection />}
+
+                <EmployeeLoadingLimitSection />
+
                 {/* Urgent Customers Management Section */}
                 <div className="mt-12">
                     <h2 className="text-2xl font-bold mb-6 text-gray-800">จัดการลูกค้าด่วน</h2>
