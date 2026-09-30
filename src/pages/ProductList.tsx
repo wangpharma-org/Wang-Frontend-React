@@ -8,6 +8,7 @@ import { Bounce, toast, ToastContainer } from "react-toastify";
 import axios from "axios";
 import printBucket from "../assets/print_bucket.png";
 import Swal from "sweetalert2";
+import FeatureSuspendedScreen from "../components/FeatureSuspendedScreen";
 
 interface Product {
   product_code: string;
@@ -614,16 +615,7 @@ function ProductList() {
   }
 
   if (featureFlag === false) {
-    return (
-      <div className="flex flex-col min-h-screen text-center items-center justify-center">
-        <p className="text-2xl font-bold text-red-700">
-          ระบบโดนสั่งระงับการใช้งาน
-        </p>
-        <p className="text-2xl font-bold text-red-700">
-          หมายเหตุ : {msgFeatureFlag}
-        </p>
-      </div>
-    );
+    return <FeatureSuspendedScreen msg={msgFeatureFlag} />;
   } else {
     return (
       <div className="flex flex-col h-screen">
