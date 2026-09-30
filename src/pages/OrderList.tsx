@@ -10,6 +10,7 @@ import check from "../assets/accept.png";
 import print from "../assets/printing_black.png";
 import box from "../assets/product-17.png";
 import Swal from "sweetalert2";
+import FeatureSuspendedScreen from "../components/FeatureSuspendedScreen";
 
 interface Product {
   [x: string]: ReactNode;
@@ -863,16 +864,7 @@ const OrderList = () => {
   };
 
   if (featureFlag === false) {
-    return (
-      <div className="flex flex-col min-h-screen text-center items-center justify-center">
-        <p className="text-2xl font-bold text-red-700">
-          ระบบโดนสั่งระงับการใช้งาน
-        </p>
-        <p className="text-2xl font-bold text-red-700">
-          หมายเหตุ : {msgFeatureFlag}
-        </p>
-      </div>
-    );
+    return <FeatureSuspendedScreen msg={msgFeatureFlag} />;
   } else {
     return (
       <>
