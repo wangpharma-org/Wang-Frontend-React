@@ -16,6 +16,7 @@ import {
 } from "@dnd-kit/sortable";
 import RouteBatchSortableCard, { type EditorGroup } from "../components/RouteBatchSortableCard";
 import EmployeeLoadingLimitSection from "../components/EmployeeLoadingLimitSection";
+import OrderPauseScheduleSection from "../components/OrderPauseScheduleSection";
 
 export interface Route {
     route_code: string;
@@ -1045,6 +1046,9 @@ const RouteManage = () => {
                 )}
             </div>
             <div>
+                {/* backend จำกัดสิทธิ์ manage_product เหมือน feature-flag/send */}
+                {isFullAdmin && <OrderPauseScheduleSection />}
+
                 <EmployeeLoadingLimitSection />
 
                 {/* Urgent Customers Management Section */}
