@@ -1,5 +1,5 @@
 import Clock from "../components/Clock";
-import { useState, useEffect, useRef, ReactNode } from "react";
+import { useState, useEffect, useMemo, useRef, ReactNode } from "react";
 import { Socket, io } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router";
@@ -80,6 +80,12 @@ interface MemRoute {
   route_code: string;
   route_name: string;
   is_active: boolean;
+}
+
+interface OrderBlockSnapshot {
+  blocked_route_codes: string[];
+  bypass_route_codes: string[];
+  end_time: string | null;
 }
 
 type PickingRuleMode = "normal" | "floor" | "person";
@@ -175,6 +181,29 @@ const OrderList = () => {
   const accessToken = sessionStorage.getItem("access_token");
   const [pickingRuleStatus, setPickingRuleStatus] = useState<PickingRuleStatus | null>(null);
   const [viewingMemCodes, setViewingMemCodes] = useState<string[]>([]);
+  const [orderBlock, setOrderBlock] = useState<OrderBlockSnapshot | null>(null);
+
+  const blockedRouteCodes = useMemo(
+    () => new Set(orderBlock?.blocked_route_codes ?? []),
+    [orderBlock]
+  );
+  const bypassRouteCodes = useMemo(
+    () => new Set(orderBlock?.bypass_route_codes ?? []),
+    [orderBlock]
+  );
+
+  // ร้านด่วนนับเป็น bypass และร้านที่จัดค้างอยู่ให้จัดต่อจนจบได้
+  const isAutoBlocked = (order: orderList) =>
+    !order.urgent &&
+    order.picking_status !== "picking" &&
+    blockedRouteCodes.has(order.mem_route?.route_code ?? "");
+
+  // ใช้เรียงเฉพาะตอนมีเส้นทางถูกระงับอัตโนมัติ: bypass ขึ้นบนสุด เส้นทางที่ถูกระงับลงล่างสุด
+  const blockRank = (order: orderList) => {
+    if (blockedRouteCodes.size === 0) return 0;
+    if (isAutoBlocked(order)) return 2;
+    return bypassRouteCodes.has(order.mem_route?.route_code ?? "") ? 0 : 1;
+  };
 
   useEffect(() => {
     const totalOrders = orderList?.length;
@@ -205,6 +234,17 @@ const OrderList = () => {
         icon: "warning",
         title: "เส้นทางนี้ถูกระงับ",
         text: `ให้ไปทำเส้นทาง ${activeRoutes.length > 0 ? activeRoutes.join(", ") : "อื่น"}`,
+      });
+      return;
+    }
+    const target = orderList.find((order) => order.mem_code === id);
+    if (target && isAutoBlocked(target)) {
+      Swal.fire({
+        icon: "warning",
+        title: "เส้นทางนี้ถูกระงับ",
+        text: orderBlock?.end_time
+          ? `ระงับอัตโนมัติ จะเปิดอีกครั้งเวลา ${orderBlock.end_time} น.`
+          : "ระงับอัตโนมัติ",
       });
       return;
     }
@@ -313,6 +353,7 @@ const OrderList = () => {
       setRequestProduct(data.requestProduct);
       setPickingRuleStatus(data.pickingRule ?? null);
       setViewingMemCodes(data.viewingMemCodes ?? []);
+      setOrderBlock(data.orderBlock ?? null);
       console.log("time", data.lastestDate);
       setLoading(false);
     });
@@ -1269,6 +1310,8 @@ const OrderList = () => {
                       .sort((a, b) => {
                         if (a.urgent && !b.urgent) return -1;
                         if (!a.urgent && b.urgent) return 1;
+                        const rankDiff = blockRank(a) - blockRank(b);
+                        if (rankDiff !== 0) return rankDiff;
                         const tier = (o: orderList) =>
                           o.picking_status === "picking" && viewingMemCodes.includes(o.mem_code)
                             ? 0
@@ -1339,7 +1382,7 @@ const OrderList = () => {
                                 : order.picking_status === "picking"
                                 ? "bg-green-400"
                                 : "bg-gray-400"
-                                } ${order.mem_route?.is_active === false
+                                } ${order.mem_route?.is_active === false || isAutoBlocked(order)
                                   ? "opacity-50 "
                                   : ""
                                 } cursor-pointer hover:scale-[1.02] transition-transform duration-100 ease-in-out`}
@@ -1353,7 +1396,7 @@ const OrderList = () => {
                                   }`}
                               >
                                 <div>
-                                  {order?.mem_route?.is_active === false && (
+                                  {(order?.mem_route?.is_active === false || isAutoBlocked(order)) && (
                                     <div>
                                       <p className="text-red-600 font-bold text-center">เส้นทางนี้ถูกระงับ</p>
                                     </div>
