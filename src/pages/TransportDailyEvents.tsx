@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
-import { AlertTriangle, ChevronLeft, ChevronRight, RefreshCw, Truck, X } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, MapPin, RefreshCw, User, X } from "lucide-react";
 import axios from "axios";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -19,16 +19,20 @@ const labels: Record<string, string> = {
   OTHER: "อื่น ๆ",
 };
 
-interface RouteCard {
-  route_code: string | null;
-  route_name: string;
+interface EmployeeCard {
+  emp_code: string;
+  emp_name: string | null;
   event_count: number;
 }
 
-interface Summary {
+interface EmployeesSummary {
   date: string;
-  routes: RouteCard[];
-  unassigned_event_count: number;
+  employees: EmployeeCard[];
+}
+
+interface RouteSnapshot {
+  route_code: string;
+  route_name: string;
 }
 
 interface DailyEvent {
@@ -39,6 +43,7 @@ interface DailyEvent {
   occurred_at: string;
   emp_code: string;
   emp_name: string | null;
+  routes: RouteSnapshot[];
 }
 
 interface EventPage {
@@ -61,8 +66,8 @@ const messageFor = (error: unknown) => {
   return "โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่";
 };
 
-function EventDetails({ route, date, token, onClose }: {
-  route: RouteCard;
+function EventDetails({ employee, date, token, onClose }: {
+  employee: EmployeeCard;
   date: string;
   token: string | null;
   onClose: () => void;
@@ -83,8 +88,10 @@ function EventDetails({ route, date, token, onClose }: {
     axios.get<EventPage>(`${API}/api/logistic/shipping/daily-events`, {
       headers: { Authorization: `Bearer ${token}` },
       params: {
-        date, page, limit: 20,
-        ...(route.route_code === null ? { unassigned: "true" } : { route_code: route.route_code }),
+        date,
+        page,
+        limit: 20,
+        emp_code: employee.emp_code,
       },
       signal: controller.signal,
     }).then((response) => {
@@ -95,7 +102,7 @@ function EventDetails({ route, date, token, onClose }: {
       if (!controller.signal.aborted) setLoading(false);
     });
     return () => controller.abort();
-  }, [route.route_code, date, page, token, refresh]);
+  }, [employee.emp_code, date, page, token, refresh]);
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 1;
 
@@ -110,7 +117,7 @@ function EventDetails({ route, date, token, onClose }: {
                 <div className="min-w-0">
                   <p className="text-sm text-gray-500">{date} · เหตุการณ์ระหว่างวัน</p>
                   <DialogTitle className="mt-1 break-words text-xl font-semibold text-gray-900">
-                    {route.route_code && <span>{route.route_code} · </span>}{route.route_name}
+                    <span>{employee.emp_code} · </span>{employee.emp_name ?? "ไม่พบชื่อพนักงาน"}
                   </DialogTitle>
                 </div>
                 <button type="button" onClick={onClose} aria-label="ปิดรายละเอียด" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
@@ -138,9 +145,26 @@ function EventDetails({ route, date, token, onClose }: {
                         {dayjs(event.occurred_at).tz("Asia/Bangkok").format("DD/MM/YYYY HH:mm:ss")}
                       </time>
                     </div>
-                    <p className="mt-3 break-words text-sm text-gray-700">
-                      ผู้แจ้ง: <span className="font-medium">{event.emp_code}</span> · {event.emp_name ?? "ไม่พบชื่อพนักงาน"}
-                    </p>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-1.5 text-sm">
+                      <span className="text-xs font-medium text-gray-500">เส้นทาง ณ ขณะเกิดเหตุ:</span>
+                      {event.routes && event.routes.length > 0 ? (
+                        event.routes.map((r) => (
+                          <span
+                            key={r.route_code}
+                            className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800"
+                          >
+                            <MapPin size={12} aria-hidden="true" className="text-blue-600" />
+                            <span className="font-semibold">{r.route_code}</span> · {r.route_name}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="inline-flex items-center rounded-md border border-gray-200 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                          ไม่ระบุเส้นทาง
+                        </span>
+                      )}
+                    </div>
+
                     <p className="mt-3 whitespace-pre-wrap break-words text-gray-800">{event.note || "ไม่มีรายละเอียดเพิ่มเติม"}</p>
                     {event.image_url && (
                       brokenImages[event.id]
@@ -183,11 +207,11 @@ export default function TransportDailyEvents() {
   const { userInfo, accessToken } = useAuth();
   const isAdmin = userInfo?.manage_product === "Yes";
   const [date, setDate] = useState(() => dayjs().tz("Asia/Bangkok").format("YYYY-MM-DD"));
-  const [summary, setSummary] = useState<Summary | null>(null);
+  const [summary, setSummary] = useState<EmployeesSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
-  const [selected, setSelected] = useState<RouteCard | null>(null);
+  const [selected, setSelected] = useState<EmployeeCard | null>(null);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -199,7 +223,7 @@ export default function TransportDailyEvents() {
       setLoading(false);
       return () => controller.abort();
     }
-    axios.get<Summary>(`${API}/api/logistic/shipping/daily-events/routes`, {
+    axios.get<EmployeesSummary>(`${API}/api/logistic/shipping/daily-events/employees`, {
       headers: { Authorization: `Bearer ${accessToken}` },
       params: { date },
       signal: controller.signal,
@@ -217,12 +241,7 @@ export default function TransportDailyEvents() {
     return <main className="mx-auto max-w-7xl p-6"><p role="alert" className="rounded-xl bg-red-50 p-5 text-red-700">ไม่มีสิทธิ์ดูเหตุการณ์ระหว่างวัน</p></main>;
   }
 
-  const cards = summary ? [
-    ...summary.routes,
-    ...(summary.unassigned_event_count > 0
-      ? [{ route_code: null, route_name: "ไม่ระบุเส้นทาง", event_count: summary.unassigned_event_count }]
-      : []),
-  ].sort((a, b) => Number(b.event_count > 0) - Number(a.event_count > 0) || (a.route_code ?? "").localeCompare(b.route_code ?? "")) : [];
+  const employees = summary?.employees ?? [];
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
@@ -230,7 +249,7 @@ export default function TransportDailyEvents() {
         <div>
           <p className="text-sm font-medium text-orange-600">สำหรับผู้ดูแล · ขนส่ง</p>
           <h1 className="mt-1 text-2xl font-bold text-gray-900 sm:text-3xl">เหตุการณ์ระหว่างวัน</h1>
-          <p className="mt-2 text-sm text-gray-500">เลือกเส้นทางเพื่อดูเหตุการณ์และพนักงานผู้แจ้ง</p>
+          <p className="mt-2 text-sm text-gray-500">เลือกพนักงานเพื่อดูเหตุการณ์และเส้นทางที่รับผิดชอบ</p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-sm font-medium text-gray-700">
@@ -245,27 +264,50 @@ export default function TransportDailyEvents() {
         </div>
       </div>
       <div className="mt-7" aria-live="polite">
-        {loading && <p role="status" className="py-12 text-center text-gray-500">กำลังโหลดเส้นทาง...</p>}
+        {loading && <p role="status" className="py-12 text-center text-gray-500">กำลังโหลดข้อมูลพนักงาน...</p>}
         {error && <p role="alert" className="rounded-xl bg-red-50 p-5 text-red-700">{error}</p>}
-        {!loading && !error && cards.length === 0 && <p className="rounded-xl border border-gray-200 p-8 text-center text-gray-500">ยังไม่มีข้อมูลเส้นทางหรือเหตุการณ์</p>}
-        {!loading && !error && (
+        {!loading && !error && employees.length === 0 && (
+          <p className="rounded-xl border border-gray-200 p-8 text-center text-gray-500">ไม่มีเหตุการณ์ในวันที่เลือก</p>
+        )}
+        {!loading && !error && employees.length > 0 && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {cards.map((route) => (
-              <button type="button" key={route.route_code === null ? "unassigned" : `route:${route.route_code}`} onClick={() => setSelected(route)}
-                className={`flex min-w-0 flex-col rounded-xl border p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-orange-500 ${route.event_count > 0 ? "border-orange-200 bg-orange-50" : "border-gray-200 bg-white"}`}>
+            {employees.map((employee) => (
+              <button
+                type="button"
+                key={employee.emp_code}
+                onClick={() => setSelected(employee)}
+                className="flex min-w-0 flex-col rounded-xl border border-orange-200 bg-orange-50/40 p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-orange-500"
+              >
                 <div className="mb-4 flex w-full items-center justify-between gap-3">
-                  <Truck size={24} className={route.event_count > 0 ? "text-orange-600" : "text-gray-400"} aria-hidden="true" />
-                  {route.event_count > 0 && <span className="flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-800"><AlertTriangle size={13} aria-hidden="true" />{route.event_count} เหตุการณ์</span>}
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                    <User size={20} aria-hidden="true" />
+                  </div>
+                  <span className="flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-800">
+                    <AlertTriangle size={13} aria-hidden="true" />
+                    {employee.event_count} เหตุการณ์
+                  </span>
                 </div>
-                {route.route_code && <p className="break-all text-sm font-medium text-gray-500">{route.route_code}</p>}
-                <h2 className="mt-1 break-words text-lg font-semibold text-gray-900">{route.route_name}</h2>
-                <p className={`mt-3 text-sm ${route.event_count > 0 ? "text-orange-700" : "text-gray-500"}`}>{route.event_count > 0 ? "มีเหตุการณ์ · กดดูรายละเอียด" : "ไม่มีเหตุการณ์"}</p>
+                <p className="break-all text-sm font-medium text-gray-500">{employee.emp_code}</p>
+                <h2 className="mt-1 break-words text-lg font-semibold text-gray-900">
+                  {employee.emp_name ?? "ไม่พบชื่อพนักงาน"}
+                </h2>
+                <p className="mt-3 text-sm font-medium text-orange-700">
+                  มีเหตุการณ์ · กดดูรายละเอียด
+                </p>
               </button>
             ))}
           </div>
         )}
       </div>
-      {selected && <EventDetails key={`${date}:${selected.route_code}`} route={selected} date={date} token={accessToken} onClose={() => setSelected(null)} />}
+      {selected && (
+        <EventDetails
+          key={`${date}:${selected.emp_code}`}
+          employee={selected}
+          date={date}
+          token={accessToken}
+          onClose={() => setSelected(null)}
+        />
+      )}
     </main>
   );
 }
