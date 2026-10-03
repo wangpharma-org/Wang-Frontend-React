@@ -352,6 +352,8 @@ const OrderBlockSection = () => {
                   key={draft.day_of_week}
                   draft={draft}
                   isToday={draft.day_of_week === todayDayOfWeek}
+                  pendingCount={overview?.status?.pending_count ?? 0}
+                  queueCount={overview?.status?.queue_count ?? 0}
                   error={rowInfo[index]?.error ?? null}
                   summary={rowInfo[index]?.summary ?? ""}
                   disabled={saving}
