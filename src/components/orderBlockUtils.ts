@@ -22,6 +22,7 @@ export interface OrderBlockStatus {
   phase: OrderBlockPhase;
   all_blocked: boolean;
   pending_count: number;
+  queue_count: number;
 }
 
 export interface OrderBlockOverview {

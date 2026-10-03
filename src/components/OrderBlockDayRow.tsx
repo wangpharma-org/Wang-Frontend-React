@@ -4,6 +4,8 @@ import { DAY_NAMES, type DayDraft } from "./orderBlockUtils";
 interface OrderBlockDayRowProps {
   draft: DayDraft;
   isToday: boolean;
+  pendingCount: number;
+  queueCount: number;
   error: string | null;
   summary: string;
   disabled: boolean;
@@ -17,6 +19,8 @@ const inputClass =
 const OrderBlockDayRow = ({
   draft,
   isToday,
+  pendingCount,
+  queueCount,
   error,
   summary,
   disabled,
@@ -54,16 +58,27 @@ const OrderBlockDayRow = ({
             </span>
           )}
         </div>
-        {draft.is_enabled && (
-          <button
-            type="button"
-            disabled={disabled || error !== null}
-            onClick={() => onCopyToAll(dayOfWeek)}
-            className="text-sm text-blue-600 hover:underline disabled:text-gray-400 disabled:no-underline"
-          >
-            ใช้ค่านี้กับทุกวัน
-          </button>
-        )}
+        <div className="flex items-center gap-4">
+          {isToday && (
+            <span className="px-3 py-1 text-sm rounded-lg border border-blue-300 bg-white text-gray-700">
+              เหลือจัดทั้งระบบ{" "}
+              <b className="text-lg text-blue-700">{pendingCount}</b> รายการ
+              <span className="mx-2 text-gray-300">|</span>
+              เหลือคิว <b className="text-lg text-blue-700">{queueCount}</b>{" "}
+              รายการ
+            </span>
+          )}
+          {draft.is_enabled && (
+            <button
+              type="button"
+              disabled={disabled || error !== null}
+              onClick={() => onCopyToAll(dayOfWeek)}
+              className="text-sm text-blue-600 hover:underline disabled:text-gray-400 disabled:no-underline"
+            >
+              ใช้ค่านี้กับทุกวัน
+            </button>
+          )}
+        </div>
       </div>
 
       {draft.is_enabled && (
