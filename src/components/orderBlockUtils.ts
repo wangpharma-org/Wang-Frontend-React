@@ -7,6 +7,8 @@ export interface OrderBlockDay {
   end_time: string;
   min_count: number | null;
   max_count: number | null;
+  qc_min_count: number | null;
+  qc_max_count: number | null;
 }
 
 export interface OrderBlockRoute {
@@ -22,6 +24,7 @@ export interface OrderBlockStatus {
   phase: OrderBlockPhase;
   all_blocked: boolean;
   pending_count: number;
+  qc_pending_count: number;
 }
 
 export interface OrderBlockOverview {
@@ -38,6 +41,8 @@ export interface DayDraft {
   end_time: string;
   min_count: string;
   max_count: string;
+  qc_min_count: string;
+  qc_max_count: string;
 }
 
 export interface StatusSummary {
@@ -61,13 +66,18 @@ export const DAY_NAMES: Record<number, string> = {
   6: "เสาร์",
 };
 
+const toCountText = (count: number | null | undefined): string =>
+  count == null ? "" : String(count);
+
 export const toDraft = (day: OrderBlockDay): DayDraft => ({
   day_of_week: day.day_of_week,
   is_enabled: day.is_enabled,
   start_time: day.start_time ?? "",
   end_time: day.end_time ?? DEFAULT_END_TIME,
-  min_count: day.min_count === null ? "" : String(day.min_count),
-  max_count: day.max_count === null ? "" : String(day.max_count),
+  min_count: toCountText(day.min_count),
+  max_count: toCountText(day.max_count),
+  qc_min_count: toCountText(day.qc_min_count),
+  qc_max_count: toCountText(day.qc_max_count),
 });
 
 export const toDrafts = (days: OrderBlockDay[]): DayDraft[] =>
@@ -80,11 +90,31 @@ export const toDrafts = (days: OrderBlockDay[]): DayDraft[] =>
         end_time: DEFAULT_END_TIME,
         min_count: null,
         max_count: null,
+        qc_min_count: null,
+        qc_max_count: null,
       },
     ),
   );
 
 const isWholeNumber = (value: string) => /^\d+$/.test(value.trim());
+
+const validateRange = (
+  minText: string,
+  maxText: string,
+  label: string,
+): string | null => {
+  const min = minText.trim();
+  const max = maxText.trim();
+  if (!min && !max) return null;
+  if (!min || !max) {
+    return `min และ max ของ${label} ต้องกรอกทั้งคู่ หรือเว้นว่างทั้งคู่`;
+  }
+  if (!isWholeNumber(min) || !isWholeNumber(max)) {
+    return `min และ max ของ${label} ต้องเป็นจำนวนเต็มไม่ติดลบ`;
+  }
+  if (Number(min) >= Number(max)) return `min ของ${label} ต้องน้อยกว่า max`;
+  return null;
+};
 
 const validateFields = (draft: DayDraft): string | null => {
   if (!draft.start_time) return "กรุณาระบุเวลาเริ่ม";
@@ -92,16 +122,10 @@ const validateFields = (draft: DayDraft): string | null => {
   if (draft.start_time >= draft.end_time) {
     return "เวลาเริ่มต้องมาก่อนเวลาสิ้นสุด";
   }
-
-  const min = draft.min_count.trim();
-  const max = draft.max_count.trim();
-  if (!min && !max) return null;
-  if (!min || !max) return "min และ max ต้องกรอกทั้งคู่ หรือเว้นว่างทั้งคู่";
-  if (!isWholeNumber(min) || !isWholeNumber(max)) {
-    return "min และ max ต้องเป็นจำนวนเต็มไม่ติดลบ";
-  }
-  if (Number(min) >= Number(max)) return "min ต้องน้อยกว่า max";
-  return null;
+  return (
+    validateRange(draft.qc_min_count, draft.qc_max_count, "ยอดรอ QC") ??
+    validateRange(draft.min_count, draft.max_count, "ยอดเหลือจัด")
+  );
 };
 
 // วันที่ปิดอยู่ไม่ต้องตรวจ เพราะค่าในช่องยังไม่มีผลกับการระงับ
@@ -113,10 +137,18 @@ export const describeDay = (draft: DayDraft): string => {
   const { start_time: start, end_time: end } = draft;
   const min = draft.min_count.trim();
   const max = draft.max_count.trim();
+  const qcMin = draft.qc_min_count.trim();
+  const qcMax = draft.qc_max_count.trim();
+  const qcRule =
+    qcMin && qcMax
+      ? `รอ QC ≥ ${qcMax} รายการ → ระงับ · รอ QC ≤ ${qcMin} รายการ → เปิด (มาก่อนเงื่อนไขอื่น) · `
+      : "";
   if (!min && !max) {
-    return `${start} ระงับทุกเส้นทางทันที → ${end} เปิดจัดตามปกติ`;
+    return qcRule
+      ? `ช่วง ${start}–${end}: ${qcRule}นอกนั้นระงับตั้งแต่ ${start} · ${end} เปิดเสมอ`
+      : `${start} ระงับทุกเส้นทางทันที → ${end} เปิดจัดตามปกติ`;
   }
-  return `ช่วง ${start}–${end}: เหลือจัด ≤ ${min} รายการ → ระงับ · สะสมถึง ${max} รายการ → เปิด · ${end} เปิดเสมอ`;
+  return `ช่วง ${start}–${end}: ${qcRule}เหลือจัด ≤ ${min} รายการ → ระงับ · สะสมถึง ${max} รายการ → เปิด · ${end} เปิดเสมอ`;
 };
 
 const toCount = (value: string): number | null =>
@@ -135,6 +167,8 @@ export const toPayload = (
       end_time: saved?.end_time ?? DEFAULT_END_TIME,
       min_count: saved?.min_count ?? null,
       max_count: saved?.max_count ?? null,
+      qc_min_count: saved?.qc_min_count ?? null,
+      qc_max_count: saved?.qc_max_count ?? null,
     };
   }
   return {
@@ -144,6 +178,8 @@ export const toPayload = (
     end_time: draft.end_time,
     min_count: toCount(draft.min_count),
     max_count: toCount(draft.max_count),
+    qc_min_count: toCount(draft.qc_min_count),
+    qc_max_count: toCount(draft.qc_max_count),
   };
 };
 
@@ -152,7 +188,9 @@ export const isSameDraft = (a: DayDraft, b: DayDraft): boolean =>
   a.start_time === b.start_time &&
   a.end_time === b.end_time &&
   a.min_count.trim() === b.min_count.trim() &&
-  a.max_count.trim() === b.max_count.trim();
+  a.max_count.trim() === b.max_count.trim() &&
+  a.qc_min_count.trim() === b.qc_min_count.trim() &&
+  a.qc_max_count.trim() === b.qc_max_count.trim();
 
 export const describeStatus = (
   status: OrderBlockStatus,
@@ -165,7 +203,9 @@ export const describeStatus = (
       detail: "ทุกเส้นทางจัดได้ตามปกติ",
     };
   }
-  const hasThreshold = today.min_count !== null && today.max_count !== null;
+  const hasThreshold = today.min_count != null && today.max_count != null;
+  const hasQcThreshold =
+    today.qc_min_count != null && today.qc_max_count != null;
 
   if (status.phase === "off") {
     return {
@@ -182,18 +222,31 @@ export const describeStatus = (
     };
   }
   if (status.all_blocked) {
+    const openWhen = [
+      hasQcThreshold ? `รอ QC ลดถึง ${today.qc_min_count} รายการ` : null,
+      hasThreshold
+        ? `เหลือจัดสะสมถึง ${today.max_count} รายการ${hasQcThreshold ? " (ขณะที่รอ QC ยังไม่ถึง max)" : ""}`
+        : null,
+    ].filter((condition) => condition !== null);
     return {
       tone: "red",
       title: "กำลังระงับทุกเส้นทาง ยกเว้น bypass และร้านด่วน",
-      detail: hasThreshold
-        ? `จะเปิดเมื่อเหลือจัดสะสมถึง ${today.max_count} รายการ หรือถึงเวลา ${today.end_time}`
-        : `จะเปิดเวลา ${today.end_time}`,
+      detail:
+        openWhen.length > 0
+          ? `จะเปิดเมื่อ${openWhen.join(" หรือ")} หรือถึงเวลา ${today.end_time}`
+          : `จะเปิดเวลา ${today.end_time}`,
     };
   }
+  const blockWhen = [
+    hasQcThreshold ? `รอ QC ≥ ${today.qc_max_count} รายการ` : null,
+    hasThreshold
+      ? `เหลือจัด ≤ ${today.min_count} รายการ${hasQcThreshold ? " (ขณะที่รอ QC ยังไม่ถึง min)" : ""}`
+      : null,
+  ].filter((condition) => condition !== null);
   return {
     tone: "green",
     title: "อยู่ในช่วงเวลา แต่ยังเปิดจัดอยู่",
-    detail: `จะระงับทุกเส้นทางเมื่อเหลือจัด ≤ ${today.min_count ?? "-"} รายการ`,
+    detail: `จะระงับทุกเส้นทางเมื่อ${blockWhen.join(" หรือ")}`,
   };
 };
 
