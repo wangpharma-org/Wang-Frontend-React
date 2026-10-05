@@ -2245,6 +2245,33 @@ const QCDashboard = () => {
     setInputValues(updated);
   };
 
+  // ช่อง Barcode สินค้า: บังคับใช้เครื่องสแกนเท่านั้น (เหมือนช่องหมายเลขบิล)
+  // เครื่องสแกนส่งตัวอักษรติดกันเร็วมาก ถ้าห่างกันเกิน 100ms ถือว่าพิมพ์เอง → เคลียร์ช่องทิ้ง
+  // ถ้าพิมพ์เอง / copy-paste จะแสดงข้อความเตือนใต้ช่อง (ไม่ใช้ popup)
+  const lastBarcodeInputTimeRef = useRef<number | null>(null);
+  const [barcodeWarning, setBarcodeWarning] = useState(false);
+  const handleBarcodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const now = Date.now();
+    const isFirstChar = e.target.value.length <= 1;
+
+    if (!isFirstChar && lastBarcodeInputTimeRef.current !== null) {
+      const timeDiff = now - lastBarcodeInputTimeRef.current;
+      if (timeDiff > 100) {
+        setBarcodeWarning(true);
+        lastBarcodeInputTimeRef.current = null;
+        e.target.value = "";
+        return;
+      }
+    }
+
+    lastBarcodeInputTimeRef.current = now;
+  };
+
+  const blockClipboard = (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    setBarcodeWarning(true);
+  };
+
   const OtherShipping = () => {
     if (
       !dataQC ||
@@ -4290,10 +4317,19 @@ const QCDashboard = () => {
                         : `border-gray-500 bg-gray-200 `
                         }`}
                       placeholder="รหัสสินค้า / Barcode"
+                      autoComplete="off"
+                      onChange={handleBarcodeChange}
+                      onPaste={blockClipboard}
+                      onCopy={blockClipboard}
+                      onCut={blockClipboard}
+                      onDrop={blockClipboard}
+                      onContextMenu={blockClipboard}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
+                          lastBarcodeInputTimeRef.current = null;
                           const val = e.currentTarget.value;
                           if (!val) return;
+                          setBarcodeWarning(false);
                           if (recycleBoxes.some((b) => b.id === val)) {
                             handleScanRecycleBox(val);
                           } else {
@@ -4302,6 +4338,11 @@ const QCDashboard = () => {
                         }
                       }}
                     ></input>
+                    {barcodeWarning && (
+                      <p className="col-span-8 text-red-600 font-bold text-lg text-center">
+                        ติดต่อพี่มาร์คเพื่อสร้าง QR Code
+                      </p>
+                    )}
                   </div>
                   <div className="px-4 mt-3 ">
                     <table className="w-full rounded-lg overflow-hidden">
