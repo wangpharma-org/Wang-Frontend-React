@@ -291,12 +291,21 @@ const OrderBlockSection = () => {
                     </p>
                     <p className="text-sm mt-1">{statusSummary.detail}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs opacity-70">เหลือจัดทั้งระบบ</p>
-                    <p className="text-2xl font-bold">
-                      {overview?.status?.pending_count ?? 0}
-                    </p>
-                    <p className="text-xs opacity-70">รายการ</p>
+                  <div className="flex gap-6 text-right">
+                    <div>
+                      <p className="text-xs opacity-70">รอ QC ทั้งระบบ</p>
+                      <p className="text-2xl font-bold">
+                        {overview?.status?.qc_pending_count ?? 0}
+                      </p>
+                      <p className="text-xs opacity-70">รายการ</p>
+                    </div>
+                    <div>
+                      <p className="text-xs opacity-70">เหลือจัดทั้งระบบ</p>
+                      <p className="text-2xl font-bold">
+                        {overview?.status?.pending_count ?? 0}
+                      </p>
+                      <p className="text-xs opacity-70">รายการ</p>
+                    </div>
                   </div>
                 </div>
                 {departedRoutes.length > 0 && (
@@ -325,6 +334,13 @@ const OrderBlockSection = () => {
                 ระบบจะระงับการจัดเมื่อไหร่
               </p>
               <ol className="text-sm text-gray-600 list-decimal pl-5 space-y-1">
+                <li>
+                  <b>ตามยอดรอ QC</b> — นับรายการที่จัดเสร็จแล้วแต่ยังไม่ได้ QC
+                  ถ้าสะสมถึง QC max จะระงับทุกเส้นทางที่ไม่ได้ bypass
+                  ถ้าลดลงถึง QC min จะเปิดจัดทุกเส้นทาง
+                  รวมเส้นทางที่รถออกแล้ว เงื่อนไขนี้มาก่อนยอด "เหลือจัด"
+                  และทำงานเฉพาะในช่วงเวลาเริ่ม–สิ้นสุด
+                </li>
                 <li>
                   <b>ตามตารางด้านล่าง</b> — ระงับทุกเส้นทางที่ไม่ได้ bypass
                   ถ้าเว้น min/max ว่างจะระงับทันทีเมื่อถึงเวลาเริ่ม

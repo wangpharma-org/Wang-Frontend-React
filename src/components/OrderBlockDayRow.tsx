@@ -93,6 +93,36 @@ const OrderBlockDayRow = ({
             />
           </label>
           <label className="text-sm text-gray-600">
+            QC min — รอ QC ลดถึงค่านี้ให้เปิด
+            <input
+              type="number"
+              min={0}
+              inputMode="numeric"
+              value={draft.qc_min_count}
+              disabled={disabled}
+              placeholder="เว้นว่าง"
+              onChange={(event) =>
+                onChange(dayOfWeek, { qc_min_count: event.target.value })
+              }
+              className={inputClass}
+            />
+          </label>
+          <label className="text-sm text-gray-600">
+            QC max — รอ QC ถึงค่านี้ให้ระงับ
+            <input
+              type="number"
+              min={1}
+              inputMode="numeric"
+              value={draft.qc_max_count}
+              disabled={disabled}
+              placeholder="เว้นว่าง"
+              onChange={(event) =>
+                onChange(dayOfWeek, { qc_max_count: event.target.value })
+              }
+              className={inputClass}
+            />
+          </label>
+          <label className="text-sm text-gray-600">
             min — เหลือจัดถึงค่านี้ให้ระงับ
             <input
               type="number"
