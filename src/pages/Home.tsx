@@ -180,6 +180,13 @@ const listMenu = [
     admin: true,
   },
   {
+    id: 25,
+    name: "อนุมัติสแกนสินค้าไม่มีบาร์โค้ด",
+    href: "/no-barcode-approval",
+    imageSrc: settingsIcon,
+    admin: true,
+  },
+  {
     id: 23,
     name: "ตั้งค่าระบบไฟ",
     href: "/floor-light-operators",
