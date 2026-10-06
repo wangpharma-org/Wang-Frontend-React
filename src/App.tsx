@@ -49,6 +49,7 @@ import ReturnReceipt from "./pages/ReturnReceipt";
 import ReturnReceiptPrint from "./pages/ReturnReceiptPrint";
 import ProductNameChangeApproval from "./pages/ProductNameChangeApproval";
 import DailyIpLogsPage from "./pages/DailyIpLogsPage";
+import NoBarcodeApprovalSettings from "./pages/NoBarcodeApprovalSettings";
 import ScanBox from "./pages/ScanBox";
 import ScanBasket from "./pages/ScanBasket";
 import ScanConfirmSticker from "./pages/ScanConfirmSticker";
@@ -413,6 +414,17 @@ function App() {
               <RequireAuth>
                 <TaskApprovalPage />
               </RequireAuth>
+            }
+          />
+          <Route
+            path="/no-barcode-approval"
+            element={
+              <div>
+                <Navbar />
+                <RequireAuth>
+                  <NoBarcodeApprovalSettings />
+                </RequireAuth>
+              </div>
             }
           />
           <Route
