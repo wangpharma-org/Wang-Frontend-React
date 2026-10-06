@@ -30,6 +30,13 @@ import ManualPicture from "../assets/manual_sticker.png";
 import Reportproblem from "../components/Reportproblem";
 import correct from "../assets/correct.png";
 import WaitingRTWidget from "../components/WaitingRTWidget";
+import NoBarcodeApprovalModal, {
+  type ApprovalTarget,
+} from "../components/NoBarcodeApprovalModal";
+import {
+  type ApprovalInfo,
+  fetchApprovalFlag,
+} from "../components/noBarcodeApproval";
 
 const TAB_KEY = "qc-dashboard";
 
@@ -431,6 +438,13 @@ const QCDashboard = () => {
   // State ของสินค้าที่ไม่มี Barcode
   const [productNotHaveBarcode, setProductNotHaveBarcode] =
     useState<Product | null>(null);
+
+  // OPHMBC-306: เปิด flag แล้วต้องสแกนบัตรผู้อนุมัติก่อนแสดง QR
+  // อนุมัติผูกกับรหัสสินค้า (key = product_code) ใช้ได้ทุกบิลของร้านที่กำลัง QC และล้างเมื่อเปลี่ยนร้าน
+  const [approvalFlag, setApprovalFlag] = useState<boolean>(false);
+  const [approvals, setApprovals] = useState<Record<string, ApprovalInfo>>({});
+  const [approvalTarget, setApprovalTarget] = useState<ApprovalTarget | null>(null);
+  const [qrApproval, setQrApproval] = useState<ApprovalInfo | null>(null);
 
   // State เก็บไอดีห้องของการต่อ WebSocket
   const [myRoom, setMyRoom] = useState<string | null>(null);
@@ -1259,6 +1273,9 @@ const QCDashboard = () => {
     setCountBox(0);
     setInputValues(Array(10).fill(""));
     setProductNotHaveBarcode(null);
+    setQrApproval(null);
+    setApprovals({});
+    setApprovalTarget(null);
     setSHRunningArray(null);
     setAddShRunningArray(null);
     setErrMsgSubmit(null);
@@ -2323,13 +2340,80 @@ const QCDashboard = () => {
     }
   };
 
-  // เช็ค flag ทุกครั้งที่กด เพราะหน้า QC เปิดค้างทั้งวัน และ flag นี้ไม่มี socket แจ้ง
-  const openProductQrCode = async (product: Product) => {
-    const enabled = await checkFlagGenQr();
-    if (!enabled) return;
+  const checkApprovalFlag = async (): Promise<boolean> => {
+    try {
+      const enabled = await fetchApprovalFlag();
+      setApprovalFlag(enabled);
+      return enabled;
+    } catch {
+      return approvalFlag;
+    }
+  };
+
+  useEffect(() => {
+    void checkApprovalFlag();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const showProductQr = (product: Product, approval: ApprovalInfo | null) => {
     setProductNotHaveBarcode(product);
+    setQrApproval(approval);
     inputBarcode.current?.focus();
   };
+
+  // เช็ค flag ทุกครั้งที่กด เพราะหน้า QC เปิดค้างทั้งวัน และ flag นี้ไม่มี socket แจ้ง
+  const openProductQrCode = async (so: ShoppingOrder) => {
+    const [enabled, needApproval] = await Promise.all([
+      checkFlagGenQr(),
+      checkApprovalFlag(),
+    ]);
+    if (!enabled) return;
+    if (!needApproval) {
+      showProductQr(so.product, null);
+      return;
+    }
+    const approved = approvals[so.product.product_code];
+    if (approved) {
+      showProductQr(so.product, approved);
+      return;
+    }
+    setApprovalTarget({
+      product_code: so.product.product_code,
+      product_name: so.product_name_at_order ?? so.product.product_name,
+      sh_running: so.sh_running,
+      so_running: so.so_running,
+    });
+  };
+
+  const handleApproved = (info: ApprovalInfo) => {
+    if (!approvalTarget) return;
+    const target = approvalTarget;
+    setApprovals((prev) => ({
+      ...prev,
+      [target.product_code]: info,
+    }));
+    setApprovalTarget(null);
+    const so = (Array.isArray(dataQC) ? dataQC : dataQC ? [dataQC] : [])
+      .flatMap((bill) => bill.shoppingOrders)
+      .find(
+        (order) =>
+          order.sh_running === target.sh_running &&
+          order.product.product_code === target.product_code
+      );
+    if (so) showProductQr(so.product, info);
+  };
+
+  const approverLabel = (info: ApprovalInfo) =>
+    `${info.emp_code} ${info.name} · ${dayjs(info.approved_at).format("HH:mm")}`;
+
+  const packerLabel = useMemo(() => {
+    try {
+      const user = JSON.parse(sessionStorage.getItem("user_info") || "{}");
+      return `${user.emp_code ?? "-"} ${user.nickname || user.username || ""}`.trim();
+    } catch {
+      return "-";
+    }
+  }, []);
 
   const toggleFlagGenQr = async () => {
     const newStatus = !flagGenQr;
@@ -2363,7 +2447,10 @@ const QCDashboard = () => {
         }
       );
       setFlagGenQr(newStatus);
-      if (!newStatus) setProductNotHaveBarcode(null);
+      if (!newStatus) {
+        setProductNotHaveBarcode(null);
+        setQrApproval(null);
+      }
     } catch {
       Swal.fire({
         title: "เกิดข้อผิดพลาด",
@@ -4426,7 +4513,7 @@ const QCDashboard = () => {
                                         id={`pro_code ${index + 1}`}
                                         className="text-lg cursor-pointer select-none hover:underline"
                                         onDoubleClick={() => {
-                                          void openProductQrCode(so.product);
+                                          void openProductQrCode(so);
                                         }}
                                       >
                                         {so?.product?.product_code}
@@ -4450,14 +4537,28 @@ const QCDashboard = () => {
                                         !so.product.product_barcode &&
                                         !so.product.product_barcode2 &&
                                         !so.product.product_barcode3 && (
-                                          <button
-                                            className="mt-2 text-sm font-bold bg-green-500 text-white p-1 rounded-sm hover:bg-green-600 cursor-pointer"
-                                            onClick={() => {
-                                              void openProductQrCode(so.product);
-                                            }}
-                                          >
-                                            แสดง QR Code
-                                          </button>
+                                          <>
+                                            <button
+                                              className={`mt-2 text-sm font-bold text-white p-1 rounded-sm cursor-pointer ${approvalFlag
+                                                ? "bg-orange-500 hover:bg-orange-600"
+                                                : "bg-green-500 hover:bg-green-600"
+                                                }`}
+                                              onClick={() => {
+                                                void openProductQrCode(so);
+                                              }}
+                                            >
+                                              {approvalFlag ? "อนุมัติให้สแกน" : "แสดง QR Code"}
+                                            </button>
+                                            {approvalFlag &&
+                                              approvals[so.product.product_code] && (
+                                                <p className="mt-1 text-xs text-green-700">
+                                                  อนุมัติโดย{" "}
+                                                  {approverLabel(
+                                                    approvals[so.product.product_code]
+                                                  )}
+                                                </p>
+                                              )}
+                                          </>
                                         )}
                                     </div>
                                   </td>
@@ -4851,6 +4952,7 @@ const QCDashboard = () => {
                           className="w-7 cursor-pointer"
                           onClick={() => {
                             setProductNotHaveBarcode(null);
+                            setQrApproval(null);
                           }}
                         ></img>
                       </div>
@@ -4879,6 +4981,11 @@ const QCDashboard = () => {
                             ></QRCodeSVG>
                           )}
                         </div>
+                        {qrApproval && (
+                          <p className="mt-2 text-sm font-medium text-green-700">
+                            อนุมัติโดย {approverLabel(qrApproval)}
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -5443,6 +5550,18 @@ const QCDashboard = () => {
           </div>
         </div>,
         document.body
+      )}
+      {approvalTarget && (
+        <NoBarcodeApprovalModal
+          target={approvalTarget}
+          packerLabel={packerLabel}
+          station={myUUIDRef.current}
+          onApproved={handleApproved}
+          onClose={() => {
+            setApprovalTarget(null);
+            inputBarcode.current?.focus();
+          }}
+        />
       )}
       </div>
     );
