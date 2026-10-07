@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { Printer, QrCode, Search, Trash2 } from "lucide-react";
 import BarcodeLabelPrint from "../components/BarcodeLabelPrint";
@@ -7,6 +7,7 @@ import {
   BARCODE_SLOTS,
   type BarcodeLabel,
   authHeaders,
+  fetchPrintLabelFlag,
 } from "../components/noBarcodeApproval";
 
 // OPHMBC-309 — เลือกบาร์โค้ดสินค้าหลายรายการแล้วพิมพ์ฉลาก QR รวดเดียว
@@ -31,6 +32,14 @@ const ProductBarcodePrintSelect = () => {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<BarcodeLabel[]>([]);
   const [printLabels, setPrintLabels] = useState<BarcodeLabel[] | null>(null);
+  // flag qc-barcode-print — null = กำลังโหลด
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetchPrintLabelFlag()
+      .then(setEnabled)
+      .catch(() => setEnabled(false));
+  }, []);
 
   const selectedKeys = useMemo(() => new Set(selected.map(labelKey)), [selected]);
   const totalLabels = selected.reduce((sum, label) => sum + label.copies, 0);
@@ -82,9 +91,25 @@ const ProductBarcodePrintSelect = () => {
   };
 
   // พิมพ์ในหน้านี้ด้วย browser print — ส่ง array ใหม่ทุกครั้งเพื่อให้กดพิมพ์ซ้ำได้
-  const print = () => {
-    if (selected.length > 0) setPrintLabels([...selected]);
+  // เช็ก flag ซ้ำตอนกด เผื่อ admin ปิดระหว่างที่เปิดหน้าค้างไว้
+  const print = async () => {
+    if (selected.length === 0) return;
+    const allowed = await fetchPrintLabelFlag().catch(() => false);
+    setEnabled(allowed);
+    if (allowed) setPrintLabels([...selected]);
   };
+
+  if (enabled !== true) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center bg-slate-50 p-4">
+        <p className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-600 shadow-sm">
+          {enabled === null
+            ? "กำลังโหลด..."
+            : "หน้าพิมพ์ฉลาก QR บาร์โค้ดสินค้าปิดใช้งานอยู่ ติดต่อ admin ให้เปิดที่หน้า \"อนุมัติสแกนสินค้าไม่มีบาร์โค้ด\""}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-6">
@@ -245,7 +270,7 @@ const ProductBarcodePrintSelect = () => {
           <button
             type="button"
             disabled={selected.length === 0}
-            onClick={print}
+            onClick={() => void print()}
             className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-green-600 py-3 font-bold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Printer className="h-5 w-5" />

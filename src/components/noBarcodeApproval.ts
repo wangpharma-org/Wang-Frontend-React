@@ -44,6 +44,7 @@ export interface ApproverRow {
 export interface ApprovalSettings {
   enabled: boolean;
   barcode_edit_enabled: boolean;
+  print_label_enabled: boolean;
   approver_count: number;
   employees: ApproverRow[];
 }
@@ -100,6 +101,14 @@ export const fetchApprovalFlag = async (): Promise<boolean> => {
 export const fetchBarcodeEditFlag = async (): Promise<boolean> => {
   const res = await axios.get<{ enabled: boolean }>(
     `${approvalApiUrl}/barcode/flag`,
+    authHeaders()
+  );
+  return res.data.enabled;
+};
+
+export const fetchPrintLabelFlag = async (): Promise<boolean> => {
+  const res = await axios.get<{ enabled: boolean }>(
+    `${approvalApiUrl}/print-label/flag`,
     authHeaders()
   );
   return res.data.enabled;
