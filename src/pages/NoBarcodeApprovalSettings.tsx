@@ -5,6 +5,7 @@ import Swal from "sweetalert2";
 import { Copy, Eye, EyeOff, QrCode, RefreshCw, Search, ShieldCheck } from "lucide-react";
 import { downloadApprovalQrImage } from "../components/approvalQrImage";
 import {
+  ApprovalAction,
   ApprovalLog,
   ApprovalResult,
   ApprovalSettings,
@@ -17,6 +18,36 @@ type Tab = "approvers" | "logs";
 type LogFilter = "all" | ApprovalResult;
 
 const MASK = "•".repeat(APPROVAL_CODE_MAX_LENGTH);
+
+const ACTION_LABEL: Record<ApprovalAction, string> = {
+  show_qr: "แสดง QR",
+  barcode_update: "แก้บาร์โค้ด",
+  barcode_delete: "ลบบาร์โค้ด",
+  barcode_move_out: "ย้ายบาร์โค้ดออก",
+};
+
+const relatedLabel = (log: ApprovalLog) => {
+  if (!log.related_product_code) return "";
+  return log.action === "barcode_move_out"
+    ? ` (ย้ายไปสินค้า ${log.related_product_code})`
+    : ` (ย้ายมาจากสินค้า ${log.related_product_code})`;
+};
+
+type FlagKey = "enabled" | "barcode_edit_enabled" | "print_label_enabled";
+const FLAG_CONFIG: Record<FlagKey, { path: string; title: string }> = {
+  enabled: {
+    path: "flag",
+    title: "บังคับอนุมัติก่อนสแกนสินค้าที่ไม่มีบาร์โค้ด",
+  },
+  barcode_edit_enabled: {
+    path: "barcode/flag",
+    title: "แก้/ลบบาร์โค้ดจากหน้า QC (ต้องสแกนบัตร)",
+  },
+  print_label_enabled: {
+    path: "print-label/flag",
+    title: "หน้าพิมพ์ฉลาก QR บาร์โค้ดสินค้า",
+  },
+};
 
 const errorMessage = (err: unknown) =>
   (err as AxiosError<{ message?: string }>).response?.data?.message ??
@@ -69,7 +100,7 @@ const NoBarcodeApprovalSettings = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [busyEmp, setBusyEmp] = useState<string | null>(null);
-  const [flagBusy, setFlagBusy] = useState(false);
+  const [flagBusy, setFlagBusy] = useState<FlagKey | null>(null);
   // รหัสเต็มเก็บไว้เฉพาะในหน้านี้ตอน admin กดแสดง/เพิ่งสร้าง
   const [revealed, setRevealed] = useState<Record<string, string>>({});
 
@@ -129,13 +160,13 @@ const NoBarcodeApprovalSettings = () => {
     );
   }, [settings, search]);
 
-  const toggleFlag = async () => {
+  const toggleFlag = async (key: FlagKey) => {
     if (!settings) return;
-    const next = !settings.enabled;
+    const next = !settings[key];
     const action = next ? "เปิด" : "ปิด";
     const confirm = await Swal.fire({
       icon: "question",
-      title: `${action}การบังคับอนุมัติก่อนสแกนสินค้าที่ไม่มีบาร์โค้ด`,
+      title: `${action}: ${FLAG_CONFIG[key].title}`,
       text: "มีผลกับหน้า QC ทุกเครื่องทันที",
       showCancelButton: true,
       confirmButtonText: `ยืนยัน${action}`,
@@ -143,14 +174,18 @@ const NoBarcodeApprovalSettings = () => {
       reverseButtons: true,
     });
     if (!confirm.isConfirmed) return;
-    setFlagBusy(true);
+    setFlagBusy(key);
     try {
-      await axios.put(`${approvalApiUrl}/flag`, { enabled: next }, authHeaders());
-      setSettings({ ...settings, enabled: next });
+      await axios.put(
+        `${approvalApiUrl}/${FLAG_CONFIG[key].path}`,
+        { enabled: next },
+        authHeaders()
+      );
+      setSettings({ ...settings, [key]: next });
     } catch (err) {
       Swal.fire({ icon: "error", title: "ปรับสถานะไม่สำเร็จ", text: errorMessage(err) });
     } finally {
-      setFlagBusy(false);
+      setFlagBusy(null);
     }
   };
 
@@ -288,21 +323,30 @@ const NoBarcodeApprovalSettings = () => {
               ผู้มีสิทธิ์อนุมัติ {settings?.approver_count ?? 0} คน
             </p>
           </div>
-          <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3">
-            <span className="text-sm font-medium text-slate-700">
-              บังคับอนุมัติก่อนสแกนสินค้าที่ไม่มีบาร์โค้ด
-            </span>
-            <Switch
-              checked={settings?.enabled ?? false}
-              disabled={!settings || flagBusy}
-              onChange={() => void toggleFlag()}
-              label="บังคับอนุมัติก่อนสแกนสินค้าที่ไม่มีบาร์โค้ด"
-            />
-            <span
-              className={`text-sm font-bold ${settings?.enabled ? "text-green-600" : "text-slate-400"}`}
-            >
-              {settings?.enabled ? "เปิด" : "ปิด"}
-            </span>
+          <div className="flex flex-col gap-2">
+            {(Object.keys(FLAG_CONFIG) as FlagKey[]).map((key) => (
+              <div
+                key={key}
+                className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-4 py-3"
+              >
+                <span className="text-sm font-medium text-slate-700">
+                  {FLAG_CONFIG[key].title}
+                </span>
+                <div className="flex items-center gap-3">
+                  <Switch
+                    checked={settings?.[key] ?? false}
+                    disabled={!settings || flagBusy !== null}
+                    onChange={() => void toggleFlag(key)}
+                    label={FLAG_CONFIG[key].title}
+                  />
+                  <span
+                    className={`w-6 text-sm font-bold ${settings?.[key] ? "text-green-600" : "text-slate-400"}`}
+                  >
+                    {settings?.[key] ? "เปิด" : "ปิด"}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -477,6 +521,8 @@ const NoBarcodeApprovalSettings = () => {
                   <tr>
                     <th className="px-4 py-3 font-medium">วันเวลา</th>
                     <th className="px-4 py-3 font-medium">ผู้อนุมัติ</th>
+                    <th className="px-4 py-3 font-medium">ประเภท</th>
+                    <th className="px-4 py-3 font-medium">บาร์โค้ด (เดิม → ใหม่)</th>
                     <th className="px-4 py-3 font-medium">รหัสสินค้า</th>
                     <th className="px-4 py-3 font-medium">รายละเอียดสินค้า</th>
                     <th className="px-4 py-3 font-medium">เลขบิล</th>
@@ -487,13 +533,13 @@ const NoBarcodeApprovalSettings = () => {
                 <tbody className="divide-y divide-slate-100">
                   {logLoading ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
+                      <td colSpan={9} className="px-4 py-10 text-center text-slate-400">
                         กำลังโหลด...
                       </td>
                     </tr>
                   ) : logs.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
+                      <td colSpan={9} className="px-4 py-10 text-center text-slate-400">
                         ยังไม่มี Log
                       </td>
                     </tr>
@@ -506,6 +552,16 @@ const NoBarcodeApprovalSettings = () => {
                         <td className="px-4 py-3">
                           {log.approver_emp_code
                             ? `${log.approver_emp_code} ${log.approver_name ?? ""}`
+                            : "—"}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {ACTION_LABEL[log.action] ?? log.action}
+                        </td>
+                        <td className="px-4 py-3 font-mono whitespace-nowrap">
+                          {log.barcode_slot
+                            ? `ช่อง ${log.barcode_slot}: ${log.old_barcode ?? "(ว่าง)"} → ${
+                                log.new_barcode ?? "ลบ"
+                              }${relatedLabel(log)}`
                             : "—"}
                         </td>
                         <td className="px-4 py-3 font-mono">{log.product_code}</td>

@@ -45,6 +45,7 @@ import RTApproval from "./pages/RTApproval";
 import WorklogPage from "./pages/WorklogPage";
 import TaskApprovalPage from "./pages/TaskApprovalPage";
 import RecycleBoxBarcode from "./pages/RecycleBoxBarcode";
+import ProductBarcodePrintSelect from "./pages/ProductBarcodePrintSelect";
 import ReturnReceipt from "./pages/ReturnReceipt";
 import ReturnReceiptPrint from "./pages/ReturnReceiptPrint";
 import ProductNameChangeApproval from "./pages/ProductNameChangeApproval";
@@ -423,6 +424,17 @@ function App() {
                 <Navbar />
                 <RequireAuth>
                   <NoBarcodeApprovalSettings />
+                </RequireAuth>
+              </div>
+            }
+          />
+          <Route
+            path="/product-barcode-print-select"
+            element={
+              <div>
+                <Navbar />
+                <RequireAuth>
+                  <ProductBarcodePrintSelect />
                 </RequireAuth>
               </div>
             }

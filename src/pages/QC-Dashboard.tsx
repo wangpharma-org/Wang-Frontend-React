@@ -33,9 +33,14 @@ import WaitingRTWidget from "../components/WaitingRTWidget";
 import NoBarcodeApprovalModal, {
   type ApprovalTarget,
 } from "../components/NoBarcodeApprovalModal";
+import BarcodeEditModal, {
+  type BarcodeEditTarget,
+} from "../components/BarcodeEditModal";
 import {
   type ApprovalInfo,
+  type ProductBarcodes,
   fetchApprovalFlag,
+  fetchBarcodeEditFlag,
 } from "../components/noBarcodeApproval";
 
 const TAB_KEY = "qc-dashboard";
@@ -439,6 +444,9 @@ const QCDashboard = () => {
   const [approvals, setApprovals] = useState<Record<string, ApprovalInfo>>({});
   const [approvalTarget, setApprovalTarget] = useState<ApprovalTarget | null>(null);
   const [qrApproval, setQrApproval] = useState<ApprovalInfo | null>(null);
+  // แก้/ลบบาร์โค้ดสินค้า ต้องสแกนบัตรผู้อนุมัติทุกครั้ง (flag qc-barcode-edit)
+  const [barcodeEditFlag, setBarcodeEditFlag] = useState<boolean>(false);
+  const [barcodeEditTarget, setBarcodeEditTarget] = useState<BarcodeEditTarget | null>(null);
 
   // State เก็บไอดีห้องของการต่อ WebSocket
   const [myRoom, setMyRoom] = useState<string | null>(null);
@@ -1246,6 +1254,7 @@ const QCDashboard = () => {
     setQrApproval(null);
     setApprovals({});
     setApprovalTarget(null);
+    setBarcodeEditTarget(null);
     setSHRunningArray(null);
     setAddShRunningArray(null);
     setErrMsgSubmit(null);
@@ -2344,6 +2353,79 @@ const QCDashboard = () => {
           order.product.product_code === target.product_code
       );
     if (so) showProductQr(so.product, info);
+  };
+
+  const checkBarcodeEditFlag = async (): Promise<boolean> => {
+    try {
+      const enabled = await fetchBarcodeEditFlag();
+      setBarcodeEditFlag(enabled);
+      return enabled;
+    } catch {
+      return barcodeEditFlag;
+    }
+  };
+
+  useEffect(() => {
+    void checkBarcodeEditFlag();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const openBarcodeEdit = async (so: ShoppingOrder) => {
+    if (!(await checkBarcodeEditFlag())) return;
+    setBarcodeEditTarget({
+      product_name: so.product_name_at_order ?? so.product.product_name,
+      sh_running: so.sh_running,
+      so_running: so.so_running,
+      barcodes: {
+        product_code: so.product.product_code,
+        product_barcode: so.product.product_barcode || null,
+        product_barcode2: so.product.product_barcode2 || null,
+        product_barcode3: so.product.product_barcode3 || null,
+      },
+    });
+  };
+
+  // อัปเดตทุกบิลที่มีสินค้านี้ (และสินค้าที่ถูกย้ายบาร์โค้ดออก) เพื่อให้สแกนได้ทันทีโดยไม่ต้องโหลดร้านใหม่
+  const handleBarcodeSaved = (
+    product: ProductBarcodes,
+    info: ApprovalInfo,
+    movedFrom: ProductBarcodes[]
+  ) => {
+    const barcodesByCode = new Map(
+      [product, ...movedFrom].map((p) => [
+        p.product_code,
+        {
+          product_barcode: p.product_barcode ?? "",
+          product_barcode2: p.product_barcode2 ?? "",
+          product_barcode3: p.product_barcode3 ?? "",
+        },
+      ])
+    );
+    const updateOrder = (order: ShoppingOrder): ShoppingOrder => {
+      const barcodes = barcodesByCode.get(order.product.product_code);
+      return barcodes
+        ? { ...order, product: { ...order.product, ...barcodes } }
+        : order;
+    };
+    setDataQC((prev) => {
+      if (!prev) return null;
+      if (Array.isArray(prev)) {
+        return prev.map((root) => ({
+          ...root,
+          shoppingOrders: root.shoppingOrders.map(updateOrder),
+        }));
+      }
+      return { ...prev, shoppingOrders: prev.shoppingOrders.map(updateOrder) };
+    });
+    setBarcodeEditTarget(null);
+    inputBarcode.current?.focus();
+    void Swal.fire({
+      icon: "success",
+      title: "บันทึกบาร์โค้ดแล้ว",
+      text: `อนุมัติโดย ${approverLabel(info)}`,
+      timer: 1500,
+      showConfirmButton: false,
+    });
   };
 
   const approverLabel = (info: ApprovalInfo) =>
@@ -4505,6 +4587,16 @@ const QCDashboard = () => {
                                       <p className="text-base pb-1 border-b-2 border-blue-200">
                                         {so?.product?.product_barcode3}
                                       </p>
+                                      {barcodeEditFlag && (
+                                        <button
+                                          className="mt-2 text-sm font-bold text-white p-1 px-2 rounded-sm cursor-pointer bg-blue-500 hover:bg-blue-600"
+                                          onClick={() => {
+                                            void openBarcodeEdit(so);
+                                          }}
+                                        >
+                                          แก้บาร์โค้ด
+                                        </button>
+                                      )}
                                     </div>
                                   </td>
                                   <td className="py-4 text-lg border-r-2 border-blue-200">
@@ -5488,6 +5580,18 @@ const QCDashboard = () => {
           onApproved={handleApproved}
           onClose={() => {
             setApprovalTarget(null);
+            inputBarcode.current?.focus();
+          }}
+        />
+      )}
+      {barcodeEditTarget && (
+        <BarcodeEditModal
+          target={barcodeEditTarget}
+          packerLabel={packerLabel}
+          station={myUUIDRef.current}
+          onSaved={handleBarcodeSaved}
+          onClose={() => {
+            setBarcodeEditTarget(null);
             inputBarcode.current?.focus();
           }}
         />
