@@ -19,6 +19,9 @@ import updateStockIcon from "../assets/shopping-cart-add.png";
 import chartIcon from "../assets/chat-arrow-grow.png";
 import settingsIcon from "../assets/settings.png";
 import { useNavigate } from "react-router";
+import { fetchPrintLabelFlag } from "../components/noBarcodeApproval";
+
+const PRINT_LABEL_HREF = "/product-barcode-print-select";
 const listMenu = [
   {
     id: 24,
@@ -189,7 +192,7 @@ const listMenu = [
   {
     id: 26,
     name: "พิมพ์ฉลาก QR บาร์โค้ดสินค้า",
-    href: "/product-barcode-print-select",
+    href: PRINT_LABEL_HREF,
     imageSrc: printerIcon,
     admin: false,
   },
@@ -223,6 +226,11 @@ const Home = () => {
     const fetchVisibility = async () => {
       const results = await Promise.all(
         listMenu.map(async (menu) => {
+          // เมนูพิมพ์ฉลาก QR คุมด้วย flag qc-barcode-print (ตั้งที่หน้า /no-barcode-approval) — โหลดไม่ได้ให้ซ่อน
+          if (menu.href === PRINT_LABEL_HREF) {
+            const visible = await fetchPrintLabelFlag().catch(() => false);
+            return { id: menu.id, visible };
+          }
           try {
             const res = await axios.get(
               `${import.meta.env.VITE_API_URL_VERIFY_ORDER}/api/hide-button/${menu.id}`
