@@ -187,6 +187,13 @@ const listMenu = [
     admin: true,
   },
   {
+    id: 26,
+    name: "พิมพ์ฉลาก QR บาร์โค้ดสินค้า",
+    href: "/product-barcode-print-select",
+    imageSrc: printerIcon,
+    admin: false,
+  },
+  {
     id: 23,
     name: "ตั้งค่าระบบไฟ",
     href: "/floor-light-operators",
