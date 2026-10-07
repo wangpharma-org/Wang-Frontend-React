@@ -2,17 +2,33 @@ import axios from "axios";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
 
+type LimitMode = "TOTAL" | "ROUTE" | "NONE";
+
 interface EmployeeRoute {
   route_code: string;
   route_name: string;
+  max_stores_per_round: number | null;
 }
 
 interface EmployeeLoadingLimit {
   emp_code: string;
   emp_name: string;
+  limit_mode: LimitMode;
   max_stores_per_round: number;
   routes: EmployeeRoute[];
 }
+
+interface DraftLimit {
+  mode: LimitMode;
+  total: string;
+  routes: Record<string, string>;
+}
+
+const MODE_OPTIONS: { value: LimitMode; label: string }[] = [
+  { value: "TOTAL", label: "รวมทุกเส้นทาง" },
+  { value: "ROUTE", label: "แยกตามเส้นทาง" },
+  { value: "NONE", label: "ไม่จำกัด" },
+];
 
 const logisticApiUrl = import.meta.env.VITE_API_URL_LOGISTIC?.replace(
   /\/$/,
@@ -31,9 +47,39 @@ const responseMessage = (error: unknown, fallback: string) => {
   return typeof message === "string" ? message : fallback;
 };
 
+const toDraft = (employee: EmployeeLoadingLimit): DraftLimit => ({
+  mode: employee.limit_mode ?? "TOTAL",
+  total: String(employee.max_stores_per_round ?? ""),
+  routes: Object.fromEntries(
+    (employee.routes ?? []).map((route) => [
+      route.route_code,
+      route.max_stores_per_round == null
+        ? ""
+        : String(route.max_stores_per_round),
+    ]),
+  ),
+});
+
+const isStoreCount = (value: number) => Number.isInteger(value) && value >= 1;
+
+const savedSummary = (employee: EmployeeLoadingLimit) => {
+  if (employee.limit_mode === "NONE") return "ไม่จำกัดจำนวนร้าน";
+  if (employee.limit_mode === "ROUTE") {
+    return (employee.routes ?? [])
+      .map(
+        (route) =>
+          `${route.route_code}: ${route.max_stores_per_round ?? "ไม่จำกัด"}`,
+      )
+      .join(", ");
+  }
+  return `${employee.max_stores_per_round} ร้านต่อรอบ`;
+};
+
 const EmployeeLoadingLimitSection = () => {
   const [employees, setEmployees] = useState<EmployeeLoadingLimit[]>([]);
-  const [draftLimits, setDraftLimits] = useState<Record<string, string>>({});
+  const [draftLimits, setDraftLimits] = useState<Record<string, DraftLimit>>(
+    {},
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,10 +103,7 @@ const EmployeeLoadingLimitSection = () => {
       setEmployees(data);
       setDraftLimits(
         Object.fromEntries(
-          data.map((employee) => [
-            employee.emp_code,
-            String(employee.max_stores_per_round),
-          ]),
+          data.map((employee) => [employee.emp_code, toDraft(employee)]),
         ),
       );
     } catch (fetchError) {
@@ -89,38 +132,85 @@ const EmployeeLoadingLimitSection = () => {
     );
   }, [employees, searchTerm]);
 
-  const saveLimit = async (empCode: string) => {
-    const value = Number(draftLimits[empCode]);
-    if (!Number.isInteger(value) || value < 1) {
-      await Swal.fire({
-        icon: "warning",
-        title: "จำนวนร้านไม่ถูกต้อง",
-        text: "กรุณาระบุจำนวนเต็มตั้งแต่ 1 ขึ้นไป",
+  const updateDraft = useCallback(
+    (empCode: string, change: (draft: DraftLimit) => DraftLimit) => {
+      setDraftLimits((current) => {
+        const draft = current[empCode];
+        if (!draft) return current;
+        return { ...current, [empCode]: change(draft) };
       });
-      return;
+    },
+    [],
+  );
+
+  const saveLimit = async (employee: EmployeeLoadingLimit) => {
+    const empCode = employee.emp_code;
+    const draft = draftLimits[empCode];
+    if (!draft || !logisticApiUrl) return;
+
+    const payload: {
+      limit_mode: LimitMode;
+      max_stores_per_round?: number;
+      route_limits?: { route_code: string; max_stores_per_round: number | null }[];
+    } = { limit_mode: draft.mode };
+
+    if (draft.mode === "TOTAL") {
+      const value = Number(draft.total);
+      if (!isStoreCount(value)) {
+        await Swal.fire({
+          icon: "warning",
+          title: "จำนวนร้านไม่ถูกต้อง",
+          text: "กรุณาระบุจำนวนเต็มตั้งแต่ 1 ขึ้นไป",
+        });
+        return;
+      }
+      payload.max_stores_per_round = value;
     }
-    if (!logisticApiUrl) return;
+
+    if (draft.mode === "ROUTE") {
+      const routeLimits = (employee.routes ?? []).map((route) => {
+        const raw = (draft.routes[route.route_code] ?? "").trim();
+        return {
+          route_code: route.route_code,
+          max_stores_per_round: raw === "" ? null : Number(raw),
+        };
+      });
+      const invalidRoute = routeLimits.find(
+        (route) =>
+          route.max_stores_per_round !== null &&
+          !isStoreCount(route.max_stores_per_round),
+      );
+      if (invalidRoute) {
+        await Swal.fire({
+          icon: "warning",
+          title: "จำนวนร้านไม่ถูกต้อง",
+          text: `เส้นทาง ${invalidRoute.route_code}: กรุณาระบุจำนวนเต็มตั้งแต่ 1 ขึ้นไป หรือเว้นว่างถ้าไม่จำกัด`,
+        });
+        return;
+      }
+      payload.route_limits = routeLimits;
+    }
 
     setSavingEmpCode(empCode);
     try {
       const response = await axios.patch<EmployeeLoadingLimit>(
         `${logisticApiUrl}/api/logistic/employee/${encodeURIComponent(empCode)}/loading-limit`,
-        { max_stores_per_round: value },
+        payload,
         authHeaders(),
       );
       setEmployees((current) =>
-        current.map((employee) =>
-          employee.emp_code === empCode ? response.data : employee,
+        current.map((item) =>
+          item.emp_code === empCode ? response.data : item,
         ),
       );
       setDraftLimits((current) => ({
         ...current,
-        [empCode]: String(response.data.max_stores_per_round),
+        [empCode]: toDraft(response.data),
       }));
       await Swal.fire({
         icon: "success",
         title: "บันทึกสำเร็จ",
-        text: `${response.data.emp_code} - ${response.data.emp_name}: ${response.data.max_stores_per_round} ร้านต่อรอบ`,
+        text: `${response.data.emp_code} - ${response.data.emp_name}: ${savedSummary(response.data)}`,
       });
     } catch (saveError) {
       await Swal.fire({
@@ -141,7 +231,9 @@ const EmployeeLoadingLimitSection = () => {
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
         <div className="p-6 border-b border-gray-200">
           <p className="text-sm text-gray-600 mb-4">
-            ค่าเริ่มต้น 10 ร้าน โดยนับรวมทุกเส้นทางของพนักงานในรอบเดียวกัน
+            เลือกได้รายคนว่าจะจำกัดรวมทุกเส้นทาง (ค่าเริ่มต้น 10 ร้าน)
+            จำกัดแยกตามเส้นทาง หรือไม่จำกัด
+            เส้นทางที่เว้นว่างไว้จะไม่จำกัดจำนวนร้าน
           </p>
           <input
             type="text"
@@ -174,55 +266,120 @@ const EmployeeLoadingLimitSection = () => {
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
-            {filteredEmployees.map((employee) => (
-              <div key={employee.emp_code} className="p-5">
-                <div className="flex flex-wrap justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-gray-900">
-                      {employee.emp_code} - {employee.emp_name}
-                    </p>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {employee.routes.map((route) => (
-                        <span
-                          key={route.route_code}
-                          className="px-2 py-1 text-xs rounded bg-blue-50 text-blue-700 border border-blue-200"
-                        >
-                          {route.route_code} - {route.route_name}
-                        </span>
-                      ))}
+            {filteredEmployees.map((employee) => {
+              const draft = draftLimits[employee.emp_code];
+              const mode = draft?.mode ?? "TOTAL";
+              const saving = savingEmpCode === employee.emp_code;
+              return (
+                <div key={employee.emp_code} className="p-5">
+                  <div className="flex flex-wrap justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-900">
+                        {employee.emp_code} - {employee.emp_name}
+                      </p>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {MODE_OPTIONS.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() =>
+                              updateDraft(employee.emp_code, (current) => ({
+                                ...current,
+                                mode: option.value,
+                              }))
+                            }
+                            disabled={saving}
+                            className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                              mode === option.value
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                      {mode !== "ROUTE" && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {employee.routes.map((route) => (
+                            <span
+                              key={route.route_code}
+                              className="px-2 py-1 text-xs rounded bg-blue-50 text-blue-700 border border-blue-200"
+                            >
+                              {route.route_code} - {route.route_name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-end gap-2">
+                      {mode === "TOTAL" && (
+                        <label className="text-sm text-gray-600">
+                          ร้านต่อรอบ
+                          <input
+                            type="number"
+                            min={1}
+                            value={draft?.total ?? ""}
+                            onChange={(event) =>
+                              updateDraft(employee.emp_code, (current) => ({
+                                ...current,
+                                total: event.target.value,
+                              }))
+                            }
+                            disabled={saving}
+                            className="block w-28 mt-1 px-3 py-2 border border-gray-300 rounded-lg"
+                          />
+                        </label>
+                      )}
+                      {mode === "NONE" && (
+                        <p className="text-sm text-gray-500 py-2">
+                          ไม่จำกัดจำนวนร้าน
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => void saveLimit(employee)}
+                        disabled={savingEmpCode !== null}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {saving ? "กำลังบันทึก..." : "บันทึก"}
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-end gap-2">
-                    <label className="text-sm text-gray-600">
-                      ร้านต่อรอบ
-                      <input
-                        type="number"
-                        min={1}
-                        value={draftLimits[employee.emp_code] ?? ""}
-                        onChange={(event) =>
-                          setDraftLimits((current) => ({
-                            ...current,
-                            [employee.emp_code]: event.target.value,
-                          }))
-                        }
-                        disabled={savingEmpCode === employee.emp_code}
-                        className="block w-28 mt-1 px-3 py-2 border border-gray-300 rounded-lg"
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => void saveLimit(employee.emp_code)}
-                      disabled={savingEmpCode !== null}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                    >
-                      {savingEmpCode === employee.emp_code
-                        ? "กำลังบันทึก..."
-                        : "บันทึก"}
-                    </button>
-                  </div>
+                  {mode === "ROUTE" && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
+                      {employee.routes.map((route) => (
+                        <label
+                          key={route.route_code}
+                          className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-700"
+                        >
+                          <span className="min-w-0 truncate">
+                            {route.route_code} - {route.route_name}
+                          </span>
+                          <input
+                            type="number"
+                            min={1}
+                            value={draft?.routes[route.route_code] ?? ""}
+                            onChange={(event) =>
+                              updateDraft(employee.emp_code, (current) => ({
+                                ...current,
+                                routes: {
+                                  ...current.routes,
+                                  [route.route_code]: event.target.value,
+                                },
+                              }))
+                            }
+                            disabled={saving}
+                            placeholder="ไม่จำกัด"
+                            className="w-24 shrink-0 px-3 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-900"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
