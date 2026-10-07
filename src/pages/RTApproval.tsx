@@ -112,7 +112,15 @@ interface GroupedItem extends RTApprovalItem {
   _count: number;
 }
 
-const STATUS_FILTERS = ["Pending", "Approved", "Duplicate", "all", "Done", "NotActive"] as const;
+interface BackOrderResponse {
+  data: RTApprovalItem[];
+  total: number;
+  totalPages: number;
+  currentPage: number;
+  limit: number;
+}
+
+const STATUS_FILTERS = ["Pending", "Approved", "Duplicate", "all", "Done", "NotActive", "BackOrder"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 function statusDisplay(status: string): { label: string; color: string } {
@@ -176,6 +184,7 @@ function filterLabel(s: StatusFilter): string {
   if (s === "Done") return "ดำเนินการแล้ว";
   if (s === "Duplicate") return "ซ้ำ";
   if (s === "NotActive") return "ช่วงปิดระบบ";
+  if (s === "BackOrder") return "รายการ Back Order";
   return "ทั้งหมด";
 }
 
@@ -214,6 +223,7 @@ export default function RTApproval() {
     "สินค้าจริงไม่มี",
     "ให้สินค้าอื่นทดแทน",
     "สินค้ามีการสลับกัน ตรวจสอบเพิ่ม",
+    "Back Order",
     "อื่นๆ"
   ];
 
@@ -229,6 +239,15 @@ export default function RTApproval() {
   const [active, setActive] = useState<boolean>(true);
   const [purchestLoading, setPurchestLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [backOrderData, setBackOrderData] = useState<RTApprovalItem[]>([]);
+  const [backOrderLoading, setBackOrderLoading] = useState(false);
+  const [backOrderSearch, setBackOrderSearch] = useState("");
+  const [backOrderKeyword, setBackOrderKeyword] = useState("");
+  const [backOrderPage, setBackOrderPage] = useState(1);
+  const [backOrderTotal, setBackOrderTotal] = useState(0);
+  const [backOrderTotalPages, setBackOrderTotalPages] = useState(1);
+  const [backOrderLimit, setBackOrderLimit] = useState(100);
+  const [backOrderRefresh, setBackOrderRefresh] = useState(0);
 
   const filteredData = (Array.isArray(data) ? data : []).filter((item) => {
     const matchStatus = statusFilter === "all" || item.status === statusFilter;
@@ -340,6 +359,50 @@ export default function RTApproval() {
 
     return () => { clearInterval(interval); };
   }, [active]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setBackOrderKeyword(backOrderSearch.trim());
+      setBackOrderPage(1);
+    }, 400);
+    return () => { clearTimeout(timer); };
+  }, [backOrderSearch]);
+
+  useEffect(() => {
+    if (statusFilter !== "BackOrder") return;
+    // ยกเลิก request เก่า ไม่งั้นผลของ keyword/หน้าเดิมอาจมาทับผลล่าสุด
+    const controller = new AbortController();
+    setBackOrderLoading(true);
+    axios
+      .get<BackOrderResponse>(`${VITE_API_URL_ORDER}/api/rt-request/back-order`, {
+        params: { page: backOrderPage, pro_code: backOrderKeyword || undefined },
+        headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
+        signal: controller.signal,
+      })
+      .then((res) => {
+        setBackOrderData(Array.isArray(res.data?.data) ? res.data.data : []);
+        setBackOrderTotal(res.data?.total ?? 0);
+        setBackOrderTotalPages(Math.max(1, res.data?.totalPages ?? 1));
+        setBackOrderLimit(res.data?.limit ?? 100);
+        setBackOrderLoading(false);
+      })
+      .catch((error: unknown) => {
+        if (axios.isCancel(error)) return;
+        console.error("Failed to fetch back order list", error);
+        setBackOrderData([]);
+        setBackOrderTotal(0);
+        setBackOrderTotalPages(1);
+        setBackOrderLoading(false);
+        Swal.fire({
+          icon: 'error',
+          title: 'เกิดข้อผิดพลาด!',
+          text: 'ไม่สามารถโหลดรายการ Back Order ได้ กรุณาลองใหม่อีกครั้ง',
+          confirmButtonText: 'ตกลง',
+          confirmButtonColor: '#ef4444'
+        });
+      });
+    return () => { controller.abort(); };
+  }, [statusFilter, backOrderPage, backOrderKeyword, backOrderRefresh]);
 
   // // Auto-fetch purchest data when modal opens and purchest data is missing
   // useEffect(() => {
@@ -608,9 +671,11 @@ export default function RTApproval() {
 
   const isClickable = (status: string) => status === "Pending";
 
-  const tableData = statusFilter === "Duplicate" ? groupedDuplicates :
-    statusFilter === "Pending" ? groupedPending.length > 0 ? groupedPending : filteredData :
-      filteredData;
+  const isBackOrderView = statusFilter === "BackOrder";
+  const tableData = isBackOrderView ? backOrderData :
+    statusFilter === "Duplicate" ? groupedDuplicates :
+      statusFilter === "Pending" ? groupedPending.length > 0 ? groupedPending : filteredData :
+        filteredData;
   const isDuplicateView = statusFilter === "Duplicate";
   const isPendingGroupView = statusFilter === "Pending" && groupedPending.length > 0;
 
@@ -642,6 +707,7 @@ export default function RTApproval() {
         'Duplicate': 'รายการซ้ำ',
         'Done': 'ดำเนินการแล้ว',
         'NotActive': 'ช่วงปิดระบบ',
+        'BackOrder': 'Back Order',
         'all': 'ทั้งหมด'
       }[statusFilter] || statusFilter;
 
@@ -850,6 +916,7 @@ export default function RTApproval() {
               onClick={() => {
                 setError(null);
                 fetchData();
+                if (isBackOrderView) setBackOrderRefresh((value) => value + 1);
               }}
               disabled={loading}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -886,29 +953,41 @@ export default function RTApproval() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="ค้นหา / พนักงาน / ร้าน / รหัสสินค้า / ชื่อสินค้า / ชั้น / SO / SH / จำนวน / หน่วย / ฝ่ายขาย / เส้นทาง / หมายเหตุ..."
-            className="flex-1 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-          <div className="flex items-center gap-2">
+          {isBackOrderView ? (
             <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              type="text"
+              value={backOrderSearch}
+              onChange={(e) => setBackOrderSearch(e.target.value)}
+              placeholder="ค้นหารหัสสินค้า..."
+              className="flex-1 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
-            {dateFilter && (
-              <button
-                onClick={() => setDateFilter("")}
-                className="px-3 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-              >
-                ล้าง
-              </button>
-            )}
-          </div>
+          ) : (
+            <>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="ค้นหา / พนักงาน / ร้าน / รหัสสินค้า / ชื่อสินค้า / ชั้น / SO / SH / จำนวน / หน่วย / ฝ่ายขาย / เส้นทาง / หมายเหตุ..."
+                className="flex-1 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+                {dateFilter && (
+                  <button
+                    onClick={() => setDateFilter("")}
+                    className="px-3 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                  >
+                    ล้าง
+                  </button>
+                )}
+              </div>
+            </>
+          )}
           <div className="flex gap-2 flex-wrap">
             {STATUS_FILTERS.map((s) => (
               <button
@@ -925,7 +1004,7 @@ export default function RTApproval() {
           </div>
         </div>
 
-        {loading ? (
+        {loading || (isBackOrderView && backOrderLoading) ? (
           <div className="text-center text-gray-800 py-10">
             <div className="flex flex-col items-center gap-3">
               <svg className="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -1003,7 +1082,7 @@ export default function RTApproval() {
                     >
                       <td className="py-4 px-3 text-sm font-medium text-gray-600">
                         <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-xs font-bold">
-                          {index + 1}
+                          {isBackOrderView ? (backOrderPage - 1) * backOrderLimit + index + 1 : index + 1}
                         </span>
                       </td>
                       <td className="py-4 px-3 text-sm max-w-[120px]">
@@ -1197,7 +1276,7 @@ export default function RTApproval() {
                       </td>
                       <td className="py-4 px-3 text-sm text-center text-gray-600">
                         <div className="space-y-1">
-                          <div className="font-medium">{dayjs(item.created_at).format('DD/MM')}</div>
+                          <div className="font-medium">{dayjs(item.created_at).format(isBackOrderView ? 'DD/MM/YY' : 'DD/MM')}</div>
                           <div className="text-xs">{dayjs(item.created_at).format('HH:mm')}</div>
                         </div>
                       </td>
@@ -1241,6 +1320,29 @@ export default function RTApproval() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+        {isBackOrderView && !backOrderLoading && !loading && !error && (
+          <div className="flex flex-wrap items-center justify-between gap-3 mt-4 text-sm">
+            <p className="text-gray-500">
+              ทั้งหมด {backOrderTotal.toLocaleString()} รายการ · หน้า {backOrderPage}/{backOrderTotalPages}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setBackOrderPage((value) => value - 1)}
+                disabled={backOrderPage <= 1}
+                className="px-4 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                ก่อนหน้า
+              </button>
+              <button
+                onClick={() => setBackOrderPage((value) => value + 1)}
+                disabled={backOrderPage >= backOrderTotalPages}
+                className="px-4 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                ถัดไป
+              </button>
+            </div>
           </div>
         )}
       </div>
