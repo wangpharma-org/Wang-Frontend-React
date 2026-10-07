@@ -1,0 +1,14 @@
+/* OPHMBC-309 — พิมพ์ฉลาก QR ในหน้าเดิมด้วย browser print: ตอนพิมพ์ซ่อนทุกอย่างยกเว้นส่วนฉลาก */
+#barcode-label-print {
+  display: none;
+}
+
+@media print {
+  body.printing-barcode-labels > *:not(#barcode-label-print) {
+    display: none !important;
+  }
+
+  body.printing-barcode-labels #barcode-label-print {
+    display: block !important;
+  }
+}
