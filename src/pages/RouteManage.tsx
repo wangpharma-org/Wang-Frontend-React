@@ -17,6 +17,7 @@ import {
 import RouteBatchSortableCard, { type EditorGroup } from "../components/RouteBatchSortableCard";
 import EmployeeLoadingLimitSection from "../components/EmployeeLoadingLimitSection";
 import OrderBlockSection from "../components/OrderBlockSection";
+import RouteBatchBlockGuide from "../components/RouteBatchBlockGuide";
 
 export interface Route {
     route_code: string;
@@ -39,6 +40,14 @@ interface RouteBatchGroupStatus {
     name: string | null;
     min_remaining: number;
     departure_time: string | null;
+    block_before_minutes: number | null;
+    // เวลาเริ่มระงับที่ backend คำนวณให้ (departure_time - block_before_minutes)
+    block_time: string | null;
+    // เวลาสิ้นสุดของวันนี้ที่ระงับก่อนออกรถจะปลด — null = วันนี้ไม่ได้เปิดระงับการจัดอัตโนมัติ
+    block_until: string | null;
+    // feature flag route-departure-block — false = ปิดทั้งระบบ
+    departure_block_enabled: boolean;
+    is_departure_blocked: boolean;
     opened: boolean;
     opened_at: string | null;
     routes: RouteBatchGroupRoute[];
@@ -58,6 +67,7 @@ const makeEditorGroup = (): EditorGroup => ({
     name: "",
     min_remaining: "",
     departure_time: "",
+    block_before_minutes: "",
     route_codes: [],
 });
 
@@ -417,6 +427,8 @@ const RouteManage = () => {
                     name: g.name ?? "",
                     min_remaining: String(g.min_remaining),
                     departure_time: g.departure_time ?? "",
+                    block_before_minutes:
+                        g.block_before_minutes === null ? "" : String(g.block_before_minutes),
                     route_codes: g.routes.map((r) => r.route_code),
                 }))
             );
@@ -492,7 +504,7 @@ const RouteManage = () => {
 
     const handleGroupFieldChange = (
         index: number,
-        field: "name" | "min_remaining" | "departure_time",
+        field: "name" | "min_remaining" | "departure_time" | "block_before_minutes",
         value: string
     ) => {
         setEditorGroups((prev) =>
@@ -546,6 +558,17 @@ const RouteManage = () => {
                 });
                 return;
             }
+            if (group.block_before_minutes !== "") {
+                const minutes = Number(group.block_before_minutes);
+                if (!group.departure_time || !Number.isInteger(minutes) || minutes < 1 || minutes > 1440) {
+                    Swal.fire({
+                        icon: "error",
+                        title: "บันทึกไม่สำเร็จ",
+                        text: `ชุด "${group.name || "(ไม่มีชื่อ)"}" ต้องระบุเวลาออกรถ และเวลาระงับเป็นนาที 1-1440`,
+                    });
+                    return;
+                }
+            }
         }
 
         setSavingGroups(true);
@@ -557,6 +580,11 @@ const RouteManage = () => {
                         name: g.name || undefined,
                         min_remaining: Number(g.min_remaining),
                         departure_time: g.departure_time || undefined,
+                        // ไม่มีเวลาออกรถ = ระงับไม่ได้ ส่ง null ไปล้างค่าเดิม
+                        block_before_minutes:
+                            g.departure_time && g.block_before_minutes !== ""
+                                ? Number(g.block_before_minutes)
+                                : null,
                         route_codes: g.route_codes,
                     })),
                 },
@@ -756,6 +784,7 @@ const RouteManage = () => {
                 {routeBatchSetting?.mode !== "batch" && (
                     <div className="mb-8">
                         <h2 className="text-xl font-bold mb-4 text-gray-800">ตั้งค่าชุดเส้นทาง (สำหรับโหมดเปิดทีละชุด)</h2>
+                        <RouteBatchBlockGuide />
                         <div className="bg-white rounded-lg shadow-lg p-6">
                             {loadingGroups ? (
                                 <div className="flex items-center text-gray-500">
@@ -789,6 +818,12 @@ const RouteManage = () => {
                                                     onChange={handleGroupFieldChange}
                                                     onToggleRoute={handleToggleRouteInGroup}
                                                     onRemove={handleRemoveGroup}
+                                                    blockUntil={
+                                                        routeBatchGroups.length > 0
+                                                            ? routeBatchGroups[0].block_until
+                                                            : undefined
+                                                    }
+                                                    blockEnabled={routeBatchGroups[0]?.departure_block_enabled}
                                                 />
                                             ))}
                                         </SortableContext>
@@ -871,6 +906,20 @@ const RouteManage = () => {
                                     <span className="font-semibold">
                                         #{group.position} {group.name || "(ไม่มีชื่อ)"}
                                         {group.departure_time ? ` — ออกรถ ${group.departure_time}` : ""}
+                                        {group.block_time
+                                            ? !group.departure_block_enabled
+                                                ? ` · ระงับ ${group.block_time} (ฟีเจอร์ถูกปิดอยู่)`
+                                                : group.block_until && group.block_time >= group.block_until
+                                                ? ` · ระงับ ${group.block_time} (วันนี้ไม่มีผล: เลยเวลาสิ้นสุด ${group.block_until})`
+                                                : group.block_until
+                                                ? ` · ระงับการจัด ${group.block_time}–${group.block_until} (ก่อนออก ${group.block_before_minutes} นาที)`
+                                                : ` · ระงับ ${group.block_time} (วันนี้ไม่มีผล)`
+                                            : ""}
+                                        {group.is_departure_blocked && (
+                                            <span className="ml-2 text-xs font-semibold px-2 py-1 rounded bg-red-600 text-white">
+                                                ระงับการจัดแล้ว
+                                            </span>
+                                        )}
                                     </span>
                                     <span
                                         className={`text-xs font-semibold px-2 py-1 rounded ${group.opened ? "bg-green-600 text-white" : "bg-gray-300 text-gray-700"
