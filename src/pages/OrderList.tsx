@@ -1421,7 +1421,36 @@ const OrderList = () => {
                                 }
 
                                 <div className="flex justify-between">
-                                  <div className="flex justify-start">
+                                  <div className="flex justify-start items-center">
+                                    {order.picking_status === "picking" && (
+                                      // แท่งเสียงเต้น (equalizer) = ร้านนี้กำลังจัด — ใช้ SVG animate ไม่ต้องเพิ่ม keyframes
+                                      <svg
+                                        className="mr-1 shrink-0"
+                                        width="14"
+                                        height="14"
+                                        viewBox="0 0 14 14"
+                                      >
+                                        <title>กำลังจัด</title>
+                                        {[
+                                          { x: 1, begin: "0s" },
+                                          { x: 5.5, begin: "-0.3s" },
+                                          { x: 10, begin: "-0.6s" },
+                                        ].map((bar) => (
+                                          <rect
+                                            key={bar.x}
+                                            x={bar.x}
+                                            y="4"
+                                            width="3"
+                                            height="10"
+                                            rx="1"
+                                            fill="#15803d"
+                                          >
+                                            <animate attributeName="y" values="10;1;6;10" dur="0.9s" begin={bar.begin} repeatCount="indefinite" />
+                                            <animate attributeName="height" values="4;13;8;4" dur="0.9s" begin={bar.begin} repeatCount="indefinite" />
+                                          </rect>
+                                        ))}
+                                      </svg>
+                                    )}
                                     <p>{order.mem_code}</p>&nbsp;
                                     <p className="truncate max-w-[170px]">
                                       {order.mem_name}
