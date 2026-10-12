@@ -21,6 +21,24 @@ const STICKER_HEIGHT = "1in";
 // qr = QR code บน A4 หน้าละ 4 ดวง / linear = บาร์โค้ดแท่ง CODE128 บนสติกเกอร์ 1.5x1 นิ้ว
 export type LabelFormat = "qr" | "linear";
 
+// เลข GTIN ที่ check digit ถูก (EAN-13 / EAN-8 / UPC-A) พิมพ์ตามมาตรฐานสินค้า — เลขอยู่ใต้แท่ง แท่งขอบยาวลงมา
+// ค่าอื่นๆ (เลขภายใน/ตัวอักษร) ใช้ CODE128
+const isValidGtin = (value: string) => {
+  const digits = value.split("").map(Number);
+  const check = digits.pop()!;
+  const sum = digits
+    .reverse()
+    .reduce((acc, digit, i) => acc + digit * (i % 2 === 0 ? 3 : 1), 0);
+  return (10 - (sum % 10)) % 10 === check;
+};
+
+const linearFormat = (value: string) => {
+  if (/^\d{13}$/.test(value) && isValidGtin(value)) return "EAN13";
+  if (/^\d{12}$/.test(value) && isValidGtin(value)) return "UPC";
+  if (/^\d{8}$/.test(value) && isValidGtin(value)) return "EAN8";
+  return "CODE128";
+};
+
 interface Props {
   // null = ไม่พิมพ์ / มีค่า = เปิดหน้าต่างพิมพ์ทันที
   labels: BarcodeLabel[] | null;
@@ -76,18 +94,22 @@ export default function BarcodeLabelPrint({ labels, onDone, format = "qr" }: Pro
               {label.name}
             </p>
             {/* svg ของ JsBarcode มี viewBox — ย่อให้พอดีความกว้างสติกเกอร์ด้วย CSS ได้ */}
-            <div className="my-[0.5mm] w-full [&_svg]:mx-auto [&_svg]:h-[12mm] [&_svg]:w-full">
+            {/* เลขบาร์โค้ดเป็นส่วนหนึ่งของ svg — fontSize เทียบกับ height ของแท่ง */}
+            <div className="mt-[0.5mm] w-full [&_svg]:mx-auto [&_svg]:h-[15mm] [&_svg]:w-full">
               <Barcode
-                value={label.barcode}
-                format="CODE128"
+                value={label.barcode.trim()}
+                format={linearFormat(label.barcode.trim())}
                 renderer="svg"
                 width={2}
-                height={90}
-                displayValue={false}
+                height={50}
+                displayValue
+                font="'Times New Roman', Times, serif"
+                fontOptions="bold"
+                fontSize={22}
+                textMargin={1}
                 margin={0}
               />
             </div>
-            <p className="w-full truncate font-mono text-[7pt] leading-tight">{label.barcode}</p>
           </div>
         ))}
       </div>,

@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { io, Socket } from "socket.io-client";
 import Modal from "../components/ModalQC";
 import Barcode from "react-barcode";
+import { Printer } from "lucide-react";
 import axios, { AxiosError } from "axios";
 import Marquee from "react-fast-marquee";
 import prepareIcon from "../assets/received.png";
@@ -36,11 +37,16 @@ import NoBarcodeApprovalModal, {
 import BarcodeEditModal, {
   type BarcodeEditTarget,
 } from "../components/BarcodeEditModal";
+import BarcodeLabelPrint from "../components/BarcodeLabelPrint";
 import {
   type ApprovalInfo,
+  type BarcodeLabel,
   type ProductBarcodes,
+  BARCODE_FIELD,
+  BARCODE_SLOTS,
   fetchApprovalFlag,
   fetchBarcodeEditFlag,
+  fetchPrintLabelFlag,
 } from "../components/noBarcodeApproval";
 
 const TAB_KEY = "qc-dashboard";
@@ -452,6 +458,9 @@ const QCDashboard = () => {
   const [qrApproval, setQrApproval] = useState<ApprovalInfo | null>(null);
   // แก้/ลบบาร์โค้ดสินค้า ต้องสแกนบัตรผู้อนุมัติทุกครั้ง (flag qc-barcode-edit)
   const [barcodeEditFlag, setBarcodeEditFlag] = useState<boolean>(false);
+  // OPHMBC-315: ปุ่มพิมพ์สติกเกอร์บาร์โค้ดแท่ง — คุมด้วย flag qc-barcode-print
+  const [printLabelFlag, setPrintLabelFlag] = useState<boolean>(false);
+  const [printLabels, setPrintLabels] = useState<BarcodeLabel[] | null>(null);
   const [barcodeEditTarget, setBarcodeEditTarget] = useState<BarcodeEditTarget | null>(null);
 
   // State เก็บไอดีห้องของการต่อ WebSocket
@@ -2426,6 +2435,34 @@ const QCDashboard = () => {
     void checkBarcodeEditFlag();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const checkPrintLabelFlag = async (): Promise<boolean> => {
+    try {
+      const enabled = await fetchPrintLabelFlag();
+      setPrintLabelFlag(enabled);
+      return enabled;
+    } catch {
+      return printLabelFlag;
+    }
+  };
+
+  useEffect(() => {
+    void checkPrintLabelFlag();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // เช็ก flag ซ้ำตอนกด เผื่อ admin ปิดระหว่างที่เปิดหน้าค้างไว้
+  const printBarcodeSticker = async (so: ShoppingOrder, barcode: string) => {
+    if (!(await checkPrintLabelFlag())) return;
+    setPrintLabels([
+      {
+        barcode,
+        product_code: so.product.product_code,
+        name: so.product_name_at_order ?? so.product.product_name,
+        copies: 1,
+      },
+    ]);
+  };
 
   const openBarcodeEdit = async (so: ShoppingOrder) => {
     if (!(await checkBarcodeEditFlag())) return;
@@ -4646,18 +4683,32 @@ const QCDashboard = () => {
                                   </td>
                                   <td className="py-4 text-lg border-r-2 border-blue-200">
                                     <div className="flex flex-col items-center justify-center text-center px-2">
-                                      <p
-                                        id={`barcode${index + 1}dashboard-qc`}
-                                        className="text-base pb-1 mb-1 border-b-2 border-blue-200"
-                                      >
-                                        {so?.product?.product_barcode}
-                                      </p>
-                                      <p className="text-base pb-1 mb-1 border-b-2 border-blue-200">
-                                        {so?.product?.product_barcode2}
-                                      </p>
-                                      <p className="text-base pb-1 border-b-2 border-blue-200">
-                                        {so?.product?.product_barcode3}
-                                      </p>
+                                      {BARCODE_SLOTS.map((slot) => {
+                                        const barcode = so?.product?.[BARCODE_FIELD[slot]]?.trim();
+                                        return (
+                                          <div
+                                            key={slot}
+                                            className={`flex items-center justify-center gap-1 text-base pb-1 border-b-2 border-blue-200 ${slot < 3 ? "mb-1" : ""}`}
+                                          >
+                                            <span id={slot === 1 ? `barcode${index + 1}dashboard-qc` : undefined}>
+                                              {so?.product?.[BARCODE_FIELD[slot]]}
+                                            </span>
+                                            {printLabelFlag && barcode && (
+                                              <button
+                                                type="button"
+                                                title="พิมพ์สติกเกอร์บาร์โค้ด"
+                                                aria-label={`พิมพ์สติกเกอร์บาร์โค้ด ${barcode}`}
+                                                className="cursor-pointer rounded-sm px-1 text-sm text-blue-600 hover:bg-blue-100"
+                                                onClick={() => {
+                                                  void printBarcodeSticker(so, barcode);
+                                                }}
+                                              >
+                                                <Printer className="h-4 w-4" />
+                                              </button>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
                                       {barcodeEditFlag && (
                                         <button
                                           className="mt-2 text-sm font-bold text-white p-1 px-2 rounded-sm cursor-pointer bg-blue-500 hover:bg-blue-600"
@@ -5667,6 +5718,14 @@ const QCDashboard = () => {
           }}
         />
       )}
+      <BarcodeLabelPrint
+        labels={printLabels}
+        format="linear"
+        onDone={() => {
+          setPrintLabels(null);
+          inputBarcode.current?.focus();
+        }}
+      />
       </div>
     );
   }
