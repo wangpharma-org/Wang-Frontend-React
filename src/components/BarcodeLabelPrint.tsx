@@ -103,7 +103,8 @@ export default function BarcodeLabelPrint({ labels, onDone, format = "qr" }: Pro
                 width={2}
                 height={50}
                 displayValue
-                font="monospace"
+                font="'Times New Roman', Times, serif"
+                fontOptions="bold"
                 fontSize={22}
                 textMargin={1}
                 margin={0}
