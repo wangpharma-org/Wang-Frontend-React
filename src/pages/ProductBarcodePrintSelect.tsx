@@ -36,7 +36,7 @@ const ProductBarcodePrintSelect = () => {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<BarcodeLabel[]>([]);
   const [printLabels, setPrintLabels] = useState<BarcodeLabel[] | null>(null);
-  const [format, setFormat] = useState<LabelFormat>("qr");
+  const [format, setFormat] = useState<LabelFormat>("linear");
   // flag qc-barcode-print — null = กำลังโหลด
   const [enabled, setEnabled] = useState<boolean | null>(null);
 
