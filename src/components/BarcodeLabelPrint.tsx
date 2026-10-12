@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { QRCodeSVG } from "qrcode.react";
+import Barcode from "react-barcode";
 import type { BarcodeLabel } from "./noBarcodeApproval";
 import "../css/barcode-label-print.css";
 
@@ -13,14 +14,21 @@ const PAGE_HEIGHT = "96vh";
 // QR สูงไม่เกิน 25% ของหน้า (A4 ≈ 7 ซม.) — ช่องละครึ่งหน้า เหลือที่ให้ชื่อและเลขบาร์โค้ด
 const QR_MAX_HEIGHT = "25vh";
 const PRINT_CLASS = "printing-barcode-labels";
+// ขนาดสติกเกอร์ม้วนของบาร์โค้ดแท่ง — แนวนอน กว้าง 1.5 นิ้ว x สูง 1 นิ้ว
+const STICKER_WIDTH = "1.5in";
+const STICKER_HEIGHT = "1in";
+
+// qr = QR code บน A4 หน้าละ 4 ดวง / linear = บาร์โค้ดแท่ง CODE128 บนสติกเกอร์ 1.5x1 นิ้ว
+export type LabelFormat = "qr" | "linear";
 
 interface Props {
   // null = ไม่พิมพ์ / มีค่า = เปิดหน้าต่างพิมพ์ทันที
   labels: BarcodeLabel[] | null;
   onDone: () => void;
+  format?: LabelFormat;
 }
 
-export default function BarcodeLabelPrint({ labels, onDone }: Props) {
+export default function BarcodeLabelPrint({ labels, onDone, format = "qr" }: Props) {
   // หน้า QC re-render บ่อย (socket) — ถ้า effect ผูกกับ onDone ตัวใหม่ทุกครั้งจะสั่งพิมพ์ซ้ำ
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
@@ -47,6 +55,45 @@ export default function BarcodeLabelPrint({ labels, onDone }: Props) {
   const expanded = labels.flatMap((label) =>
     Array.from({ length: Math.max(1, label.copies) }, () => label)
   );
+
+  // บาร์โค้ดแท่ง — สติกเกอร์ม้วน 1.5x1 นิ้ว แผ่นละ 1 ดวง
+  if (format === "linear") {
+    return createPortal(
+      <div id="barcode-label-print">
+        <style>{`@page { size: ${STICKER_WIDTH} ${STICKER_HEIGHT}; margin: 0; }`}</style>
+        {expanded.map((label, index) => (
+          <div
+            key={index}
+            className="flex flex-col items-center justify-center overflow-hidden px-[1.5mm] py-[1mm] text-center"
+            style={{
+              width: STICKER_WIDTH,
+              // หักไว้นิด — สูงเท่ากระดาษพอดีบาง browser ปัดเศษล้นจนได้แผ่นเปล่าแทรก
+              height: `calc(${STICKER_HEIGHT} - 0.5mm)`,
+              ...(index < expanded.length - 1 ? { breakAfter: "page" } : {}),
+            }}
+          >
+            <p className="line-clamp-2 w-full break-all text-[6pt] font-bold leading-normal">
+              {label.name}
+            </p>
+            {/* svg ของ JsBarcode มี viewBox — ย่อให้พอดีความกว้างสติกเกอร์ด้วย CSS ได้ */}
+            <div className="my-[0.5mm] w-full [&_svg]:mx-auto [&_svg]:h-[12mm] [&_svg]:w-full">
+              <Barcode
+                value={label.barcode}
+                format="CODE128"
+                renderer="svg"
+                width={2}
+                height={90}
+                displayValue={false}
+                margin={0}
+              />
+            </div>
+            <p className="w-full truncate font-mono text-[7pt] leading-tight">{label.barcode}</p>
+          </div>
+        ))}
+      </div>,
+      document.body
+    );
+  }
 
   const pages = Array.from(
     { length: Math.ceil(expanded.length / LABELS_PER_PAGE) },
