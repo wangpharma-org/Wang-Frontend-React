@@ -9,6 +9,7 @@ import axios from "axios";
 import printBucket from "../assets/print_bucket.png";
 import Swal from "sweetalert2";
 import FeatureSuspendedScreen from "../components/FeatureSuspendedScreen";
+import { fetchMyScanPolicy, ScanPolicy } from "../components/employeeScanSetting";
 
 interface Product {
   product_code: string;
@@ -95,6 +96,30 @@ function ProductList() {
   // const handleDoubleClick = useDoubleClick();
 
   const [prepareScan, setPrepareScan] = useState<string | null>(null);
+
+  // OPHMBC-316 — policy ของพนักงาน (ชั้นล่าสุด + ต้องสแกนตอนนี้ไหม) โหลดทุก 1 นาที
+  // flag ปิด / โหลดไม่ได้ = พฤติกรรมเดิม (ชั้นจาก token, จัดแบบไม่สแกนได้)
+  const [scanPolicy, setScanPolicy] = useState<ScanPolicy | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const load = () =>
+      fetchMyScanPolicy()
+        .then((policy) => !cancelled && setScanPolicy(policy))
+        .catch(() => !cancelled && setScanPolicy(null));
+    load();
+    const timer = setInterval(load, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
+  const policyActive = scanPolicy?.enabled === true;
+  const empFloor = policyActive
+    ? scanPolicy.emp_floor
+      ? Number(scanPolicy.emp_floor)
+      : undefined
+    : userInfo?.floor_picking;
+  const scanRequiredNow = policyActive && scanPolicy.scan_required_now;
 
   const checkFlag = async () => {
     const flag = await axios.get(
@@ -286,6 +311,7 @@ function ProductList() {
           mem_code: mem_code,
           status: status,
           sh_running: orderItem.sh_running,
+          pick_method: "scan", // OPHMBC-316 — มาจากสแกนบาร์โค้ดตรงกัน
         });
       }
     }
@@ -319,6 +345,7 @@ function ProductList() {
             mem_code: mem_code,
             status: status,
             sh_running: orderItem.sh_running,
+            pick_method: "manual", // OPHMBC-316 — ปุ่มจัดแบบไม่สแกน / สถานะอื่น
           });
         }
       }
@@ -435,7 +462,7 @@ function ProductList() {
               mem_code,
               type,
               count: Number(count_save),
-              floor: userInfo?.floor_picking,
+              floor: empFloor,
             },
             {
               headers: {
@@ -533,7 +560,7 @@ function ProductList() {
           mem_code: mem_code,
           emp_code: userInfo?.emp_code,
           emp_name: userInfo?.nickname,
-          floor: userInfo?.floor_picking,
+          floor: empFloor,
           route_code: route_code ?? null,
           route_name: route_name ?? null,
           mem_name: listproduct?.mem_name,
@@ -807,7 +834,7 @@ function ProductList() {
                         ชื่อเล่น : {userInfo?.nickname}
                       </p>
                       <p className="flex justify-center mt-1 text-white">
-                        {`ประจำชั้น ${userInfo?.floor_picking || ""}`}
+                        {`ประจำชั้น ${empFloor || ""}`}
                       </p>
                     </div>
                   </div>
@@ -935,7 +962,8 @@ function ProductList() {
                                   handleDoubleClick={handleDoubleClick}
                                   handleClick={handleClick}
                                   printStickerSelect={printStickerSelect}
-                                  empFloor={userInfo?.floor_picking}
+                                  empFloor={empFloor}
+                                  scanRequiredNow={scanRequiredNow}
                                 />
                               );
                             }
