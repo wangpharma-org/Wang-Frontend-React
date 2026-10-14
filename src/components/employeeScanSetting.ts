@@ -68,7 +68,19 @@ export const updateEmployeeSettings = async (
   return res.data;
 };
 
-export const errorMessage = (err: unknown, fallback: string): string => {
+// เปิด/ปิดบังคับสแกนพนักงานที่ใช้งานอยู่ทุกคน — เปิดต้องส่งช่วงเวลากลาง (ทับของเดิม)
+export const bulkUpdateEmployeeScan = async (
+  body: { scan_required: true; scan_windows: ScanWindow[] } | { scan_required: false }
+): Promise<{ updated: number }> => {
+  const res = await axios.post<{ updated: number }>(
+    `${authApiUrl}/bulk-scan`,
+    body,
+    authHeaders()
+  );
+  return res.data;
+};
+
+export const errorMessage =(err: unknown, fallback: string): string => {
   if (axios.isAxiosError(err)) {
     const message = err.response?.data?.message;
     if (typeof message === "string") return message;

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
 import { Plus, RefreshCw, ScanLine, Search, Trash2, Users } from "lucide-react";
 import {
+  bulkUpdateEmployeeScan,
   EmployeeSettingRow,
   errorMessage,
   fetchEmployeeSettings,
@@ -60,6 +61,184 @@ function Switch({
   );
 }
 
+// คืนข้อความเตือนถ้าช่วงเวลาใช้ไม่ได้ (null = ผ่าน)
+const windowsProblem = (
+  windows: ScanWindow[],
+  required: boolean
+): { title: string; text: string } | null => {
+  if (required && windows.length === 0) {
+    return {
+      title: "ยังไม่ได้กำหนดช่วงเวลา",
+      text: "เปิดบังคับสแกนต้องมีช่วงเวลาอย่างน้อย 1 ช่วง",
+    };
+  }
+  if (windows.some((w) => !w.start || !w.end || w.start === w.end)) {
+    return {
+      title: "ช่วงเวลาไม่ถูกต้อง",
+      text: "กรอกเวลาเริ่ม-สิ้นสุดให้ครบ และต้องไม่เท่ากัน",
+    };
+  }
+  return null;
+};
+
+function WindowsEditor({
+  windows,
+  disabled,
+  onChange,
+  labelSuffix = "",
+}: {
+  windows: ScanWindow[];
+  disabled?: boolean;
+  onChange: (windows: ScanWindow[]) => void;
+  labelSuffix?: string;
+}) {
+  const setWindow = (index: number, key: keyof ScanWindow, value: string) =>
+    onChange(windows.map((w, i) => (i === index ? { ...w, [key]: value } : w)));
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-slate-500">
+        ช่วงเวลาที่ต้องสแกน (ทุกวัน · เวลาสิ้นสุดน้อยกว่าเวลาเริ่ม = ข้ามเที่ยงคืน)
+      </p>
+      {windows.length === 0 && <p className="text-sm text-slate-400">ยังไม่มีช่วงเวลา</p>}
+      {windows.map((w, index) => (
+        <div key={index} className="flex items-center gap-2">
+          <input
+            type="time"
+            aria-label={`เวลาเริ่มช่วงที่ ${index + 1}${labelSuffix}`}
+            value={w.start}
+            disabled={disabled}
+            onChange={(e) => setWindow(index, "start", e.target.value)}
+            className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-1 text-sm"
+          />
+          <span className="text-slate-400">–</span>
+          <input
+            type="time"
+            aria-label={`เวลาสิ้นสุดช่วงที่ ${index + 1}${labelSuffix}`}
+            value={w.end}
+            disabled={disabled}
+            onChange={(e) => setWindow(index, "end", e.target.value)}
+            className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-1 text-sm"
+          />
+          <button
+            type="button"
+            aria-label={`ลบช่วงที่ ${index + 1}${labelSuffix}`}
+            disabled={disabled}
+            onClick={() => onChange(windows.filter((_, i) => i !== index))}
+            className="shrink-0 rounded-lg p-1.5 text-red-500 hover:bg-red-50"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      ))}
+      {windows.length < MAX_SCAN_WINDOWS && (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange([...windows, { start: "08:00", end: "12:00" }])}
+          className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
+        >
+          <Plus size={16} /> เพิ่มช่วงเวลา
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ตั้งค่าทุกคน: เปิด = ใช้ช่วงเวลากลางทับของเดิม, ปิด = คงช่วงเวลาเดิมของแต่ละคน
+function BulkScanPanel({
+  activeCount,
+  onDone,
+}: {
+  activeCount: number;
+  onDone: () => Promise<void>;
+}) {
+  const [windows, setWindows] = useState<ScanWindow[]>([{ start: "08:00", end: "12:00" }]);
+  const [busy, setBusy] = useState(false);
+
+  const run = async (enable: boolean) => {
+    if (enable) {
+      const invalid = windowsProblem(windows, true);
+      if (invalid) {
+        Swal.fire({ icon: "warning", ...invalid });
+        return;
+      }
+    }
+    const timeText = windows.map((w) => `${w.start}-${w.end}`).join(", ");
+    const confirm = await Swal.fire({
+      icon: "question",
+      title: enable ? "เปิดบังคับสแกนทุกคน?" : "ปิดบังคับสแกนทุกคน?",
+      text: enable
+        ? `พนักงานที่ใช้งานอยู่ ${activeCount} คน จะถูกบังคับสแกนช่วง ${timeText} (ทับช่วงเวลาเดิมของแต่ละคน)`
+        : `พนักงานที่ใช้งานอยู่ ${activeCount} คน จะจัดแบบไม่สแกนได้ (ช่วงเวลาเดิมยังเก็บไว้)`,
+      showCancelButton: true,
+      confirmButtonText: enable ? "เปิดทั้งหมด" : "ปิดทั้งหมด",
+      cancelButtonText: "ยกเลิก",
+    });
+    if (!confirm.isConfirmed) return;
+
+    setBusy(true);
+    try {
+      const res = await bulkUpdateEmployeeScan(
+        enable ? { scan_required: true, scan_windows: windows } : { scan_required: false }
+      );
+      await onDone();
+      Swal.fire({
+        icon: "success",
+        title: enable ? "เปิดบังคับสแกนทุกคนแล้ว" : "ปิดบังคับสแกนทุกคนแล้ว",
+        text: `อัปเดต ${res.updated} คน`,
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "บันทึกไม่สำเร็จ",
+        text: errorMessage(err, "เกิดข้อผิดพลาด กรุณาลองใหม่"),
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div
+      data-testid="bulk-scan-panel"
+      className="flex flex-col gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm md:flex-row md:items-end"
+    >
+      <div className="min-w-0 flex-1 md:max-w-lg">
+        <p className="mb-2 font-semibold text-slate-800">
+          ตั้งค่าทุกคน (พนักงานที่ใช้งานอยู่ {activeCount} คน)
+        </p>
+        <WindowsEditor
+          windows={windows}
+          disabled={busy}
+          onChange={setWindows}
+          labelSuffix=" (ทุกคน)"
+        />
+      </div>
+      <div className="flex flex-col gap-2 md:ml-auto">
+        <button
+          type="button"
+          disabled={busy || activeCount === 0}
+          onClick={() => void run(true)}
+          className="whitespace-nowrap rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+        >
+          เปิดบังคับสแกนทุกคน
+        </button>
+        <button
+          type="button"
+          disabled={busy || activeCount === 0}
+          onClick={() => void run(false)}
+          className="whitespace-nowrap rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-40"
+        >
+          ปิดบังคับสแกนทุกคน
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function EmployeeCard({
   row,
   onSaved,
@@ -74,39 +253,10 @@ function EmployeeCard({
 
   useEffect(() => setDraft(toDraft(row)), [row]);
 
-  const setWindow = (index: number, key: keyof ScanWindow, value: string) =>
-    setDraft((d) => ({
-      ...d,
-      scan_windows: d.scan_windows.map((w, i) => (i === index ? { ...w, [key]: value } : w)),
-    }));
-
-  const addWindow = () =>
-    setDraft((d) => ({
-      ...d,
-      scan_windows: [...d.scan_windows, { start: "08:00", end: "12:00" }],
-    }));
-
-  const removeWindow = (index: number) =>
-    setDraft((d) => ({
-      ...d,
-      scan_windows: d.scan_windows.filter((_, i) => i !== index),
-    }));
-
   const save = async () => {
-    if (draft.scan_required && draft.scan_windows.length === 0) {
-      Swal.fire({
-        icon: "warning",
-        title: "ยังไม่ได้กำหนดช่วงเวลา",
-        text: "เปิดบังคับสแกนต้องมีช่วงเวลาอย่างน้อย 1 ช่วง",
-      });
-      return;
-    }
-    if (draft.scan_windows.some((w) => !w.start || !w.end || w.start === w.end)) {
-      Swal.fire({
-        icon: "warning",
-        title: "ช่วงเวลาไม่ถูกต้อง",
-        text: "กรอกเวลาเริ่ม-สิ้นสุดให้ครบ และต้องไม่เท่ากัน",
-      });
+    const invalid = windowsProblem(draft.scan_windows, draft.scan_required);
+    if (invalid) {
+      Swal.fire({ icon: "warning", ...invalid });
       return;
     }
     setSaving(true);
@@ -182,52 +332,11 @@ function EmployeeCard({
         />
       </div>
 
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-slate-500">
-          ช่วงเวลาที่ต้องสแกน (ทุกวัน · เวลาสิ้นสุดน้อยกว่าเวลาเริ่ม = ข้ามเที่ยงคืน)
-        </p>
-        {draft.scan_windows.length === 0 && <p className="text-sm text-slate-400">ยังไม่มีช่วงเวลา</p>}
-        {draft.scan_windows.map((w, index) => (
-          <div key={index} className="flex items-center gap-2">
-            <input
-              type="time"
-              aria-label={`เวลาเริ่มช่วงที่ ${index + 1}`}
-              value={w.start}
-              disabled={saving}
-              onChange={(e) => setWindow(index, "start", e.target.value)}
-              className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-1 text-sm"
-            />
-            <span className="text-slate-400">–</span>
-            <input
-              type="time"
-              aria-label={`เวลาสิ้นสุดช่วงที่ ${index + 1}`}
-              value={w.end}
-              disabled={saving}
-              onChange={(e) => setWindow(index, "end", e.target.value)}
-              className="w-full min-w-0 rounded-lg border border-slate-300 px-2 py-1 text-sm"
-            />
-            <button
-              type="button"
-              aria-label={`ลบช่วงที่ ${index + 1}`}
-              disabled={saving}
-              onClick={() => removeWindow(index)}
-              className="shrink-0 rounded-lg p-1.5 text-red-500 hover:bg-red-50"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-        ))}
-        {draft.scan_windows.length < MAX_SCAN_WINDOWS && (
-          <button
-            type="button"
-            disabled={saving}
-            onClick={addWindow}
-            className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
-          >
-            <Plus size={16} /> เพิ่มช่วงเวลา
-          </button>
-        )}
-      </div>
+      <WindowsEditor
+        windows={draft.scan_windows}
+        disabled={saving}
+        onChange={(scan_windows) => setDraft((d) => ({ ...d, scan_windows }))}
+      />
 
       <div className="mt-auto flex gap-2 pt-1">
         <button
@@ -294,6 +403,7 @@ const EmployeeSettings = () => {
   }, [rows, search, onlyScan, showInactive]);
 
   const scanCount = rows.filter((r) => r.allowUsed && r.scan_required).length;
+  const activeCount = rows.filter((r) => r.allowUsed).length;
 
   if (forbidden) {
     return (
@@ -350,6 +460,8 @@ const EmployeeSettings = () => {
             แสดงคนที่ปิดการใช้งาน
           </label>
         </div>
+
+        <BulkScanPanel activeCount={activeCount} onDone={load} />
 
         {loading && rows.length === 0 ? (
           <p className="py-10 text-center text-slate-500">กำลังโหลด...</p>
