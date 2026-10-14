@@ -65,6 +65,68 @@ jobs:
 
           kubectl -n "${K8S_NAMESPACE}" rollout status deploy/"${DEPLOYMENT_NAME}" --timeout=600s
 
+      # หลักฐานชั้น "ยืนยัน" ของระบบมองเห็นงาน (NNRB-1525) — วางหลัง rollout status
+      # จึงบันทึกก็ต่อเมื่อ pod ขึ้นจริงแล้ว ไม่ใช่แค่สั่ง set image สำเร็จ
+      # step นี้ไม่ทำให้ job พังไม่ว่ากรณีไหน (ไม่มี token/ยิงไม่ผ่าน = warning แล้วไปต่อ)
+      # ใส่ logic ตรงนี้แทน `uses: wangpharma-org/actions/record-deploy@v1` เพราะ repo นี้เป็น public
+      # แต่ wangpharma-org/actions เป็น private — GitHub ไม่ให้ repo public เรียก action จาก repo private
+      # (resolve ไม่เจอ ทำให้ทั้ง job fail ตั้งแต่ก่อนเริ่ม) · ถ้าแก้ action ของกลาง ต้องตามมาแก้ที่นี่ด้วย
+      - name: บันทึก deploy เข้าระบบมองเห็นงาน
+        if: success()
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.DEPLOY_EVENTS_TOKEN }}
+          ENDPOINT: https://deployevents-ybierszkha-as.a.run.app
+          ENVIRONMENT: production
+          VERSION: ${{ env.TAG }}
+          RUN_ID: ${{ github.run_id }}
+          REPO_FULL: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${TOKEN}" ]; then
+            echo "::warning::ไม่ได้ตั้ง secret DEPLOY_EVENTS_TOKEN — ข้ามการบันทึก deploy"
+            exit 0
+          fi
+
+          REPO_NAME="${REPO_FULL##*/}"
+          SRC_REF="gha-${RUN_ID}"
+
+          # เลขใบแกะจาก commit ล่าสุด — ไม่เดาจากชื่อ branch เพราะผูกผิดใบแย่กว่าไม่มีใบ
+          RAW="$(git log -1 --pretty=%s%n%b || true)"
+          KEYS="$(printf '%s' "${RAW}" | grep -oE '[A-Z][A-Z0-9]{1,9}-[0-9]+' | sort -u | jq -R . | jq -sc . || true)"
+          [ -z "${KEYS}" ] && KEYS='[]' || true
+
+          BODY="$(jq -nc \
+            --arg repo "${REPO_NAME}" \
+            --arg ref "${SRC_REF}" \
+            --arg actor "${ACTOR}" \
+            --arg sha "${SHA}" \
+            --arg env "${ENVIRONMENT}" \
+            --arg version "${VERSION}" \
+            --argjson keys "${KEYS}" \
+            '{repo: $repo, source_ref: $ref, actor: $actor, commit_sha: $sha,
+              environment: $env, issue_keys: $keys}
+             + (if $version == "" then {} else {version: $version} end)')"
+
+          echo "บันทึก deploy: ${REPO_NAME} ${VERSION:-"(ไม่ระบุเวอร์ชัน)"} → ${ENVIRONMENT} · ใบ ${KEYS}"
+
+          set +e
+          RESP="$(curl --fail-with-body -sS --max-time 20 -X POST "${ENDPOINT}" \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "${BODY}" 2>&1)"
+          RC=$?
+          set -e
+
+          if [ "${RC}" -ne 0 ]; then
+            echo "::warning::บันทึก deploy ไม่สำเร็จ (exit ${RC}) — ตัว deploy ไม่กระทบ: ${RESP}"
+            exit 0
+          fi
+          echo "${RESP}"
+
       - name: Show status
         run: |
           kubectl -n "${K8S_NAMESPACE}" get deploy "${DEPLOYMENT_NAME}" -o wide

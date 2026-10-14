@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
-import { Printer, QrCode, Search, Trash2 } from "lucide-react";
-import BarcodeLabelPrint from "../components/BarcodeLabelPrint";
+import { Barcode, Printer, QrCode, Search, Trash2 } from "lucide-react";
+import BarcodeLabelPrint, { type LabelFormat } from "../components/BarcodeLabelPrint";
 import {
   BARCODE_FIELD,
   BARCODE_SLOTS,
@@ -20,6 +20,10 @@ interface ProductRow {
 }
 
 const MAX_COPIES = 50;
+const FORMAT_OPTIONS: { value: LabelFormat; label: string; Icon: typeof QrCode }[] = [
+  { value: "qr", label: "QR Code", Icon: QrCode },
+  { value: "linear", label: "บาร์โค้ดแท่ง", Icon: Barcode },
+];
 const labelKey = (label: Pick<BarcodeLabel, "product_code" | "barcode">) =>
   `${label.product_code}|${label.barcode}`;
 
@@ -32,6 +36,7 @@ const ProductBarcodePrintSelect = () => {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<BarcodeLabel[]>([]);
   const [printLabels, setPrintLabels] = useState<BarcodeLabel[] | null>(null);
+  const [format, setFormat] = useState<LabelFormat>("linear");
   // flag qc-barcode-print — null = กำลังโหลด
   const [enabled, setEnabled] = useState<boolean | null>(null);
 
@@ -117,7 +122,7 @@ const ProductBarcodePrintSelect = () => {
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-800">
             <QrCode className="text-blue-600" />
-            พิมพ์ฉลาก QR บาร์โค้ดสินค้า
+            พิมพ์ฉลากบาร์โค้ดสินค้า
           </h1>
           <form
             className="mt-4 flex gap-2"
@@ -267,6 +272,28 @@ const ProductBarcodePrintSelect = () => {
               })}
             </ul>
           )}
+          <div className="mt-4">
+            <p className="mb-1.5 text-sm font-medium text-slate-600">รูปแบบฉลาก</p>
+            <div className="grid grid-cols-2 gap-2" role="radiogroup">
+              {FORMAT_OPTIONS.map(({ value, label, Icon }) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={format === value}
+                  onClick={() => setFormat(value)}
+                  className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border-2 py-2 text-sm font-medium ${
+                    format === value
+                      ? "border-blue-500 bg-blue-50 text-blue-700"
+                      : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           <button
             type="button"
             disabled={selected.length === 0}
@@ -278,7 +305,11 @@ const ProductBarcodePrintSelect = () => {
           </button>
         </aside>
       </div>
-      <BarcodeLabelPrint labels={printLabels} onDone={() => setPrintLabels(null)} />
+      <BarcodeLabelPrint
+        labels={printLabels}
+        format={format}
+        onDone={() => setPrintLabels(null)}
+      />
     </div>
   );
 };
