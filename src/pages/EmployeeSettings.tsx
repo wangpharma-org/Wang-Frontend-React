@@ -145,16 +145,23 @@ function WindowsEditor({
   );
 }
 
-// ตั้งค่าทุกคน: เปิด = ใช้ช่วงเวลากลางทับของเดิม, ปิด = คงช่วงเวลาเดิมของแต่ละคน
+// ตั้งค่าทุกคน (หรือเฉพาะชั้น): เปิด = ใช้ช่วงเวลากลางทับของเดิม, ปิด = คงช่วงเวลาเดิมของแต่ละคน
+// ชั้นที่เลือกใช้ตอนกดเท่านั้น — คนที่ย้ายชั้นทีหลังไม่เปลี่ยนตาม
 function BulkScanPanel({
-  activeCount,
+  activeRows,
   onDone,
 }: {
-  activeCount: number;
+  activeRows: EmployeeSettingRow[];
   onDone: () => Promise<void>;
 }) {
   const [windows, setWindows] = useState<ScanWindow[]>([{ start: "08:00", end: "12:00" }]);
+  const [floor, setFloor] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  const targetCount = activeRows.filter((r) => floor === null || r.emp_floor === floor).length;
+  const scopeLabel = floor === null ? "ทุกคน" : `ชั้น ${floor}`;
+  const floorOptions = Array.from(
+    new Set([...FLOOR_OPTIONS, ...activeRows.flatMap((r) => (r.emp_floor ? [r.emp_floor] : []))])
+  ).sort((a, b) => a - b);
 
   const run = async (enable: boolean) => {
     if (enable) {
@@ -167,10 +174,10 @@ function BulkScanPanel({
     const timeText = windows.map((w) => `${w.start}-${w.end}`).join(", ");
     const confirm = await Swal.fire({
       icon: "question",
-      title: enable ? "เปิดบังคับสแกนทุกคน?" : "ปิดบังคับสแกนทุกคน?",
+      title: enable ? `เปิดบังคับสแกน${scopeLabel}?` : `ปิดบังคับสแกน${scopeLabel}?`,
       text: enable
-        ? `พนักงานที่ใช้งานอยู่ ${activeCount} คน จะถูกบังคับสแกนช่วง ${timeText} (ทับช่วงเวลาเดิมของแต่ละคน)`
-        : `พนักงานที่ใช้งานอยู่ ${activeCount} คน จะจัดแบบไม่สแกนได้ (ช่วงเวลาเดิมยังเก็บไว้)`,
+        ? `พนักงานที่ใช้งานอยู่ (${scopeLabel}) ${targetCount} คน จะถูกบังคับสแกนช่วง ${timeText} (ทับช่วงเวลาเดิมของแต่ละคน)`
+        : `พนักงานที่ใช้งานอยู่ (${scopeLabel}) ${targetCount} คน จะจัดแบบไม่สแกนได้ (ช่วงเวลาเดิมยังเก็บไว้)`,
       showCancelButton: true,
       confirmButtonText: enable ? "เปิดทั้งหมด" : "ปิดทั้งหมด",
       cancelButtonText: "ยกเลิก",
@@ -179,13 +186,16 @@ function BulkScanPanel({
 
     setBusy(true);
     try {
+      const scope = floor === null ? {} : { emp_floor: floor };
       const res = await bulkUpdateEmployeeScan(
-        enable ? { scan_required: true, scan_windows: windows } : { scan_required: false }
+        enable
+          ? { scan_required: true, scan_windows: windows, ...scope }
+          : { scan_required: false, ...scope }
       );
       await onDone();
       Swal.fire({
         icon: "success",
-        title: enable ? "เปิดบังคับสแกนทุกคนแล้ว" : "ปิดบังคับสแกนทุกคนแล้ว",
+        title: enable ? `เปิดบังคับสแกน${scopeLabel}แล้ว` : `ปิดบังคับสแกน${scopeLabel}แล้ว`,
         text: `อัปเดต ${res.updated} คน`,
         timer: 1500,
         showConfirmButton: false,
@@ -207,9 +217,24 @@ function BulkScanPanel({
       className="flex flex-col gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm md:flex-row md:items-end"
     >
       <div className="min-w-0 flex-1 md:max-w-lg">
-        <p className="mb-2 font-semibold text-slate-800">
-          ตั้งค่าทุกคน (พนักงานที่ใช้งานอยู่ {activeCount} คน)
-        </p>
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <p className="font-semibold text-slate-800">ตั้งค่าหลายคนพร้อมกัน</p>
+          <select
+            aria-label="เลือกชั้นที่จะตั้งค่า"
+            value={floor ?? ""}
+            disabled={busy}
+            onChange={(e) => setFloor(e.target.value === "" ? null : Number(e.target.value))}
+            className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm"
+          >
+            <option value="">ทุกชั้น</option>
+            {floorOptions.map((f) => (
+              <option key={f} value={f}>
+                ชั้น {f}
+              </option>
+            ))}
+          </select>
+          <span className="text-sm text-slate-500">พนักงานที่ใช้งานอยู่ {targetCount} คน</span>
+        </div>
         <WindowsEditor
           windows={windows}
           disabled={busy}
@@ -220,19 +245,19 @@ function BulkScanPanel({
       <div className="flex flex-col gap-2 md:ml-auto">
         <button
           type="button"
-          disabled={busy || activeCount === 0}
+          disabled={busy || targetCount === 0}
           onClick={() => void run(true)}
           className="whitespace-nowrap rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
         >
-          เปิดบังคับสแกนทุกคน
+          เปิดบังคับสแกน{scopeLabel}
         </button>
         <button
           type="button"
-          disabled={busy || activeCount === 0}
+          disabled={busy || targetCount === 0}
           onClick={() => void run(false)}
           className="whitespace-nowrap rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-40"
         >
-          ปิดบังคับสแกนทุกคน
+          ปิดบังคับสแกน{scopeLabel}
         </button>
       </div>
     </div>
@@ -403,7 +428,7 @@ const EmployeeSettings = () => {
   }, [rows, search, onlyScan, showInactive]);
 
   const scanCount = rows.filter((r) => r.allowUsed && r.scan_required).length;
-  const activeCount = rows.filter((r) => r.allowUsed).length;
+  const activeRows = useMemo(() => rows.filter((r) => r.allowUsed), [rows]);
 
   if (forbidden) {
     return (
@@ -461,7 +486,7 @@ const EmployeeSettings = () => {
           </label>
         </div>
 
-        <BulkScanPanel activeCount={activeCount} onDone={load} />
+        <BulkScanPanel activeRows={activeRows} onDone={load} />
 
         {loading && rows.length === 0 ? (
           <p className="py-10 text-center text-slate-500">กำลังโหลด...</p>

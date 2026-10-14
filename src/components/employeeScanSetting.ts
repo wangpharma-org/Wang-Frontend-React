@@ -68,9 +68,12 @@ export const updateEmployeeSettings = async (
   return res.data;
 };
 
-// เปิด/ปิดบังคับสแกนพนักงานที่ใช้งานอยู่ทุกคน — เปิดต้องส่งช่วงเวลากลาง (ทับของเดิม)
+// เปิด/ปิดบังคับสแกนพนักงานที่ใช้งานอยู่ทุกคน หรือเฉพาะชั้น (emp_floor) — เปิดต้องส่งช่วงเวลากลาง (ทับของเดิม)
 export const bulkUpdateEmployeeScan = async (
-  body: { scan_required: true; scan_windows: ScanWindow[] } | { scan_required: false }
+  body: (
+    | { scan_required: true; scan_windows: ScanWindow[] }
+    | { scan_required: false }
+  ) & { emp_floor?: number }
 ): Promise<{ updated: number }> => {
   const res = await axios.post<{ updated: number }>(
     `${authApiUrl}/bulk-scan`,
