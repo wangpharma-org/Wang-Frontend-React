@@ -20,8 +20,10 @@ import chartIcon from "../assets/chat-arrow-grow.png";
 import settingsIcon from "../assets/settings.png";
 import { useNavigate } from "react-router";
 import { fetchPrintLabelFlag } from "../components/noBarcodeApproval";
+import { fetchMyScanPolicy } from "../components/employeeScanSetting";
 
 const PRINT_LABEL_HREF = "/product-barcode-print-select";
+const EMPLOYEE_SETTINGS_HREF = "/employee-settings";
 const listMenu = [
   {
     id: 24,
@@ -203,6 +205,13 @@ const listMenu = [
     imageSrc: settingsIcon,
     admin: true,
   },
+  {
+    id: 27,
+    name: "ตั้งค่าพนักงาน (สแกน/ชั้น)",
+    href: EMPLOYEE_SETTINGS_HREF,
+    imageSrc: settingsIcon,
+    admin: false,
+  },
 ];
 const Home = () => {
   const navigate = useNavigate()
@@ -229,6 +238,13 @@ const Home = () => {
           // เมนูพิมพ์ฉลาก QR คุมด้วย flag qc-barcode-print (ตั้งที่หน้า /no-barcode-approval) — โหลดไม่ได้ให้ซ่อน
           if (menu.href === PRINT_LABEL_HREF) {
             const visible = await fetchPrintLabelFlag().catch(() => false);
+            return { id: menu.id, visible };
+          }
+          // OPHMBC-316 — เห็นเมื่อเปิด flag employee-scan-setting และพนักงานมี manage_qc = Yes
+          if (menu.href === EMPLOYEE_SETTINGS_HREF) {
+            const visible = await fetchMyScanPolicy()
+              .then((p) => p.enabled && p.can_manage_employee_settings)
+              .catch(() => false);
             return { id: menu.id, visible };
           }
           try {
