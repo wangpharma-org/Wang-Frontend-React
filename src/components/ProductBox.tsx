@@ -15,6 +15,8 @@ interface ProductBoxProps {
   setPrepareScan: Dispatch<SetStateAction<string | null>>;
   printStickerSelect: (type: string, product_name: string) => void;
   empFloor?: number;
+  // OPHMBC-316 — ช่วงเวลาที่พนักงานคนนี้ต้องจัดแบบสแกนเท่านั้น
+  scanRequiredNow?: boolean;
 }
 
 // Removed from the top level and will be added inside the component
@@ -27,6 +29,7 @@ export default function ProductBox({
   setPrepareScan,
   printStickerSelect,
   empFloor,
+  scanRequiredNow = false,
 }: ProductBoxProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -147,6 +150,14 @@ export default function ProductBox({
           </div>
           <div className="text-xs w-2/3 ml-1">
             <div className="flex justify-between">
+              {scanRequiredNow ? (
+              <span
+                data-testid="scan-required-badge"
+                className="self-center rounded-sm bg-blue-600 px-2 py-2 text-white shadow-md"
+              >
+                ต้องสแกนบาร์โค้ด
+              </span>
+              ) : (
               <button
               id={`buttonpicking`}
               className={`text-white rounded-sm shadow-md bg-gray-500 py-2 px-3 ${blocked ? "opacity-50 cursor-not-allowed" : ""
@@ -162,6 +173,7 @@ export default function ProductBox({
             >
               จัดแบบไม่สแกน
             </button>
+              )}
               <div
                 className="mr-2 bg-gray-500 p-1.5 rounded-[100%] cursor-pointer shadow-md"
                 onClick={() => printStickerSelect("ลัง", orderItem.product_name_at_order ?? orderItem.product.product_name)}
