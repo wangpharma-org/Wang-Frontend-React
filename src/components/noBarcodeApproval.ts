@@ -1,8 +1,12 @@
 import axios from "axios";
+import { useEffect, useState } from "react";
 
 // OPHMBC-306 — อนุมัติการสแกนสินค้าที่ไม่มีบาร์โค้ด
 export const approvalApiUrl = `${import.meta.env.VITE_API_URL_ORDER}/api/no-barcode-approval`;
 export const APPROVAL_CODE_MAX_LENGTH = 20;
+// HS-972 — QR ของบัตรพนักงาน HR (ใน LINE) เป็นลิงก์ยาว เปิด flag แล้วช่องสแกนรับได้เท่ากับ backend (APPROVER_SCAN_MAX_LENGTH)
+// ปิด flag = 20 ตัวเหมือนเดิม
+export const APPROVER_SCAN_MAX_LENGTH = 500;
 
 // ใช้ key เดียวกับหน้า QC เครื่องเดียวกันจึงได้ device id เดียวกัน — backend เก็บลงประวัติการใช้งาน
 const DEVICE_ID_KEY = "qc_machine_uuid";
@@ -45,6 +49,7 @@ export interface ApprovalSettings {
   enabled: boolean;
   barcode_edit_enabled: boolean;
   print_label_enabled: boolean;
+  hr_card_enabled: boolean;
   approver_count: number;
   employees: ApproverRow[];
 }
@@ -104,6 +109,30 @@ export const fetchBarcodeEditFlag = async (): Promise<boolean> => {
     authHeaders()
   );
   return res.data.enabled;
+};
+
+// flag qc-approval-hr-card — เปิดแล้วผู้อนุมัติสแกน QR บัตรพนักงานใน LINE แทนรหัสบัตรอนุมัติเดิม
+export const fetchHrCardFlag = async (): Promise<boolean> => {
+  const res = await axios.get<{ enabled: boolean }>(
+    `${approvalApiUrl}/hr-card/flag`,
+    authHeaders()
+  );
+  return res.data.enabled;
+};
+
+// เลือกข้อความและความยาวช่องในหน้าต่างสแกน — อ่านไม่สำเร็จถือว่าปิด (แบบเดิม) เปิดหน้าต่างใหม่จะอ่านใหม่
+export const useHrCardMode = (): boolean => {
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    fetchHrCardFlag()
+      .then((on) => alive && setEnabled(on))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return enabled;
 };
 
 export const fetchPrintLabelFlag = async (): Promise<boolean> => {
