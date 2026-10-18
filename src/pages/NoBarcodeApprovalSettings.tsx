@@ -33,7 +33,7 @@ const relatedLabel = (log: ApprovalLog) => {
     : ` (ย้ายมาจากสินค้า ${log.related_product_code})`;
 };
 
-type FlagKey = "enabled" | "barcode_edit_enabled" | "print_label_enabled";
+type FlagKey = "enabled" | "barcode_edit_enabled" | "print_label_enabled" | "hr_card_enabled";
 const FLAG_CONFIG: Record<FlagKey, { path: string; title: string }> = {
   enabled: {
     path: "flag",
@@ -46,6 +46,11 @@ const FLAG_CONFIG: Record<FlagKey, { path: string; title: string }> = {
   print_label_enabled: {
     path: "print-label/flag",
     title: "หน้าพิมพ์ฉลาก QR บาร์โค้ดสินค้า",
+  },
+  // HS-972 — เปิดแล้วรหัสบัตรอนุมัติเดิมใช้ไม่ได้ ผู้อนุมัติทุกคนต้องมีบัตรพนักงานใน LINE ก่อน
+  hr_card_enabled: {
+    path: "hr-card/flag",
+    title: "ใช้ QR บัตรพนักงาน HR (ใน LINE) แทนรหัสบัตรอนุมัติเดิม",
   },
 };
 

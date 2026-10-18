@@ -3,10 +3,12 @@ import { createPortal } from "react-dom";
 import axios, { AxiosError } from "axios";
 import {
   APPROVAL_CODE_MAX_LENGTH,
+  APPROVER_SCAN_MAX_LENGTH,
   ApprovalInfo,
   VerifyResponse,
   approvalApiUrl,
   authHeaders,
+  useHrCardMode,
 } from "./noBarcodeApproval";
 
 export interface ApprovalTarget {
@@ -34,6 +36,7 @@ export default function NoBarcodeApprovalModal({
   onClose,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const hrCard = useHrCardMode();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
@@ -193,18 +196,25 @@ export default function NoBarcodeApprovalModal({
         >
           <div className="flex items-center justify-between">
             <label htmlFor="nb-approval-code" className="text-sm font-medium text-gray-700">
-              รหัสบัตรผู้อนุมัติ
+              {hrCard ? "QR บัตรพนักงานของผู้อนุมัติ" : "รหัสบัตรผู้อนุมัติ"}
             </label>
-            <span className="text-sm tabular-nums text-gray-500">
-              {code.length}/{APPROVAL_CODE_MAX_LENGTH}
-            </span>
+            {!hrCard && (
+              <span className="text-sm tabular-nums text-gray-500">
+                {code.length}/{APPROVAL_CODE_MAX_LENGTH}
+              </span>
+            )}
           </div>
+          {hrCard && (
+            <p className="mt-1 text-sm text-gray-500">
+              ให้ผู้อนุมัติเปิดบัตรพนักงานใน LINE แล้วยิง QR ด้วยเครื่องสแกน (QR เปลี่ยนทุก 30 วินาที ใช้ได้ครั้งเดียว)
+            </p>
+          )}
           <input
             id="nb-approval-code"
             ref={inputRef}
             type="password"
             autoComplete="off"
-            maxLength={APPROVAL_CODE_MAX_LENGTH}
+            maxLength={hrCard ? APPROVER_SCAN_MAX_LENGTH : APPROVAL_CODE_MAX_LENGTH}
             value={code}
             disabled={locked}
             onChange={(e) => {
