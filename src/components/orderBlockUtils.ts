@@ -27,10 +27,45 @@ export interface OrderBlockStatus {
   qc_pending_count: number;
 }
 
+export interface BoxFloorStatus {
+  floor: number;
+  min_boxes: number | null;
+  // null = ยังอ่านยอดจากแอปบันทึกลังไม่ได้ (ไม่ระงับ)
+  refilled: number | null;
+  blocked: boolean;
+}
+
+// ยอดเติมลังวันนี้ต่อชั้นจากแอป inventory (flag order-block-box-stock)
+export interface BoxStockStatus {
+  enabled: boolean;
+  configured: boolean;
+  date: string;
+  synced_at: string | null;
+  error: string | null;
+  // ยอดเหลือจัดทั้งระบบถึง max → ปลดระงับเพราะลังทุกชั้น จนกว่าจะลดถึง min
+  pending_release_min: number | null;
+  pending_release_max: number | null;
+  released: boolean;
+  floors: BoxFloorStatus[];
+}
+
+// พนักงานชั้นละ 1 คนที่เริ่มจัดได้ระหว่างระงับ (flag order-block-floor-picker)
+export interface FloorPickerOverview {
+  enabled: boolean;
+  floors: {
+    floor: number;
+    emp_code: string | null;
+    emp_nickname: string | null;
+  }[];
+}
+
 export interface OrderBlockOverview {
   days: OrderBlockDay[];
   routes: OrderBlockRoute[];
   status: OrderBlockStatus;
+  // backend รุ่นก่อนไม่มีฟิลด์นี้
+  box_stock?: BoxStockStatus;
+  floor_pickers?: FloorPickerOverview;
 }
 
 // ช่องตัวเลขเก็บเป็น string เพื่อให้แอดมินเคลียร์ค่าเป็นว่างได้
