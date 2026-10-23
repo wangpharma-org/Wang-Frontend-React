@@ -8,6 +8,7 @@ import RouteBatchZone from "../components/picking-control/RouteBatchZone";
 import RouteLanes from "../components/picking-control/RouteLanes";
 import OrderBlockSection from "../components/OrderBlockSection";
 import HelpPanel from "../components/picking-control/HelpPanel";
+import Hint from "../components/picking-control/Hint";
 import Toggle from "../components/picking-control/Toggle";
 import { ShowAllHelpContext, readShowAllHelp, writeShowAllHelp } from "../components/picking-control/helpContext";
 import {
@@ -148,6 +149,7 @@ const PickingControl = () => {
               />
               แสดงคำอธิบายทั้งหมด
             </label>
+            <Hint k="showAllHelp" label="แสดงคำอธิบายทั้งหมด" />
             <p className="text-xs text-gray-500">
               อัปเดตล่าสุด {updatedAt} · ผู้ดูแล ({userInfo?.emp_code ?? "-"})
             </p>
