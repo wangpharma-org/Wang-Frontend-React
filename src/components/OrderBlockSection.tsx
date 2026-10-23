@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import OrderBlockDayRow from "./OrderBlockDayRow";
 import OrderBlockBoxStockCard, {
-  type BoxFloorPayload,
+  type BoxStockPayload,
 } from "./OrderBlockBoxStockCard";
 import {
   DAY_NAMES,
@@ -235,18 +235,18 @@ const OrderBlockSection = () => {
     }
   };
 
-  const saveBoxFloors = async (floors: BoxFloorPayload[]) => {
+  const saveBoxFloors = async (payload: BoxStockPayload) => {
     setSavingBoxFloors(true);
     try {
       const response = await axios.put<OrderBlockOverview>(
         `${orderBlockApiUrl}/box-floors`,
-        { floors },
+        payload,
         authHeaders(),
       );
       applyOverview(response.data, !dirtyRef.current);
       await Swal.fire({
         icon: "success",
-        title: "บันทึกขั้นต่ำลังสำเร็จ",
+        title: "บันทึกการตั้งค่าลังสำเร็จ",
         text: "มีผลกับหน้าจัดออเดอร์ทันที",
         timer: 1800,
         showConfirmButton: false,
@@ -443,6 +443,7 @@ const OrderBlockSection = () => {
           {overview?.box_stock && (
             <OrderBlockBoxStockCard
               boxStock={overview.box_stock}
+              pendingCount={overview.status?.pending_count ?? 0}
               saving={savingBoxFloors}
               onSave={saveBoxFloors}
             />

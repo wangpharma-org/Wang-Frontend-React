@@ -42,6 +42,10 @@ export interface BoxStockStatus {
   date: string;
   synced_at: string | null;
   error: string | null;
+  // ยอดเหลือจัดทั้งระบบถึง max → ปลดระงับเพราะลังทุกชั้น จนกว่าจะลดถึง min
+  pending_release_min: number | null;
+  pending_release_max: number | null;
+  released: boolean;
   floors: BoxFloorStatus[];
 }
 

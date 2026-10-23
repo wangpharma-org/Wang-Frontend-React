@@ -1,29 +1,40 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatTime, type BoxStockStatus } from "./orderBlockUtils";
 
-export interface BoxFloorPayload {
-  floor: number;
-  min_boxes: number | null;
+export interface BoxStockPayload {
+  floors: { floor: number; min_boxes: number | null }[];
+  pending_release_min: number | null;
+  pending_release_max: number | null;
 }
 
 interface OrderBlockBoxStockCardProps {
   boxStock: BoxStockStatus;
+  // ยอด "เหลือจัด" ทั้งระบบตอนนี้ — ตัวเดียวกับที่ใช้เทียบ min/max ปลดระงับ
+  pendingCount: number;
   saving: boolean;
-  onSave: (floors: BoxFloorPayload[]) => Promise<void>;
+  onSave: (payload: BoxStockPayload) => Promise<void>;
 }
 
 const FLOORS = [1, 2, 3, 4, 5];
+const RELEASE_MIN = "release_min";
+const RELEASE_MAX = "release_max";
 
-// ช่องเก็บเป็น string เพื่อให้แอดมินเคลียร์เป็นว่าง (= ไม่เช็คชั้นนั้น) ได้
-const toDrafts = (boxStock: BoxStockStatus): Record<number, string> =>
-  Object.fromEntries(
-    FLOORS.map((floor) => {
-      const min = boxStock.floors.find((f) => f.floor === floor)?.min_boxes;
-      return [floor, min == null ? "" : String(min)];
-    }),
-  );
+const toText = (value: number | null | undefined) =>
+  value == null ? "" : String(value);
 
-const validate = (value: string): string | null => {
+// ช่องเก็บเป็น string เพื่อให้แอดมินเคลียร์เป็นว่าง (= ไม่เช็ค / ไม่ใช้) ได้
+const toDrafts = (boxStock: BoxStockStatus): Record<string, string> => ({
+  ...Object.fromEntries(
+    FLOORS.map((floor) => [
+      String(floor),
+      toText(boxStock.floors.find((f) => f.floor === floor)?.min_boxes),
+    ]),
+  ),
+  [RELEASE_MIN]: toText(boxStock.pending_release_min),
+  [RELEASE_MAX]: toText(boxStock.pending_release_max),
+});
+
+const validateFloor = (value: string): string | null => {
   const text = value.trim();
   if (!text) return null;
   if (!/^\d+$/.test(text) || Number(text) < 1) {
@@ -32,21 +43,40 @@ const validate = (value: string): string | null => {
   return Number(text) > 100000 ? "ไม่เกิน 100,000 ลัง" : null;
 };
 
+const validateRelease = (minText: string, maxText: string): string | null => {
+  const min = minText.trim();
+  const max = maxText.trim();
+  if (!min && !max) return null;
+  if (!min || !max) return "min และ max ต้องกรอกทั้งคู่ หรือเว้นว่างทั้งคู่";
+  if (!/^\d+$/.test(min) || !/^\d+$/.test(max)) {
+    return "min และ max ต้องเป็นจำนวนเต็มไม่ติดลบ";
+  }
+  return Number(min) >= Number(max) ? "min ต้องน้อยกว่า max" : null;
+};
+
+const toNumber = (text: string) => (text.trim() ? Number(text.trim()) : null);
+
 const OrderBlockBoxStockCard = ({
   boxStock,
+  pendingCount,
   saving,
   onSave,
 }: OrderBlockBoxStockCardProps) => {
   const savedDrafts = useMemo(() => toDrafts(boxStock), [boxStock]);
   const [drafts, setDrafts] = useState(savedDrafts);
 
-  const dirty = FLOORS.some(
-    (floor) => (drafts[floor] ?? "").trim() !== (savedDrafts[floor] ?? ""),
+  const dirty = Object.keys(savedDrafts).some(
+    (key) => (drafts[key] ?? "").trim() !== savedDrafts[key],
   );
-  const errors = Object.fromEntries(
-    FLOORS.map((floor) => [floor, validate(drafts[floor] ?? "")]),
+  const floorErrors = Object.fromEntries(
+    FLOORS.map((floor) => [floor, validateFloor(drafts[String(floor)] ?? "")]),
   );
-  const hasError = FLOORS.some((floor) => errors[floor] !== null);
+  const releaseError = validateRelease(
+    drafts[RELEASE_MIN] ?? "",
+    drafts[RELEASE_MAX] ?? "",
+  );
+  const hasError =
+    releaseError !== null || FLOORS.some((floor) => floorErrors[floor] !== null);
 
   // refresh สถานะทุกนาทีต้องไม่ทับค่าที่แอดมินกำลังแก้ค้างอยู่
   useEffect(() => {
@@ -54,14 +84,19 @@ const OrderBlockBoxStockCard = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedDrafts]);
 
+  const setDraft = (key: string, value: string) =>
+    setDrafts((current) => ({ ...current, [key]: value }));
+
   // บันทึกสำเร็จแล้วค่าที่ได้กลับมาตรงกับ drafts → dirty = false แล้ว effect ด้านบนซิงก์ให้เอง
   const save = () =>
-    onSave(
-      FLOORS.map((floor) => {
-        const text = (drafts[floor] ?? "").trim();
-        return { floor, min_boxes: text ? Number(text) : null };
-      }),
-    );
+    onSave({
+      floors: FLOORS.map((floor) => ({
+        floor,
+        min_boxes: toNumber(drafts[String(floor)] ?? ""),
+      })),
+      pending_release_min: toNumber(drafts[RELEASE_MIN] ?? ""),
+      pending_release_max: toNumber(drafts[RELEASE_MAX] ?? ""),
+    });
 
   const blockedCount = boxStock.floors.filter((f) => f.blocked).length;
   const notice = !boxStock.enabled
@@ -74,15 +109,20 @@ const OrderBlockBoxStockCard = ({
           className: "bg-amber-50 border-amber-300 text-amber-800",
           text: `อ่านยอดจากแอปบันทึกลังไม่ได้ — ระบบจะไม่ระงับจนกว่าจะอ่านได้ (${boxStock.error ?? "ยังไม่ได้ตั้งค่า"})`,
         }
-      : blockedCount > 0
+      : boxStock.released
         ? {
-            className: "bg-red-50 border-red-300 text-red-800",
-            text: `กำลังระงับ ${blockedCount} ชั้น — ร้านที่มีสินค้ารอจัดบนชั้นนั้นจะเริ่มจัดไม่ได้จนกว่าจะเติมลังครบ`,
+            className: "bg-blue-50 border-blue-300 text-blue-800",
+            text: `ปลดการระงับเพราะลังชั่วคราว — ยอดเหลือจัดถึง ${boxStock.pending_release_max} รายการ จะกลับมาระงับเมื่อลดถึง ${boxStock.pending_release_min} รายการ (ถ้าลังยังไม่ครบ)`,
           }
-        : {
-            className: "bg-green-50 border-green-300 text-green-800",
-            text: "ลังทุกชั้นที่ตั้งไว้ถึงขั้นต่ำแล้ว — จัดได้ตามปกติ",
-          };
+        : blockedCount > 0
+          ? {
+              className: "bg-red-50 border-red-300 text-red-800",
+              text: `กำลังระงับ ${blockedCount} ชั้น — ร้านที่มีสินค้ารอจัดบนชั้นนั้นจะเริ่มจัดไม่ได้จนกว่าจะเติมลังครบ`,
+            }
+          : {
+              className: "bg-green-50 border-green-300 text-green-800",
+              text: "ลังทุกชั้นที่ตั้งไว้ถึงขั้นต่ำแล้ว — จัดได้ตามปกติ",
+            };
 
   return (
     <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
@@ -113,7 +153,7 @@ const OrderBlockBoxStockCard = ({
       <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         {FLOORS.map((floor) => {
           const status = boxStock.floors.find((f) => f.floor === floor);
-          const error = errors[floor];
+          const error = floorErrors[floor];
           return (
             <div
               key={floor}
@@ -144,14 +184,11 @@ const OrderBlockBoxStockCard = ({
                   type="text"
                   inputMode="numeric"
                   aria-label={`ขั้นต่ำลังชั้น ${floor}`}
-                  value={drafts[floor] ?? ""}
+                  value={drafts[String(floor)] ?? ""}
                   disabled={saving}
                   placeholder="ไม่เช็ค"
                   onChange={(event) =>
-                    setDrafts((current) => ({
-                      ...current,
-                      [floor]: event.target.value,
-                    }))
+                    setDraft(String(floor), event.target.value)
                   }
                   className={`block w-full mt-1 px-3 py-2 border rounded-lg disabled:bg-gray-50 ${
                     error ? "border-red-400" : "border-gray-300"
@@ -162,6 +199,68 @@ const OrderBlockBoxStockCard = ({
             </div>
           );
         })}
+      </div>
+
+      <div className="px-6 pb-6">
+        <div
+          className={`p-4 rounded-lg border ${
+            boxStock.released
+              ? "border-blue-400 bg-blue-50"
+              : "border-gray-200 bg-white"
+          }`}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="font-semibold text-gray-900">
+                ปลดระงับเมื่อยอดเหลือจัดค้างเยอะ
+              </p>
+              <p className="text-sm text-gray-600 mt-1">
+                ยอดเหลือจัดทั้งระบบสะสมถึง max → ปลดการระงับเพราะลังทุกชั้น ·
+                ลดลงถึง min → กลับมาระงับ (ถ้าลังยังไม่ครบ) · เว้นว่างทั้งคู่ = ไม่ใช้
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500">เหลือจัดทั้งระบบตอนนี้</p>
+              <p className="text-2xl font-bold text-gray-900">{pendingCount}</p>
+              <p className="text-xs text-gray-500">รายการ</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 mt-3 max-w-md">
+            <label className="block text-sm text-gray-700">
+              min (กลับมาระงับ)
+              <input
+                type="text"
+                inputMode="numeric"
+                aria-label="ยอดเหลือจัด min ที่กลับมาระงับ"
+                value={drafts[RELEASE_MIN] ?? ""}
+                disabled={saving}
+                placeholder="ไม่ใช้"
+                onChange={(event) => setDraft(RELEASE_MIN, event.target.value)}
+                className={`block w-full mt-1 px-3 py-2 border rounded-lg disabled:bg-gray-50 ${
+                  releaseError ? "border-red-400" : "border-gray-300"
+                }`}
+              />
+            </label>
+            <label className="block text-sm text-gray-700">
+              max (ปลดระงับ)
+              <input
+                type="text"
+                inputMode="numeric"
+                aria-label="ยอดเหลือจัด max ที่ปลดระงับ"
+                value={drafts[RELEASE_MAX] ?? ""}
+                disabled={saving}
+                placeholder="ไม่ใช้"
+                onChange={(event) => setDraft(RELEASE_MAX, event.target.value)}
+                className={`block w-full mt-1 px-3 py-2 border rounded-lg disabled:bg-gray-50 ${
+                  releaseError ? "border-red-400" : "border-gray-300"
+                }`}
+              />
+            </label>
+          </div>
+          {releaseError && (
+            <p className="text-xs text-red-600 mt-1">{releaseError}</p>
+          )}
+        </div>
       </div>
 
       <div className="p-6 border-t border-gray-200 flex flex-wrap items-center justify-between gap-3 bg-gray-50">
@@ -185,7 +284,7 @@ const OrderBlockBoxStockCard = ({
             disabled={!dirty || saving || hasError}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
-            {saving ? "กำลังบันทึก..." : "บันทึกขั้นต่ำลัง"}
+            {saving ? "กำลังบันทึก..." : "บันทึกการตั้งค่าลัง"}
           </button>
         </div>
       </div>
