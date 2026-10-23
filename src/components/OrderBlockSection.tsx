@@ -1,7 +1,18 @@
 import axios from "axios";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Swal from "sweetalert2";
 import OrderBlockDayRow from "./OrderBlockDayRow";
+import OrderBlockFloorPickerCard, {
+  type FloorPickerPayload,
+} from "./OrderBlockFloorPickerCard";
+import FloorControlTable, {
+  type FloorTablePayload,
+} from "./picking-control/FloorControlTable";
+import { sendFlag } from "./picking-control/pickingControlApi";
+import Hint from "./picking-control/Hint";
+import OrderBlockBoxStockCard, {
+  type BoxStockPayload,
+} from "./OrderBlockBoxStockCard";
 import {
   DAY_NAMES,
   describeDay,
@@ -38,13 +49,50 @@ const TONE_CLASS = {
   gray: "bg-gray-50 border-gray-300 text-gray-700",
 };
 
-const OrderBlockSection = () => {
+// แผงควบคุม (OPHMBC-322) พับส่วนตั้งค่ายาว ๆ ไว้ก่อน — หน้าจัดการเส้นทางเดิมแสดงเต็มเหมือนเดิม
+const Fold = ({
+  enabled,
+  title,
+  card = false,
+  children,
+}: {
+  enabled: boolean;
+  title: string;
+  card?: boolean;
+  children: ReactNode;
+}) =>
+  enabled ? (
+    <details
+      className={
+        card
+          ? // การ์ดด้านในมีเงา/มุมโค้งของตัวเองอยู่แล้ว — ปิดไว้ไม่ให้ซ้อนสองชั้น
+            "bg-white rounded-lg shadow-lg overflow-hidden [&>div]:shadow-none [&>div]:rounded-none"
+          : "border-t border-gray-200"
+      }
+    >
+      <summary className="cursor-pointer select-none px-6 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+        {title}
+      </summary>
+      {children}
+    </details>
+  ) : (
+    <>{children}</>
+  );
+
+interface OrderBlockSectionProps {
+  // cards = หน้าจัดการเส้นทางเดิม · table = แผงควบคุมสายการไหล (OPHMBC-322) รวมลัง+คนจัดเป็นตารางรายชั้น
+  floorLayout?: "cards" | "table";
+}
+
+const OrderBlockSection = ({ floorLayout = "cards" }: OrderBlockSectionProps) => {
   const [overview, setOverview] = useState<OrderBlockOverview | null>(null);
   const [drafts, setDrafts] = useState<DayDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [togglingRoute, setTogglingRoute] = useState<string | null>(null);
+  const [savingBoxFloors, setSavingBoxFloors] = useState(false);
+  const [savingFloorPickers, setSavingFloorPickers] = useState(false);
   const [routeSearch, setRouteSearch] = useState("");
 
   const savedDrafts = useMemo(
@@ -231,6 +279,111 @@ const OrderBlockSection = () => {
     }
   };
 
+  const saveBoxFloors = async (payload: BoxStockPayload) => {
+    setSavingBoxFloors(true);
+    try {
+      const response = await axios.put<OrderBlockOverview>(
+        `${orderBlockApiUrl}/box-floors`,
+        payload,
+        authHeaders(),
+      );
+      applyOverview(response.data, !dirtyRef.current);
+      await Swal.fire({
+        icon: "success",
+        title: "บันทึกการตั้งค่าลังสำเร็จ",
+        text: "มีผลกับหน้าจัดออเดอร์ทันที",
+        timer: 1800,
+        showConfirmButton: false,
+      });
+    } catch (saveError) {
+      await Swal.fire({
+        icon: "error",
+        title: "บันทึกไม่สำเร็จ",
+        text: responseMessage(saveError, "กรุณาลองใหม่อีกครั้ง"),
+      });
+    } finally {
+      setSavingBoxFloors(false);
+    }
+  };
+
+  const saveFloorPickers = async (floors: FloorPickerPayload[]) => {
+    setSavingFloorPickers(true);
+    try {
+      const response = await axios.put<OrderBlockOverview>(
+        `${orderBlockApiUrl}/floor-pickers`,
+        { floors },
+        authHeaders(),
+      );
+      applyOverview(response.data, !dirtyRef.current);
+      await Swal.fire({
+        icon: "success",
+        title: "บันทึกคนจัดรายชั้นสำเร็จ",
+        text: "มีผลกับหน้าจัดออเดอร์ทันที",
+        timer: 1800,
+        showConfirmButton: false,
+      });
+    } catch (saveError) {
+      await Swal.fire({
+        icon: "error",
+        title: "บันทึกไม่สำเร็จ",
+        text: responseMessage(saveError, "กรุณาลองใหม่อีกครั้ง"),
+      });
+    } finally {
+      setSavingFloorPickers(false);
+    }
+  };
+
+  // บันทึกลังก่อนแล้วค่อยคนจัด — ผลลัพธ์สุดท้ายคือ overview ล่าสุดของทั้งสองอย่าง
+  const saveFloorTable = async ({ box, pickers }: FloorTablePayload) => {
+    setSavingBoxFloors(true);
+    try {
+      await axios.put(`${orderBlockApiUrl}/box-floors`, box, authHeaders());
+      const response = await axios.put<OrderBlockOverview>(
+        `${orderBlockApiUrl}/floor-pickers`,
+        { floors: pickers },
+        authHeaders(),
+      );
+      applyOverview(response.data, !dirtyRef.current);
+      await Swal.fire({
+        icon: "success",
+        title: "บันทึกรายชั้นสำเร็จ",
+        text: "มีผลกับหน้าจัดออเดอร์ทันที",
+        timer: 1800,
+        showConfirmButton: false,
+      });
+    } catch (saveError) {
+      await Swal.fire({
+        icon: "error",
+        title: "บันทึกไม่สำเร็จ",
+        text: responseMessage(saveError, "กรุณาลองใหม่อีกครั้ง"),
+      });
+    } finally {
+      setSavingBoxFloors(false);
+    }
+  };
+
+  const toggleFloorFlag = async (module: string, next: boolean) => {
+    const confirm = await Swal.fire({
+      icon: "question",
+      title: `${next ? "เปิด" : "ปิด"}ใช้งาน${module === "order-block-box-stock" ? "ระงับเพราะลังขาด" : "คนจัดระหว่างระงับ"}?`,
+      text: "มีผลกับหน้าจัดออเดอร์ทุกเครื่องทันที",
+      showCancelButton: true,
+      confirmButtonText: "ยืนยัน",
+      cancelButtonText: "ยกเลิก",
+    });
+    if (!confirm.isConfirmed) return;
+    try {
+      await sendFlag(module, next, null);
+      await fetchOverview(true);
+    } catch (flagError) {
+      await Swal.fire({
+        icon: "error",
+        title: "เปลี่ยนสถานะไม่สำเร็จ",
+        text: responseMessage(flagError, "กรุณาลองใหม่อีกครั้ง"),
+      });
+    }
+  };
+
   const toggleBypass = async (routeCode: string, bypass: boolean) => {
     setTogglingRoute(routeCode);
     try {
@@ -329,6 +482,7 @@ const OrderBlockSection = () => {
               </div>
             )}
 
+            <Fold enabled={floorLayout === "table"} title="ตั้งเวลาระงับรายวัน (จ.–อา.) · ยอดเหลือจัด / รอ QC">
             <div className="p-6 border-b border-gray-200">
               <p className="text-sm font-semibold text-gray-800 mb-2">
                 ระบบจะระงับการจัดเมื่อไหร่
@@ -376,6 +530,7 @@ const OrderBlockSection = () => {
                   disabled={saving}
                   onChange={changeDay}
                   onCopyToAll={copyToAll}
+                  hints={floorLayout === "table"}
                 />
               ))}
             </div>
@@ -405,14 +560,48 @@ const OrderBlockSection = () => {
                 >
                   {saving ? "กำลังบันทึก..." : "บันทึกตาราง"}
                 </button>
+                {floorLayout === "table" && <Hint k="daySave" label="บันทึกตาราง" />}
               </div>
             </div>
+            </Fold>
           </div>
 
+          {floorLayout === "table" &&
+            overview?.box_stock &&
+            overview?.floor_pickers && (
+              <FloorControlTable
+                boxStock={overview.box_stock}
+                floorPickers={overview.floor_pickers}
+                pendingCount={overview.status?.pending_count ?? 0}
+                saving={savingBoxFloors}
+                onSave={saveFloorTable}
+                onToggleFlag={(module, next) => void toggleFloorFlag(module, next)}
+              />
+            )}
+
+          {floorLayout === "cards" && overview?.floor_pickers && (
+            <OrderBlockFloorPickerCard
+              floorPickers={overview.floor_pickers}
+              saving={savingFloorPickers}
+              onSave={saveFloorPickers}
+            />
+          )}
+
+          {floorLayout === "cards" && overview?.box_stock && (
+            <OrderBlockBoxStockCard
+              boxStock={overview.box_stock}
+              pendingCount={overview.status?.pending_count ?? 0}
+              saving={savingBoxFloors}
+              onSave={saveBoxFloors}
+            />
+          )}
+
+          <Fold enabled={floorLayout === "table"} title="เส้นทาง Bypass (ไม่ถูกระงับอัตโนมัติ)" card>
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-bold text-gray-800">
                 เส้นทาง Bypass ({bypassCount})
+                {floorLayout === "table" && <Hint k="bypassRoute" label="เส้นทาง Bypass" />}
               </h3>
               <p className="text-sm text-gray-600 mt-1 mb-4">
                 เส้นทางที่เลือกจะไม่ถูกระงับอัตโนมัติไม่ว่ากรณีใด
@@ -454,6 +643,7 @@ const OrderBlockSection = () => {
               </div>
             )}
           </div>
+          </Fold>
         </>
       )}
     </section>
