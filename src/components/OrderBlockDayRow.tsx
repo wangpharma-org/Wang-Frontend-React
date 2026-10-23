@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { DAY_NAMES, type DayDraft } from "./orderBlockUtils";
+import Hint from "./picking-control/Hint";
 
 interface OrderBlockDayRowProps {
   draft: DayDraft;
@@ -9,6 +10,8 @@ interface OrderBlockDayRowProps {
   disabled: boolean;
   onChange: (dayOfWeek: number, patch: Partial<DayDraft>) => void;
   onCopyToAll: (dayOfWeek: number) => void;
+  // แผงควบคุม (OPHMBC-322) แสดง ⓘ คำอธิบายรายช่อง
+  hints?: boolean;
 }
 
 const inputClass =
@@ -22,14 +25,15 @@ const OrderBlockDayRow = ({
   disabled,
   onChange,
   onCopyToAll,
+  hints = false,
 }: OrderBlockDayRowProps) => {
   const dayOfWeek = draft.day_of_week;
   const dayName = DAY_NAMES[dayOfWeek] ?? "";
 
   return (
     <div className={`p-5 ${isToday ? "bg-blue-50" : ""}`}>
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             role="switch"
@@ -47,7 +51,10 @@ const OrderBlockDayRow = ({
               }`}
             />
           </button>
-          <span className="font-semibold text-gray-900">{dayName}</span>
+          <span className="font-semibold text-gray-900">
+            {dayName}
+            {hints && <Hint k="dayEnabled" label={`เปิดใช้วัน${dayName}`} />}
+          </span>
           {isToday && (
             <span className="px-2 py-0.5 text-xs rounded bg-blue-600 text-white">
               วันนี้
@@ -62,6 +69,7 @@ const OrderBlockDayRow = ({
             className="text-sm text-blue-600 hover:underline disabled:text-gray-400 disabled:no-underline"
           >
             ใช้ค่านี้กับทุกวัน
+            {hints && <Hint k="dayCopy" label="ใช้ค่านี้กับทุกวัน" />}
           </button>
         )}
       </div>
@@ -70,6 +78,7 @@ const OrderBlockDayRow = ({
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
           <label className="text-sm text-gray-600">
             เวลาเริ่ม
+            {hints && <Hint k="dayStart" label="เวลาเริ่ม" />}
             <input
               type="time"
               value={draft.start_time}
@@ -82,6 +91,7 @@ const OrderBlockDayRow = ({
           </label>
           <label className="text-sm text-gray-600">
             เวลาสิ้นสุด (เปิดเสมอ)
+            {hints && <Hint k="dayEnd" label="เวลาสิ้นสุด" />}
             <input
               type="time"
               value={draft.end_time}
@@ -94,6 +104,7 @@ const OrderBlockDayRow = ({
           </label>
           <label className="text-sm text-gray-600">
             QC min — รอ QC ลดถึงค่านี้ให้เปิด
+            {hints && <Hint k="dayQcMin" label="QC min" />}
             <input
               type="number"
               min={0}
@@ -109,6 +120,7 @@ const OrderBlockDayRow = ({
           </label>
           <label className="text-sm text-gray-600">
             QC max — รอ QC ถึงค่านี้ให้ระงับ
+            {hints && <Hint k="dayQcMax" label="QC max" />}
             <input
               type="number"
               min={1}
@@ -124,6 +136,7 @@ const OrderBlockDayRow = ({
           </label>
           <label className="text-sm text-gray-600">
             min — เหลือจัดถึงค่านี้ให้ระงับ
+            {hints && <Hint k="dayMin" label="min เหลือจัด" />}
             <input
               type="number"
               min={0}
@@ -139,6 +152,7 @@ const OrderBlockDayRow = ({
           </label>
           <label className="text-sm text-gray-600">
             max — สะสมถึงค่านี้ให้เปิด
+            {hints && <Hint k="dayMax" label="max เหลือจัด" />}
             <input
               type="number"
               min={1}
