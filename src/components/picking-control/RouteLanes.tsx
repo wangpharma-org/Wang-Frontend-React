@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import Swal from "sweetalert2";
 import Toggle from "./Toggle";
 import HelpPanel from "./HelpPanel";
+import Hint from "./Hint";
 import {
   errorMessage,
   setRoutesActive,
@@ -102,16 +103,20 @@ const RouteLanes = ({ routes, groups, setting, stages, onChanged }: RouteLanesPr
             onChange={(next) => void apply([route.route_code], next, `เส้นทาง ${route.route_code}`)}
           />
           <div className="min-w-0">
-            <p className="truncate font-semibold text-gray-900">{route.route_name}</p>
+            <p className="font-semibold text-gray-900">
+              {route.route_name}
+              <Hint k="laneRouteSwitch" label={`สวิตช์เส้นทาง ${route.route_code}`} />
+            </p>
             <p className={`text-xs ${blocked ? "text-red-600" : route.is_active ? "text-green-600" : "text-gray-500"}`}>
               {route.route_code} · {blocked ? "ถูกระงับ — ไม่ขึ้นคิวจัด" : route.is_active ? "เปิดใช้งาน" : "ปิดใช้งาน"}
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <StationChip label="จัดออเดอร์" on={route.is_active} note={pickingNote} muted={muted || stages.picking === false} />
           <StationChip label="QC" on={false} note={qcNote} muted />
           <StationChip label="ขึ้นของ" on={false} note="เร็วๆ นี้" muted />
+          <Hint k="laneChips" label={`สถานะรายสถานี ${route.route_code}`} />
         </div>
       </div>
     );
@@ -129,9 +134,11 @@ const RouteLanes = ({ routes, groups, setting, stages, onChanged }: RouteLanesPr
             placeholder="ค้นหารหัสหรือชื่อเส้นทาง..."
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm sm:w-64"
           />
+          <Hint k="laneSearch" label="ค้นหาเส้นทาง" />
           <span className="rounded-full bg-blue-50 px-3 py-1 text-xs text-blue-700">ทั้งหมด {routes.length}</span>
           <span className="rounded-full bg-green-50 px-3 py-1 text-xs text-green-700">เปิดใช้งาน {activeCount}</span>
           <span className="rounded-full bg-red-50 px-3 py-1 text-xs text-red-700">ปิด/ระงับ {routes.length - activeCount}</span>
+          <Hint k="laneCounts" label="ตัวนับเส้นทาง" />
         </div>
       </div>
       <div className="-mt-2 mb-4">
@@ -190,6 +197,7 @@ const RouteLanes = ({ routes, groups, setting, stages, onChanged }: RouteLanesPr
                     <p className="font-bold">
                       ชุดที่ {group.position}
                       {group.name ? ` · ${group.name}` : ""}
+                      <Hint k="laneGroupSwitch" label={`สวิตช์หัวชุด ${group.position}`} />
                     </p>
                     <p className="text-xs text-white/80">
                       {group.departure_time ? `ออกรถ ${group.departure_time} · ` : ""}min {group.min_remaining} · {group.routes.length} เส้นทาง
@@ -217,6 +225,7 @@ const RouteLanes = ({ routes, groups, setting, stages, onChanged }: RouteLanesPr
             >
               <p className="font-bold">
                 {groups.length === 0 ? "ทุกเส้นทาง" : "ยังไม่จัดกลุ่ม"}
+                {groups.length > 0 && <Hint k="laneUngrouped" label="ยังไม่จัดกลุ่ม" />}
                 <span className="ml-2 text-xs font-normal text-white/80">
                   {ungrouped.length} เส้นทาง —{" "}
                   {isBatch ? "ไม่อยู่ในชุดไหน จึงถูกระงับในโหมดเปิดทีละชุด" : "คุมรายตัว ไม่มีสวิตช์ชุด (ไปจัดกลุ่มที่โซนขึ้นของ)"}

@@ -1,6 +1,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Route } from "../pages/RouteManage";
+import Hint from "./picking-control/Hint";
 
 export interface EditorGroup {
     key: string;
@@ -34,6 +35,8 @@ interface RouteBatchSortableCardProps {
     blockUntil?: string | null;
     // feature flag route-departure-block — false = ปิดทั้งระบบ ตั้งค่าไว้ก็ไม่ระงับ
     blockEnabled?: boolean;
+    // แผงควบคุม (OPHMBC-322) แสดง ⓘ คำอธิบายรายช่อง — หน้าจัดการเส้นทางเดิมไม่แสดง
+    hints?: boolean;
 }
 
 const RouteBatchSortableCard = ({
@@ -46,6 +49,7 @@ const RouteBatchSortableCard = ({
     onRemove,
     blockUntil,
     blockEnabled,
+    hints = false,
 }: RouteBatchSortableCardProps) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
         useSortable({ id: group.key });
@@ -80,7 +84,7 @@ const RouteBatchSortableCard = ({
                             {index + 1}
                         </span>
                         <label className="flex-1 min-w-[10rem]">
-                            <span className="block text-xs text-gray-500 mb-1">ชื่อชุด</span>
+                            <span className="block text-xs text-gray-500 mb-1">ชื่อชุด{hints && <Hint k="groupName" label="ชื่อชุด" />}</span>
                             <input
                                 type="text"
                                 placeholder="ชื่อชุด เช่น ชุดที่ 1"
@@ -90,7 +94,7 @@ const RouteBatchSortableCard = ({
                             />
                         </label>
                         <label>
-                            <span className="block text-xs text-gray-500 mb-1">min เหลือ</span>
+                            <span className="block text-xs text-gray-500 mb-1">min เหลือ{hints && <Hint k="groupMin" label="min เหลือ" />}</span>
                             <input
                                 type="number"
                                 min={0}
@@ -101,7 +105,7 @@ const RouteBatchSortableCard = ({
                             />
                         </label>
                         <label>
-                            <span className="block text-xs text-gray-500 mb-1">เวลาออกรถ</span>
+                            <span className="block text-xs text-gray-500 mb-1">เวลาออกรถ{hints && <Hint k="groupDeparture" label="เวลาออกรถ" />}</span>
                             <input
                                 type="time"
                                 value={group.departure_time}
@@ -110,7 +114,7 @@ const RouteBatchSortableCard = ({
                             />
                         </label>
                         <label>
-                            <span className="block text-xs text-gray-500 mb-1">ระงับก่อนออกรถ (นาที)</span>
+                            <span className="block text-xs text-gray-500 mb-1">ระงับก่อนออกรถ (นาที){hints && <Hint k="groupBlockBefore" label="ระงับก่อนออกรถ" />}</span>
                             <input
                                 type="number"
                                 min={1}
@@ -148,7 +152,16 @@ const RouteBatchSortableCard = ({
                         >
                             ลบชุด
                         </button>
+                        {hints && <Hint k="groupRemove" label="ลบชุด" />}
                     </div>
+                    {hints && (
+                        <p className="mb-1 text-xs text-gray-500">
+                            เส้นทางในชุด
+                            <Hint k="groupRoutes" label="เส้นทางในชุด" />
+                            <span className="ml-3">ลาก ⠿ เพื่อจัดลำดับ</span>
+                            <Hint k="groupDrag" label="ลากจัดลำดับ" />
+                        </p>
+                    )}
                     <div className="flex flex-wrap gap-2">
                         {allRoutes.map((route) => {
                             const checked = group.route_codes.includes(route.route_code);

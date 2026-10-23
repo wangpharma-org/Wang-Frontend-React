@@ -6,6 +6,7 @@ import type { FloorPickerPayload } from "../OrderBlockFloorPickerCard";
 import Toggle from "./Toggle";
 import { API } from "./pickingControlApi";
 import HelpPanel from "./HelpPanel";
+import Hint from "./Hint";
 
 // OPHMBC-322 — รวมการ์ดลังรายชั้น + คนจัดระหว่างระงับ (OPHMBC-320) เป็นตารางเดียว 1 แถว/ชั้น
 export interface FloorTablePayload {
@@ -141,7 +142,8 @@ const FloorControlTable = ({
             </HelpPanel>
           </div>
           <div className="flex flex-col gap-2 text-xs">
-            <label className="flex items-center justify-end gap-2 text-gray-700">
+            <label className="flex flex-wrap items-center justify-end gap-2 text-gray-700">
+              <Hint k="boxFlag" label="ระงับเพราะลังขาด" />
               ระงับเพราะลังขาด
               <Toggle
                 size="sm"
@@ -150,7 +152,8 @@ const FloorControlTable = ({
                 onChange={(next) => onToggleFlag("order-block-box-stock", next)}
               />
             </label>
-            <label className="flex items-center justify-end gap-2 text-gray-700">
+            <label className="flex flex-wrap items-center justify-end gap-2 text-gray-700">
+              <Hint k="pickerFlag" label="คนจัดระหว่างระงับ" />
               คนจัดระหว่างระงับ
               <Toggle
                 size="sm"
@@ -179,10 +182,10 @@ const FloorControlTable = ({
           <thead className="bg-gray-50 text-xs text-gray-500">
             <tr>
               <th className="px-4 py-2 text-left font-medium">ชั้น</th>
-              <th className="px-4 py-2 text-right font-medium">เติมแล้ววันนี้</th>
-              <th className="px-4 py-2 text-left font-medium">ขั้นต่ำ (ลัง)</th>
-              <th className="px-4 py-2 text-left font-medium">สถานะ</th>
-              <th className="px-4 py-2 text-left font-medium">คนจัดระหว่างระงับ</th>
+              <th className="px-4 py-2 text-right font-medium">เติมแล้ววันนี้<Hint k="floorRefilled" label="เติมแล้ววันนี้" /></th>
+              <th className="px-4 py-2 text-left font-medium">ขั้นต่ำ (ลัง)<Hint k="floorMin" label="ขั้นต่ำ (ลัง)" /></th>
+              <th className="px-4 py-2 text-left font-medium">สถานะ<Hint k="floorStatus" label="สถานะ" /></th>
+              <th className="px-4 py-2 text-left font-medium">คนจัดระหว่างระงับ<Hint k="floorPicker" label="คนจัดระหว่างระงับ" /></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -270,6 +273,7 @@ const FloorControlTable = ({
               className={`w-24 rounded-lg border px-2 py-1 ${relError ? "border-red-400" : "border-gray-300"}`}
             />
           </label>
+          <Hint k="releaseMin" label="min กลับมาระงับ" />
           <label className="flex items-center gap-1">
             max
             <input
@@ -282,6 +286,7 @@ const FloorControlTable = ({
               className={`w-24 rounded-lg border px-2 py-1 ${relError ? "border-red-400" : "border-gray-300"}`}
             />
           </label>
+          <Hint k="releaseMax" label="max ปลดระงับ" />
         </div>
         {relError && <p className="text-xs text-red-600">{relError}</p>}
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -309,6 +314,7 @@ const FloorControlTable = ({
             >
               {saving ? "กำลังบันทึก..." : "บันทึกรายชั้น"}
             </button>
+            <Hint k="floorSave" label="บันทึกรายชั้น" />
           </div>
         </div>
       </div>

@@ -9,6 +9,7 @@ import FloorControlTable, {
   type FloorTablePayload,
 } from "./picking-control/FloorControlTable";
 import { sendFlag } from "./picking-control/pickingControlApi";
+import Hint from "./picking-control/Hint";
 import OrderBlockBoxStockCard, {
   type BoxStockPayload,
 } from "./OrderBlockBoxStockCard";
@@ -529,6 +530,7 @@ const OrderBlockSection = ({ floorLayout = "cards" }: OrderBlockSectionProps) =>
                   disabled={saving}
                   onChange={changeDay}
                   onCopyToAll={copyToAll}
+                  hints={floorLayout === "table"}
                 />
               ))}
             </div>
@@ -558,6 +560,7 @@ const OrderBlockSection = ({ floorLayout = "cards" }: OrderBlockSectionProps) =>
                 >
                   {saving ? "กำลังบันทึก..." : "บันทึกตาราง"}
                 </button>
+                {floorLayout === "table" && <Hint k="daySave" label="บันทึกตาราง" />}
               </div>
             </div>
             </Fold>
@@ -598,6 +601,7 @@ const OrderBlockSection = ({ floorLayout = "cards" }: OrderBlockSectionProps) =>
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-bold text-gray-800">
                 เส้นทาง Bypass ({bypassCount})
+                {floorLayout === "table" && <Hint k="bypassRoute" label="เส้นทาง Bypass" />}
               </h3>
               <p className="text-sm text-gray-600 mt-1 mb-4">
                 เส้นทางที่เลือกจะไม่ถูกระงับอัตโนมัติไม่ว่ากรณีใด

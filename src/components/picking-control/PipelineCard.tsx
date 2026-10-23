@@ -1,7 +1,16 @@
 import { Fragment } from "react";
 import Toggle from "./Toggle";
 import HelpPanel from "./HelpPanel";
+import Hint from "./Hint";
+import type { HintKey } from "./hints";
 import { STAGES, type Stage, type StageKey, type StageState } from "./stages";
+
+const STAGE_HINT: Record<StageKey, HintKey> = {
+  picking: "stagePicking",
+  qc: "stageQc",
+  loading: "stageLoading",
+  shipping: "stageShipping",
+};
 
 interface PipelineCardProps {
   states: StageState;
@@ -77,8 +86,9 @@ const PipelineCard = ({ states, busy, onToggle }: PipelineCardProps) => (
               <span className="text-xl" aria-hidden>
                 {stage.icon}
               </span>
-              <span className="font-semibold text-gray-900 text-sm sm:text-base">
+              <span className="font-semibold text-gray-900 text-sm sm:text-base text-center">
                 {stage.label}
+                <Hint k={STAGE_HINT[stage.key]} label={`สถานี${stage.label}`} />
               </span>
               <Toggle
                 size="lg"

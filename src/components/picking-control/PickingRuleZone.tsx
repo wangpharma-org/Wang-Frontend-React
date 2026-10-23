@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { API, authHeaders, errorMessage } from "./pickingControlApi";
 import HelpPanel from "./HelpPanel";
+import Hint from "./Hint";
 
 type PickingRuleMode = "normal" | "floor" | "person";
 
@@ -186,7 +187,10 @@ const PickingRuleZone = () => {
   return (
     <div className="space-y-5">
       <div>
-        <h3 className="text-sm font-semibold text-gray-800">โซนจัดออเดอร์ · กติกาเริ่มจัด</h3>
+        <h3 className="text-sm font-semibold text-gray-800">
+          โซนจัดออเดอร์ · กติกาเริ่มจัด
+          <Hint k="ruleMode" label="กติกาเริ่มจัด" />
+        </h3>
         <div className="mb-3">
           <HelpPanel topic="กติกาเริ่มจัด">
             <ul>
@@ -226,6 +230,7 @@ const PickingRuleZone = () => {
         {mode !== "normal" && (
           <div className="mt-3 flex flex-wrap items-center gap-3">
             {mode === "floor" ? (
+              <>
               <select
                 aria-label="ชั้นที่เริ่มจัดได้"
                 value={floor}
@@ -239,6 +244,8 @@ const PickingRuleZone = () => {
                   </option>
                 ))}
               </select>
+              <Hint k="ruleFloor" label="ชั้นที่เริ่มจัดได้" />
+              </>
             ) : (
               <>
                 <input
@@ -256,6 +263,7 @@ const PickingRuleZone = () => {
                     </option>
                   ))}
                 </datalist>
+                <Hint k="ruleEmployee" label="พนักงานที่เริ่มจัดได้" />
               </>
             )}
             <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -270,6 +278,7 @@ const PickingRuleZone = () => {
               />
               ร้าน
             </label>
+            <Hint k="ruleLimit" label="จัดพร้อมกันได้" />
           </div>
         )}
 
@@ -296,6 +305,7 @@ const PickingRuleZone = () => {
         >
           {savingRule ? "กำลังบันทึก..." : "บันทึกกติกาเริ่มจัด"}
         </button>
+        <Hint k="ruleSave" label="บันทึกกติกาเริ่มจัด" />
       </div>
 
       <div className="border-t border-gray-100 pt-4">
@@ -322,6 +332,7 @@ const PickingRuleZone = () => {
             >
               บันทึก
             </button>
+            <Hint k="urgentLimit" label="limit ลูกค้าด่วน" />
           </div>
         </div>
         <div className="-mt-1 mb-3">
@@ -349,6 +360,16 @@ const PickingRuleZone = () => {
           placeholder="ใส่รหัสลูกค้าแล้วกด Enter เช่น 22007"
           className="w-full rounded-lg border border-red-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
         />
+        <p className="mt-1 text-xs text-gray-500">
+          เพิ่มลูกค้าด่วน
+          <Hint k="urgentAdd" label="เพิ่มลูกค้าด่วน" />
+          {urgent.length > 0 && (
+            <>
+              <span className="ml-3">ปุ่มยกเลิกด่วน</span>
+              <Hint k="urgentCancel" label="ยกเลิกด่วน" />
+            </>
+          )}
+        </p>
         <ul className="mt-2 space-y-2">
           {urgent.map((customer) => (
             <li

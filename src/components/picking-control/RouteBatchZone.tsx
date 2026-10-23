@@ -14,6 +14,7 @@ import {
   type RouteBatchSetting,
 } from "./pickingControlApi";
 import HelpPanel from "./HelpPanel";
+import Hint from "./Hint";
 
 interface RouteBatchZoneProps {
   routes: Route[];
@@ -174,6 +175,7 @@ const RouteBatchZone = ({ routes, groups, setting, onChanged }: RouteBatchZonePr
             {mode === "normal" ? "โหมดปกติ" : "เปิดทีละชุด"}
           </button>
         ))}
+        <Hint k="batchMode" label="โหมดการเปิดเส้นทาง" />
         <label className="flex items-center gap-2 text-xs text-gray-600 sm:ml-2">
           max auto-switch
           <input
@@ -188,6 +190,7 @@ const RouteBatchZone = ({ routes, groups, setting, onChanged }: RouteBatchZonePr
           />
           บิลค้างทั้งระบบ
         </label>
+        <Hint k="batchMax" label="max auto-switch" />
         <button
           type="button"
           onClick={() =>
@@ -246,6 +249,7 @@ const RouteBatchZone = ({ routes, groups, setting, onChanged }: RouteBatchZonePr
           >
             {groups.length === 0 ? "+ ตั้งชุดเส้นทาง" : "แก้ไขชุด"}
           </button>
+          <Hint k="batchEdit" label="แก้ไขชุด" />
         </div>
       ) : (
         <div className="mt-4">
@@ -253,6 +257,7 @@ const RouteBatchZone = ({ routes, groups, setting, onChanged }: RouteBatchZonePr
             <SortableContext items={editor.map((g) => g.key)} strategy={verticalListSortingStrategy}>
               {editor.map((group, index) => (
                 <RouteBatchSortableCard
+                  hints
                   key={group.key}
                   group={group}
                   index={index}
@@ -310,6 +315,7 @@ const RouteBatchZone = ({ routes, groups, setting, onChanged }: RouteBatchZonePr
             >
               {busy ? "กำลังบันทึก..." : "บันทึกการจัดกลุ่ม"}
             </button>
+            <Hint k="groupSave" label="บันทึกการจัดกลุ่ม" />
           </div>
         </div>
       )}
