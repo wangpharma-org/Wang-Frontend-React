@@ -13,6 +13,7 @@ import {
   type RouteBatchMode,
   type RouteBatchSetting,
 } from "./pickingControlApi";
+import HelpPanel from "./HelpPanel";
 
 interface RouteBatchZoneProps {
   routes: Route[];
@@ -136,7 +137,20 @@ const RouteBatchZone = ({ routes, groups, setting, onChanged }: RouteBatchZonePr
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-gray-800 mb-3">โซนขึ้นของ · โหมดการเปิดเส้นทาง</h3>
+      <h3 className="text-sm font-semibold text-gray-800">โซนขึ้นของ · โหมดการเปิดเส้นทาง</h3>
+      <div className="mb-3">
+        <HelpPanel topic="โหมดการเปิดเส้นทาง">
+          <ul>
+            <li><b>โหมดปกติ</b> — เปิด/ปิดเส้นทางเองที่ "สายรายเส้นทาง" ด้านล่าง</li>
+            <li>
+              <b>เปิดทีละชุด</b> — เปิดเฉพาะชุดที่ 1 ก่อน ของในชุดเหลือถึง <b>min</b> จะเปิดชุดถัดไปเอง · เส้นทางที่ไม่อยู่ในชุดไหนถูกระงับ
+            </li>
+            <li><b>max auto-switch</b> — บิลค้างทั้งระบบถึงค่านี้ ระบบเข้าโหมดเปิดทีละชุดเอง (เว้นว่าง = ไม่ใช้)</li>
+            <li><b>เวลาออกรถ + ระงับก่อนออกรถ (นาที)</b> — ถึงเวลานั้นเส้นทางในชุดถูกระงับจนถึงเวลาสิ้นสุดของวัน</li>
+          </ul>
+          <p>แก้ชุดได้เฉพาะตอนอยู่โหมดปกติ (ปุ่ม "แก้ไขชุด") · 1 เส้นทางอยู่ได้แค่ 1 ชุด · ลาก ⠿ เพื่อสลับลำดับ</p>
+        </HelpPanel>
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         {(["normal", "batch"] as const).map((mode) => (
           <button

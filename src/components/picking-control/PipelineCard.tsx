@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import Toggle from "./Toggle";
+import HelpPanel from "./HelpPanel";
 import { STAGES, type Stage, type StageKey, type StageState } from "./stages";
 
 interface PipelineCardProps {
@@ -39,6 +40,20 @@ const PipelineCard = ({ states, busy, onToggle }: PipelineCardProps) => (
     <h2 className="text-sm font-semibold text-gray-800 mb-4">
       สายหลักทั้งระบบ — เปิด/ปิดแต่ละขั้นแยกกันได้
     </h2>
+    <div className="-mt-2 mb-4">
+      <HelpPanel topic="สายหลักทั้งระบบ">
+        <p>
+          กดสวิตช์ของสถานีเพื่อ <b>เปิด/ปิดทั้งคลัง</b> — ปิดแล้วระบบให้พิมพ์ข้อความที่จะขึ้นบนจอพนักงาน
+        </p>
+        <ul>
+          <li><b>ปิดจัดออเดอร์</b> — หน้าจัดออเดอร์ทุกเครื่องขึ้นหน้าพักระบบ เริ่มจัดร้านใหม่ไม่ได้</li>
+          <li><b>ปิด QC</b> — หน้า QC ทุกเครื่องขึ้น "ระบบโดนสั่งระงับการใช้งาน" บิลที่จัดเสร็จจะค้างรอ QC</li>
+          <li>เส้น "ไหลผ่าน" = ทั้งสองฝั่งเปิด · "ตัดวงจร" = ฝั่งใดฝั่งหนึ่งปิด · ด้านบนหน้าจะขึ้นแถบเตือนสีเหลือง</li>
+          <li>"ขึ้นของ" และ "จัดส่ง" อยู่ในระบบขนส่ง ยังสั่งจากหน้านี้ไม่ได้</li>
+        </ul>
+        <p>⚠️ มีผลกับ<b>ทุกเครื่องทันที</b> — ใช้เมื่อจำเป็นและอย่าลืมเปิดคืน</p>
+      </HelpPanel>
+    </div>
     {/* จอแคบ = ตาราง 2×2 ไม่มีเส้นเชื่อม, จอกว้าง = สายเรียงแถวเดียวตามดีไซน์ */}
     <div className="grid grid-cols-2 gap-3 sm:flex sm:items-stretch sm:gap-0">
       {STAGES.map((stage, index) => {

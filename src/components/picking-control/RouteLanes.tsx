@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import Swal from "sweetalert2";
 import Toggle from "./Toggle";
+import HelpPanel from "./HelpPanel";
 import {
   errorMessage,
   setRoutesActive,
@@ -132,6 +133,17 @@ const RouteLanes = ({ routes, groups, setting, stages, onChanged }: RouteLanesPr
           <span className="rounded-full bg-green-50 px-3 py-1 text-xs text-green-700">เปิดใช้งาน {activeCount}</span>
           <span className="rounded-full bg-red-50 px-3 py-1 text-xs text-red-700">ปิด/ระงับ {routes.length - activeCount}</span>
         </div>
+      </div>
+      <div className="-mt-2 mb-4">
+        <HelpPanel topic="สายรายเส้นทาง">
+          <ul>
+            <li><b>สวิตช์หัวชุด</b> — เปิด/ปิดการจัดออเดอร์ทุกเส้นทางในชุดพร้อมกัน</li>
+            <li><b>สวิตช์เส้นทาง</b> (น้ำเงิน) — เปิด/ปิดการจัดออเดอร์ของเส้นทางนั้น</li>
+            <li>ชิป จัดออเดอร์ / QC / ขึ้นของ = สถานะรายสถานี (QC และขึ้นของรายเส้นทางยังไม่รองรับ)</li>
+            <li><b>ยังไม่จัดกลุ่ม</b> — เส้นทางที่ไม่อยู่ในชุดไหน ในโหมดเปิดทีละชุดจะถูกระงับ</li>
+          </ul>
+          <p>⚠️ กดสวิตช์ตอนอยู่<b>โหมดเปิดทีละชุด</b> ระบบจะออกจากโหมดนั้นกลับเป็นโหมดปกติ (มีถามยืนยันก่อน)</p>
+        </HelpPanel>
       </div>
 
       <div className="space-y-4">

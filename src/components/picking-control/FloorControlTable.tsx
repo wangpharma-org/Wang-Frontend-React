@@ -5,6 +5,7 @@ import type { BoxStockPayload } from "../OrderBlockBoxStockCard";
 import type { FloorPickerPayload } from "../OrderBlockFloorPickerCard";
 import Toggle from "./Toggle";
 import { API } from "./pickingControlApi";
+import HelpPanel from "./HelpPanel";
 
 // OPHMBC-322 — รวมการ์ดลังรายชั้น + คนจัดระหว่างระงับ (OPHMBC-320) เป็นตารางเดียว 1 แถว/ชั้น
 export interface FloorTablePayload {
@@ -120,6 +121,24 @@ const FloorControlTable = ({
               ยอดลังนับจากแอปบันทึกลังของ<b>วันนี้</b> (ไม่นับรอบที่ถูกปฏิเสธ) · ชั้นไหนไม่ถึงขั้นต่ำ ร้านที่มีสินค้ารอจัดบนชั้นนั้นเริ่มจัดไม่ได้ ·
               คนจัดระหว่างระงับเริ่มจัดได้เฉพาะร้านที่มีสินค้าชั้นของตัวเอง
             </p>
+            <HelpPanel topic="ตารางรายชั้น">
+              <ul>
+                <li>
+                  <b>เติมแล้ววันนี้</b> — ยอดลังจากแอปบันทึกลังของวันนี้ ไม่นับรอบที่ถูกปฏิเสธ · ขึ้นวันใหม่เริ่มจาก 0 · อ่านใหม่ทุก 1 นาที
+                </li>
+                <li>
+                  <b>ขั้นต่ำ</b> — ยอดยังไม่ถึง → ร้านที่มีสินค้ารอจัดบนชั้นนี้เริ่มจัดไม่ได้จนกว่าจะเติมลังครบ · เว้นว่าง = ไม่เช็คชั้นนี้
+                </li>
+                <li>
+                  <b>คนจัดระหว่างระงับ</b> — 1 คนต่อชั้น ยังเริ่มจัดได้แม้ถูกระงับทุกแบบ เฉพาะร้านที่มีสินค้าชั้นนี้
+                </li>
+                <li>
+                  <b>ปลดระงับ min/max</b> — เหลือจัดทั้งระบบถึง max → ปลดการระงับเพราะลังชั่วคราว, ลดถึง min → กลับมาระงับ
+                </li>
+                <li>สวิตช์มุมขวา = เปิด/ปิดแต่ละฟีเจอร์ทั้งระบบ</li>
+              </ul>
+              <p>ถ้าอ่านยอดจากแอปบันทึกลังไม่ได้ ระบบจะ<b>ไม่ระงับเพราะลัง</b>ชั่วคราว (กันคลังหยุดงาน)</p>
+            </HelpPanel>
           </div>
           <div className="flex flex-col gap-2 text-xs">
             <label className="flex items-center justify-end gap-2 text-gray-700">

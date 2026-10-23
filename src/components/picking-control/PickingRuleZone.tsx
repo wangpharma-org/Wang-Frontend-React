@@ -2,6 +2,7 @@ import axios from "axios";
 import { useCallback, useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { API, authHeaders, errorMessage } from "./pickingControlApi";
+import HelpPanel from "./HelpPanel";
 
 type PickingRuleMode = "normal" | "floor" | "person";
 
@@ -185,7 +186,19 @@ const PickingRuleZone = () => {
   return (
     <div className="space-y-5">
       <div>
-        <h3 className="text-sm font-semibold text-gray-800 mb-3">โซนจัดออเดอร์ · กติกาเริ่มจัด</h3>
+        <h3 className="text-sm font-semibold text-gray-800">โซนจัดออเดอร์ · กติกาเริ่มจัด</h3>
+        <div className="mb-3">
+          <HelpPanel topic="กติกาเริ่มจัด">
+            <ul>
+              <li><b>ปกติ</b> — ทุกคนกดเริ่มจัดได้</li>
+              <li><b>ตามชั้น</b> — เฉพาะพนักงานของชั้นที่เลือก และจัดพร้อมกันได้ไม่เกิน N ร้าน</li>
+              <li><b>ตามพนักงาน</b> — เฉพาะพนักงานคนที่เลือก และจัดพร้อมกันได้ไม่เกิน N ร้าน</li>
+            </ul>
+            <p>
+              เปลี่ยนกติกาตอนยังมีร้านค้างจากกติกาเดิม → ระบบรอให้ร้านค้างจัดเสร็จก่อนแล้วเปลี่ยนให้เอง (กล่องสีส้ม)
+            </p>
+          </HelpPanel>
+        </div>
         <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="กติกาเริ่มจัด">
           {MODES.map((option) => (
             <button
@@ -287,7 +300,7 @@ const PickingRuleZone = () => {
 
       <div className="border-t border-gray-100 pt-4">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <h3 className="text-sm font-semibold text-red-700">
+          <h3 className="text-sm font-semibold text-red-700 w-full sm:w-auto">
             🚨 ลูกค้าด่วน ({urgent.length}
             {urgentLimit !== null ? `/${urgentLimit}` : ""})
           </h3>
@@ -310,6 +323,17 @@ const PickingRuleZone = () => {
               บันทึก
             </button>
           </div>
+        </div>
+        <div className="-mt-1 mb-3">
+          <HelpPanel topic="ลูกค้าด่วน">
+            <p>
+              ร้านในรายการนี้ <b>ไม่ถูกระงับไม่ว่ากรณีใด</b> และมีป้าย "ด่วน" บนหน้าจัดออเดอร์
+            </p>
+            <ul>
+              <li>เพิ่ม: พิมพ์รหัสลูกค้าแล้วกด Enter · ยกเลิก: กด "ยกเลิกด่วน"</li>
+              <li><b>limit</b> = จำนวนร้านด่วนสูงสุดพร้อมกัน — เต็มแล้วเพิ่มไม่ได้</li>
+            </ul>
+          </HelpPanel>
         </div>
         <input
           aria-label="เพิ่มลูกค้าด่วน"

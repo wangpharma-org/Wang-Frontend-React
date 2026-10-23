@@ -7,6 +7,9 @@ import PickingRuleZone from "../components/picking-control/PickingRuleZone";
 import RouteBatchZone from "../components/picking-control/RouteBatchZone";
 import RouteLanes from "../components/picking-control/RouteLanes";
 import OrderBlockSection from "../components/OrderBlockSection";
+import HelpPanel from "../components/picking-control/HelpPanel";
+import Toggle from "../components/picking-control/Toggle";
+import { ShowAllHelpContext, readShowAllHelp, writeShowAllHelp } from "../components/picking-control/helpContext";
 import {
   API,
   PICKING_CONTROL_FLAG,
@@ -35,6 +38,7 @@ const PickingControl = () => {
   const [groups, setGroups] = useState<RouteBatchGroupStatus[]>([]);
   const [batchSetting, setBatchSetting] = useState<RouteBatchSetting | null>(null);
   const [updatedAt, setUpdatedAt] = useState(nowHHmm());
+  const [showAllHelp, setShowAllHelp] = useState(readShowAllHelp);
 
   const loadStages = useCallback(async () => {
     const [picking, qc] = await Promise.all([fetchFlag("order"), fetchFlag("qc")]);
@@ -123,6 +127,7 @@ const PickingControl = () => {
   const cutStage = STAGES.find((stage) => stage.flag && stages[stage.key] === false);
 
   return (
+    <ShowAllHelpContext.Provider value={showAllHelp}>
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-7xl space-y-5 px-4 py-5 sm:px-6">
         <header className="flex flex-wrap items-center justify-between gap-3">
@@ -130,9 +135,23 @@ const PickingControl = () => {
             <h1 className="text-xl font-bold text-blue-900 sm:text-2xl">จัดการ Order — แผงควบคุมสายการไหล</h1>
             <span className="rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-800">สวิตช์ / กติกา / โหมดชุด</span>
           </div>
-          <p className="text-xs text-gray-500">
-            อัปเดตล่าสุด {updatedAt} · ผู้ดูแล ({userInfo?.emp_code ?? "-"})
-          </p>
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="flex items-center gap-2 text-xs text-sky-800">
+              <Toggle
+                size="sm"
+                label="แสดงคำอธิบายทั้งหมด"
+                checked={showAllHelp}
+                onChange={(next) => {
+                  setShowAllHelp(next);
+                  writeShowAllHelp(next);
+                }}
+              />
+              แสดงคำอธิบายทั้งหมด
+            </label>
+            <p className="text-xs text-gray-500">
+              อัปเดตล่าสุด {updatedAt} · ผู้ดูแล ({userInfo?.emp_code ?? "-"})
+            </p>
+          </div>
         </header>
 
         {cutStage && (
@@ -157,6 +176,21 @@ const PickingControl = () => {
             โซนจัดออเดอร์ · ระงับอัตโนมัติ (ตามเวลา / ยอดค้าง / รถออก / bypass) และรายชั้น
           </summary>
           <div className="border-t border-gray-100 p-4 sm:p-6 [&_section]:mb-0">
+            <div className="mb-4">
+              <HelpPanel topic="ระงับอัตโนมัติ">
+                <ul>
+                  <li>
+                    <b>ตั้งเวลาระงับรายวัน</b> (กดหัวข้อเพื่อกาง) — ช่วงเวลาเริ่ม–สิ้นสุดของแต่ละวัน · min/max ยอดเหลือจัด · QC min/max ·
+                    ถึงเวลาสิ้นสุดเปิดจัดทุกเส้นทางเสมอ
+                  </li>
+                  <li>
+                    <b>เส้นทาง Bypass</b> — เส้นทางที่เลือกไว้ไม่ถูกระงับอัตโนมัติไม่ว่ากรณีใด
+                  </li>
+                  <li>กล่อง "สถานะตอนนี้" บอกว่าระงับอยู่ไหมและจะเปิดเมื่อไหร่</li>
+                </ul>
+                <p>ไม่ถูกระงับเสมอ: ร้านด่วน · ร้านที่กำลังจัดค้างอยู่ · เส้นทาง Bypass · คนจัดระหว่างระงับ (เฉพาะร้านที่มีสินค้าชั้นของตัวเอง)</p>
+              </HelpPanel>
+            </div>
             <OrderBlockSection floorLayout="table" />
           </div>
         </details>
@@ -164,6 +198,7 @@ const PickingControl = () => {
         <RouteLanes routes={routes} groups={groups} setting={batchSetting} stages={stages} onChanged={loadRoutes} />
       </div>
     </div>
+    </ShowAllHelpContext.Provider>
   );
 };
 
