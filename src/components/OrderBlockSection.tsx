@@ -2,6 +2,9 @@ import axios from "axios";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import OrderBlockDayRow from "./OrderBlockDayRow";
+import OrderBlockBoxStockCard, {
+  type BoxFloorPayload,
+} from "./OrderBlockBoxStockCard";
 import {
   DAY_NAMES,
   describeDay,
@@ -45,6 +48,7 @@ const OrderBlockSection = () => {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [togglingRoute, setTogglingRoute] = useState<string | null>(null);
+  const [savingBoxFloors, setSavingBoxFloors] = useState(false);
   const [routeSearch, setRouteSearch] = useState("");
 
   const savedDrafts = useMemo(
@@ -231,6 +235,33 @@ const OrderBlockSection = () => {
     }
   };
 
+  const saveBoxFloors = async (floors: BoxFloorPayload[]) => {
+    setSavingBoxFloors(true);
+    try {
+      const response = await axios.put<OrderBlockOverview>(
+        `${orderBlockApiUrl}/box-floors`,
+        { floors },
+        authHeaders(),
+      );
+      applyOverview(response.data, !dirtyRef.current);
+      await Swal.fire({
+        icon: "success",
+        title: "บันทึกขั้นต่ำลังสำเร็จ",
+        text: "มีผลกับหน้าจัดออเดอร์ทันที",
+        timer: 1800,
+        showConfirmButton: false,
+      });
+    } catch (saveError) {
+      await Swal.fire({
+        icon: "error",
+        title: "บันทึกไม่สำเร็จ",
+        text: responseMessage(saveError, "กรุณาลองใหม่อีกครั้ง"),
+      });
+    } finally {
+      setSavingBoxFloors(false);
+    }
+  };
+
   const toggleBypass = async (routeCode: string, bypass: boolean) => {
     setTogglingRoute(routeCode);
     try {
@@ -408,6 +439,14 @@ const OrderBlockSection = () => {
               </div>
             </div>
           </div>
+
+          {overview?.box_stock && (
+            <OrderBlockBoxStockCard
+              boxStock={overview.box_stock}
+              saving={savingBoxFloors}
+              onSave={saveBoxFloors}
+            />
+          )}
 
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             <div className="p-6 border-b border-gray-200">

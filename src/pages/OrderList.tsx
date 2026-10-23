@@ -87,6 +87,9 @@ interface OrderBlockSnapshot {
   blocked_route_codes: string[];
   bypass_route_codes: string[];
   end_time: string | null;
+  // ลังชั้นยังเติมไม่ถึงขั้นต่ำ (flag order-block-box-stock) — backend รุ่นก่อนไม่มีฟิลด์นี้
+  box_blocked_floors?: { floor: number; min_boxes: number | null; refilled: number | null }[];
+  box_blocked_members?: { mem_code: string; floors: number[] }[];
 }
 
 type PickingRuleMode = "normal" | "floor" | "person";
@@ -193,6 +196,28 @@ const OrderList = () => {
     [orderBlock]
   );
 
+  // backend กรองร้านด่วน/กำลังจัด/bypass ออกให้แล้ว
+  const boxBlockedFloorsByMember = useMemo(
+    () =>
+      new Map(
+        (orderBlock?.box_blocked_members ?? []).map((member) => [
+          member.mem_code,
+          member.floors,
+        ])
+      ),
+    [orderBlock]
+  );
+
+  const describeBoxShortage = (floors: number[]) =>
+    (orderBlock?.box_blocked_floors ?? [])
+      .filter((floor) => floors.includes(floor.floor))
+      .map((floor) => `ชั้น ${floor.floor} (${floor.refilled ?? 0}/${floor.min_boxes ?? "-"} ลัง)`)
+      .join(", ");
+
+  const isBoxBlocked = (order: orderList) =>
+    order.picking_status !== "picking" &&
+    boxBlockedFloorsByMember.has(order.mem_code);
+
   // ร้านด่วนนับเป็น bypass และร้านที่จัดค้างอยู่ให้จัดต่อจนจบได้
   const isAutoBlocked = (order: orderList) =>
     !order.urgent &&
@@ -201,8 +226,8 @@ const OrderList = () => {
 
   // ใช้เรียงเฉพาะตอนมีเส้นทางถูกระงับอัตโนมัติ: bypass ขึ้นบนสุด เส้นทางที่ถูกระงับลงล่างสุด
   const blockRank = (order: orderList) => {
-    if (blockedRouteCodes.size === 0) return 0;
-    if (isAutoBlocked(order)) return 2;
+    if (blockedRouteCodes.size === 0 && boxBlockedFloorsByMember.size === 0) return 0;
+    if (isAutoBlocked(order) || isBoxBlocked(order)) return 2;
     return bypassRouteCodes.has(order.mem_route?.route_code ?? "") ? 0 : 1;
   };
 
@@ -246,6 +271,14 @@ const OrderList = () => {
         text: orderBlock?.end_time
           ? `ระงับอัตโนมัติ จะเปิดอีกครั้งเวลา ${orderBlock.end_time} น.`
           : "ระงับอัตโนมัติ",
+      });
+      return;
+    }
+    if (target && isBoxBlocked(target)) {
+      Swal.fire({
+        icon: "warning",
+        title: "ลังยังเติมไม่ถึงขั้นต่ำ",
+        text: `${describeBoxShortage(boxBlockedFloorsByMember.get(target.mem_code) ?? [])} — ระงับการจัดจนกว่าจะเติมลังครบ`,
       });
       return;
     }
@@ -1317,6 +1350,13 @@ const OrderList = () => {
             </div>
           ) : (
             <div>
+              {(orderBlock?.box_blocked_floors ?? []).length > 0 && (
+                <div className="mx-3 mt-3 p-2 rounded-sm bg-red-600 text-white text-center text-sm font-bold">
+                  ลังยังเติมไม่ถึงขั้นต่ำ:{" "}
+                  {describeBoxShortage((orderBlock?.box_blocked_floors ?? []).map((floor) => floor.floor))}
+                  {" "}— ร้านที่มีสินค้าชั้นนี้จะจัดได้เมื่อเติมลังครบ
+                </div>
+              )}
               {filteredData?.length > 0 ? (
                 <div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2 w-full mb-36 mt-3">
@@ -1396,7 +1436,7 @@ const OrderList = () => {
                                 : order.picking_status === "picking"
                                 ? "bg-green-400"
                                 : "bg-gray-400"
-                                } ${order.mem_route?.is_active === false || isAutoBlocked(order)
+                                } ${order.mem_route?.is_active === false || isAutoBlocked(order) || isBoxBlocked(order)
                                   ? "opacity-50 "
                                   : ""
                                 } cursor-pointer hover:scale-[1.02] transition-transform duration-100 ease-in-out`}
@@ -1414,6 +1454,11 @@ const OrderList = () => {
                                     <div>
                                       <p className="text-red-600 font-bold text-center">เส้นทางนี้ถูกระงับ</p>
                                     </div>
+                                  )}
+                                  {order?.mem_route?.is_active !== false && !isAutoBlocked(order) && isBoxBlocked(order) && (
+                                    <p className="text-red-600 font-bold text-center">
+                                      รอเติมลัง {describeBoxShortage(boxBlockedFloorsByMember.get(order.mem_code) ?? [])}
+                                    </p>
                                   )}
                                 </div>
                                 {order.urgent &&
