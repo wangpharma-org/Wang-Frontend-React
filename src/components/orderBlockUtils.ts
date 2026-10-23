@@ -49,12 +49,23 @@ export interface BoxStockStatus {
   floors: BoxFloorStatus[];
 }
 
+// พนักงานชั้นละ 1 คนที่เริ่มจัดได้ระหว่างระงับ (flag order-block-floor-picker)
+export interface FloorPickerOverview {
+  enabled: boolean;
+  floors: {
+    floor: number;
+    emp_code: string | null;
+    emp_nickname: string | null;
+  }[];
+}
+
 export interface OrderBlockOverview {
   days: OrderBlockDay[];
   routes: OrderBlockRoute[];
   status: OrderBlockStatus;
   // backend รุ่นก่อนไม่มีฟิลด์นี้
   box_stock?: BoxStockStatus;
+  floor_pickers?: FloorPickerOverview;
 }
 
 // ช่องตัวเลขเก็บเป็น string เพื่อให้แอดมินเคลียร์ค่าเป็นว่างได้

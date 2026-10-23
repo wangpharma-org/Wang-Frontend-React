@@ -90,6 +90,8 @@ interface OrderBlockSnapshot {
   // ลังชั้นยังเติมไม่ถึงขั้นต่ำ (flag order-block-box-stock) — backend รุ่นก่อนไม่มีฟิลด์นี้
   box_blocked_floors?: { floor: number; min_boxes: number | null; refilled: number | null }[];
   box_blocked_members?: { mem_code: string; floors: number[] }[];
+  // พนักงานชั้นละ 1 คนที่เริ่มจัดได้แม้ถูกระงับ (flag order-block-floor-picker)
+  floor_pickers?: { floor: number; emp_code: string }[];
 }
 
 type PickingRuleMode = "normal" | "floor" | "person";
@@ -214,15 +216,39 @@ const OrderList = () => {
       .map((floor) => `ชั้น ${floor.floor} (${floor.refilled ?? 0}/${floor.min_boxes ?? "-"} ลัง)`)
       .join(", ");
 
+  // ชั้นที่ผู้ใช้คนนี้ถูกตั้งเป็นคนจัดระหว่างระงับ
+  const myPickerFloors = useMemo(
+    () =>
+      new Set(
+        (orderBlock?.floor_pickers ?? [])
+          .filter((picker) => picker.emp_code === userInfo?.emp_code)
+          .map((picker) => String(picker.floor))
+      ),
+    [orderBlock, userInfo?.emp_code]
+  );
+
+  // คนจัดระหว่างระงับเริ่มจัดได้เฉพาะร้านที่มีสินค้ารอจัดบนชั้นของตัวเอง — server เช็คซ้ำอีกชั้น
+  const isFloorPickerExempt = (order: orderList) =>
+    myPickerFloors.size > 0 &&
+    order.shoppingHeads.some((sh) =>
+      sh.shoppingOrders.some(
+        (so) =>
+          so.picking_status === "pending" &&
+          myPickerFloors.has(String(so.product?.product_floor || "1").trim())
+      )
+    );
+
   const isBoxBlocked = (order: orderList) =>
     order.picking_status !== "picking" &&
-    boxBlockedFloorsByMember.has(order.mem_code);
+    boxBlockedFloorsByMember.has(order.mem_code) &&
+    !isFloorPickerExempt(order);
 
   // ร้านด่วนนับเป็น bypass และร้านที่จัดค้างอยู่ให้จัดต่อจนจบได้
   const isAutoBlocked = (order: orderList) =>
     !order.urgent &&
     order.picking_status !== "picking" &&
-    blockedRouteCodes.has(order.mem_route?.route_code ?? "");
+    blockedRouteCodes.has(order.mem_route?.route_code ?? "") &&
+    !isFloorPickerExempt(order);
 
   // ใช้เรียงเฉพาะตอนมีเส้นทางถูกระงับอัตโนมัติ: bypass ขึ้นบนสุด เส้นทางที่ถูกระงับลงล่างสุด
   const blockRank = (order: orderList) => {

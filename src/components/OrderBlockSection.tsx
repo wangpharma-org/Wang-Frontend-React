@@ -2,6 +2,9 @@ import axios from "axios";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import OrderBlockDayRow from "./OrderBlockDayRow";
+import OrderBlockFloorPickerCard, {
+  type FloorPickerPayload,
+} from "./OrderBlockFloorPickerCard";
 import OrderBlockBoxStockCard, {
   type BoxStockPayload,
 } from "./OrderBlockBoxStockCard";
@@ -49,6 +52,7 @@ const OrderBlockSection = () => {
   const [saving, setSaving] = useState(false);
   const [togglingRoute, setTogglingRoute] = useState<string | null>(null);
   const [savingBoxFloors, setSavingBoxFloors] = useState(false);
+  const [savingFloorPickers, setSavingFloorPickers] = useState(false);
   const [routeSearch, setRouteSearch] = useState("");
 
   const savedDrafts = useMemo(
@@ -262,6 +266,33 @@ const OrderBlockSection = () => {
     }
   };
 
+  const saveFloorPickers = async (floors: FloorPickerPayload[]) => {
+    setSavingFloorPickers(true);
+    try {
+      const response = await axios.put<OrderBlockOverview>(
+        `${orderBlockApiUrl}/floor-pickers`,
+        { floors },
+        authHeaders(),
+      );
+      applyOverview(response.data, !dirtyRef.current);
+      await Swal.fire({
+        icon: "success",
+        title: "บันทึกคนจัดรายชั้นสำเร็จ",
+        text: "มีผลกับหน้าจัดออเดอร์ทันที",
+        timer: 1800,
+        showConfirmButton: false,
+      });
+    } catch (saveError) {
+      await Swal.fire({
+        icon: "error",
+        title: "บันทึกไม่สำเร็จ",
+        text: responseMessage(saveError, "กรุณาลองใหม่อีกครั้ง"),
+      });
+    } finally {
+      setSavingFloorPickers(false);
+    }
+  };
+
   const toggleBypass = async (routeCode: string, bypass: boolean) => {
     setTogglingRoute(routeCode);
     try {
@@ -439,6 +470,14 @@ const OrderBlockSection = () => {
               </div>
             </div>
           </div>
+
+          {overview?.floor_pickers && (
+            <OrderBlockFloorPickerCard
+              floorPickers={overview.floor_pickers}
+              saving={savingFloorPickers}
+              onSave={saveFloorPickers}
+            />
+          )}
 
           {overview?.box_stock && (
             <OrderBlockBoxStockCard
