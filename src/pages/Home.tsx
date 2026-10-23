@@ -21,9 +21,11 @@ import settingsIcon from "../assets/settings.png";
 import { useNavigate } from "react-router";
 import { fetchPrintLabelFlag } from "../components/noBarcodeApproval";
 import { fetchMyScanPolicy } from "../components/employeeScanSetting";
+import { PICKING_CONTROL_FLAG, fetchFlag } from "../components/picking-control/pickingControlApi";
 
 const PRINT_LABEL_HREF = "/product-barcode-print-select";
 const EMPLOYEE_SETTINGS_HREF = "/employee-settings";
+const PICKING_CONTROL_HREF = "/picking-control";
 const listMenu = [
   {
     id: 24,
@@ -77,6 +79,13 @@ const listMenu = [
     name: "จัดการOrder",
     href: "/route-manage",
     imageSrc: RouteManage,
+    admin: true,
+  },
+  {
+    id: 28,
+    name: "แผงควบคุมสายการไหล",
+    href: PICKING_CONTROL_HREF,
+    imageSrc: settingsIcon,
     admin: true,
   },
     {
@@ -238,6 +247,11 @@ const Home = () => {
           // เมนูพิมพ์ฉลาก QR คุมด้วย flag qc-barcode-print (ตั้งที่หน้า /no-barcode-approval) — โหลดไม่ได้ให้ซ่อน
           if (menu.href === PRINT_LABEL_HREF) {
             const visible = await fetchPrintLabelFlag().catch(() => false);
+            return { id: menu.id, visible };
+          }
+          // OPHMBC-322 — เห็นเมื่อเปิด flag picking-control-page (เมนู admin อยู่แล้ว) — โหลดไม่ได้ให้ซ่อน
+          if (menu.href === PICKING_CONTROL_HREF) {
+            const visible = await fetchFlag(PICKING_CONTROL_FLAG).catch(() => false);
             return { id: menu.id, visible };
           }
           // OPHMBC-316 — เห็นเมื่อเปิด flag employee-scan-setting และพนักงานมี manage_qc = Yes

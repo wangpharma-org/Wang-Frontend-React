@@ -32,6 +32,7 @@ import ProductManage from "./pages/ProductManage";
 // import StatusTicket from "./pages/OpenTicket/StatusTicket";
 import RequestProduct from "./pages/RequestProduct";
 import RouteManage from "./pages/RouteManage";
+import PickingControl from "./pages/PickingControl";
 import RouteSchedule from "./pages/RouteSchedule";
 import TransportDailyEvents from "./pages/TransportDailyEvents";
 import FloorLightOperatorManage from "./pages/FloorLightOperatorManage";
@@ -310,6 +311,17 @@ function App() {
               </div>
             }
           /> */}
+          <Route
+            path="/picking-control"
+            element={
+              <div>
+                <Navbar />
+                <RequireAuth>
+                  <PickingControl />
+                </RequireAuth>
+              </div>
+            }
+          />
           <Route
             path="/route-manage"
             element={
