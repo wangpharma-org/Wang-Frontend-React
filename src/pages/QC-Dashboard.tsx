@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { io, Socket } from "socket.io-client";
 import Modal from "../components/ModalQC";
 import Barcode from "react-barcode";
+import { Printer } from "lucide-react";
 import axios, { AxiosError } from "axios";
 import Marquee from "react-fast-marquee";
 import prepareIcon from "../assets/received.png";
@@ -36,11 +37,16 @@ import NoBarcodeApprovalModal, {
 import BarcodeEditModal, {
   type BarcodeEditTarget,
 } from "../components/BarcodeEditModal";
+import BarcodeLabelPrint from "../components/BarcodeLabelPrint";
 import {
   type ApprovalInfo,
+  type BarcodeLabel,
   type ProductBarcodes,
+  BARCODE_FIELD,
+  BARCODE_SLOTS,
   fetchApprovalFlag,
   fetchBarcodeEditFlag,
+  fetchPrintLabelFlag,
 } from "../components/noBarcodeApproval";
 
 const TAB_KEY = "qc-dashboard";
@@ -280,6 +286,12 @@ const QCDashboard = () => {
   const [dataQC, setDataQC] = useState<ShoppingHead | ShoppingHeadOne | null>(
     null
   );
+  // [] เป็น truthy ใน JS — ต้องเช็ค length ด้วย ไม่งั้นเคส "ลูกค้าไม่มีบิลค้าง QC เหลือแล้ว" (backend คืน [])
+  // จะถูกนับว่า "มีข้อมูล" ทั้งที่จริงๆ ไม่มี
+  const hasQcData = (
+    data: ShoppingHead | ShoppingHeadOne | null
+  ): data is ShoppingHead | ShoppingHeadOne =>
+    !!data && (!Array.isArray(data) || data.length > 0);
   const myUUIDRef = useRef<string>(
     (() => {
       const stored = localStorage.getItem("qc_machine_uuid");
@@ -446,6 +458,9 @@ const QCDashboard = () => {
   const [qrApproval, setQrApproval] = useState<ApprovalInfo | null>(null);
   // แก้/ลบบาร์โค้ดสินค้า ต้องสแกนบัตรผู้อนุมัติทุกครั้ง (flag qc-barcode-edit)
   const [barcodeEditFlag, setBarcodeEditFlag] = useState<boolean>(false);
+  // OPHMBC-315: ปุ่มพิมพ์สติกเกอร์บาร์โค้ดแท่ง — คุมด้วย flag qc-barcode-print
+  const [printLabelFlag, setPrintLabelFlag] = useState<boolean>(false);
+  const [printLabels, setPrintLabels] = useState<BarcodeLabel[] | null>(null);
   const [barcodeEditTarget, setBarcodeEditTarget] = useState<BarcodeEditTarget | null>(null);
 
   // State เก็บไอดีห้องของการต่อ WebSocket
@@ -471,6 +486,7 @@ const QCDashboard = () => {
   const [loadingPrinting, setLoadingPrinting] = useState<boolean>(false);
 
   const [loadingSubmit, setLoadingSubmit] = useState<boolean>(false);
+  const loadingSubmitRef = useRef(false);
 
   const [hasPrintSticker, setHasPrintSticker] = useState<boolean>(false);
   const [hasFrozenNameChange, setHasFrozenNameChange] = useState<boolean>(false);
@@ -724,6 +740,10 @@ const QCDashboard = () => {
   }, [prepareEmp]);
 
   useEffect(() => {
+    loadingSubmitRef.current = loadingSubmit;
+  }, [loadingSubmit]);
+
+  useEffect(() => {
     if (QCEmp?.dataEmp?.emp_code) {
       setInputQC(
         `${QCEmp.dataEmp.emp_code} ${QCEmp.dataEmp.emp_nickname || ""}`
@@ -816,6 +836,9 @@ const QCDashboard = () => {
     });
 
     newSocket.on("qc:refresh", () => {
+      // ระหว่างที่เรากำลัง submit อยู่ ไม่ต้อง refresh ตัวเอง กัน dataQC ถูกเซ็ตเป็น null
+      // แทรกกลางจอก่อน handleClear() ของ submit จะทำงาน (จอกระพริบ/ค้างข้อมูลครึ่งๆ กลางๆ)
+      if (loadingSubmitRef.current) return;
       newSocket.emit("refresh_qc_room");
     });
 
@@ -1048,7 +1071,7 @@ const QCDashboard = () => {
   ]);
 
   useEffect(() => {
-    if (dataQC) {
+    if (hasQcData(dataQC)) {
       let sortedData = [];
 
       if (Array.isArray(dataQC)) {
@@ -1074,9 +1097,13 @@ const QCDashboard = () => {
       setSHRunningArray(sortedData.map((bill) => bill.sh_running));
 
       socket?.emit("get_my_room");
+    } else {
+      // dataQC ว่าง ต้องเคลียร์ช่องหมายเลขบิลที่ค้างไว้ด้วย ไม่งั้นกด Enter ซ้ำจะยังดึงข้อมูลด้วยเลขบิลเก่าได้
+      setInputValues(Array(10).fill(""));
+      setSHRunningArray(null);
     }
 
-    if (dataQC) {
+    if (hasQcData(dataQC)) {
       console.log("Data QC : ", dataQC);
       const mem_code = Array.isArray(dataQC)
         ? dataQC[0]?.members?.mem_code
@@ -1133,6 +1160,18 @@ const QCDashboard = () => {
       );
       setMemRoute(memRoute);
       setMem_code(mem_code);
+    } else {
+      // dataQC ว่าง (เช่น บิลถูก QC ไปแล้วโดยคนอื่น/ที่อื่นก่อนเรา refresh)
+      // ต้องเคลียร์ order/ตัวนับตามด้วย ไม่งั้นตารางค้างข้อมูลเก่าทั้งที่ข้อความแจ้งว่าไม่มีข้อมูลแล้ว
+      setOrder([]);
+      setHasnotQC(0);
+      setHasQC(0);
+      setHasPicked(0);
+      setHasNotPicked(0);
+      setInComplete(0);
+      setRT(0);
+      setHasPrintSticker(false);
+      setHasFrozenNameChange(false);
     }
     if (dataQC) {
       if (Array.isArray(dataQC) && dataQC.length > 0) {
@@ -1700,7 +1739,7 @@ const QCDashboard = () => {
         emp_prepare: prepareEmp?.dataEmp?.emp_code,
         mem_code: mem_code,
       });
-      if (prepareEmp && QCEmp && packedEMP && dataQC && hasNotQC === 0) {
+      if (prepareEmp && QCEmp && packedEMP && hasQcData(dataQC) && hasNotQC === 0) {
         console.log({
           amount: { sum: countBox },
           sh_running: shRunningArray,
@@ -2040,7 +2079,7 @@ const QCDashboard = () => {
   };
 
   const handlePrintStickerBox = async () => {
-    if (dataQC) {
+    if (hasQcData(dataQC)) {
       setLoadingPrinting(true);
       const block_credit = await axios.post(
         `${import.meta.env.VITE_API_URL_ORDER}/api/picking/check-credit`,
@@ -2241,6 +2280,33 @@ const QCDashboard = () => {
     setInputValues(updated);
   };
 
+  // ช่อง Barcode สินค้า: บังคับใช้เครื่องสแกนเท่านั้น (เหมือนช่องหมายเลขบิล)
+  // เครื่องสแกนส่งตัวอักษรติดกันเร็วมาก ถ้าห่างกันเกิน 100ms ถือว่าพิมพ์เอง → เคลียร์ช่องทิ้ง
+  // ถ้าพิมพ์เอง / copy-paste จะแสดงข้อความเตือนใต้ช่อง (ไม่ใช้ popup)
+  const lastBarcodeInputTimeRef = useRef<number | null>(null);
+  const [barcodeWarning, setBarcodeWarning] = useState(false);
+  const handleBarcodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const now = Date.now();
+    const isFirstChar = e.target.value.length <= 1;
+
+    if (!isFirstChar && lastBarcodeInputTimeRef.current !== null) {
+      const timeDiff = now - lastBarcodeInputTimeRef.current;
+      if (timeDiff > 100) {
+        setBarcodeWarning(true);
+        lastBarcodeInputTimeRef.current = null;
+        e.target.value = "";
+        return;
+      }
+    }
+
+    lastBarcodeInputTimeRef.current = now;
+  };
+
+  const blockClipboard = (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    setBarcodeWarning(true);
+  };
+
   const OtherShipping = () => {
     if (
       !dataQC ||
@@ -2369,6 +2435,34 @@ const QCDashboard = () => {
     void checkBarcodeEditFlag();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const checkPrintLabelFlag = async (): Promise<boolean> => {
+    try {
+      const enabled = await fetchPrintLabelFlag();
+      setPrintLabelFlag(enabled);
+      return enabled;
+    } catch {
+      return printLabelFlag;
+    }
+  };
+
+  useEffect(() => {
+    void checkPrintLabelFlag();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // เช็ก flag ซ้ำตอนกด เผื่อ admin ปิดระหว่างที่เปิดหน้าค้างไว้
+  const printBarcodeSticker = async (so: ShoppingOrder, barcode: string) => {
+    if (!(await checkPrintLabelFlag())) return;
+    setPrintLabels([
+      {
+        barcode,
+        product_code: so.product.product_code,
+        name: so.product_name_at_order ?? so.product.product_name,
+        copies: 1,
+      },
+    ]);
+  };
 
   const openBarcodeEdit = async (so: ShoppingOrder) => {
     if (!(await checkBarcodeEditFlag())) return;
@@ -4429,10 +4523,19 @@ const QCDashboard = () => {
                         : `border-gray-500 bg-gray-200 `
                         }`}
                       placeholder="รหัสสินค้า / Barcode"
+                      autoComplete="off"
+                      onChange={handleBarcodeChange}
+                      onPaste={blockClipboard}
+                      onCopy={blockClipboard}
+                      onCut={blockClipboard}
+                      onDrop={blockClipboard}
+                      onContextMenu={blockClipboard}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
+                          lastBarcodeInputTimeRef.current = null;
                           const val = e.currentTarget.value;
                           if (!val) return;
+                          setBarcodeWarning(false);
                           if (recycleBoxes.some((b) => b.id === val)) {
                             handleScanRecycleBox(val);
                           } else {
@@ -4441,6 +4544,11 @@ const QCDashboard = () => {
                         }
                       }}
                     ></input>
+                    {barcodeWarning && (
+                      <p className="col-span-8 text-red-600 font-bold text-lg text-center">
+                        ติดต่อพี่มาร์คเพื่อสร้าง QR Code
+                      </p>
+                    )}
                   </div>
                   <div className="px-4 mt-3 ">
                     <table className="w-full rounded-lg overflow-hidden">
@@ -4575,18 +4683,32 @@ const QCDashboard = () => {
                                   </td>
                                   <td className="py-4 text-lg border-r-2 border-blue-200">
                                     <div className="flex flex-col items-center justify-center text-center px-2">
-                                      <p
-                                        id={`barcode${index + 1}dashboard-qc`}
-                                        className="text-base pb-1 mb-1 border-b-2 border-blue-200"
-                                      >
-                                        {so?.product?.product_barcode}
-                                      </p>
-                                      <p className="text-base pb-1 mb-1 border-b-2 border-blue-200">
-                                        {so?.product?.product_barcode2}
-                                      </p>
-                                      <p className="text-base pb-1 border-b-2 border-blue-200">
-                                        {so?.product?.product_barcode3}
-                                      </p>
+                                      {BARCODE_SLOTS.map((slot) => {
+                                        const barcode = so?.product?.[BARCODE_FIELD[slot]]?.trim();
+                                        return (
+                                          <div
+                                            key={slot}
+                                            className={`flex items-center justify-center gap-1 text-base pb-1 border-b-2 border-blue-200 ${slot < 3 ? "mb-1" : ""}`}
+                                          >
+                                            <span id={slot === 1 ? `barcode${index + 1}dashboard-qc` : undefined}>
+                                              {so?.product?.[BARCODE_FIELD[slot]]}
+                                            </span>
+                                            {printLabelFlag && barcode && (
+                                              <button
+                                                type="button"
+                                                title="พิมพ์สติกเกอร์บาร์โค้ด"
+                                                aria-label={`พิมพ์สติกเกอร์บาร์โค้ด ${barcode}`}
+                                                className="cursor-pointer rounded-sm px-1 text-sm text-blue-600 hover:bg-blue-100"
+                                                onClick={() => {
+                                                  void printBarcodeSticker(so, barcode);
+                                                }}
+                                              >
+                                                <Printer className="h-4 w-4" />
+                                              </button>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
                                       {barcodeEditFlag && (
                                         <button
                                           className="mt-2 text-sm font-bold text-white p-1 px-2 rounded-sm cursor-pointer bg-blue-500 hover:bg-blue-600"
@@ -4939,12 +5061,12 @@ const QCDashboard = () => {
                         )}
                       </tbody>
                     </table>
-                    {!dataQC && submitSuccess ? (
+                    {!hasQcData(dataQC) && submitSuccess ? (
                       <div className="w-full flex justify-center text-3xl mt-5 text-green-700 font-bold">
                         <p>ยืนยันการตรวจสอบรายการสำเร็จ</p>
                       </div>
                     ) : (
-                      !dataQC && (
+                      !hasQcData(dataQC) && (
                         <div>
                           <p className="w-full flex justify-center text-3xl mt-5 text-red-700 font-bold">
                             กรุณากรอกรหัสพนักงานและรหัสลูกค้าหรือเลขบิลให้เรียบร้อย
@@ -5218,7 +5340,7 @@ const QCDashboard = () => {
                     </div>
 
                     <div className="mt-5 px-13">
-                      {hasNotQC === 0 && dataQC && (
+                      {hasNotQC === 0 && hasQcData(dataQC) && (
                         <div>
                           {countBox < 1 && (
                             <p className="text-center text-red-600 font-bold text-lg mb-2">
@@ -5596,6 +5718,14 @@ const QCDashboard = () => {
           }}
         />
       )}
+      <BarcodeLabelPrint
+        labels={printLabels}
+        format="linear"
+        onDone={() => {
+          setPrintLabels(null);
+          inputBarcode.current?.focus();
+        }}
+      />
       </div>
     );
   }
