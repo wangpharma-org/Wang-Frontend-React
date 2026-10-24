@@ -52,6 +52,7 @@ import ReturnReceiptPrint from "./pages/ReturnReceiptPrint";
 import ProductNameChangeApproval from "./pages/ProductNameChangeApproval";
 import DailyIpLogsPage from "./pages/DailyIpLogsPage";
 import NoBarcodeApprovalSettings from "./pages/NoBarcodeApprovalSettings";
+import ChainAuditSettings from "./pages/ChainAuditSettings";
 import EmployeeSettings from "./pages/EmployeeSettings";
 import ScanBox from "./pages/ScanBox";
 import ScanBasket from "./pages/ScanBasket";
@@ -428,6 +429,17 @@ function App() {
               <RequireAuth>
                 <TaskApprovalPage />
               </RequireAuth>
+            }
+          />
+          <Route
+            path="/chain-audit-settings"
+            element={
+              <div>
+                <Navbar />
+                <RequireAuth>
+                  <ChainAuditSettings />
+                </RequireAuth>
+              </div>
             }
           />
           <Route
