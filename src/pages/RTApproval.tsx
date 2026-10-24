@@ -51,11 +51,13 @@ interface PurchestData {
     pr_amount: string | null;
     pr_unit: string | null;
   } | null;
+  // มาจาก Diary_IC ย้อนหลัง 180 วัน: amount = "ผลต่อปริมาณ" มีเครื่องหมายแล้ว (ขายติดลบ ซื้อ/รับคืนเป็นบวก)
+  // type มีมากกว่า SAL/RET/PUR เช่น RTIN และ API ส่ง amount มาเป็น string ได้
   purchestHistory: {
     purchest_history_id: number;
     date: string;
-    type: 'SAL' | 'RET' | 'PUR';
-    amount: number;
+    type: string;
+    amount: number | string;
     unit: string;
   }[];
   product: {
@@ -88,7 +90,10 @@ interface RTApprovalItem {
       quantity_received: string;
       unit: string;
     };
+    stock?: { amount: number | null; updated_at: string | null };
   };
+  // สิ่งที่คนหยิบกดไว้บนชั้นสำหรับบรรทัดนี้ (null = ยังไม่มีใครกด หรือบรรทัดถูก archive แล้ว)
+  floor_claim?: FloorClaim | null;
   member: {
     code: string;
     name: string;
@@ -106,6 +111,51 @@ interface RTApprovalItem {
   note?: string | null;
   empQC_note?: string | null;
   created_at: string;
+}
+
+interface FloorClaim {
+  status: string;
+  emp_code: string | null;
+  emp_name: string | null;
+  emp_floor: string | null;
+  picked_at: string | null;
+  claims_no_stock: boolean;
+}
+
+// ชั้นบอกว่าไม่มีของ แต่สต็อกในระบบยังมี → หัวหน้าต้องขึ้นไปตรวจที่ชั้นก่อนอนุมัติ
+function stockContradictsFloor(item: RTApprovalItem): boolean {
+  const amount = item.product.stock?.amount;
+  return !!item.floor_claim?.claims_no_stock && amount !== null && amount !== undefined && amount > 0;
+}
+
+function FloorClaimView({ item, compact = false }: { item: RTApprovalItem; compact?: boolean }) {
+  const claim = item.floor_claim;
+  if (!claim) {
+    return <div className="text-center text-gray-400 italic text-xs py-2">ชั้นยังไม่ได้แจ้ง</div>;
+  }
+  const warn = stockContradictsFloor(item);
+  const who = [claim.emp_code, claim.emp_name].filter(Boolean).join(" ");
+  const meta = [claim.emp_floor ? `ชั้น ${claim.emp_floor}` : null, claim.picked_at ? dayjs(claim.picked_at).format("HH:mm") : null]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <div className={`space-y-1 ${compact ? "" : "text-sm"}`}>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span
+          className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold border ${claim.claims_no_stock ? "bg-red-50 text-red-700 border-red-200" : "bg-gray-100 text-gray-700 border-gray-200"}`}
+        >
+          {claim.status === "picking" ? "หยิบแล้ว" : claim.status}
+        </span>
+        <span className="font-medium text-gray-800">{who || "-"}</span>
+      </div>
+      {meta && <div className="text-xs text-gray-500">{meta}</div>}
+      {warn && (
+        <div className="text-xs font-semibold text-red-600">
+          สต็อกในระบบยังมี {item.product.stock?.amount?.toLocaleString()} — ตรวจที่ชั้นก่อนอนุมัติ
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface GroupedItem extends RTApprovalItem {
@@ -186,6 +236,62 @@ function filterLabel(s: StatusFilter): string {
   if (s === "NotActive") return "ช่วงปิดระบบ";
   if (s === "BackOrder") return "รายการ Back Order";
   return "ทั้งหมด";
+}
+
+interface DailyMovement {
+  dateKey: string;
+  SAL: number;
+  RET: number;
+  PUR: number;
+  other: number;
+  net: number;
+  unit: string;
+  balance: number | null;
+}
+
+// รวมประวัติเป็นรายวัน (ใหม่ → เก่า) แล้วคำนวณคงเหลือสิ้นวันย้อนจากสต็อกที่ได้มาพร้อมประวัติ
+// สุทธิรวมทุกประเภท เพราะ amount มีเครื่องหมายอยู่แล้ว
+function summarizeHistory(
+  history: PurchestData["purchestHistory"],
+  currentStock: number | null
+): DailyMovement[] {
+  const byDay = new Map<string, DailyMovement>();
+  for (const h of history) {
+    const day = dayjs(h.date);
+    if (!day.isValid()) continue;
+    const dateKey = day.format("YYYY-MM-DD");
+    const row = byDay.get(dateKey) ?? { dateKey, SAL: 0, RET: 0, PUR: 0, other: 0, net: 0, unit: h.unit, balance: null };
+    const amount = Number(h.amount) || 0;
+    if (h.type === "SAL" || h.type === "RET" || h.type === "PUR") row[h.type] += amount;
+    else row.other += amount;
+    row.net += amount;
+    byDay.set(dateKey, row);
+  }
+  const days = [...byDay.values()].sort((a, b) => b.dateKey.localeCompare(a.dateKey));
+  if (currentStock !== null) {
+    let balance = currentStock;
+    for (const day of days) {
+      day.balance = balance;
+      balance -= day.net;
+    }
+  }
+  return days;
+}
+
+function parseStock(value: string | null | undefined): number | null {
+  if (value === null || value === undefined || String(value).trim() === "") return null;
+  const n = Number(String(value).replace(/,/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+function formatSigned(n: number): string {
+  if (n === 0) return "";
+  return `${n > 0 ? "+" : "-"}${Math.abs(n).toLocaleString()}`;
+}
+
+function formatDateTime(value: string | Date | null | undefined): string {
+  const d = value ? dayjs(value) : null;
+  return d && d.isValid() ? d.locale("th").format("DD/MM/YYYY HH:mm") : "-";
 }
 
 function timeAgo(dateString: string): string {
@@ -271,6 +377,9 @@ export default function RTApproval() {
       (item.member?.sales?.name || "").toLowerCase().includes(q) ||
       (item.member?.route?.code || "").toLowerCase().includes(q) ||
       (item.member?.route?.name || "").toLowerCase().includes(q) ||
+      (item.floor_claim?.status || "").toLowerCase().includes(q) ||
+      (item.floor_claim?.emp_code || "").toLowerCase().includes(q) ||
+      (item.floor_claim?.emp_name || "").toLowerCase().includes(q) ||
       item.amount_item?.toString().includes(q);
     const matchDate = !dateFilter || item.created_at?.slice(0, 10) === dateFilter;
     return matchStatus && matchSearch && matchDate;
@@ -404,12 +513,16 @@ export default function RTApproval() {
     return () => { controller.abort(); };
   }, [statusFilter, backOrderPage, backOrderKeyword, backOrderRefresh]);
 
-  // // Auto-fetch purchest data when modal opens and purchest data is missing
-  // useEffect(() => {
-  //   if (modalOpen && selectedItem && !selectedItem.product.purchest) {
-  //     fetchPurchestData(selectedItem.product.code);
-  //   }
-  // }, [modalOpen, selectedItem]);
+  // เปิดรายการแล้วโหลดข้อมูลการซื้อขายให้เลย: ใช้ที่เก็บไว้ในระบบก่อน ถ้ายังไม่เคยมีค่อยดึงใหม่จากระบบเก่า (ครั้งเดียวต่อการเปิด)
+  const selectedRef = selectedItem?.ref;
+  useEffect(() => {
+    if (!modalOpen || !selectedItem || selectedItem.product.purchest) return;
+    const { ref, product } = selectedItem;
+    void fetchPurchestDataShow(ref, product.code).then((found) => {
+      if (!found) void fetchPurchestData(ref, product.code, { silent: true });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalOpen, selectedRef]);
 
   const checkFeatureFlag = async () => {
     try {
@@ -517,32 +630,27 @@ export default function RTApproval() {
     }
   };
 
-  const fetchPurchestDataShow = async (productCode: string) => {
+  // คืน true เมื่อมีข้อมูลในระบบ · อัปเดตเฉพาะรายการ ref นั้น กันผลที่มาช้าไปทับรายการอื่นที่เปิดอยู่
+  const fetchPurchestDataShow = async (ref: string, productCode: string): Promise<boolean> => {
     setPurchestLoading(true);
     try {
-      const res = await axios.get(`${VITE_API_URL_ORDER}/api/purchest/history/${productCode}`, {
+      const res = await axios.get<PurchestData | null>(`${VITE_API_URL_ORDER}/api/purchest/history/${productCode}`, {
         headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
       });
-
-      if (selectedItem && res.data) {
-        const updatedProduct = {
-          ...selectedItem.product,
-          purchest: res.data
-        };
-        setSelectedItem({
-          ...selectedItem,
-          product: updatedProduct
-        });
-        setData(prev => prev.map(item => item.ref === selectedItem.ref ? { ...item, product: updatedProduct } : item));
-      }
+      const purchest = res.data;
+      if (!purchest) return false;
+      setSelectedItem((prev) => (prev && prev.ref === ref ? { ...prev, product: { ...prev.product, purchest } } : prev));
+      setData((prev) => prev.map((item) => (item.ref === ref ? { ...item, product: { ...item.product, purchest } } : item)));
+      return true;
     } catch (error) {
       console.error('Failed to fetch purchest data', error);
+      return false;
     } finally {
       setPurchestLoading(false);
     }
   };
 
-  const fetchPurchestData = async (productCode: string) => {
+  const fetchPurchestData = async (ref: string, productCode: string, options: { silent?: boolean } = {}) => {
     if (!productCode) return;
     setPurchestLoading(true);
     try {
@@ -552,8 +660,9 @@ export default function RTApproval() {
         headers: { Authorization: `Bearer ${sessionStorage.getItem("access_token")}` },
       });
       if (res.data) {
-        fetchPurchestDataShow(productCode);
+        await fetchPurchestDataShow(ref, productCode);
       }
+      if (options.silent) return;
       Swal.fire({
         icon: 'success',
         title: 'โหลดข้อมูลสำเร็จ!',
@@ -565,6 +674,7 @@ export default function RTApproval() {
       });
     } catch (error: unknown) {
       console.error('Failed to fetch purchest data', error);
+      if (options.silent) return;
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด!',
@@ -577,8 +687,20 @@ export default function RTApproval() {
     }
   };
 
+  const hasNote = !!finalNote?.trim();
+
+  const warnNoteRequired = () => {
+    Swal.fire({
+      icon: 'warning',
+      title: 'กรุณาเลือกหมายเหตุ',
+      text: selectedReason === "อื่นๆ" ? 'กรุณาพิมพ์หมายเหตุเพิ่มเติม' : 'ต้องเลือกหมายเหตุก่อนอนุมัติหรือปฏิเสธ',
+      confirmButtonText: 'ตกลง'
+    });
+  };
+
   const handleReject = async () => {
     if (!selectedItem) return;
+    if (!hasNote) return warnNoteRequired();
     setRejecting(true);
     try {
       await axios.patch(`${VITE_API_URL_ORDER}/api/rt-request/reject/${selectedItem.ref}`, {
@@ -624,6 +746,7 @@ export default function RTApproval() {
 
   const handleApprove = async () => {
     if (!selectedItem) return;
+    if (!hasNote) return warnNoteRequired();
     setSubmitting(true);
     try {
       await axios.patch(`${VITE_API_URL_ORDER}/api/rt-request/${selectedItem.ref}`, {
@@ -1062,6 +1185,7 @@ export default function RTApproval() {
                   <th className="py-4 px-3 text-left font-semibold text-sm">สถานะ</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">หมายเหตุ</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">หมายเหตุจาก QC</th>
+                  <th className="py-4 px-3 text-left font-semibold text-sm">ชั้นแจ้ง</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">วันที่</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">เวลาที่ผ่านมา</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">รายการเข้า</th>
@@ -1274,6 +1398,9 @@ export default function RTApproval() {
                           </div>
                         )}
                       </td>
+                      <td className={`py-4 px-3 text-sm min-w-[160px] max-w-[220px] ${stockContradictsFloor(item) ? "bg-red-50" : ""}`}>
+                        <FloorClaimView item={item} compact />
+                      </td>
                       <td className="py-4 px-3 text-sm text-center text-gray-600">
                         <div className="space-y-1">
                           <div className="font-medium">{dayjs(item.created_at).format(isBackOrderView ? 'DD/MM/YY' : 'DD/MM')}</div>
@@ -1400,6 +1527,25 @@ export default function RTApproval() {
                 </div>
               </div>
 
+              {/* ชั้นแจ้งอะไร โดยใคร — เทียบกับสต็อกในระบบ */}
+              <div className={`rounded-lg border p-3 ${stockContradictsFloor(selectedItem) ? "border-red-300 bg-red-50" : "border-gray-200 bg-gray-50"}`}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">ชั้นแจ้ง</p>
+                    <FloorClaimView item={selectedItem} />
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">สต็อกในระบบ</p>
+                    <p className="font-semibold text-gray-800">
+                      {selectedItem.product.stock?.amount !== null && selectedItem.product.stock?.amount !== undefined
+                        ? selectedItem.product.stock.amount.toLocaleString()
+                        : "-"}
+                    </p>
+                    <p className="text-xs text-gray-500">{formatDateTime(selectedItem.product.stock?.updated_at)}</p>
+                  </div>
+                </div>
+              </div>
+
               {/* Purchase Information */}
               <div className="border-t border-gray-100" />
 
@@ -1413,7 +1559,7 @@ export default function RTApproval() {
                   </h3>
                   <div>
                     <button
-                      onClick={() => fetchPurchestData(selectedItem.product.code)}
+                      onClick={() => fetchPurchestData(selectedItem.ref, selectedItem.product.code)}
                       disabled={purchestLoading}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-blue-300 text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
@@ -1423,7 +1569,7 @@ export default function RTApproval() {
                       {purchestLoading ? 'กำลังโหลด...' : 'โหลดข้อมูลล่าสุด'}
                     </button>
                     <p>
-                      <span className="text-xs text-gray-500">{(dayjs(selectedItem.product.purchest?.update_at || "-")).locale('th').format('DD/MM/YYYY HH:mm')}</span>
+                      <span className="text-xs text-gray-500">{formatDateTime(selectedItem.product.purchest?.update_at)}</span>
                     </p>
                   </div>
                 </div>
@@ -1436,12 +1582,12 @@ export default function RTApproval() {
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <span className="text-gray-500">สต็อก:</span>
-                          <span className="ml-2 font-medium">{selectedItem.product.purchest.product.product_stock} {selectedItem.product.purchest.pro_Unit1}</span>
+                          <span className="ml-2 font-medium">{selectedItem.product.purchest.product?.product_stock ?? '-'} {selectedItem.product.purchest.pro_Unit1}</span>
                         </div>
                         <div>
                           <span className="text-gray-500">อัปเดต:</span>
                           <span className="ml-2 font-medium">
-                            {dayjs(selectedItem.product.purchest.product.last_stock_date).locale('th').format('DD/MM/YYYY HH:mm')}
+                            {formatDateTime(selectedItem.product.purchest.product?.last_stock_date)}
                           </span>
                         </div>
                       </div>
@@ -1573,19 +1719,11 @@ export default function RTApproval() {
 
                     {/* ประวัติการเคลื่อนไหว */}
                     {selectedItem.product.purchest.purchestHistory && selectedItem.product.purchest.purchestHistory.length > 0 && (() => {
-                      // จัดกลุ่มข้อมูลตามวันที่
-                      const groupedHistory = selectedItem.product.purchest.purchestHistory.reduce((acc, history) => {
-                        const date = dayjs(history.date).locale('th').format('DD/MM/YYYY');
-                        if (!acc[date]) {
-                          acc[date] = { SAL: 0, RET: 0, PUR: 0, unit: history.unit };
-                        }
-                        acc[date][history.type === 'SAL' ? 'SAL' : history.type === 'RET' ? 'RET' : 'PUR'] += history.amount;
-                        return acc;
-                      }, {} as Record<string, { SAL: number; RET: number; PUR: number; unit: string }>);
-
-                      const sortedDates = Object.keys(groupedHistory).sort((a, b) =>
-                        dayjs(b, 'DD/MM/YYYY').toDate().getTime() - dayjs(a, 'DD/MM/YYYY').toDate().getTime()
-                      );
+                      const purchest = selectedItem.product.purchest;
+                      const anchorStock = parseStock(purchest.pro_stock);
+                      const days = summarizeHistory(purchest.purchestHistory, anchorStock);
+                      const showOther = days.some((d) => d.other !== 0);
+                      const signedClass = (n: number) => (n < 0 ? 'text-red-600' : 'text-green-600');
 
                       return (
                         <div className="bg-white border border-gray-200 rounded-lg p-4">
@@ -1598,74 +1736,37 @@ export default function RTApproval() {
                                   <th className="py-2 px-3 text-right text-xs font-medium text-gray-600">ขาย</th>
                                   <th className="py-2 px-3 text-right text-xs font-medium text-gray-600">คืน</th>
                                   <th className="py-2 px-3 text-right text-xs font-medium text-gray-600">ซื้อ</th>
+                                  {showOther && <th className="py-2 px-3 text-right text-xs font-medium text-gray-600">อื่นๆ</th>}
                                   <th className="py-2 px-3 text-right text-xs font-medium text-gray-600">สุทธิ</th>
+                                  {anchorStock !== null && <th className="py-2 px-3 text-right text-xs font-medium text-gray-600">คงเหลือสิ้นวัน</th>}
                                 </tr>
                               </thead>
                               <tbody>
-                                {(() => {
-                                  // สร้าง array ของวันที่เรียงจากเก่าไปใหม่สำหรับการคำนวณ running total
-                                  const datesSortedOldest = Object.keys(groupedHistory).sort((a, b) =>
-                                    dayjs(a, 'DD/MM/YYYY').toDate().getTime() - dayjs(b, 'DD/MM/YYYY').toDate().getTime()
-                                  );
-
-                                  // คำนวณ running total สำหรับแต่ละวัน
-                                  const runningTotals: Record<string, number> = {};
-                                  let accumulator = 0;
-
-                                  datesSortedOldest.forEach(date => {
-                                    const data = groupedHistory[date];
-                                    const dailyNet = data.PUR + data.RET + data.SAL; // สุทธิของวันนั้น
-                                    accumulator += dailyNet;
-                                    runningTotals[date] = accumulator;
-                                  });
-
-                                  // แสดงผลตามลำดับวันใหม่ไปเก่า (เหมือนเดิม)
-                                  return sortedDates.map((date, index) => {
-                                    const data = groupedHistory[date];
-                                    const dailyNet = data.PUR + data.RET + data.SAL; // สุทธิของวันนั้น
-                                    const runningTotal = runningTotals[date]; // สะสมจากวันแรกถึงวันนั้น
-
-                                    return (
-                                      <tr key={date} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}>
-                                        <td className="py-2 px-3 text-gray-700 font-medium">{date}</td>
-                                        <td className="py-2 px-3 text-right">
-                                          {data.SAL !== 0 && (
-                                            <span className="text-red-600 font-medium">
-                                              -{Math.abs(data.SAL).toLocaleString()}
-                                            </span>
-                                          )}
-                                        </td>
-                                        <td className="py-2 px-3 text-right">
-                                          {data.RET !== 0 && (
-                                            <span className="text-blue-600 font-medium">
-                                              +{data.RET.toLocaleString()}
-                                            </span>
-                                          )}
-                                        </td>
-                                        <td className="py-2 px-3 text-right">
-                                          {data.PUR !== 0 && (
-                                            <span className="text-green-600 font-medium">
-                                              +{data.PUR.toLocaleString()}
-                                            </span>
-                                          )}
-                                        </td>
-                                        <td className="py-2 px-3 text-right">
-                                          <div className="flex flex-col items-end gap-1">
-                                            <span className={`text-xs font-medium ${dailyNet >= 0 ? 'text-green-600' : 'text-red-600'}`} title="สุทธิของวันนี้">
-                                              {dailyNet > 0 ? '+' : ''}{dailyNet.toLocaleString()} {data.unit}
-                                            </span>
-                                            <span className={`font-semibold ${runningTotal >= 0 ? 'text-green-600' : 'text-red-600'}`} title="สะสมจากวันเก่าถึงวันนี้">
-                                              รวม: {runningTotal > 0 ? '+' : ''}{runningTotal.toLocaleString()} {data.unit}
-                                            </span>
-                                          </div>
-                                        </td>
-                                      </tr>
-                                    );
-                                  });
-                                })()}
+                                {days.map((day, index) => (
+                                  <tr key={day.dateKey} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}>
+                                    <td className="py-2 px-3 text-gray-700 font-medium">{dayjs(day.dateKey).format('DD/MM/YYYY')}</td>
+                                    <td className="py-2 px-3 text-right text-red-600 font-medium">{formatSigned(day.SAL)}</td>
+                                    <td className="py-2 px-3 text-right text-blue-600 font-medium">{formatSigned(day.RET)}</td>
+                                    <td className="py-2 px-3 text-right text-green-600 font-medium">{formatSigned(day.PUR)}</td>
+                                    {showOther && <td className="py-2 px-3 text-right text-gray-600 font-medium">{formatSigned(day.other)}</td>}
+                                    <td className={`py-2 px-3 text-right text-xs font-medium ${signedClass(day.net)}`}>
+                                      {formatSigned(day.net) || '0'} {day.unit}
+                                    </td>
+                                    {anchorStock !== null && (
+                                      <td className={`py-2 px-3 text-right font-semibold ${day.balance !== null && day.balance < 0 ? 'text-red-600' : 'text-gray-800'}`}>
+                                        {day.balance?.toLocaleString()} {day.unit}
+                                      </td>
+                                    )}
+                                  </tr>
+                                ))}
                               </tbody>
                             </table>
                           </div>
+                          {anchorStock !== null && (
+                            <p className="mt-2 text-xs text-gray-500">
+                              คงเหลือสิ้นวันคำนวณย้อนจากสต็อก {anchorStock.toLocaleString()} {purchest.pro_Unit1} ตอนโหลดข้อมูล ({formatDateTime(purchest.update_at)})
+                            </p>
+                          )}
                         </div>
                       );
                     })()}
@@ -1826,16 +1927,21 @@ export default function RTApproval() {
 
               {/* Action Buttons - Sticky at bottom */}
               <div className="sticky bottom-0 bg-white pt-4 border-t border-gray-200 flex justify-end gap-3 z-20">
+                {featureFlag && !hasNote && (
+                  <span className="mr-auto self-center text-sm text-red-500">
+                    {selectedReason === "อื่นๆ" ? "พิมพ์หมายเหตุก่อน" : "เลือกหมายเหตุก่อน"}
+                  </span>
+                )}
                 <button
                   onClick={handleReject}
-                  disabled={!featureFlag || rejecting}
+                  disabled={!featureFlag || rejecting || !hasNote}
                   className="bg-red-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   {rejecting ? "กำลังปฏิเสธ..." : !featureFlag ? "ไม่สามารถปฏิเสธได้" : "ปฏิเสธคำขอ"}
                 </button>
                 <button
                   onClick={handleApprove}
-                  disabled={!featureFlag || submitting}
+                  disabled={!featureFlag || submitting || !hasNote}
                   className="bg-blue-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   {submitting ? "กำลังบันทึก..." : !featureFlag ? "ไม่สามารถอนุมัติได้" : "ยืนยันอนุมัติ"}
