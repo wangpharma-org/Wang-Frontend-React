@@ -54,6 +54,16 @@ export interface BoxStockStatus {
   window_end?: string | null;
   window_active?: boolean;
   floors: BoxFloorStatus[];
+  // OPHMBC-324: ค่าที่ตั้งแยกรายวัน (0 = อาทิตย์) — floors / pending_release_* ด้านบนเป็นของวันนี้
+  day_of_week?: number;
+  days?: BoxStockDayConfig[];
+}
+
+export interface BoxStockDayConfig {
+  day_of_week: number;
+  floors: { floor: number; min_boxes: number | null }[];
+  pending_release_min: number | null;
+  pending_release_max: number | null;
 }
 
 // ข้อความช่วงเวลาที่ระงับเพราะลังมีผล (OPHMBC-324)
@@ -66,13 +76,18 @@ export function boxWindowText(boxStock: BoxStockStatus): string {
 }
 
 // พนักงานชั้นละ 1 คนที่เริ่มจัดได้ระหว่างระงับ (flag order-block-floor-picker)
+export interface FloorPickerView {
+  floor: number;
+  emp_code: string | null;
+  emp_nickname: string | null;
+}
+
 export interface FloorPickerOverview {
   enabled: boolean;
-  floors: {
-    floor: number;
-    emp_code: string | null;
-    emp_nickname: string | null;
-  }[];
+  // ของวันนี้ · days = ครบ 7 วัน (OPHMBC-324)
+  floors: FloorPickerView[];
+  day_of_week?: number;
+  days?: { day_of_week: number; floors: FloorPickerView[] }[];
 }
 
 export interface OrderBlockOverview {

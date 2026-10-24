@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { boxWindowText, formatTime, type BoxStockStatus } from "./orderBlockUtils";
 
 export interface BoxStockPayload {
+  // ไม่ส่ง = ใช้กับทุกวัน
+  day_of_week?: number;
   floors: { floor: number; min_boxes: number | null }[];
   pending_release_min: number | null;
   pending_release_max: number | null;
@@ -96,6 +98,8 @@ const OrderBlockBoxStockCard = ({
       })),
       pending_release_min: toNumber(drafts[RELEASE_MIN] ?? ""),
       pending_release_max: toNumber(drafts[RELEASE_MAX] ?? ""),
+      // แก้ได้เฉพาะวันนี้ — ตั้งรายวันที่หน้าแผงควบคุม
+      day_of_week: boxStock.day_of_week,
     });
 
   const blockedCount = boxStock.floors.filter((f) => f.blocked).length;

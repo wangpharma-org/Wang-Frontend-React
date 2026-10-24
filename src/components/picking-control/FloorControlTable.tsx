@@ -1,6 +1,13 @@
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
-import { boxWindowText, formatTime, type BoxStockStatus, type FloorPickerOverview } from "../orderBlockUtils";
+import {
+  boxWindowText,
+  DAY_NAMES,
+  DAY_ORDER,
+  formatTime,
+  type BoxStockStatus,
+  type FloorPickerOverview,
+} from "../orderBlockUtils";
 import type { BoxStockPayload } from "../OrderBlockBoxStockCard";
 import type { FloorPickerPayload } from "../OrderBlockFloorPickerCard";
 import Toggle from "./Toggle";
@@ -12,6 +19,8 @@ import Hint from "./Hint";
 export interface FloorTablePayload {
   box: BoxStockPayload;
   pickers: FloorPickerPayload[];
+  // OPHMBC-324: วันที่บันทึก (0 = อาทิตย์) · undefined = ใช้กับทุกวัน
+  day_of_week?: number;
 }
 
 interface FloorControlTableProps {
@@ -40,12 +49,17 @@ interface Draft {
   releaseMax: string;
 }
 
-const toDraft = (box: BoxStockStatus, pickers: FloorPickerOverview): Draft => ({
-  min: Object.fromEntries(FLOORS.map((f) => [f, text(box.floors.find((x) => x.floor === f)?.min_boxes)])),
-  picker: Object.fromEntries(FLOORS.map((f) => [f, pickers.floors.find((x) => x.floor === f)?.emp_code ?? ""])),
-  releaseMin: text(box.pending_release_min),
-  releaseMax: text(box.pending_release_max),
-});
+// ค่าของวันที่เลือก — backend รุ่นก่อน OPHMBC-324 ไม่มี days ใช้ค่าเดียว (ของวันนี้) แทน
+const toDraft = (box: BoxStockStatus, pickers: FloorPickerOverview, day: number): Draft => {
+  const boxDay = box.days?.find((d) => d.day_of_week === day) ?? box;
+  const pickerFloors = pickers.days?.find((d) => d.day_of_week === day)?.floors ?? pickers.floors;
+  return {
+    min: Object.fromEntries(FLOORS.map((f) => [f, text(boxDay.floors.find((x) => x.floor === f)?.min_boxes)])),
+    picker: Object.fromEntries(FLOORS.map((f) => [f, pickerFloors.find((x) => x.floor === f)?.emp_code ?? ""])),
+    releaseMin: text(boxDay.pending_release_min),
+    releaseMax: text(boxDay.pending_release_max),
+  };
+};
 
 const sameDraft = (a: Draft, b: Draft) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -74,10 +88,19 @@ const FloorControlTable = ({
   onSave,
   onToggleFlag,
 }: FloorControlTableProps) => {
-  const saved = useMemo(() => toDraft(boxStock, floorPickers), [boxStock, floorPickers]);
+  const today = boxStock.day_of_week ?? new Date().getDay();
+  const perDay = !!boxStock.days;
+  const [selectedDay, setSelectedDay] = useState(today);
+  const [applyAll, setApplyAll] = useState(false);
+  const isToday = selectedDay === today;
+  const saved = useMemo(
+    () => toDraft(boxStock, floorPickers, selectedDay),
+    [boxStock, floorPickers, selectedDay],
+  );
   const [draft, setDraft] = useState(saved);
   const [employees, setEmployees] = useState<PickerEmployee[]>([]);
   const dirty = !sameDraft(draft, saved);
+  const canSave = dirty || applyAll;
 
   // refresh ทุกนาทีจาก section แม่ต้องไม่ทับค่าที่แอดมินกำลังแก้
   useEffect(() => {
@@ -100,16 +123,18 @@ const FloorControlTable = ({
 
   const save = () =>
     onSave({
+      day_of_week: perDay && !applyAll ? selectedDay : undefined,
       box: {
         floors: FLOORS.map((floor) => ({ floor, min_boxes: toNumber(draft.min[floor] ?? "") })),
         pending_release_min: toNumber(draft.releaseMin),
         pending_release_max: toNumber(draft.releaseMax),
       },
       pickers: FLOORS.map((floor) => ({ floor, emp_code: draft.picker[floor] || null })),
-    });
+    }).then(() => setApplyAll(false));
 
   const nickname = (code: string) =>
     employees.find((e) => e.emp_code === code)?.emp_nickname ??
+    floorPickers.days?.flatMap((d) => d.floors).find((f) => f.emp_code === code)?.emp_nickname ??
     floorPickers.floors.find((f) => f.emp_code === code)?.emp_nickname ??
     "";
 
@@ -140,6 +165,10 @@ const FloorControlTable = ({
                 <li>
                   <b>ช่วงเวลา</b> — ระงับเพราะลังเฉพาะช่วงเวลาเริ่ม–สิ้นสุดของวันนั้นในตาราง 7 วัน · ก่อนเวลาเริ่ม / หลังเวลาสิ้นสุด / วันที่ปิด
                   ไม่ระงับ (สถานะขึ้น 🟠 ลังขาด)
+                </li>
+                <li>
+                  <b>เลือกวัน</b> — ขั้นต่ำลัง คนจัด และ min/max ตั้งแยกได้ทั้ง 7 วัน ระบบใช้ค่าของวันนั้นอัตโนมัติ · ติ๊ก
+                  "ใช้กับทุกวัน" ก่อนบันทึกถ้าต้องการค่าเดียวกันทุกวัน · ยอดลังและสถานะแสดงเฉพาะวันนี้
                 </li>
                 <li>สวิตช์มุมขวา = เปิด/ปิดแต่ละฟีเจอร์ทั้งระบบ · ปิดอยู่ยังเห็นยอดลังได้ (เช็คการเชื่อมต่อก่อนเปิดใช้)</li>
               </ul>
@@ -192,6 +221,36 @@ const FloorControlTable = ({
         )}
       </div>
 
+      {perDay && (
+        <div className="flex flex-wrap items-center gap-2 px-4 sm:px-6 py-3 border-b border-gray-100" data-testid="floor-day-tabs">
+          <span className="text-xs text-gray-500">ตั้งค่าของวัน</span>
+          {DAY_ORDER.map((day) => (
+            <button
+              key={day}
+              type="button"
+              aria-pressed={day === selectedDay}
+              disabled={saving || (dirty && day !== selectedDay)}
+              title={dirty && day !== selectedDay ? "บันทึกหรือยกเลิกการแก้ไขก่อนเปลี่ยนวัน" : undefined}
+              onClick={() => setSelectedDay(day)}
+              className={`rounded-full px-3 py-1 text-xs border disabled:opacity-50 ${
+                day === selectedDay
+                  ? "bg-blue-600 border-blue-600 text-white"
+                  : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100"
+              }`}
+            >
+              {DAY_NAMES[day]}
+              {day === today ? " (วันนี้)" : ""}
+            </button>
+          ))}
+          <Hint k="floorDay" label="ตั้งค่าของวัน" />
+        </div>
+      )}
+      {perDay && !isToday && (
+        <p className="px-4 sm:px-6 pt-3 text-xs text-gray-500">
+          กำลังแก้ค่าของวัน{DAY_NAMES[selectedDay]} — ยอดเติมและสถานะในตารางเป็นของวันนี้ ({DAY_NAMES[today]})
+        </p>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-xs text-gray-500">
@@ -215,10 +274,10 @@ const FloorControlTable = ({
                   a.emp_code.localeCompare(b.emp_code),
               );
               return (
-                <tr key={floor} className={status?.blocked ? "bg-red-50/60" : status?.short ? "bg-orange-50/60" : ""}>
+                <tr key={floor} className={!isToday ? "" : status?.blocked ? "bg-red-50/60" : status?.short ? "bg-orange-50/60" : ""}>
                   <td className="px-4 py-2 font-semibold text-gray-900 whitespace-nowrap">ชั้น {floor}</td>
                   <td className="px-4 py-2 text-right whitespace-nowrap">
-                    <b>{status?.refilled == null ? "-" : status.refilled}</b> ลัง
+                    {isToday ? <><b>{status?.refilled == null ? "-" : status.refilled}</b> ลัง</> : <span className="text-gray-400">–</span>}
                   </td>
                   <td className="px-4 py-2">
                     <input
@@ -233,7 +292,9 @@ const FloorControlTable = ({
                     {error && <p className="mt-0.5 text-[11px] text-red-600">{error}</p>}
                   </td>
                   <td className="px-4 py-2 whitespace-nowrap">
-                    {status?.blocked ? (
+                    {!isToday ? (
+                      <span className="text-xs text-gray-400">แสดงเฉพาะวันนี้</span>
+                    ) : status?.blocked ? (
                       <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs text-white">🔴 ระงับ</span>
                     ) : status?.short ? (
                       <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-700">🟠 ลังขาด (ยังไม่ระงับ)</span>
@@ -306,6 +367,18 @@ const FloorControlTable = ({
           <Hint k="releaseMax" label="max ปลดระงับ" />
         </div>
         {relError && <p className="text-xs text-red-600">{relError}</p>}
+        {perDay && (
+          <label className="flex items-center gap-2 text-xs text-gray-700">
+            <input
+              type="checkbox"
+              aria-label="ใช้ค่านี้กับทุกวัน"
+              checked={applyAll}
+              disabled={saving}
+              onChange={(e) => setApplyAll(e.target.checked)}
+            />
+            ใช้ค่าชุดนี้กับทุกวัน (ทับค่าของวันอื่น)
+          </label>
+        )}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className={`text-xs ${dirty ? "text-amber-700 font-medium" : "text-gray-500"}`}>
             {dirty
@@ -317,8 +390,11 @@ const FloorControlTable = ({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => setDraft(saved)}
-              disabled={!dirty || saving}
+              onClick={() => {
+                setDraft(saved);
+                setApplyAll(false);
+              }}
+              disabled={!canSave || saving}
               className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
             >
               ยกเลิกการแก้ไข
@@ -326,7 +402,7 @@ const FloorControlTable = ({
             <button
               type="button"
               onClick={() => void save()}
-              disabled={!dirty || saving || hasError}
+              disabled={!canSave || saving || hasError}
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >
               {saving ? "กำลังบันทึก..." : "บันทึกรายชั้น"}

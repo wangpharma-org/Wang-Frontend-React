@@ -309,9 +309,10 @@ const OrderBlockSection = ({ floorLayout = "cards" }: OrderBlockSectionProps) =>
   const saveFloorPickers = async (floors: FloorPickerPayload[]) => {
     setSavingFloorPickers(true);
     try {
+      // การ์ดแบบเก่าแก้เฉพาะวันนี้ — ไม่ส่งวัน backend จะบันทึกทับทุกวัน
       const response = await axios.put<OrderBlockOverview>(
         `${orderBlockApiUrl}/floor-pickers`,
-        { floors },
+        { floors, day_of_week: overview?.floor_pickers?.day_of_week },
         authHeaders(),
       );
       applyOverview(response.data, !dirtyRef.current);
@@ -334,13 +335,13 @@ const OrderBlockSection = ({ floorLayout = "cards" }: OrderBlockSectionProps) =>
   };
 
   // บันทึกลังก่อนแล้วค่อยคนจัด — ผลลัพธ์สุดท้ายคือ overview ล่าสุดของทั้งสองอย่าง
-  const saveFloorTable = async ({ box, pickers }: FloorTablePayload) => {
+  const saveFloorTable = async ({ box, pickers, day_of_week }: FloorTablePayload) => {
     setSavingBoxFloors(true);
     try {
-      await axios.put(`${orderBlockApiUrl}/box-floors`, box, authHeaders());
+      await axios.put(`${orderBlockApiUrl}/box-floors`, { ...box, day_of_week }, authHeaders());
       const response = await axios.put<OrderBlockOverview>(
         `${orderBlockApiUrl}/floor-pickers`,
-        { floors: pickers },
+        { floors: pickers, day_of_week },
         authHeaders(),
       );
       applyOverview(response.data, !dirtyRef.current);
