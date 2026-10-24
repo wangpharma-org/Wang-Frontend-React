@@ -4,7 +4,7 @@ import { formatTime, type BoxStockStatus, type FloorPickerOverview } from "../or
 import type { BoxStockPayload } from "../OrderBlockBoxStockCard";
 import type { FloorPickerPayload } from "../OrderBlockFloorPickerCard";
 import Toggle from "./Toggle";
-import { API } from "./pickingControlApi";
+import { API, authHeaders } from "./pickingControlApi";
 import HelpPanel from "./HelpPanel";
 import Hint from "./Hint";
 
@@ -29,6 +29,27 @@ interface PickerEmployee {
   emp_nickname: string;
   emp_floor: string | null;
 }
+
+// HS-1000 — สถานะลงเวลาจาก HR ผ่าน backend (GET /order-block/floor-pickers/attendance) ใช้เตือนเท่านั้น ไม่ห้ามเลือก
+type OnDutyState = "on_duty" | "checked_out" | "not_checked_in";
+interface OnDutyStatus {
+  state: OnDutyState;
+  check_in_at: string | null;
+  check_out_at: string | null;
+}
+interface Attendance {
+  available: boolean;
+  as_of: string | null;
+  people: Record<string, OnDutyStatus>;
+}
+
+const ATTENDANCE_REFRESH_MS = 60_000;
+
+const attendanceText = (status: OnDutyStatus | undefined): string => {
+  if (!status || status.state === "not_checked_in") return "ยังไม่ลงเวลา";
+  if (status.state === "checked_out") return `ออกงานแล้ว ${formatTime(status.check_out_at)}`;
+  return `เข้างาน ${formatTime(status.check_in_at)}`;
+};
 
 const FLOORS = [1, 2, 3, 4, 5];
 const text = (value: number | string | null | undefined) => (value == null ? "" : String(value));
@@ -77,6 +98,8 @@ const FloorControlTable = ({
   const saved = useMemo(() => toDraft(boxStock, floorPickers), [boxStock, floorPickers]);
   const [draft, setDraft] = useState(saved);
   const [employees, setEmployees] = useState<PickerEmployee[]>([]);
+  // null = ยังไม่ได้คำตอบ · available: false = ถาม HR ไม่ได้ (หน้าทำงานต่อ ไม่แสดงสถานะ)
+  const [attendance, setAttendance] = useState<Attendance | null>(null);
   const dirty = !sameDraft(draft, saved);
 
   // refresh ทุกนาทีจาก section แม่ต้องไม่ทับค่าที่แอดมินกำลังแก้
@@ -91,6 +114,24 @@ const FloorControlTable = ({
       .then((res) => setEmployees(res.data.employees ?? []))
       .catch((error) => console.error("Error fetching picker options:", error));
   }, []);
+
+  useEffect(() => {
+    const load = () =>
+      axios
+        .get<Attendance>(`${API}/order-block/floor-pickers/attendance`, authHeaders())
+        .then((res) => setAttendance(res.data))
+        .catch(() => setAttendance({ available: false, as_of: null, people: {} }));
+    void load();
+    const timer = window.setInterval(load, ATTENDANCE_REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, []);
+  const known = attendance?.available === true;
+  const statusOf = (code: string) => (known ? attendance?.people[code] : undefined);
+  const onDuty = (code: string) => statusOf(code)?.state === "on_duty";
+  // ชั้นที่ตั้งคนไว้ (ตามค่าที่บันทึกแล้ว) แต่คนนั้นไม่ได้อยู่ในงาน — ระหว่างระงับชั้นนั้นจะไม่มีใครจัดได้
+  const absentFloors = known
+    ? FLOORS.filter((f) => saved.picker[f] && !onDuty(saved.picker[f]))
+    : [];
 
   const relError = releaseError(draft.releaseMin, draft.releaseMax);
   const hasError = relError !== null || FLOORS.some((f) => minError(draft.min[f] ?? "") !== null);
@@ -169,6 +210,20 @@ const FloorControlTable = ({
             อ่านยอดจากแอปบันทึกลังไม่ได้ — ระบบจะไม่ระงับจนกว่าจะอ่านได้ ({boxStock.error ?? "ยังไม่ได้ตั้งค่า"})
           </p>
         )}
+        {absentFloors.length > 0 && (
+          <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800" data-testid="floor-picker-absent">
+            คนจัดระหว่างระงับไม่ได้อยู่ในงาน:{" "}
+            {absentFloors
+              .map((f) => `ชั้น ${f} ${saved.picker[f]} ${nickname(saved.picker[f])} (${attendanceText(statusOf(saved.picker[f]))})`)
+              .join(" · ")}{" "}
+            — ระหว่างระงับชั้นนี้จะไม่มีใครจัดได้ ควรเปลี่ยนเป็นคนที่เข้างานอยู่
+          </p>
+        )}
+        {attendance && !attendance.available && (
+          <p className="mt-3 text-xs text-gray-500" data-testid="floor-picker-attendance-unavailable">
+            ดูสถานะลงเวลาจาก HR ไม่ได้ตอนนี้ — เลือกคนจัดได้ตามปกติ แต่ระบบเตือนไม่ได้ว่าใครไม่ได้เข้างาน
+          </p>
+        )}
         {boxStock.enabled && boxStock.released && (
           <p className="mt-3 rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 text-xs text-blue-800">
             ปลดการระงับเพราะลังชั่วคราว — ยอดเหลือจัดถึง {boxStock.pending_release_max} จะกลับมาระงับเมื่อลดถึง{" "}
@@ -194,11 +249,14 @@ const FloorControlTable = ({
               const error = minError(draft.min[floor] ?? "");
               const pickerCode = draft.picker[floor] ?? "";
               const listed = employees.some((e) => e.emp_code === pickerCode);
+              // คนบนชั้นนี้ก่อน แล้วคนที่เข้างานอยู่ก่อน แล้วตามรหัส
               const options = [...employees].sort(
                 (a, b) =>
                   Number(b.emp_floor === String(floor)) - Number(a.emp_floor === String(floor)) ||
+                  Number(onDuty(b.emp_code)) - Number(onDuty(a.emp_code)) ||
                   a.emp_code.localeCompare(b.emp_code),
               );
+              const pickerStatus = pickerCode && known ? statusOf(pickerCode) : undefined;
               return (
                 <tr key={floor} className={status?.blocked ? "bg-red-50/60" : ""}>
                   <td className="px-4 py-2 font-semibold text-gray-900 whitespace-nowrap">ชั้น {floor}</td>
@@ -232,7 +290,7 @@ const FloorControlTable = ({
                       value={pickerCode}
                       disabled={saving}
                       onChange={(e) => setDraft((d) => ({ ...d, picker: { ...d.picker, [floor]: e.target.value } }))}
-                      className="w-44 rounded-lg border border-gray-300 bg-white px-2 py-1.5"
+                      className="w-72 max-w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5"
                     >
                       <option value="">— ไม่มี —</option>
                       {pickerCode && !listed && (
@@ -244,9 +302,18 @@ const FloorControlTable = ({
                         <option key={e.emp_code} value={e.emp_code}>
                           {e.emp_code} {e.emp_nickname}
                           {e.emp_floor ? ` (ชั้น ${e.emp_floor})` : ""}
+                          {known ? ` · ${attendanceText(statusOf(e.emp_code))}` : ""}
                         </option>
                       ))}
                     </select>
+                    {pickerCode && known && (
+                      <p
+                        className={`mt-0.5 text-[11px] ${pickerStatus?.state === "on_duty" ? "text-green-700" : "text-amber-700"}`}
+                        data-testid={`floor-picker-status-${floor}`}
+                      >
+                        {pickerStatus?.state === "on_duty" ? "🟢" : "🟠"} {attendanceText(pickerStatus)}
+                      </p>
+                    )}
                   </td>
                 </tr>
               );
