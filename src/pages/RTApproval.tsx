@@ -90,7 +90,10 @@ interface RTApprovalItem {
       quantity_received: string;
       unit: string;
     };
+    stock?: { amount: number | null; updated_at: string | null };
   };
+  // สิ่งที่คนหยิบกดไว้บนชั้นสำหรับบรรทัดนี้ (null = ยังไม่มีใครกด หรือบรรทัดถูก archive แล้ว)
+  floor_claim?: FloorClaim | null;
   member: {
     code: string;
     name: string;
@@ -108,6 +111,51 @@ interface RTApprovalItem {
   note?: string | null;
   empQC_note?: string | null;
   created_at: string;
+}
+
+interface FloorClaim {
+  status: string;
+  emp_code: string | null;
+  emp_name: string | null;
+  emp_floor: string | null;
+  picked_at: string | null;
+  claims_no_stock: boolean;
+}
+
+// ชั้นบอกว่าไม่มีของ แต่สต็อกในระบบยังมี → หัวหน้าต้องขึ้นไปตรวจที่ชั้นก่อนอนุมัติ
+function stockContradictsFloor(item: RTApprovalItem): boolean {
+  const amount = item.product.stock?.amount;
+  return !!item.floor_claim?.claims_no_stock && amount !== null && amount !== undefined && amount > 0;
+}
+
+function FloorClaimView({ item, compact = false }: { item: RTApprovalItem; compact?: boolean }) {
+  const claim = item.floor_claim;
+  if (!claim) {
+    return <div className="text-center text-gray-400 italic text-xs py-2">ชั้นยังไม่ได้แจ้ง</div>;
+  }
+  const warn = stockContradictsFloor(item);
+  const who = [claim.emp_code, claim.emp_name].filter(Boolean).join(" ");
+  const meta = [claim.emp_floor ? `ชั้น ${claim.emp_floor}` : null, claim.picked_at ? dayjs(claim.picked_at).format("HH:mm") : null]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <div className={`space-y-1 ${compact ? "" : "text-sm"}`}>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span
+          className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold border ${claim.claims_no_stock ? "bg-red-50 text-red-700 border-red-200" : "bg-gray-100 text-gray-700 border-gray-200"}`}
+        >
+          {claim.status === "picking" ? "หยิบแล้ว" : claim.status}
+        </span>
+        <span className="font-medium text-gray-800">{who || "-"}</span>
+      </div>
+      {meta && <div className="text-xs text-gray-500">{meta}</div>}
+      {warn && (
+        <div className="text-xs font-semibold text-red-600">
+          สต็อกในระบบยังมี {item.product.stock?.amount?.toLocaleString()} — ตรวจที่ชั้นก่อนอนุมัติ
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface GroupedItem extends RTApprovalItem {
@@ -329,6 +377,9 @@ export default function RTApproval() {
       (item.member?.sales?.name || "").toLowerCase().includes(q) ||
       (item.member?.route?.code || "").toLowerCase().includes(q) ||
       (item.member?.route?.name || "").toLowerCase().includes(q) ||
+      (item.floor_claim?.status || "").toLowerCase().includes(q) ||
+      (item.floor_claim?.emp_code || "").toLowerCase().includes(q) ||
+      (item.floor_claim?.emp_name || "").toLowerCase().includes(q) ||
       item.amount_item?.toString().includes(q);
     const matchDate = !dateFilter || item.created_at?.slice(0, 10) === dateFilter;
     return matchStatus && matchSearch && matchDate;
@@ -1134,6 +1185,7 @@ export default function RTApproval() {
                   <th className="py-4 px-3 text-left font-semibold text-sm">สถานะ</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">หมายเหตุ</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">หมายเหตุจาก QC</th>
+                  <th className="py-4 px-3 text-left font-semibold text-sm">ชั้นแจ้ง</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">วันที่</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">เวลาที่ผ่านมา</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">รายการเข้า</th>
@@ -1346,6 +1398,9 @@ export default function RTApproval() {
                           </div>
                         )}
                       </td>
+                      <td className={`py-4 px-3 text-sm min-w-[160px] max-w-[220px] ${stockContradictsFloor(item) ? "bg-red-50" : ""}`}>
+                        <FloorClaimView item={item} compact />
+                      </td>
                       <td className="py-4 px-3 text-sm text-center text-gray-600">
                         <div className="space-y-1">
                           <div className="font-medium">{dayjs(item.created_at).format(isBackOrderView ? 'DD/MM/YY' : 'DD/MM')}</div>
@@ -1469,6 +1524,25 @@ export default function RTApproval() {
                       <span className={`font-medium text-gray-800 ${clamp ? "line-clamp-2" : ""}`} title={clamp ? String(value) : undefined}>{value}</span>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* ชั้นแจ้งอะไร โดยใคร — เทียบกับสต็อกในระบบ */}
+              <div className={`rounded-lg border p-3 ${stockContradictsFloor(selectedItem) ? "border-red-300 bg-red-50" : "border-gray-200 bg-gray-50"}`}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">ชั้นแจ้ง</p>
+                    <FloorClaimView item={selectedItem} />
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">สต็อกในระบบ</p>
+                    <p className="font-semibold text-gray-800">
+                      {selectedItem.product.stock?.amount !== null && selectedItem.product.stock?.amount !== undefined
+                        ? selectedItem.product.stock.amount.toLocaleString()
+                        : "-"}
+                    </p>
+                    <p className="text-xs text-gray-500">{formatDateTime(selectedItem.product.stock?.updated_at)}</p>
+                  </div>
                 </div>
               </div>
 
