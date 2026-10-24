@@ -208,6 +208,14 @@ const listMenu = [
     admin: false,
   },
   {
+    // ตั้งเหตุผล/แต้มที่คนหลังหักคนก่อน (QC → หยิบ → โหลด → รับเข้า)
+    id: 29,
+    name: "ตั้งค่าแต้ม (คนหลังตรวจคนก่อน)",
+    href: "/chain-audit-settings",
+    imageSrc: settingsIcon,
+    admin: true,
+  },
+  {
     id: 23,
     name: "ตั้งค่าระบบไฟ",
     href: "/floor-light-operators",
