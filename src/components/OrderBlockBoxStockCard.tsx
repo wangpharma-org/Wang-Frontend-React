@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { formatTime, type BoxStockStatus } from "./orderBlockUtils";
+import { boxWindowText, formatTime, type BoxStockStatus } from "./orderBlockUtils";
 
 export interface BoxStockPayload {
   floors: { floor: number; min_boxes: number | null }[];
@@ -99,15 +99,17 @@ const OrderBlockBoxStockCard = ({
     });
 
   const blockedCount = boxStock.floors.filter((f) => f.blocked).length;
-  const notice = !boxStock.enabled
+  const shortCount = boxStock.floors.filter((f) => f.short).length;
+  // ยอดลังอ่านตลอดแม้ flag ปิด (OPHMBC-324) — เช็คการเชื่อมต่อก่อน แล้วค่อยบอกสถานะ flag
+  const notice = !boxStock.configured || boxStock.error
     ? {
-        className: "bg-gray-50 border-gray-300 text-gray-700",
-        text: "ยังไม่เปิดใช้งาน (feature flag order-block-box-stock ปิดอยู่) — ตั้งค่าไว้ก่อนได้ แต่ยังไม่ระงับ",
+        className: "bg-amber-50 border-amber-300 text-amber-800",
+        text: `อ่านยอดจากแอปบันทึกลังไม่ได้ — ระบบจะไม่ระงับจนกว่าจะอ่านได้ (${boxStock.error ?? "ยังไม่ได้ตั้งค่า"})`,
       }
-    : !boxStock.configured || boxStock.error
+    : !boxStock.enabled
       ? {
-          className: "bg-amber-50 border-amber-300 text-amber-800",
-          text: `อ่านยอดจากแอปบันทึกลังไม่ได้ — ระบบจะไม่ระงับจนกว่าจะอ่านได้ (${boxStock.error ?? "ยังไม่ได้ตั้งค่า"})`,
+          className: "bg-gray-50 border-gray-300 text-gray-700",
+          text: `ยังไม่เปิดใช้งาน (feature flag order-block-box-stock ปิดอยู่) — อ่านยอดลังให้ดูได้แล้ว${shortCount > 0 ? ` (ลังขาด ${shortCount} ชั้น)` : ""} แต่ยังไม่ระงับ`,
         }
       : boxStock.released
         ? {
@@ -119,6 +121,11 @@ const OrderBlockBoxStockCard = ({
               className: "bg-red-50 border-red-300 text-red-800",
               text: `กำลังระงับ ${blockedCount} ชั้น — ร้านที่มีสินค้ารอจัดบนชั้นนั้นจะเริ่มจัดไม่ได้จนกว่าจะเติมลังครบ`,
             }
+          : shortCount > 0
+            ? {
+                className: "bg-orange-50 border-orange-300 text-orange-800",
+                text: `ลังขาด ${shortCount} ชั้น แต่ยังไม่ระงับ — ${boxWindowText(boxStock)}`,
+              }
           : {
               className: "bg-green-50 border-green-300 text-green-800",
               text: "ลังทุกชั้นที่ตั้งไว้ถึงขั้นต่ำแล้ว — จัดได้ตามปกติ",
@@ -141,6 +148,9 @@ const OrderBlockBoxStockCard = ({
         </p>
         <div className={`mt-4 p-3 border rounded-lg text-sm ${notice.className}`}>
           {notice.text}
+          {boxStock.enabled && (
+            <span className="block text-xs opacity-80 mt-1">{boxWindowText(boxStock)}</span>
+          )}
           {boxStock.synced_at && (
             <span className="block text-xs opacity-70 mt-1">
               อ่านยอดล่าสุด {formatTime(boxStock.synced_at)} น. · วันที่{" "}
@@ -160,16 +170,22 @@ const OrderBlockBoxStockCard = ({
               className={`p-4 rounded-lg border ${
                 status?.blocked
                   ? "border-red-400 bg-red-50"
-                  : "border-gray-200 bg-white"
+                  : status?.short
+                    ? "border-orange-300 bg-orange-50"
+                    : "border-gray-200 bg-white"
               }`}
             >
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-gray-900">ชั้น {floor}</span>
-                {status?.blocked && (
+                {status?.blocked ? (
                   <span className="px-2 py-0.5 text-xs rounded bg-red-600 text-white">
                     ระงับ
                   </span>
-                )}
+                ) : status?.short ? (
+                  <span className="px-2 py-0.5 text-xs rounded bg-orange-500 text-white">
+                    ลังขาด
+                  </span>
+                ) : null}
               </div>
               <p className="text-sm text-gray-600 mt-2">
                 เติมแล้ววันนี้{" "}

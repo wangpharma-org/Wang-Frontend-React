@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
-import { formatTime, type BoxStockStatus, type FloorPickerOverview } from "../orderBlockUtils";
+import { boxWindowText, formatTime, type BoxStockStatus, type FloorPickerOverview } from "../orderBlockUtils";
 import type { BoxStockPayload } from "../OrderBlockBoxStockCard";
 import type { FloorPickerPayload } from "../OrderBlockFloorPickerCard";
 import Toggle from "./Toggle";
@@ -95,7 +95,8 @@ const FloorControlTable = ({
   const relError = releaseError(draft.releaseMin, draft.releaseMax);
   const hasError = relError !== null || FLOORS.some((f) => minError(draft.min[f] ?? "") !== null);
   const blockedCount = boxStock.floors.filter((f) => f.blocked).length;
-  const boxUnavailable = boxStock.enabled && (!boxStock.configured || !!boxStock.error);
+  // ยอดลังอ่านตลอดแม้ flag ปิด (OPHMBC-324) — อ่านไม่ได้ก็เตือนเลย ใช้เช็คการเชื่อมต่อก่อนเปิด
+  const boxUnavailable = !boxStock.configured || !!boxStock.error;
 
   const save = () =>
     onSave({
@@ -136,7 +137,11 @@ const FloorControlTable = ({
                 <li>
                   <b>ปลดระงับ min/max</b> — เหลือจัดทั้งระบบถึง max → ปลดการระงับเพราะลังชั่วคราว, ลดถึง min → กลับมาระงับ
                 </li>
-                <li>สวิตช์มุมขวา = เปิด/ปิดแต่ละฟีเจอร์ทั้งระบบ</li>
+                <li>
+                  <b>ช่วงเวลา</b> — ระงับเพราะลังเฉพาะช่วงเวลาเริ่ม–สิ้นสุดของวันนั้นในตาราง 7 วัน · ก่อนเวลาเริ่ม / หลังเวลาสิ้นสุด / วันที่ปิด
+                  ไม่ระงับ (สถานะขึ้น 🟠 ลังขาด)
+                </li>
+                <li>สวิตช์มุมขวา = เปิด/ปิดแต่ละฟีเจอร์ทั้งระบบ · ปิดอยู่ยังเห็นยอดลังได้ (เช็คการเชื่อมต่อก่อนเปิดใช้)</li>
               </ul>
               <p>ถ้าอ่านยอดจากแอปบันทึกลังไม่ได้ ระบบจะ<b>ไม่ระงับเพราะลัง</b>ชั่วคราว (กันคลังหยุดงาน)</p>
             </HelpPanel>
@@ -167,6 +172,16 @@ const FloorControlTable = ({
         {boxUnavailable && (
           <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
             อ่านยอดจากแอปบันทึกลังไม่ได้ — ระบบจะไม่ระงับจนกว่าจะอ่านได้ ({boxStock.error ?? "ยังไม่ได้ตั้งค่า"})
+          </p>
+        )}
+        {boxStock.enabled && (
+          <p className="mt-3 text-xs text-gray-600" data-testid="box-window">
+            ⏱ {boxWindowText(boxStock)}
+          </p>
+        )}
+        {!boxStock.enabled && !boxUnavailable && (
+          <p className="mt-3 text-xs text-gray-500">
+            ระงับเพราะลังขาดปิดอยู่ — อ่านยอดลังให้ดูได้ แต่ยังไม่ระงับ
           </p>
         )}
         {boxStock.enabled && boxStock.released && (
@@ -200,7 +215,7 @@ const FloorControlTable = ({
                   a.emp_code.localeCompare(b.emp_code),
               );
               return (
-                <tr key={floor} className={status?.blocked ? "bg-red-50/60" : ""}>
+                <tr key={floor} className={status?.blocked ? "bg-red-50/60" : status?.short ? "bg-orange-50/60" : ""}>
                   <td className="px-4 py-2 font-semibold text-gray-900 whitespace-nowrap">ชั้น {floor}</td>
                   <td className="px-4 py-2 text-right whitespace-nowrap">
                     <b>{status?.refilled == null ? "-" : status.refilled}</b> ลัง
@@ -220,6 +235,8 @@ const FloorControlTable = ({
                   <td className="px-4 py-2 whitespace-nowrap">
                     {status?.blocked ? (
                       <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs text-white">🔴 ระงับ</span>
+                    ) : status?.short ? (
+                      <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-700">🟠 ลังขาด (ยังไม่ระงับ)</span>
                     ) : status?.min_boxes ? (
                       <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">🟢 ผ่าน</span>
                     ) : (
