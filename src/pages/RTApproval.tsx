@@ -72,6 +72,12 @@ interface RTApprovalItem {
     name: string;
     image: string;
     floor: string;
+    // stock คงเหลือปัจจุบัน (แสดงแทนช่องหมายเหตุ) — backend เก่าจะไม่ส่งมา
+    stock?: {
+      amount: number | null;
+      unit: string | null;
+      last_stock_date: string | null;
+    };
     purchest?: PurchestData; // เพิ่มข้อมูล purchest ใหม่
     purchase_entry?: {
       SO_amount: string;
@@ -1047,10 +1053,8 @@ export default function RTApproval() {
                 <tr className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
                   <th className="py-4 px-3 text-left font-semibold text-sm">ลำดับ</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">พนักงาน</th>
-                  <th className="py-4 px-3 text-left font-semibold text-sm">รหัสร้าน</th>
-                  <th className="py-4 px-3 text-left font-semibold text-sm">ชื่อร้าน</th>
-                  <th className="py-4 px-3 text-left font-semibold text-sm">รหัสสินค้า</th>
-                  <th className="py-4 px-3 text-left font-semibold text-sm">ชื่อสินค้า</th>
+                  <th className="py-4 px-3 text-left font-semibold text-sm">ร้าน</th>
+                  <th className="py-4 px-3 text-left font-semibold text-sm">สินค้า</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">SH</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">จำนวน</th>
                   {isDuplicateView && (
@@ -1060,11 +1064,11 @@ export default function RTApproval() {
                     <th className="py-4 px-3 text-left font-semibold text-sm">รายการรออนุมัติ</th>
                   )}
                   <th className="py-4 px-3 text-left font-semibold text-sm">สถานะ</th>
-                  <th className="py-4 px-3 text-left font-semibold text-sm">หมายเหตุ</th>
+                  <th className="py-4 px-3 text-center font-semibold text-sm">Stock</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">หมายเหตุจาก QC</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">วันที่</th>
                   <th className="py-4 px-3 text-left font-semibold text-sm">เวลาที่ผ่านมา</th>
-                  <th className="py-4 px-3 text-left font-semibold text-sm">รายการเข้า</th>
+                  <th className="py-4 px-3 text-center font-semibold text-sm min-w-[140px]">รายการเข้า</th>
                 </tr>
               </thead>
               <tbody>
@@ -1091,83 +1095,79 @@ export default function RTApproval() {
                           <div className="text-xs text-gray-600 truncate" title={item.employee.name}>{item.employee.name}</div>
                         </div>
                       </td>
-                      <td className="py-4 px-3 text-sm max-w-[150px]">
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            copyToClipboard(item.member.code);
-                          }}
-                          className="group cursor-pointer p-2 rounded-lg border-2 border-dashed border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200"
-                          title="คลิกเพื่อคัดลอกรหัสร้าน"
-                        >
-                          <div className="font-semibold text-gray-800 group-hover:text-blue-600 flex items-center gap-2">
+                      <td className="py-4 px-3 text-sm max-w-[280px]">
+                        {/* รหัสร้าน + ชื่อร้านในช่องเดียว — กดคัดลอกแยกบรรทัด */}
+                        <div className="p-2 rounded-lg border-2 border-dashed border-gray-200 space-y-0.5">
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyToClipboard(item.member.code);
+                            }}
+                            className="group cursor-pointer font-semibold text-gray-800 hover:text-blue-600 flex items-center gap-2"
+                            title="คลิกเพื่อคัดลอกรหัสร้าน"
+                          >
                             {item.member.code}
                             <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
                           </div>
-                          {item.member.sales && (
-                            <div className="text-xs bg-green-100 text-green-600 px-1.5 py-0.5 rounded font-medium mt-1 inline-block">
-                              ฝ่ายขาย: {item.member.sales.code} {item.member.sales.name}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-4 px-3 text-sm max-w-[250px]">
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            copyToClipboard(item.member.name.trim());
-                          }}
-                          className="group cursor-pointer p-2 rounded-lg border-2 border-dashed border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all duration-200"
-                          title="คลิกเพื่อคัดลอกชื่อร้าน"
-                        >
-                          <div className="text-sm text-gray-800 group-hover:text-green-600 truncate flex items-center gap-2" title={item.member.name.trim()}>
-                            <span className="flex-1">{item.member.name.trim()}</span>
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyToClipboard(item.member.name.trim());
+                            }}
+                            className="group cursor-pointer text-sm text-gray-800 hover:text-green-600 truncate flex items-center gap-2"
+                            title={`คลิกเพื่อคัดลอกชื่อร้าน: ${item.member.name.trim()}`}
+                          >
+                            <span className="flex-1 truncate">{item.member.name.trim()}</span>
                             <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
                           </div>
-                          {item.member.route && (
-                            <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded inline-block mt-1">
-                              {item.member.route.code} - {item.member.route.name}
+                          {(item.member.sales || item.member.route) && (
+                            <div className="flex flex-wrap gap-1 pt-1">
+                              {item.member.sales && (
+                                <span className="text-xs bg-green-100 text-green-600 px-1.5 py-0.5 rounded font-medium">
+                                  ฝ่ายขาย: {item.member.sales.code} {item.member.sales.name}
+                                </span>
+                              )}
+                              {item.member.route && (
+                                <span className="text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                                  {item.member.route.code} - {item.member.route.name}
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>
                       </td>
-                      <td className="py-4 px-3 text-sm max-w-[150px]">
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            copyToClipboard(item.product.code);
-                          }}
-                          className="group cursor-pointer p-2 rounded-lg border-2 border-dashed border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200"
-                          title="คลิกเพื่อคัดลอกรหัสสินค้า"
-                        >
-                          <div className="font-semibold text-gray-800 group-hover:text-blue-600 flex items-center gap-2">
+                      <td className="py-4 px-3 text-sm max-w-[300px]">
+                        {/* รหัสสินค้า + ชื่อสินค้าในช่องเดียว — กดคัดลอกแยกบรรทัด */}
+                        <div className="p-2 rounded-lg border-2 border-dashed border-gray-200 space-y-0.5">
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyToClipboard(item.product.code);
+                            }}
+                            className="group cursor-pointer font-semibold text-gray-800 hover:text-blue-600 flex items-center gap-2"
+                            title="คลิกเพื่อคัดลอกรหัสสินค้า"
+                          >
                             {item.product.code}
+                            <span className="text-xs bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded font-medium">
+                              ชั้น {item.product.floor}
+                            </span>
                             <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
                           </div>
-                          <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
-                            <span className="bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded font-medium">
-                              ชั้น {item.product.floor}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-3 text-sm max-w-[250px]">
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            copyToClipboard(item.product.name);
-                          }}
-                          className="group cursor-pointer p-2 rounded-lg border-2 border-dashed border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all duration-200"
-                          title="คลิกเพื่อคัดลอกชื่อสินค้า"
-                        >
-                          <div className="text-sm text-gray-800 group-hover:text-green-600 line-clamp-2 flex items-start gap-2">
-                            <span className="flex-1">{item.product.name}</span>
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyToClipboard(item.product.name);
+                            }}
+                            className="group cursor-pointer text-sm text-gray-800 hover:text-green-600 flex items-start gap-2"
+                            title="คลิกเพื่อคัดลอกชื่อสินค้า"
+                          >
+                            <span className="flex-1 line-clamp-2">{item.product.name}</span>
                             <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
@@ -1228,26 +1228,22 @@ export default function RTApproval() {
                           {label}
                         </span>
                       </td>
-                      <td className="py-4 px-3 text-sm max-w-[200px]">
-                        {item.note ? (
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              copyToClipboard(item.note || '');
-                            }}
-                            className="group cursor-pointer p-2 rounded-lg border-2 border-dashed border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200"
-                            title="คลิกเพื่อคัดลอกหมายเหตุ"
-                          >
-                            <div className="text-sm text-gray-800 group-hover:text-blue-600 line-clamp-2 flex items-start gap-2">
-                              <span className="flex-1">{item.note}</span>
-                              <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                              </svg>
+                      <td className="py-4 px-3 text-sm text-center">
+                        {item.product.stock?.amount != null ? (
+                          <div className="space-y-1">
+                            <div className={`text-lg font-bold ${item.product.stock.amount <= 0 ? "text-red-600" : "text-gray-800"}`}>
+                              {item.product.stock.amount.toLocaleString()}
                             </div>
+                            <div className="text-xs text-gray-500">{item.product.stock.unit}</div>
+                            {item.product.stock.last_stock_date && (
+                              <div className="text-[10px] text-gray-400">
+                                {dayjs(item.product.stock.last_stock_date).format('DD/MM HH:mm')}
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="text-center text-gray-400 italic text-xs py-2">
-                            ไม่มีหมายเหตุ
+                            ไม่มีข้อมูล
                           </div>
                         )}
                       </td>
@@ -1292,11 +1288,11 @@ export default function RTApproval() {
                           {timeAgo(item.created_at)}
                         </div>
                       </td>
-                      <td className="py-4 px-3 text-sm text-center">
+                      <td className="py-4 px-3 text-sm text-center min-w-[140px]">
                         {item.product.newArrival ? (
-                          <div className="space-y-1">
-                            <div className="flex flex-col  text-white  bg-blue-500 font-semibold rounded-2xl py-1">
-                              <span className="text-lg">
+                          <div className="space-y-2">
+                            <div className="flex flex-col text-white bg-blue-500 font-semibold rounded-2xl px-3 py-2">
+                              <span className="text-xl leading-tight">
                                 {item.product.newArrival?.quantity_received}
                               </span>
                               <span className="text-xs">
@@ -1305,7 +1301,7 @@ export default function RTApproval() {
                             </div>
 
                             {/* แสดงวันที่ได้รับสินค้า */}
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs font-medium text-gray-600">
                               {item.product.newArrival?.received_date}
                             </div>
                           </div>
