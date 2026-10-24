@@ -32,6 +32,9 @@ export interface BoxFloorStatus {
   min_boxes: number | null;
   // null = ยังอ่านยอดจากแอปบันทึกลังไม่ได้ (ไม่ระงับ)
   refilled: number | null;
+  // ลังขาด = ยอดยังไม่ถึงขั้นต่ำ (แสดงได้แม้ flag ปิด / นอกช่วงเวลา)
+  short: boolean;
+  // ระงับจริง = ลังขาด + flag เปิด + ไม่ได้ปลดเพราะยอดค้าง + อยู่ในช่วงเวลาเริ่ม–สิ้นสุดของวันนี้
   blocked: boolean;
 }
 
@@ -46,7 +49,20 @@ export interface BoxStockStatus {
   pending_release_min: number | null;
   pending_release_max: number | null;
   released: boolean;
+  // ช่วงเวลาที่ระงับเพราะลังมีผลวันนี้ (= เวลาเริ่ม–สิ้นสุดของตารางรายวัน) · null = วันนี้ไม่ได้เปิดระงับอัตโนมัติ
+  window_start?: string | null;
+  window_end?: string | null;
+  window_active?: boolean;
   floors: BoxFloorStatus[];
+}
+
+// ข้อความช่วงเวลาที่ระงับเพราะลังมีผล (OPHMBC-324)
+export function boxWindowText(boxStock: BoxStockStatus): string {
+  if (!boxStock.window_start) return "วันนี้ไม่ได้เปิดระงับอัตโนมัติ — ไม่ระงับเพราะลังทั้งวัน";
+  const range = `${boxStock.window_start}–${boxStock.window_end ?? "?"} น.`;
+  return boxStock.window_active
+    ? `ระงับเพราะลังมีผลช่วง ${range} (ตอนนี้อยู่ในช่วง)`
+    : `ระงับเพราะลังมีผลช่วง ${range} เท่านั้น (ตอนนี้อยู่นอกช่วง ยังไม่ระงับ)`;
 }
 
 // พนักงานชั้นละ 1 คนที่เริ่มจัดได้ระหว่างระงับ (flag order-block-floor-picker)
