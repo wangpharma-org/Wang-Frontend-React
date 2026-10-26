@@ -58,6 +58,7 @@ import ScanBasket from "./pages/ScanBasket";
 import ScanConfirmSticker from "./pages/ScanConfirmSticker";
 import LogisticDriverReport from "./pages/LogisticDriverReport";
 import ReportLogistic from "./pages/ReportLogistic";
+import AdminSubmitShipping from "./pages/AdminSubmitShipping";
 
 function App() {
   useEffect(() => {
@@ -501,6 +502,10 @@ function App() {
           <Route
             path="/report-logistic"
             element={<RequireAuth><ReportLogistic /></RequireAuth>}
+          />
+          <Route
+            path="/admin-submit-shipping"
+            element={<div><Navbar /><RequireAuth><AdminSubmitShipping /></RequireAuth></div>}
           />
         </Routes>
       </Router>
