@@ -16,6 +16,7 @@ import {
 } from "@dnd-kit/sortable";
 import RouteBatchSortableCard, { type EditorGroup } from "../components/RouteBatchSortableCard";
 import EmployeeLoadingLimitSection from "../components/EmployeeLoadingLimitSection";
+import DepartureTimeSection from "../components/DepartureTimeSection";
 import OrderBlockSection from "../components/OrderBlockSection";
 import RouteBatchBlockGuide from "../components/RouteBatchBlockGuide";
 
@@ -1099,6 +1100,8 @@ const RouteManage = () => {
                 {isFullAdmin && <OrderBlockSection />}
 
                 <EmployeeLoadingLimitSection />
+
+                <DepartureTimeSection />
 
                 {/* Urgent Customers Management Section */}
                 <div className="mt-12">
