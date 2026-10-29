@@ -16,11 +16,10 @@ const fmt = (n: number) => n.toLocaleString("th-TH");
 const pct = (part: number, total: number) =>
   total > 0 ? `${((part / total) * 100).toFixed(2)}%` : "-";
 
-// แก้บิลย้อนหลังทั้งระบบ — backend ก็เช็ค SUPER_ADMIN ซ้ำอีกชั้น
-const isSuperAdmin = () => {
+// แก้บิลย้อนหลังทั้งระบบ — backend ก็เช็ค manage_product ซ้ำอีกชั้น
+const isAdmin = () => {
   try {
-    const role = JSON.parse(sessionStorage.getItem("user_info") || "{}")?.user_role;
-    return typeof role === "string" && role.toUpperCase() === "SUPER_ADMIN";
+    return JSON.parse(sessionStorage.getItem("user_info") || "{}")?.manage_product === "Yes";
   } catch {
     return false;
   }
@@ -244,7 +243,7 @@ function SuspiciousTable({ rows }: { rows: SuspiciousRatio[] }) {
 }
 
 const UnitRatioBackfill = () => {
-  const superAdmin = useMemo(isSuperAdmin, []);
+  const admin = useMemo(isAdmin, []);
   const { file, setFile, dryRun, checking, check, running, runAll, progress, error } =
     useUnitRatioBackfill();
 
@@ -264,10 +263,10 @@ const UnitRatioBackfill = () => {
     if (ok.isConfirmed) await runAll();
   };
 
-  if (!superAdmin) {
+  if (!admin) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <p className="text-xl font-bold text-red-600">เฉพาะ SUPER_ADMIN เท่านั้น</p>
+        <p className="text-xl font-bold text-red-600">เฉพาะผู้ดูแลระบบเท่านั้น</p>
       </div>
     );
   }
