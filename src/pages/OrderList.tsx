@@ -82,9 +82,23 @@ interface MemRoute {
   is_active: boolean;
 }
 
+type OrderBlockReason = "schedule" | "pending_low" | "qc_high" | "qc_wait";
+
+// ข้อความชุดเดียวกับ describeBlockReason ฝั่ง backend (order-block.service.ts)
+const BLOCK_REASON_TEXT: Record<OrderBlockReason, string> = {
+  schedule: "ระงับการจัดตามช่วงเวลาที่ตั้งไว้",
+  pending_low: "ยอดเหลือจัดลดถึงขั้นต่ำ (min) จะเปิดเมื่อยอดสะสมถึง max",
+  qc_high: "ยอดรอ QC ถึงขั้นสูงสุด (max) จะเปิดเมื่อยอดรอ QC ลดถึง min",
+  qc_wait: "รอยอดรอ QC ลดถึงขั้นต่ำ (min) ก่อนเปิดจัด",
+};
+
 interface OrderBlockSnapshot {
   all_blocked: boolean;
+  // backend รุ่นก่อนไม่มีฟิลด์นี้
+  all_blocked_reason?: OrderBlockReason | null;
   blocked_route_codes: string[];
+  // ส่วนหนึ่งของ blocked_route_codes ที่ระงับเพราะใกล้เวลาออกรถ
+  departure_blocked_route_codes?: string[];
   bypass_route_codes: string[];
   end_time: string | null;
   // ลังชั้นยังเติมไม่ถึงขั้นต่ำ (flag order-block-box-stock) — backend รุ่นก่อนไม่มีฟิลด์นี้
@@ -250,6 +264,19 @@ const OrderList = () => {
     blockedRouteCodes.has(order.mem_route?.route_code ?? "") &&
     !isFloorPickerExempt(order);
 
+  const allBlockedReasonText = orderBlock?.all_blocked
+    ? BLOCK_REASON_TEXT[orderBlock.all_blocked_reason ?? "schedule"] ?? "ระงับอัตโนมัติ"
+    : null;
+
+  // เส้นทางถูกระงับอัตโนมัติเพราะเงื่อนไขไหน — ลำดับเดียวกับ checkPickAllowed ฝั่ง backend
+  const describeRouteBlock = (order: orderList) => {
+    if (allBlockedReasonText) return allBlockedReasonText;
+    if ((orderBlock?.departure_blocked_route_codes ?? []).includes(order.mem_route?.route_code ?? "")) {
+      return "ใกล้เวลาออกรถของเส้นทางนี้";
+    }
+    return "รถของเส้นทางนี้ออกไปแล้ว";
+  };
+
   // ใช้เรียงเฉพาะตอนมีเส้นทางถูกระงับอัตโนมัติ: bypass ขึ้นบนสุด เส้นทางที่ถูกระงับลงล่างสุด
   const blockRank = (order: orderList) => {
     if (blockedRouteCodes.size === 0 && boxBlockedFloorsByMember.size === 0) return 0;
@@ -295,8 +322,8 @@ const OrderList = () => {
         icon: "warning",
         title: "เส้นทางนี้ถูกระงับ",
         text: orderBlock?.end_time
-          ? `ระงับอัตโนมัติ จะเปิดอีกครั้งเวลา ${orderBlock.end_time} น.`
-          : "ระงับอัตโนมัติ",
+          ? `${describeRouteBlock(target)} · เปิดแน่นอนเวลา ${orderBlock.end_time} น.`
+          : describeRouteBlock(target),
       });
       return;
     }
@@ -1216,6 +1243,7 @@ const OrderList = () => {
                 {orderBlock?.all_blocked && (
                   <div className="bg-white border-2 border-red-500 rounded p-3 mb-2 text-center">
                     <p className="text-xl font-bold text-red-600">แจ้งเตือนงานคลังสินค้า</p>
+                    <p className="mt-1 font-bold text-red-600">สาเหตุ: {allBlockedReasonText}</p>
                     <p className="mt-1">
                       ขณะนี้พักการจัดออเดอร์หลังรถขนส่งออก กรุณาเติมสินค้า จัดพื้นที่
                       คัดแยกสินค้าไม่พร้อมขาย หรือ Audit สต็อกและความสะอาด
@@ -1376,6 +1404,12 @@ const OrderList = () => {
             </div>
           ) : (
             <div>
+              {allBlockedReasonText && (
+                <div className="mx-3 mt-3 p-2 rounded-sm bg-red-600 text-white text-center text-sm font-bold">
+                  ระงับการจัดทุกเส้นทาง: {allBlockedReasonText}
+                  {orderBlock?.end_time && ` · เปิดแน่นอนเวลา ${orderBlock.end_time} น.`}
+                </div>
+              )}
               {(orderBlock?.box_blocked_floors ?? []).length > 0 && (
                 <div className="mx-3 mt-3 p-2 rounded-sm bg-red-600 text-white text-center text-sm font-bold">
                   ลังยังเติมไม่ถึงขั้นต่ำ:{" "}
@@ -1479,6 +1513,11 @@ const OrderList = () => {
                                   {(order?.mem_route?.is_active === false || isAutoBlocked(order)) && (
                                     <div>
                                       <p className="text-red-600 font-bold text-center">เส้นทางนี้ถูกระงับ</p>
+                                      <p className="text-red-600 text-center">
+                                        {order?.mem_route?.is_active === false
+                                          ? "ปิดเส้นทางไว้ (เปิดทีละชุด / แอดมินปิด)"
+                                          : describeRouteBlock(order)}
+                                      </p>
                                     </div>
                                   )}
                                   {order?.mem_route?.is_active !== false && !isAutoBlocked(order) && isBoxBlocked(order) && (
