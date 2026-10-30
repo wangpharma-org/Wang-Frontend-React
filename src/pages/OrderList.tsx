@@ -1240,20 +1240,6 @@ const OrderList = () => {
           <div className="px-3">
             {showRequestList && (
               <div className="flex flex-col justify-center w-full bg-yellow-300 rounded mt-3 p-2">
-                {orderBlock?.all_blocked && (
-                  <div className="bg-white border-2 border-red-500 rounded p-3 mb-2 text-center">
-                    <p className="text-xl font-bold text-red-600">แจ้งเตือนงานคลังสินค้า</p>
-                    <p className="mt-1 font-bold text-red-600">สาเหตุ: {allBlockedReasonText}</p>
-                    <p className="mt-1">
-                      ขณะนี้พักการจัดออเดอร์หลังรถขนส่งออก กรุณาเติมสินค้า จัดพื้นที่
-                      คัดแยกสินค้าไม่พร้อมขาย หรือ Audit สต็อกและความสะอาด
-                    </p>
-                    <p>โปรดเลือกงานที่กำลังดำเนินการและบันทึกผลในระบบ</p>
-                    <p className="mt-1 font-bold">
-                      ระบบจะเปิดจัดออเดอร์รอบใหม่ประมาณ {orderBlock?.end_time ?? "-"} น.
-                    </p>
-                  </div>
-                )}
                 <p className="text-center text-xl mt-1 mb-1">รายการขอเพิ่ม</p>
                 <div className="text-center grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2">
                   {(requestProduct ?? []).length > 0 ? (
@@ -1405,9 +1391,15 @@ const OrderList = () => {
           ) : (
             <div>
               {allBlockedReasonText && (
-                <div className="mx-3 mt-3 p-2 rounded-sm bg-red-600 text-white text-center text-sm font-bold">
-                  ระงับการจัดทุกเส้นทาง: {allBlockedReasonText}
-                  {orderBlock?.end_time && ` · เปิดแน่นอนเวลา ${orderBlock.end_time} น.`}
+                <div className="mx-3 mt-3 p-2 rounded-sm bg-red-600 text-white text-center text-sm">
+                  <p className="font-bold">
+                    ระงับการจัดทุกเส้นทาง: {allBlockedReasonText}
+                    {orderBlock?.end_time && ` · เปิดแน่นอนเวลา ${orderBlock.end_time} น.`}
+                  </p>
+                  <p className="mt-1">
+                    ระหว่างนี้กรุณาเติมสินค้า จัดพื้นที่ คัดแยกสินค้าไม่พร้อมขาย หรือ Audit สต็อกและความสะอาด
+                    แล้วบันทึกผลในระบบ
+                  </p>
                 </div>
               )}
               {(orderBlock?.box_blocked_floors ?? []).length > 0 && (
