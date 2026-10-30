@@ -52,6 +52,7 @@ import ReturnReceiptPrint from "./pages/ReturnReceiptPrint";
 import ProductNameChangeApproval from "./pages/ProductNameChangeApproval";
 import DailyIpLogsPage from "./pages/DailyIpLogsPage";
 import NoBarcodeApprovalSettings from "./pages/NoBarcodeApprovalSettings";
+import UnitRatioBackfill from "./pages/UnitRatioBackfill";
 import EmployeeSettings from "./pages/EmployeeSettings";
 import ScanBox from "./pages/ScanBox";
 import ScanBasket from "./pages/ScanBasket";
@@ -437,6 +438,17 @@ function App() {
                 <Navbar />
                 <RequireAuth>
                   <NoBarcodeApprovalSettings />
+                </RequireAuth>
+              </div>
+            }
+          />
+          <Route
+            path="/unit-ratio-backfill"
+            element={
+              <div>
+                <Navbar />
+                <RequireAuth>
+                  <UnitRatioBackfill />
                 </RequireAuth>
               </div>
             }
