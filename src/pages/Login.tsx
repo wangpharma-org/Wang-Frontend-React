@@ -1,14 +1,17 @@
 import { useAuth } from "../context/AuthContext"
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import logoMini from "../assets/logoMini.svg";
 import { useNavigate } from "react-router";
 import { Bounce, ToastContainer, toast } from "react-toastify";
 import Swal from "sweetalert2";
+import ForgotPasswordModal from "../components/ForgotPasswordModal";
 
 const Login = () => {
   const { login, isAuthenticated } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [forgotOpen, setForgotOpen] = useState(false)
+  const closeForgot = useCallback(() => setForgotOpen(false), [])
   const navigate = useNavigate()
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -95,6 +98,15 @@ const Login = () => {
                   <label htmlFor="password" className="block text-sm/6 font-medium text-gray-900">
                     รหัสผ่าน (Password)
                   </label>
+                  {/* OPHMBC-325 — รหัสผ่านเป็นของระบบ HR: รีเซ็ตเองด้วย OTP หรือขอ HR ออกรหัสชั่วคราว (แบบระบบขาย) */}
+                  <button
+                    type="button"
+                    onClick={() => setForgotOpen(true)}
+                    className="cursor-pointer text-sm font-medium text-blue-500 hover:text-blue-600 hover:underline"
+                    data-forgot-password
+                  >
+                    ลืมรหัสผ่าน?
+                  </button>
                 </div>
                 <div className="mt-2">
                   <input
@@ -119,6 +131,7 @@ const Login = () => {
             </form>
           </div>
         </div>
+        <ForgotPasswordModal open={forgotOpen} onClose={closeForgot} initialEmpCode={username} />
       </>
     )
   }
