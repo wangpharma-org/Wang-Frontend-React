@@ -4,19 +4,24 @@ import logoMini from "../assets/logoMini.svg";
 import { useNavigate } from "react-router";
 import { Bounce, ToastContainer, toast } from "react-toastify";
 import Swal from "sweetalert2";
+import { Loader2 } from "lucide-react";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 
 const Login = () => {
   const { login, isAuthenticated } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
   const [forgotOpen, setForgotOpen] = useState(false)
   const closeForgot = useCallback(() => setForgotOpen(false), [])
   const navigate = useNavigate()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = await login(username, password)
+    if (isLoading) return
+    // OPHMBC-325 — login รอ HRSoft ยืนยันรหัส (นานสุด ~15 วินาที) · กันกดซ้ำระหว่างรอ
+    setIsLoading(true)
+    const result = await login(username, password).finally(() => setIsLoading(false))
     if (!result.ok && result.code === 'ATTENDANCE_REQUIRED') {
       // OPHMBC-325 — ยังไม่ลงเวลาเข้างาน (หรือลงเวลาออกแล้ว) ใช้ระบบไม่ได้ · แจ้งเตือนอย่างเดียว ไม่มีลิงก์ไปลงเวลา
       await Swal.fire({
@@ -125,9 +130,18 @@ const Login = () => {
               <div>
                 <button
                   onClick={handleLogin}
-                  className="flex w-full cursor-pointer justify-center rounded-md bg-blue-500 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-xs hover:bg-blue-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                  disabled={isLoading}
+                  className="flex w-full cursor-pointer items-center justify-center rounded-md bg-blue-500 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-xs hover:bg-blue-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-70"
+                  data-login-submit
                 >
-                  เข้าสู่ระบบ
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      กำลังเข้าสู่ระบบ...
+                    </>
+                  ) : (
+                    'เข้าสู่ระบบ'
+                  )}
                 </button>
               </div>
             </form>
