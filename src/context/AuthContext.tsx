@@ -3,6 +3,7 @@ import React, {
   useState,
   useEffect,
   useContext,
+  useRef,
   ReactNode,
 } from "react";
 import axios from "axios";
@@ -23,13 +24,18 @@ interface UserInfo {
   allowUsed: boolean;
 }
 
+/** OPHMBC-325 — login ไม่ผ่านพร้อมเหตุผลจาก auth (รหัสผิด / ยังไม่ลงเวลา / ถูกระงับ / HRSoft ล่ม ฯลฯ) */
+export type LoginResult =
+  | { ok: true }
+  | { ok: false; code?: string; message?: string };
+
 interface AuthContextType {
   accessToken: string | null;
   refreshToken: string | null;
   userInfo: UserInfo | null;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<LoginResult>;
   logout: () => void;
 }
 
@@ -58,7 +64,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const login = async (
     username: string,
     password: string
-  ): Promise<boolean> => {
+  ): Promise<LoginResult> => {
     try {
       const res = await axios.post(
         `${import.meta.env.VITE_API_URL_AUTH}/api/auth/login`,
@@ -120,10 +126,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       }
 
 
-      return true;
+      return { ok: true };
     } catch (error) {
       console.error("Login failed:", error);
-      return false;
+      // auth ตอบ { code, message } (OPHMBC-325) — ส่งต่อให้หน้า login แสดงเหตุผลจริง
+      const data = axios.isAxiosError(error) ? error.response?.data : undefined;
+      return {
+        ok: false,
+        code: typeof data?.code === "string" ? data.code : undefined,
+        message: typeof data?.message === "string" ? data.message : undefined,
+      };
     }
   };
 
@@ -136,6 +148,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     sessionStorage.removeItem("refresh_token");
     sessionStorage.removeItem("user_info");
   };
+
+  // OPHMBC-325 — backend ตัด session ที่ login ก่อนเปลี่ยนไปใช้รหัส HRSoft (401 SESSION_REVOKED)
+  // → logout แล้ว RequireAuth พากลับหน้า login · หลาย request พังพร้อมกันให้เตือนครั้งเดียว
+  const revokedRef = useRef(false);
+  useEffect(() => {
+    const id = axios.interceptors.response.use(undefined, (error) => {
+      if (
+        error?.response?.status === 401 &&
+        error.response.data?.code === "SESSION_REVOKED" &&
+        !revokedRef.current
+      ) {
+        revokedRef.current = true;
+        logout();
+        Swal.fire({
+          icon: "info",
+          title: "กรุณาเข้าสู่ระบบใหม่",
+          text:
+            error.response.data?.message ||
+            "เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่ด้วยรหัสผ่าน HRSoft",
+        }).finally(() => {
+          revokedRef.current = false;
+        });
+      }
+      return Promise.reject(error);
+    });
+    return () => axios.interceptors.response.eject(id);
+  }, []);
 
   return (
     <AuthContext.Provider
