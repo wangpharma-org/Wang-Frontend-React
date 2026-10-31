@@ -3,6 +3,7 @@ import { useState } from "react";
 import logoMini from "../assets/logoMini.svg";
 import { useNavigate } from "react-router";
 import { Bounce, ToastContainer, toast } from "react-toastify";
+import Swal from "sweetalert2";
 
 const Login = () => {
   const { login, isAuthenticated } = useAuth()
@@ -12,9 +13,20 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await login(username, password)
-    if (!success) {
-      toast.error('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', {
+    const result = await login(username, password)
+    if (!result.ok && result.code === 'ATTENDANCE_REQUIRED') {
+      // OPHMBC-325 — ยังไม่ลงเวลาเข้างาน (หรือลงเวลาออกแล้ว) ใช้ระบบไม่ได้ · แจ้งเตือนอย่างเดียว ไม่มีลิงก์ไปลงเวลา
+      await Swal.fire({
+        icon: 'warning',
+        title: 'ยังเข้าใช้งานไม่ได้',
+        text: result.message || 'กรุณาลงเวลาเข้างานก่อนเข้าใช้ระบบ',
+        confirmButtonText: 'ตกลง',
+      })
+      return
+    }
+    if (!result.ok) {
+      // ข้อความจาก auth ตรงเคส (รหัสผิด / ถูกระงับ / HRSoft ไม่พร้อม ฯลฯ) — ไม่มีให้ใช้ข้อความเดิม
+      toast.error(result.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', {
         position: "top-center",
         autoClose: 2000,
         hideProgressBar: false,
