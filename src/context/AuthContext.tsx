@@ -27,7 +27,7 @@ interface UserInfo {
 /** OPHMBC-325 — login ไม่ผ่านพร้อมเหตุผลจาก auth (รหัสผิด / ยังไม่ลงเวลา / ถูกระงับ / HRSoft ล่ม ฯลฯ) */
 export type LoginResult =
   | { ok: true }
-  | { ok: false; code?: string; message?: string; checkinUrl?: string };
+  | { ok: false; code?: string; message?: string };
 
 interface AuthContextType {
   accessToken: string | null;
@@ -129,14 +129,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       return { ok: true };
     } catch (error) {
       console.error("Login failed:", error);
-      // auth ตอบ { code, message, checkin_url? } (OPHMBC-325) — ส่งต่อให้หน้า login แสดงเหตุผลจริง
+      // auth ตอบ { code, message } (OPHMBC-325) — ส่งต่อให้หน้า login แสดงเหตุผลจริง
       const data = axios.isAxiosError(error) ? error.response?.data : undefined;
       return {
         ok: false,
         code: typeof data?.code === "string" ? data.code : undefined,
         message: typeof data?.message === "string" ? data.message : undefined,
-        checkinUrl:
-          typeof data?.checkin_url === "string" ? data.checkin_url : undefined,
       };
     }
   };

@@ -15,18 +15,13 @@ const Login = () => {
     e.preventDefault();
     const result = await login(username, password)
     if (!result.ok && result.code === 'ATTENDANCE_REQUIRED') {
-      // OPHMBC-325 — ยังไม่ลงเวลาเข้างาน (หรือลงเวลาออกแล้ว) ใช้ระบบไม่ได้ · มีปุ่มพาไปลงเวลา
-      const { isConfirmed } = await Swal.fire({
+      // OPHMBC-325 — ยังไม่ลงเวลาเข้างาน (หรือลงเวลาออกแล้ว) ใช้ระบบไม่ได้ · แจ้งเตือนอย่างเดียว ไม่มีลิงก์ไปลงเวลา
+      await Swal.fire({
         icon: 'warning',
         title: 'ยังเข้าใช้งานไม่ได้',
         text: result.message || 'กรุณาลงเวลาเข้างานก่อนเข้าใช้ระบบ',
-        showCancelButton: !!result.checkinUrl,
-        confirmButtonText: result.checkinUrl ? 'ไปลงเวลาเข้างาน' : 'ตกลง',
-        cancelButtonText: 'ปิด',
+        confirmButtonText: 'ตกลง',
       })
-      if (isConfirmed && result.checkinUrl) {
-        window.open(result.checkinUrl, '_blank', 'noopener')
-      }
       return
     }
     if (!result.ok) {
