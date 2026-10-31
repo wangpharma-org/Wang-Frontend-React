@@ -24,13 +24,18 @@ interface UserInfo {
   allowUsed: boolean;
 }
 
+/** OPHMBC-325 — login ไม่ผ่านพร้อมเหตุผลจาก auth (รหัสผิด / ยังไม่ลงเวลา / ถูกระงับ / HRSoft ล่ม ฯลฯ) */
+export type LoginResult =
+  | { ok: true }
+  | { ok: false; code?: string; message?: string; checkinUrl?: string };
+
 interface AuthContextType {
   accessToken: string | null;
   refreshToken: string | null;
   userInfo: UserInfo | null;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<LoginResult>;
   logout: () => void;
 }
 
@@ -59,7 +64,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const login = async (
     username: string,
     password: string
-  ): Promise<boolean> => {
+  ): Promise<LoginResult> => {
     try {
       const res = await axios.post(
         `${import.meta.env.VITE_API_URL_AUTH}/api/auth/login`,
@@ -121,10 +126,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       }
 
 
-      return true;
+      return { ok: true };
     } catch (error) {
       console.error("Login failed:", error);
-      return false;
+      // auth ตอบ { code, message, checkin_url? } (OPHMBC-325) — ส่งต่อให้หน้า login แสดงเหตุผลจริง
+      const data = axios.isAxiosError(error) ? error.response?.data : undefined;
+      return {
+        ok: false,
+        code: typeof data?.code === "string" ? data.code : undefined,
+        message: typeof data?.message === "string" ? data.message : undefined,
+        checkinUrl:
+          typeof data?.checkin_url === "string" ? data.checkin_url : undefined,
+      };
     }
   };
 
