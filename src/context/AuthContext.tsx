@@ -3,6 +3,7 @@ import React, {
   useState,
   useEffect,
   useContext,
+  useRef,
   ReactNode,
 } from "react";
 import axios from "axios";
@@ -136,6 +137,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     sessionStorage.removeItem("refresh_token");
     sessionStorage.removeItem("user_info");
   };
+
+  // OPHMBC-325 — backend ตัด session ที่ login ก่อนเปลี่ยนไปใช้รหัส HRSoft (401 SESSION_REVOKED)
+  // → logout แล้ว RequireAuth พากลับหน้า login · หลาย request พังพร้อมกันให้เตือนครั้งเดียว
+  const revokedRef = useRef(false);
+  useEffect(() => {
+    const id = axios.interceptors.response.use(undefined, (error) => {
+      if (
+        error?.response?.status === 401 &&
+        error.response.data?.code === "SESSION_REVOKED" &&
+        !revokedRef.current
+      ) {
+        revokedRef.current = true;
+        logout();
+        Swal.fire({
+          icon: "info",
+          title: "กรุณาเข้าสู่ระบบใหม่",
+          text:
+            error.response.data?.message ||
+            "เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่ด้วยรหัสผ่าน HRSoft",
+        }).finally(() => {
+          revokedRef.current = false;
+        });
+      }
+      return Promise.reject(error);
+    });
+    return () => axios.interceptors.response.eject(id);
+  }, []);
 
   return (
     <AuthContext.Provider
