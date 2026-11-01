@@ -3,6 +3,7 @@ import axios from "axios";
 import Swal from "sweetalert2";
 import Navbar from "../components/Navbar";
 import { io } from "socket.io-client";
+import { watchRevoked } from "../context/socketAuth";
 import dayjs from "dayjs";
 
 const VITE_API_URL_ORDER = import.meta.env.VITE_API_URL_ORDER as string;
@@ -324,6 +325,7 @@ export default function TaskApprovalPage() {
       path: "/socket/task-rotation",
       extraHeaders: { Authorization: `Bearer ${token ?? ""}` },
     });
+    watchRevoked(socket);
 
     socket.on("connect", () => { console.log("✅ Connected to task-rotation socket (approval)"); });
 

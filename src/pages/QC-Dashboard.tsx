@@ -5,6 +5,7 @@ import box from "../assets/return-box.png";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { io, Socket } from "socket.io-client";
+import { socketAuth, watchRevoked } from "../context/socketAuth";
 import Modal from "../components/ModalQC";
 import Barcode from "react-barcode";
 import { Printer } from "lucide-react";
@@ -797,8 +798,10 @@ const QCDashboard = () => {
       `${import.meta.env.VITE_API_URL_ORDER}/socket/qc/dashboard`,
       {
         path: "/socket/qc",
+        ...socketAuth(),
       }
     );
+    watchRevoked(newSocket);
     setSocket(newSocket);
 
     checkFlag();

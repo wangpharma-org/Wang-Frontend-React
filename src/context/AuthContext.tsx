@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import axios from "axios";
 import Swal from "sweetalert2";
+import { AUTH_REVOKED_EVENT } from "./socketAuth";
 
 interface UserInfo {
   user_id: number;
@@ -150,30 +151,41 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   // OPHMBC-325 — backend ตัด session ที่ login ก่อนเปลี่ยนไปใช้รหัส HRSoft (401 SESSION_REVOKED)
+  // และคนที่ถูกตัดสิทธิ์ (401 USER_NOT_ALLOWED) ทั้งทาง HTTP และ socket (session:revoked)
   // → logout แล้ว RequireAuth พากลับหน้า login · หลาย request พังพร้อมกันให้เตือนครั้งเดียว
   const revokedRef = useRef(false);
+  const handleRevoked = (body?: { code?: string; message?: string }) => {
+    if (revokedRef.current) return;
+    revokedRef.current = true;
+    logout();
+    Swal.fire({
+      icon: "info",
+      title: "กรุณาเข้าสู่ระบบใหม่",
+      text:
+        body?.message ||
+        "เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่ด้วยรหัสผ่าน HRSoft",
+    }).finally(() => {
+      revokedRef.current = false;
+    });
+  };
   useEffect(() => {
     const id = axios.interceptors.response.use(undefined, (error) => {
+      const code = error?.response?.data?.code;
       if (
         error?.response?.status === 401 &&
-        error.response.data?.code === "SESSION_REVOKED" &&
-        !revokedRef.current
+        (code === "SESSION_REVOKED" || code === "USER_NOT_ALLOWED")
       ) {
-        revokedRef.current = true;
-        logout();
-        Swal.fire({
-          icon: "info",
-          title: "กรุณาเข้าสู่ระบบใหม่",
-          text:
-            error.response.data?.message ||
-            "เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่ด้วยรหัสผ่าน HRSoft",
-        }).finally(() => {
-          revokedRef.current = false;
-        });
+        handleRevoked(error.response.data);
       }
       return Promise.reject(error);
     });
-    return () => axios.interceptors.response.eject(id);
+    const onSocketRevoked = (e: Event) =>
+      handleRevoked((e as CustomEvent).detail);
+    window.addEventListener(AUTH_REVOKED_EVENT, onSocketRevoked);
+    return () => {
+      axios.interceptors.response.eject(id);
+      window.removeEventListener(AUTH_REVOKED_EVENT, onSocketRevoked);
+    };
   }, []);
 
   return (

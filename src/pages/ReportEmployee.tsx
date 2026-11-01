@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import Clock from "../components/Clock";
 import { useNavigate } from "react-router";
 import { Socket, io } from "socket.io-client";
+import { watchRevoked } from "../context/socketAuth";
 import axios from "axios";
 // import ProductList from "./ProductList";
 import ButtonMenu from "../components/buttonMenu";
@@ -107,6 +108,7 @@ const Report = () => {
         },
       }
     );
+    watchRevoked(newSocket);
     setSocket(newSocket);
 
     newSocket.on("connect", () => {

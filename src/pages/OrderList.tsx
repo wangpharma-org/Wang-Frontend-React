@@ -1,6 +1,7 @@
 import Clock from "../components/Clock";
 import { useState, useEffect, useMemo, useRef, ReactNode } from "react";
 import { Socket, io } from "socket.io-client";
+import { watchRevoked } from "../context/socketAuth";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router";
 import axios from "axios";
@@ -411,6 +412,7 @@ const OrderList = () => {
         },
       }
     );
+    watchRevoked(newSocket);
     setSocket(newSocket);
 
     handleGetRoute();

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import { Socket, io } from "socket.io-client";
+import { socketAuth, watchRevoked } from "../context/socketAuth";
 import dayjs from "dayjs";
 import 'dayjs/locale/th';
 dayjs.locale('th');
@@ -96,8 +97,10 @@ const Dashboard: React.FC = () => {
       `${import.meta.env.VITE_API_URL_ORDER}/socket/kpi/dashboard`,
       {
         path: "/socket/kpi",
+        ...socketAuth(),
       }
     );
+    watchRevoked(newSocket);
     setSocket(newSocket);
 
     newSocket.on("connect", () => {

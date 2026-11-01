@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { io, Socket } from "socket.io-client";
+import { watchRevoked } from "../context/socketAuth";
 import { useAuth } from "../context/AuthContext";
 import Clock from "../components/Clock";
 import ProductBox from "../components/ProductBox";
@@ -158,6 +159,7 @@ function ProductList() {
         },
       }
     );
+    watchRevoked(newSocket);
     setSocket(newSocket);
 
     checkFlag();
