@@ -2,6 +2,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
+import DailyStoresTab from "../components/report-logistic/DailyStoresTab";
+import MonthlyPerformanceTab from "../components/report-logistic/MonthlyPerformanceTab";
+
+type Tab = "daily" | "stores" | "monthly";
+const TABS: { key: Tab; label: string }[] = [
+  { key: "daily", label: "รายงานรายวัน" },
+  { key: "stores", label: "ขึ้นของ / ส่ง / ไม่ได้ส่ง" },
+  { key: "monthly", label: "ประเมินรายเดือน" },
+];
 
 const API = import.meta.env.VITE_API_URL_LOGISTIC ?? "";
 
@@ -665,6 +674,8 @@ export default function ReportLogistic() {
   const [error, setError] = useState<string | null>(null);
   const [empQuery, setEmpQuery] = useState("");
   const [routeFilter, setRouteFilter] = useState(""); // "" = ทุกเส้นทาง
+  const [tab, setTab] = useState<Tab>("daily");
+  const [reloadKey, setReloadKey] = useState(0); // รีเฟรชแท็บอื่นด้วยการ remount
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -739,33 +750,49 @@ export default function ReportLogistic() {
               placeholder="ค้นหารหัส / ชื่อพนักงาน"
               className="border border-blue-200 rounded-xl px-3.5 py-2 text-sm text-slate-700 w-52 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
-            <select
-              value={routeFilter}
-              onChange={(e) => setRouteFilter(e.target.value)}
-              className="border border-blue-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-            >
-              <option value="">ทุกเส้นทาง</option>
-              {routeOptions.map((r) => (
-                <option key={r.code} value={r.code}>{r.code} {r.name}</option>
-              ))}
-            </select>
-            <input
-              type="date"
-              value={date}
-              max={dayjs().format("YYYY-MM-DD")}
-              onChange={(e) => setDate(e.target.value)}
-              className="border border-blue-200 rounded-xl px-3.5 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-            <button onClick={load}
+            {tab === "daily" && (
+              <select
+                value={routeFilter}
+                onChange={(e) => setRouteFilter(e.target.value)}
+                className="border border-blue-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="">ทุกเส้นทาง</option>
+                {routeOptions.map((r) => (
+                  <option key={r.code} value={r.code}>{r.code} {r.name}</option>
+                ))}
+              </select>
+            )}
+            {tab !== "monthly" && (
+              <input
+                type="date"
+                value={date}
+                max={dayjs().format("YYYY-MM-DD")}
+                onChange={(e) => setDate(e.target.value)}
+                className="border border-blue-200 rounded-xl px-3.5 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            )}
+            <button onClick={() => (tab === "daily" ? load() : setReloadKey((k) => k + 1))}
               className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl px-5 py-2 shadow-sm shadow-blue-600/25 transition">
               รีเฟรช
             </button>
           </div>
         </div>
+        <div className="max-w-[1300px] mx-auto px-4 flex gap-1 overflow-x-auto">
+          {TABS.map((t) => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={`whitespace-nowrap px-4 py-2.5 text-sm font-semibold border-b-2 transition ${tab === t.key ? "border-blue-600 text-blue-700" : "border-transparent text-slate-500 hover:text-slate-800"}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="max-w-[1300px] mx-auto px-4 py-5 space-y-5">
-        {loading ? (
+        {tab === "stores" ? (
+          <DailyStoresTab key={reloadKey} date={date} empQuery={empQuery} />
+        ) : tab === "monthly" ? (
+          <MonthlyPerformanceTab key={reloadKey} empQuery={empQuery} />
+        ) : loading ? (
           <div className="flex items-center justify-center py-24">
             <div className="w-10 h-10 border-[3px] border-blue-600 border-t-transparent rounded-full animate-spin" />
           </div>
