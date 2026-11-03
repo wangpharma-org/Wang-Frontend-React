@@ -246,7 +246,7 @@ function Photo({ url, label, caption, shareTitle, w = 54, h = 54, contain = fals
       <button
         onClick={() => setOpen(true)}
         title={label}
-        className={`relative block rounded-xl overflow-hidden ring-1 ring-blue-200 hover:ring-blue-500 hover:scale-105 transition ${contain ? "bg-white" : ""}`}
+        className={`relative block overflow-hidden ring-1 ring-blue-200 hover:ring-blue-500 hover:scale-105 transition ${contain ? "bg-white" : ""}`}
         style={{ width: w, height: h }}
       >
         <img src={url} alt={label} className={`w-full h-full ${contain ? "object-contain" : "object-cover"}`} />
@@ -261,7 +261,7 @@ function Photo({ url, label, caption, shareTitle, w = 54, h = 54, contain = fals
             src={url}
             alt={label}
             onClick={(e) => e.stopPropagation()}
-            className={`max-w-[92vw] max-h-[72vh] object-contain rounded-2xl shadow-2xl ${contain ? "bg-white" : ""}`}
+            className={`max-w-[92vw] max-h-[72vh] object-contain shadow-2xl ${contain ? "bg-white" : ""}`}
           />
           <div className="mt-4 flex flex-wrap justify-center gap-2" onClick={(e) => e.stopPropagation()}>
             <button
