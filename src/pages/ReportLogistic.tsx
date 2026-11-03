@@ -2,6 +2,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
+import DailyStoresTab from "../components/report-logistic/DailyStoresTab";
+import MonthlyPerformanceTab from "../components/report-logistic/MonthlyPerformanceTab";
+
+type Tab = "daily" | "stores" | "monthly";
+const TABS: { key: Tab; label: string }[] = [
+  { key: "daily", label: "รายงานรายวัน" },
+  { key: "stores", label: "ขึ้นของ / ส่ง / ไม่ได้ส่ง" },
+  { key: "monthly", label: "ประเมินรายเดือน" },
+];
 
 const API = import.meta.env.VITE_API_URL_LOGISTIC ?? "";
 
@@ -237,7 +246,7 @@ function Photo({ url, label, caption, shareTitle, w = 54, h = 54, contain = fals
       <button
         onClick={() => setOpen(true)}
         title={label}
-        className={`relative block rounded-xl overflow-hidden ring-1 ring-blue-200 hover:ring-blue-500 hover:scale-105 transition ${contain ? "bg-white" : ""}`}
+        className={`relative block overflow-hidden ring-1 ring-blue-200 hover:ring-blue-500 hover:scale-105 transition ${contain ? "bg-white" : ""}`}
         style={{ width: w, height: h }}
       >
         <img src={url} alt={label} className={`w-full h-full ${contain ? "object-contain" : "object-cover"}`} />
@@ -252,7 +261,7 @@ function Photo({ url, label, caption, shareTitle, w = 54, h = 54, contain = fals
             src={url}
             alt={label}
             onClick={(e) => e.stopPropagation()}
-            className={`max-w-[92vw] max-h-[72vh] object-contain rounded-2xl shadow-2xl ${contain ? "bg-white" : ""}`}
+            className={`max-w-[92vw] max-h-[72vh] object-contain shadow-2xl ${contain ? "bg-white" : ""}`}
           />
           <div className="mt-4 flex flex-wrap justify-center gap-2" onClick={(e) => e.stopPropagation()}>
             <button
@@ -360,7 +369,7 @@ function SummaryCard({ label, value, unit, sub, icon, tint, ring = "ring-blue-10
   label: string; value: string | number; unit?: string; sub?: string; icon: React.ReactNode; tint: string; ring?: string; accent?: boolean;
 }) {
   return (
-    <div className={`rounded-2xl shadow-sm p-4 min-w-0 ring-1 ${accent ? "bg-emerald-600 ring-emerald-500" : `bg-white ${ring}`}`}>
+    <div className={`rounded-3xl shadow-sm p-4 min-w-0 ring-1 ${accent ? "bg-emerald-600 ring-emerald-500" : `bg-white ${ring}`}`}>
       <span className={`w-10 h-10 rounded-xl grid place-items-center ${tint}`}>{icon}</span>
       <div className="mt-3 flex items-baseline gap-1 min-w-0">
         <span className={`text-2xl font-extrabold tabular-nums leading-none truncate ${accent ? "text-white" : "text-slate-800"}`}>{value}</span>
@@ -425,9 +434,9 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
   }, [r]);
 
   return (
-    <div className="rounded-2xl bg-white ring-1 ring-blue-100 shadow-sm overflow-hidden">
+    <div className="rounded-3xl bg-white ring-1 ring-blue-100 shadow-sm overflow-hidden">
       {/* Header สีฟ้า */}
-      <div className="bg-gradient-to-br from-blue-800 via-blue-600 to-sky-500 px-5 py-5">
+      <div className="bg-gradient-to-br from-blue-800 via-blue-600 to-sky-500 px-5 md:px-8 py-6 md:py-7">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-3.5">
@@ -517,12 +526,12 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
                   {row.note && <div className={`text-[13px] ${done ? "text-slate-600" : "text-rose-600 font-medium"}`}>{row.note}</div>}
                   {row.photos.length > 0 && (
                     <div className="flex gap-2 flex-wrap">
-                      {row.photos.map((p) => <Photo key={p.label} {...p} shareTitle={shareTitle} w={62} h={62} />)}
+                      {row.photos.map((p) => <Photo key={p.label} {...p} shareTitle={shareTitle} w={132} h={92} />)}
                     </div>
                   )}
                   {row.signs.length > 0 && (
                     <div className="flex flex-nowrap gap-2">
-                      {row.signs.map((s) => <Photo key={s.label} {...s} label={`ลายเซ็น${s.label}`} shareTitle={shareTitle} w={96} h={62} contain />)}
+                      {row.signs.map((s) => <Photo key={s.label} {...s} label={`ลายเซ็น${s.label}`} shareTitle={shareTitle} w={140} h={92} contain />)}
                     </div>
                   )}
                   <div className="flex flex-wrap items-center gap-2">
@@ -539,13 +548,13 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
             })}
           </div>
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full table-fixed border-collapse min-w-[1100px] text-[13px]">
+            <table className="w-full table-fixed border-collapse min-w-[1400px] text-[13px]">
               <colgroup>
                 <col className="w-[112px]" />
                 <col className="w-[18%]" />
                 <col className="w-[96px]" />
-                <col className="w-[23%]" />
-                <col className="w-[206px]" />
+                <col className="w-[30%]" />
+                <col className="w-[284px]" />
                 <col className="w-[12%]" />
                 <col className="w-[170px]" />
               </colgroup>
@@ -598,7 +607,7 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
                       <td className="px-4 py-4">
                         {row.photos.length > 0 ? (
                           <div className="flex gap-2 flex-wrap">
-                            {row.photos.map((p) => <Photo key={p.label} {...p} shareTitle={shareTitle} />)}
+                            {row.photos.map((p) => <Photo key={p.label} {...p} shareTitle={shareTitle} w={120} h={84} />)}
                           </div>
                         ) : (
                           <span className="text-slate-300">-</span>
@@ -609,7 +618,7 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
                       <td className="px-4 py-4">
                         {row.signs.length > 0 ? (
                           <div className="flex flex-nowrap gap-2">
-                            {row.signs.map((s) => <Photo key={s.label} {...s} label={`ลายเซ็น${s.label}`} shareTitle={shareTitle} w={88} h={56} contain />)}
+                            {row.signs.map((s) => <Photo key={s.label} {...s} label={`ลายเซ็น${s.label}`} shareTitle={shareTitle} w={128} h={84} contain />)}
                           </div>
                         ) : (
                           <span className="text-slate-300">-</span>
@@ -665,6 +674,8 @@ export default function ReportLogistic() {
   const [error, setError] = useState<string | null>(null);
   const [empQuery, setEmpQuery] = useState("");
   const [routeFilter, setRouteFilter] = useState(""); // "" = ทุกเส้นทาง
+  const [tab, setTab] = useState<Tab>("daily");
+  const [reloadKey, setReloadKey] = useState(0); // รีเฟรชแท็บอื่นด้วยการ remount
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -721,7 +732,7 @@ export default function ReportLogistic() {
     <div className="min-h-screen bg-[#eaf1fe]">
       {/* Top bar */}
       <div className="bg-white/90 backdrop-blur border-b border-blue-100 sticky top-0 z-20">
-        <div className="max-w-[1300px] mx-auto px-4 py-3 flex flex-wrap items-center gap-4">
+        <div className="max-w-[1600px] mx-auto px-4 md:px-12 py-3 flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white shadow-md shadow-blue-600/25">
               {TruckIcon}
@@ -739,33 +750,49 @@ export default function ReportLogistic() {
               placeholder="ค้นหารหัส / ชื่อพนักงาน"
               className="border border-blue-200 rounded-xl px-3.5 py-2 text-sm text-slate-700 w-52 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
-            <select
-              value={routeFilter}
-              onChange={(e) => setRouteFilter(e.target.value)}
-              className="border border-blue-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-            >
-              <option value="">ทุกเส้นทาง</option>
-              {routeOptions.map((r) => (
-                <option key={r.code} value={r.code}>{r.code} {r.name}</option>
-              ))}
-            </select>
-            <input
-              type="date"
-              value={date}
-              max={dayjs().format("YYYY-MM-DD")}
-              onChange={(e) => setDate(e.target.value)}
-              className="border border-blue-200 rounded-xl px-3.5 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-            <button onClick={load}
+            {tab === "daily" && (
+              <select
+                value={routeFilter}
+                onChange={(e) => setRouteFilter(e.target.value)}
+                className="border border-blue-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="">ทุกเส้นทาง</option>
+                {routeOptions.map((r) => (
+                  <option key={r.code} value={r.code}>{r.code} {r.name}</option>
+                ))}
+              </select>
+            )}
+            {tab !== "monthly" && (
+              <input
+                type="date"
+                value={date}
+                max={dayjs().format("YYYY-MM-DD")}
+                onChange={(e) => setDate(e.target.value)}
+                className="border border-blue-200 rounded-xl px-3.5 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            )}
+            <button onClick={() => (tab === "daily" ? load() : setReloadKey((k) => k + 1))}
               className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl px-5 py-2 shadow-sm shadow-blue-600/25 transition">
               รีเฟรช
             </button>
           </div>
         </div>
+        <div className="max-w-[1600px] mx-auto px-4 md:px-12 flex gap-1 overflow-x-auto">
+          {TABS.map((t) => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={`whitespace-nowrap px-4 py-2.5 text-sm font-semibold border-b-2 transition ${tab === t.key ? "border-blue-600 text-blue-700" : "border-transparent text-slate-500 hover:text-slate-800"}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="max-w-[1300px] mx-auto px-4 py-5 space-y-5">
-        {loading ? (
+      <div className="max-w-[1600px] mx-auto px-4 md:px-12 py-8 space-y-8">
+        {tab === "stores" ? (
+          <DailyStoresTab key={reloadKey} date={date} empQuery={empQuery} />
+        ) : tab === "monthly" ? (
+          <MonthlyPerformanceTab key={reloadKey} empQuery={empQuery} />
+        ) : loading ? (
           <div className="flex items-center justify-center py-24">
             <div className="w-10 h-10 border-[3px] border-blue-600 border-t-transparent rounded-full animate-spin" />
           </div>
@@ -775,7 +802,7 @@ export default function ReportLogistic() {
             <button onClick={load} className="bg-blue-600 text-white text-base font-semibold rounded-xl px-5 py-2.5">ลองใหม่</button>
           </div>
         ) : data.length === 0 ? (
-          <div className="rounded-2xl bg-white ring-1 ring-blue-100 p-16 text-center">
+          <div className="rounded-3xl bg-white ring-1 ring-blue-100 p-16 text-center">
             <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4 text-blue-300">
               <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
             </div>
@@ -803,7 +830,7 @@ export default function ReportLogistic() {
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
             </div>
             {filtered.length === 0 ? (
-              <div className="rounded-2xl bg-white ring-1 ring-blue-100 p-12 text-center text-slate-400 text-base">
+              <div className="rounded-3xl bg-white ring-1 ring-blue-100 p-12 text-center text-slate-400 text-base">
                 ไม่พบพนักงานตามตัวกรอง
               </div>
             ) : (
