@@ -526,12 +526,12 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
                   {row.note && <div className={`text-[13px] ${done ? "text-slate-600" : "text-rose-600 font-medium"}`}>{row.note}</div>}
                   {row.photos.length > 0 && (
                     <div className="flex gap-2 flex-wrap">
-                      {row.photos.map((p) => <Photo key={p.label} {...p} shareTitle={shareTitle} w={62} h={62} />)}
+                      {row.photos.map((p) => <Photo key={p.label} {...p} shareTitle={shareTitle} w={132} h={92} />)}
                     </div>
                   )}
                   {row.signs.length > 0 && (
                     <div className="flex flex-nowrap gap-2">
-                      {row.signs.map((s) => <Photo key={s.label} {...s} label={`ลายเซ็น${s.label}`} shareTitle={shareTitle} w={96} h={62} contain />)}
+                      {row.signs.map((s) => <Photo key={s.label} {...s} label={`ลายเซ็น${s.label}`} shareTitle={shareTitle} w={140} h={92} contain />)}
                     </div>
                   )}
                   <div className="flex flex-wrap items-center gap-2">
@@ -548,13 +548,13 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
             })}
           </div>
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full table-fixed border-collapse min-w-[1100px] text-[13px]">
+            <table className="w-full table-fixed border-collapse min-w-[1400px] text-[13px]">
               <colgroup>
                 <col className="w-[112px]" />
                 <col className="w-[18%]" />
                 <col className="w-[96px]" />
-                <col className="w-[23%]" />
-                <col className="w-[206px]" />
+                <col className="w-[30%]" />
+                <col className="w-[284px]" />
                 <col className="w-[12%]" />
                 <col className="w-[170px]" />
               </colgroup>
@@ -607,7 +607,7 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
                       <td className="px-4 py-4">
                         {row.photos.length > 0 ? (
                           <div className="flex gap-2 flex-wrap">
-                            {row.photos.map((p) => <Photo key={p.label} {...p} shareTitle={shareTitle} />)}
+                            {row.photos.map((p) => <Photo key={p.label} {...p} shareTitle={shareTitle} w={120} h={84} />)}
                           </div>
                         ) : (
                           <span className="text-slate-300">-</span>
@@ -618,7 +618,7 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
                       <td className="px-4 py-4">
                         {row.signs.length > 0 ? (
                           <div className="flex flex-nowrap gap-2">
-                            {row.signs.map((s) => <Photo key={s.label} {...s} label={`ลายเซ็น${s.label}`} shareTitle={shareTitle} w={88} h={56} contain />)}
+                            {row.signs.map((s) => <Photo key={s.label} {...s} label={`ลายเซ็น${s.label}`} shareTitle={shareTitle} w={128} h={84} contain />)}
                           </div>
                         ) : (
                           <span className="text-slate-300">-</span>
@@ -732,7 +732,7 @@ export default function ReportLogistic() {
     <div className="min-h-screen bg-[#eaf1fe]">
       {/* Top bar */}
       <div className="bg-white/90 backdrop-blur border-b border-blue-100 sticky top-0 z-20">
-        <div className="max-w-[1300px] mx-auto px-4 py-3 flex flex-wrap items-center gap-4">
+        <div className="max-w-[1600px] mx-auto px-4 py-3 flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white shadow-md shadow-blue-600/25">
               {TruckIcon}
@@ -777,7 +777,7 @@ export default function ReportLogistic() {
             </button>
           </div>
         </div>
-        <div className="max-w-[1300px] mx-auto px-4 flex gap-1 overflow-x-auto">
+        <div className="max-w-[1600px] mx-auto px-4 flex gap-1 overflow-x-auto">
           {TABS.map((t) => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`whitespace-nowrap px-4 py-2.5 text-sm font-semibold border-b-2 transition ${tab === t.key ? "border-blue-600 text-blue-700" : "border-transparent text-slate-500 hover:text-slate-800"}`}>
@@ -787,7 +787,7 @@ export default function ReportLogistic() {
         </div>
       </div>
 
-      <div className="max-w-[1300px] mx-auto px-4 py-5 space-y-5">
+      <div className="max-w-[1600px] mx-auto px-4 py-5 space-y-5">
         {tab === "stores" ? (
           <DailyStoresTab key={reloadKey} date={date} empQuery={empQuery} />
         ) : tab === "monthly" ? (

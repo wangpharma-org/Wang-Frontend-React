@@ -18,6 +18,13 @@ export const fmtDateTime = (iso: string | null) => {
 
 // เดือนไทยแบบย่อ — '2026-11' → 'พ.ย. 69'
 const TH_MONTHS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+
+// วันที่อย่างเดียว (แยกจากเวลา) — '3 พ.ย. 69'
+export const fmtDate = (iso: string | null) => {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  return `${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${String(d.getFullYear() + 543).slice(-2)}`;
+};
 export const fmtMonth = (m: string) => {
   const [y, mo] = m.split("-").map(Number);
   return `${TH_MONTHS[mo - 1]} ${String(y + 543).slice(-2)}`;

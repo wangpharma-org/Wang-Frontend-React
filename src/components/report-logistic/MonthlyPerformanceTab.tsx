@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
-import { API, authHeader, ExcelIcon, exportXlsx, fmtMonth } from "./shared";
+import { API, authHeader, ExcelIcon, exportXlsx, fmtDate, fmtMonth, fmtTime } from "./shared";
 
 // MA-363 — อัตราส่งสำเร็จย้อนหลังรายเดือน (ตัดรอบสิ้นเดือน) + ตัวชี้วัดพฤติกรรม
 
@@ -36,12 +36,14 @@ interface DriverMonthly {
 // เกณฑ์สีอัตราส่งสำเร็จ — ปรับได้ที่นี่ที่เดียว
 const GOOD = 95;
 const WARN = 85;
-const level = (r: number | null) => (r == null ? "none" : r >= GOOD ? "good" : r >= WARN ? "warn" : "bad");
+const level = (r: number | null) =>
+  r == null ? "none" : r >= 100 ? "perfect" : r >= GOOD ? "good" : r >= WARN ? "warn" : "bad";
 const LEVEL = {
-  good: { cell: "bg-emerald-100", icon: "✓", label: `≥ ${GOOD}%` },
-  warn: { cell: "bg-amber-100", icon: "!", label: `${WARN}–${GOOD - 0.1}%` },
-  bad: { cell: "bg-rose-200", icon: "✕", label: `< ${WARN}%` },
-  none: { cell: "bg-slate-50", icon: "", label: "ไม่มีงาน" },
+  perfect: { cell: "bg-emerald-700", text: "text-white", sub: "text-emerald-50", icon: "★", label: "100%" },
+  good: { cell: "bg-emerald-100", text: "text-slate-900", sub: "text-slate-600", icon: "✓", label: `${GOOD}–99.9%` },
+  warn: { cell: "bg-amber-100", text: "text-slate-900", sub: "text-slate-600", icon: "!", label: `${WARN}–${GOOD - 0.1}%` },
+  bad: { cell: "bg-rose-200", text: "text-slate-900", sub: "text-slate-600", icon: "✕", label: `< ${WARN}%` },
+  none: { cell: "bg-slate-50", text: "text-slate-400", sub: "text-slate-400", icon: "", label: "ไม่มีงาน" },
 } as const;
 
 const pct = (r: number | null) => (r == null ? "-" : `${r}%`);
@@ -74,25 +76,25 @@ function DriverDetail({ d, months }: { d: DriverMonthly; months: string[] }) {
   const cols = [...months.map((m) => ({ key: m, label: fmtMonth(m), m: d.months[m] })), { key: "total", label: "รวม", m: d.total }];
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-[13px] border-collapse min-w-[640px]">
+      <table className="w-full text-[14px] border-collapse min-w-[640px] [&_td]:border [&_th]:border [&_td]:border-slate-200 [&_th]:border-slate-200">
         <thead>
-          <tr className="text-xs text-slate-500">
-            <th className="text-left font-semibold px-3 py-2 w-52">ตัวชี้วัด</th>
-            {cols.map((c) => <th key={c.key} className={`text-right font-semibold px-3 py-2 ${c.key === "total" ? "bg-blue-50 text-blue-700" : ""}`}>{c.label}</th>)}
+          <tr className="text-sm text-slate-700 bg-slate-50">
+            <th className="text-left font-extrabold px-3 py-2 w-56">ตัวชี้วัด</th>
+            {cols.map((c) => <th key={c.key} className={`text-right font-extrabold px-3 py-2 ${c.key === "total" ? "bg-blue-50 text-blue-700" : ""}`}>{c.label}</th>)}
           </tr>
         </thead>
         <tbody>
           {ROWS.map((r, i) => (
             <Fragment key={r.label}>
               {(i === 0 || ROWS[i - 1].group !== r.group) && (
-                <tr><td colSpan={cols.length + 1} className="px-3 pt-3 pb-1 text-[11px] font-bold text-blue-700">{r.group}</td></tr>
+                <tr><td colSpan={cols.length + 1} className="px-3 pt-3 pb-1 text-sm font-extrabold text-blue-700 bg-blue-50/50">{r.group}</td></tr>
               )}
               <tr className="border-t border-slate-100">
-                <td className="px-3 py-1.5 text-slate-600">{r.label}</td>
+                <td className="px-3 py-1.5 font-semibold text-slate-700">{r.label}</td>
                 {cols.map((c) => {
                   const flagged = r.risk?.(c.m);
                   return (
-                    <td key={c.key} className={`px-3 py-1.5 text-right tabular-nums ${c.key === "total" ? "bg-blue-50/60" : ""} ${flagged ? "font-extrabold text-slate-900" : "text-slate-600"}`}>
+                    <td key={c.key} className={`px-3 py-1.5 text-right tabular-nums ${c.key === "total" ? "bg-blue-50/60" : ""} ${flagged ? "font-extrabold text-slate-900" : "font-semibold text-slate-700"}`}>
                       {flagged && <span className="text-amber-500 mr-1" aria-label="ควรตรวจสอบ">●</span>}
                       {r.get(c.m)}
                     </td>
@@ -103,6 +105,96 @@ function DriverDetail({ d, months }: { d: DriverMonthly; months: string[] }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+interface BackStore {
+  time: string | null;
+  mem_code: string;
+  mem_name: string;
+  route_code: string | null;
+  route_name: string | null;
+  box_amount: number;
+  sh_runnings: string[];
+  status: string;
+  returned_at: string | null;
+  note: string | null;
+  photo_url: string | null;
+}
+
+// รายละเอียดร้านที่ตีกลับของพนักงานคนนี้ในช่วงเดือนที่เลือก
+function BackStores({ empCode, from, to }: { empCode: string; from: string; to: string }) {
+  const [rows, setRows] = useState<BackStore[] | null>(null);
+  const [limit, setLimit] = useState(0);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    setRows(null);
+    setError(false);
+    axios.get<{ stores: BackStore[]; limit: number }>(`${API}/api/logistic/driver-performance/back-stores`, {
+      params: { from, to, emp_code: empCode },
+      headers: authHeader(),
+    })
+      .then((res) => { if (alive) { setRows(res.data.stores ?? []); setLimit(res.data.limit); } })
+      .catch(() => { if (alive) setError(true); });
+    return () => { alive = false; };
+  }, [empCode, from, to]);
+
+  return (
+    <div className="mt-4 px-1">
+      <div className="text-base font-extrabold text-rose-700 mb-2">
+        รายละเอียดร้านที่ตีกลับ {rows && <span className="tabular-nums">({rows.length}{rows.length >= limit ? "+" : ""} ครั้ง)</span>}
+      </div>
+      {error ? (
+        <div className="text-sm text-slate-500">โหลดรายการตีกลับไม่สำเร็จ</div>
+      ) : rows == null ? (
+        <div className="text-sm text-slate-400">กำลังโหลด...</div>
+      ) : rows.length === 0 ? (
+        <div className="text-sm text-slate-400">ไม่มีร้านที่ตีกลับในช่วงนี้</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-[14px] border-collapse min-w-[860px] [&_td]:border [&_th]:border [&_td]:border-rose-100 [&_th]:border-rose-200">
+            <thead>
+              <tr className="bg-rose-50 text-rose-800 text-sm">
+                <th className="text-left font-extrabold px-3 py-2">วันที่</th>
+                <th className="text-left font-extrabold px-3 py-2">เวลา</th>
+                <th className="text-left font-extrabold px-3 py-2">ร้าน</th>
+                <th className="text-left font-extrabold px-3 py-2">เส้นทาง</th>
+                <th className="text-left font-extrabold px-3 py-2">เลขที่ SO</th>
+                <th className="text-center font-extrabold px-3 py-2">ลัง</th>
+                <th className="text-left font-extrabold px-3 py-2">เหตุผล</th>
+                <th className="text-left font-extrabold px-3 py-2">คืนคลัง</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((b, i) => (
+                <tr key={`${b.mem_code}-${b.time}-${i}`} className="align-top">
+                  <td className="px-3 py-2 font-semibold text-slate-700 whitespace-nowrap">{fmtDate(b.time)}</td>
+                  <td className="px-3 py-2 font-bold text-slate-800 tabular-nums">{fmtTime(b.time)}</td>
+                  <td className="px-3 py-2">
+                    <div className="font-bold text-slate-800">{b.mem_name}</div>
+                    <div className="text-xs text-slate-500 font-mono">{b.mem_code}</div>
+                  </td>
+                  <td className="px-3 py-2 text-slate-700">{b.route_code ? <><b>{b.route_code}</b> {b.route_name ?? ""}</> : "-"}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-slate-600">{b.sh_runnings.length ? b.sh_runnings.map((so) => <div key={so}>{so}</div>) : "-"}</td>
+                  <td className="px-3 py-2 text-center tabular-nums font-semibold">{b.box_amount}</td>
+                  <td className="px-3 py-2 text-rose-700 font-semibold break-words max-w-[260px]">
+                    {b.note || "-"}
+                    {b.photo_url && <a href={b.photo_url} target="_blank" rel="noreferrer" className="block text-xs text-blue-600 font-semibold mt-0.5">ดูรูป</a>}
+                  </td>
+                  <td className="px-3 py-2 text-sm whitespace-nowrap">
+                    {b.returned_at
+                      ? <span className="text-emerald-700 font-semibold">✓ {fmtDate(b.returned_at)} {fmtTime(b.returned_at)}</span>
+                      : b.status === "ตีกลับ" ? <span className="text-amber-700 font-bold">! ยังไม่คืน</span> : <span className="text-slate-500">{b.status}</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -240,32 +332,32 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
         <div className="rounded-2xl bg-white ring-1 ring-blue-100 shadow-sm overflow-hidden">
           <div className="px-5 py-4 flex flex-wrap items-center gap-3 border-b border-blue-50">
             <div>
-              <div className="font-extrabold text-slate-800">อัตราส่งสำเร็จรายเดือน</div>
-              <div className="text-xs text-slate-400">ส่งสำเร็จ ÷ (สำเร็จ + ตีกลับ + ค้างไม่ส่ง) · ตัดรอบสิ้นเดือน · กดชื่อเพื่อดูตัวชี้วัด</div>
+              <div className="font-extrabold text-lg text-slate-800">อัตราส่งสำเร็จรายเดือน</div>
+              <div className="text-sm text-slate-500">ส่งสำเร็จ ÷ (สำเร็จ + ตีกลับ + ค้างไม่ส่ง) · ตัดรอบสิ้นเดือน · กดชื่อเพื่อดูตัวชี้วัด</div>
             </div>
             {/* legend — ทุกช่องมีตัวเลขกำกับ ไม่พึ่งสีอย่างเดียว */}
-            <div className="ml-auto flex flex-wrap gap-2 text-xs text-slate-600">
-              {(["good", "warn", "bad"] as const).map((k) => (
-                <span key={k} className="inline-flex items-center gap-1.5">
-                  <span className={`w-4 h-4 rounded grid place-items-center text-[10px] font-bold text-slate-700 ${LEVEL[k].cell}`}>{LEVEL[k].icon}</span>
+            <div className="ml-auto flex flex-wrap gap-3 text-sm text-slate-700">
+              {(["perfect", "good", "warn", "bad"] as const).map((k) => (
+                <span key={k} className="inline-flex items-center gap-1.5 font-semibold">
+                  <span className={`w-5 h-5 rounded grid place-items-center text-[11px] font-bold ${LEVEL[k].text} ${LEVEL[k].cell}`}>{LEVEL[k].icon}</span>
                   {LEVEL[k].label}
                 </span>
               ))}
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-[13px] min-w-[720px]">
+            <table className="w-full border-collapse text-[15px] min-w-[760px] [&_td]:border [&_th]:border [&_td]:border-slate-200 [&_th]:border-blue-200">
               <thead>
-                <tr className="bg-blue-50 text-blue-700 text-xs">
-                  <th className="text-left font-bold px-4 py-2.5 sticky left-0 bg-blue-50">พนักงาน</th>
-                  {months.map((m) => <th key={m} className="font-bold px-1 py-2.5 text-center">{fmtMonth(m)}</th>)}
-                  <th className="font-bold px-3 py-2.5 text-center">รวม</th>
-                  <th className="font-bold px-3 py-2.5 text-center" title="จำนวนตัวชี้วัดพฤติกรรมที่มีค่ามากกว่า 0 ในช่วงนี้">ควรตรวจสอบ</th>
+                <tr className="bg-blue-50 text-blue-800 text-sm">
+                  <th className="text-left font-extrabold px-4 py-3 sticky left-0 bg-blue-50">พนักงาน</th>
+                  {months.map((m) => <th key={m} className="font-extrabold px-1 py-3 text-center">{fmtMonth(m)}</th>)}
+                  <th className="font-extrabold px-3 py-3 text-center">รวม</th>
+                  <th className="font-extrabold px-3 py-3 text-center" title="จำนวนตัวชี้วัดพฤติกรรมที่มีค่ามากกว่า 0 ในช่วงนี้">ควรตรวจสอบ</th>
                 </tr>
-                <tr className="text-xs text-slate-500 border-b border-blue-100">
-                  <td className="px-4 py-1.5 font-semibold sticky left-0 bg-white">ทั้งทีม</td>
+                <tr className="text-sm text-slate-700 bg-slate-50">
+                  <td className="px-4 py-2 font-extrabold sticky left-0 bg-slate-50">ทั้งทีม</td>
                   {[...months, "total"].map((m) => (
-                    <td key={m} className="px-1 py-1.5 text-center tabular-nums font-semibold">{pct(team[m]?.rate ?? null)}</td>
+                    <td key={m} className="px-1 py-2 text-center tabular-nums font-extrabold">{pct(team[m]?.rate ?? null)}</td>
                   ))}
                   <td />
                 </tr>
@@ -278,26 +370,26 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
                     <Fragment key={d.emp_code}>
                       <tr className={`border-t border-slate-100 cursor-pointer hover:bg-blue-50/40 ${open ? "bg-blue-50/50" : ""}`} onClick={() => setOpenEmp(open ? null : d.emp_code)}>
                         <td className="px-4 py-2 sticky left-0 bg-inherit">
-                          <div className="font-bold text-slate-800">{d.emp_name}</div>
-                          <div className="text-[11px] text-slate-400 font-mono">{d.emp_code}</div>
+                          <div className="font-extrabold text-slate-900">{d.emp_name}</div>
+                          <div className="text-xs text-slate-500 font-mono font-semibold">{d.emp_code}</div>
                         </td>
                         {[...months.map((m) => [m, d.months[m]] as const), ["total", d.total] as const].map(([m, x]) => {
                           const lv = level(x.success_rate);
                           return (
                             <td key={m} className="px-[2px] py-[2px]">
                               <div
-                                className={`rounded-md h-11 flex flex-col items-center justify-center tabular-nums ${LEVEL[lv].cell} ${m === "total" ? "ring-1 ring-blue-200" : ""}`}
+                                className={`rounded-md h-14 flex flex-col items-center justify-center tabular-nums ${LEVEL[lv].cell} ${m === "total" ? "ring-2 ring-blue-300" : ""}`}
                                 title={`${d.emp_name} · ${m === "total" ? "รวม" : fmtMonth(m)}\nส่งสำเร็จ ${x.done_stores} · ตีกลับ ${x.back_stores} · ค้าง ${x.leftover_stores} ร้าน`}
                               >
-                                <span className="font-extrabold text-slate-800 leading-none">{pct(x.success_rate)}</span>
-                                {x.success_rate != null && <span className="text-[10px] text-slate-500 mt-0.5">{x.done_stores + x.back_stores + x.leftover_stores} ร้าน</span>}
+                                <span className={`text-lg font-extrabold leading-none ${LEVEL[lv].text}`}>{pct(x.success_rate)}</span>
+                                {x.success_rate != null && <span className={`text-xs font-semibold mt-1 ${LEVEL[lv].sub}`}>{x.done_stores + x.back_stores + x.leftover_stores} ร้าน</span>}
                               </div>
                             </td>
                           );
                         })}
                         <td className="px-3 py-2 text-center">
                           {flags > 0
-                            ? <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-800 bg-amber-100 rounded-full px-2 py-0.5">● {flags} ข้อ</span>
+                            ? <span className="inline-flex items-center gap-1 text-sm font-bold text-amber-800 bg-amber-100 rounded-full px-2.5 py-0.5">● {flags} ข้อ</span>
                             : <span className="text-slate-300">-</span>}
                         </td>
                       </tr>
@@ -305,6 +397,7 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
                         <tr className="bg-white">
                           <td colSpan={months.length + 3} className="px-2 pb-4 border-b border-blue-100">
                             <DriverDetail d={d} months={months} />
+                            <BackStores empCode={d.emp_code} from={from} to={to} />
                           </td>
                         </tr>
                       )}
