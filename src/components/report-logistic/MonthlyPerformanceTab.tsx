@@ -14,6 +14,8 @@ interface Metrics {
   avg_load_to_departure_min: number | null;
   avg_departure_to_first_min: number | null;
   stores_per_hour: number | null;
+  avg_departure_time: string | null;
+  departure_days: number;
   avg_shift_end: string | null;
   location_bypass: number;
   scan_bypass: number;
@@ -57,6 +59,7 @@ const ROWS: { group: string; label: string; get: (m: Metrics) => string; risk?: 
   { group: "ผลการส่ง", label: "ตีกลับ (ร้าน)", get: (m) => n0(m.back_stores), risk: (m) => m.back_stores > 0 },
   { group: "ผลการส่ง", label: "ค้างไม่ส่ง (ร้าน)", get: (m) => n0(m.leftover_stores), risk: (m) => m.leftover_stores > 0 },
   { group: "ผลการส่ง", label: "วันทำงาน", get: (m) => n0(m.work_days) },
+  { group: "เวลา / ความเร็ว", label: "เวลาออกรถเฉลี่ย (รอบแรก)", get: (m) => (m.avg_departure_time ? `${m.avg_departure_time} (${m.departure_days} วัน)` : "-") },
   { group: "เวลา / ความเร็ว", label: "ขึ้นของแรก → ออกรถ", get: (m) => mins(m.avg_load_to_departure_min) },
   { group: "เวลา / ความเร็ว", label: "ออกรถ → ร้านแรก", get: (m) => mins(m.avg_departure_to_first_min) },
   { group: "เวลา / ความเร็ว", label: "ร้านต่อชั่วโมง", get: (m) => (m.stores_per_hour == null ? "-" : String(m.stores_per_hour)) },
@@ -255,6 +258,8 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
       "ตีกลับ (ร้าน)": m.back_stores,
       "ค้างไม่ส่ง (ร้าน)": m.leftover_stores,
       "วันทำงาน": m.work_days,
+      "เวลาออกรถเฉลี่ย (รอบแรก)": m.avg_departure_time ?? "",
+      "จำนวนวันที่มีเวลาออกรถ": m.departure_days,
       "ขึ้นของแรก→ออกรถ (นาที)": m.avg_load_to_departure_min ?? "",
       "ออกรถ→ร้านแรก (นาที)": m.avg_departure_to_first_min ?? "",
       "ร้านต่อชั่วโมง": m.stores_per_hour ?? "",
