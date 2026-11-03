@@ -302,7 +302,7 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* ตัวกรองช่วงเดือน + export — แถวเดียวเหนือข้อมูล */}
       <div className="flex flex-wrap items-center gap-2">
         <label className="text-sm text-slate-600">ตั้งแต่</label>
@@ -333,7 +333,7 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
         <div className="rounded-3xl bg-white ring-1 ring-blue-100 p-12 text-center text-slate-400">ไม่มีข้อมูลในช่วงที่เลือก</div>
       ) : (
         <div className="rounded-3xl bg-white ring-1 ring-blue-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 flex flex-wrap items-center gap-3 border-b border-blue-50">
+          <div className="px-5 md:px-8 py-6 flex flex-wrap items-center gap-3 border-b border-blue-50">
             <div>
               <div className="font-extrabold text-lg text-slate-800">อัตราส่งสำเร็จรายเดือน</div>
               <div className="text-sm text-slate-500">ส่งสำเร็จ ÷ (สำเร็จ + ตีกลับ + ค้างไม่ส่ง) · ตัดรอบสิ้นเดือน · กดชื่อเพื่อดูตัวชี้วัด</div>

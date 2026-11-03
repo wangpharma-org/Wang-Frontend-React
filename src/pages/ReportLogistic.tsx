@@ -436,7 +436,7 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
   return (
     <div className="rounded-3xl bg-white ring-1 ring-blue-100 shadow-sm overflow-hidden">
       {/* Header สีฟ้า */}
-      <div className="bg-gradient-to-br from-blue-800 via-blue-600 to-sky-500 px-5 py-5">
+      <div className="bg-gradient-to-br from-blue-800 via-blue-600 to-sky-500 px-5 md:px-8 py-6 md:py-7">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-3.5">
@@ -732,7 +732,7 @@ export default function ReportLogistic() {
     <div className="min-h-screen bg-[#eaf1fe]">
       {/* Top bar */}
       <div className="bg-white/90 backdrop-blur border-b border-blue-100 sticky top-0 z-20">
-        <div className="max-w-[1600px] mx-auto px-4 py-3 flex flex-wrap items-center gap-4">
+        <div className="max-w-[1600px] mx-auto px-4 md:px-12 py-3 flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center text-white shadow-md shadow-blue-600/25">
               {TruckIcon}
@@ -777,7 +777,7 @@ export default function ReportLogistic() {
             </button>
           </div>
         </div>
-        <div className="max-w-[1600px] mx-auto px-4 flex gap-1 overflow-x-auto">
+        <div className="max-w-[1600px] mx-auto px-4 md:px-12 flex gap-1 overflow-x-auto">
           {TABS.map((t) => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`whitespace-nowrap px-4 py-2.5 text-sm font-semibold border-b-2 transition ${tab === t.key ? "border-blue-600 text-blue-700" : "border-transparent text-slate-500 hover:text-slate-800"}`}>
@@ -787,7 +787,7 @@ export default function ReportLogistic() {
         </div>
       </div>
 
-      <div className="max-w-[1600px] mx-auto px-4 py-5 space-y-5">
+      <div className="max-w-[1600px] mx-auto px-4 md:px-12 py-8 space-y-8">
         {tab === "stores" ? (
           <DailyStoresTab key={reloadKey} date={date} empQuery={empQuery} />
         ) : tab === "monthly" ? (

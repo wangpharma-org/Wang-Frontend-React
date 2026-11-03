@@ -86,7 +86,7 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
   const deps = d.departures.map((t) => fmtTime(t));
   return (
     <div className="rounded-3xl bg-white ring-1 ring-blue-100 shadow-sm overflow-hidden">
-      <div className="bg-gradient-to-br from-blue-800 via-blue-600 to-sky-500 px-5 py-4 space-y-3">
+      <div className="bg-gradient-to-br from-blue-800 via-blue-600 to-sky-500 px-5 md:px-8 py-6 space-y-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
@@ -241,7 +241,7 @@ export default function DailyStoresTab({ date, empQuery }: { date: string; empQu
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
       <div className="flex flex-wrap items-center gap-2">
         <div className="text-sm text-slate-600">
           ขึ้นของ <b className="tabular-nums">{totals.loaded}</b> ร้าน · ส่งแล้ว <b className="text-emerald-700 tabular-nums">{totals.done}</b> ·
