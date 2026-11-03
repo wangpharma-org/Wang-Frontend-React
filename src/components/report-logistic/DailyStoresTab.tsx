@@ -16,6 +16,7 @@ interface StoreVisit {
   box_amount: number;
   bill_count: number;
   sh_runnings: string[];
+  bill_notes: string[];
   shipping_count: number;
   loaded_at: string | null;
   time: string | null;
@@ -124,12 +125,13 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
       </div>
       {open && (
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-[13px] min-w-[900px]">
+          <table className="w-full border-collapse text-[13px] min-w-[1000px]">
             <thead>
               <tr className="bg-blue-50 text-blue-700 text-xs">
                 <th className="text-left font-bold px-4 py-2">สถานะ</th>
                 <th className="text-left font-bold px-3 py-2">ร้าน</th>
-                <th className="text-left font-bold px-3 py-2">เลขที่ SO / บิล</th>
+                <th className="text-left font-bold px-3 py-2">เลข SO</th>
+                <th className="text-left font-bold px-3 py-2">เลขที่บิล</th>
                 <th className="text-center font-bold px-3 py-2">ลัง · บิล</th>
                 <th className="text-left font-bold px-3 py-2">ขึ้นของ</th>
                 <th className="text-left font-bold px-3 py-2">ส่ง / ตีกลับ</th>
@@ -148,9 +150,8 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
                     <div className="font-bold text-slate-800 break-words">{s.mem_name}</div>
                     <div className="text-xs text-slate-400"><span className="font-mono">{s.mem_code}</span>{s.route_code ? ` · ${s.route_code}` : ""}</div>
                   </td>
-                  <td className="px-3 py-2.5 font-mono text-xs text-slate-600">
-                    {s.sh_runnings.length ? s.sh_runnings.map((so) => <div key={so}>{so}</div>) : <span className="text-slate-300">-</span>}
-                  </td>
+                  <td className="px-3 py-2.5 font-mono text-xs text-slate-600">{s.sh_runnings.length ? s.sh_runnings.map((no) => <div key={no}>{no}</div>) : <span className="text-slate-300">-</span>}</td>
+                  <td className="px-3 py-2.5 font-mono text-xs text-slate-600">{s.bill_notes.length ? s.bill_notes.map((no) => <div key={no}>{no}</div>) : <span className="text-slate-300">-</span>}</td>
                   <td className="px-3 py-2.5 text-center tabular-nums text-slate-700">{s.box_amount} · {s.bill_count}</td>
                   <td className="px-3 py-2.5"><DateTime iso={s.loaded_at} empty="-" /></td>
                   <td className="px-3 py-2.5"><DateTime iso={s.time} empty="ยังไม่ส่ง" /></td>
@@ -219,7 +220,8 @@ export default function DailyStoresTab({ date, empQuery }: { date: string; empQu
         "รหัสร้าน": s.mem_code,
         "ร้าน": s.mem_name,
         "เส้นทาง": [s.route_code, s.route_name].filter(Boolean).join(" "),
-        "เลขที่ SO": s.sh_runnings.join(", "),
+        "เลข SO": s.sh_runnings.join(", "),
+        "เลขที่บิล": s.bill_notes.join(", "),
         "วันที่ขึ้นของ": s.loaded_at ? fmtDate(s.loaded_at) : "",
         "เวลาขึ้นของ": s.loaded_at ? fmtTime(s.loaded_at) : "",
         "วันที่ส่ง/ตีกลับ": s.time ? fmtDate(s.time) : "",

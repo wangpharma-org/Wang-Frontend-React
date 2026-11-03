@@ -117,6 +117,7 @@ interface BackStore {
   route_name: string | null;
   box_amount: number;
   sh_runnings: string[];
+  bill_notes: string[];
   status: string;
   returned_at: string | null;
   note: string | null;
@@ -155,14 +156,15 @@ function BackStores({ empCode, from, to }: { empCode: string; from: string; to: 
         <div className="text-sm text-slate-400">ไม่มีร้านที่ตีกลับในช่วงนี้</div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-[14px] border-collapse min-w-[860px] [&_td]:border [&_th]:border [&_td]:border-rose-100 [&_th]:border-rose-200">
+          <table className="w-full text-[14px] border-collapse min-w-[960px] [&_td]:border [&_th]:border [&_td]:border-rose-100 [&_th]:border-rose-200">
             <thead>
               <tr className="bg-rose-50 text-rose-800 text-sm">
                 <th className="text-left font-extrabold px-3 py-2">วันที่</th>
                 <th className="text-left font-extrabold px-3 py-2">เวลา</th>
                 <th className="text-left font-extrabold px-3 py-2">ร้าน</th>
                 <th className="text-left font-extrabold px-3 py-2">เส้นทาง</th>
-                <th className="text-left font-extrabold px-3 py-2">เลขที่ SO</th>
+                <th className="text-left font-extrabold px-3 py-2">เลข SO</th>
+                <th className="text-left font-extrabold px-3 py-2">เลขที่บิล</th>
                 <th className="text-center font-extrabold px-3 py-2">ลัง</th>
                 <th className="text-left font-extrabold px-3 py-2">เหตุผล</th>
                 <th className="text-left font-extrabold px-3 py-2">คืนคลัง</th>
@@ -179,6 +181,7 @@ function BackStores({ empCode, from, to }: { empCode: string; from: string; to: 
                   </td>
                   <td className="px-3 py-2 text-slate-700">{b.route_code ? <><b>{b.route_code}</b> {b.route_name ?? ""}</> : "-"}</td>
                   <td className="px-3 py-2 font-mono text-xs text-slate-600">{b.sh_runnings.length ? b.sh_runnings.map((so) => <div key={so}>{so}</div>) : "-"}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-slate-600">{b.bill_notes.length ? b.bill_notes.map((no) => <div key={no}>{no}</div>) : "-"}</td>
                   <td className="px-3 py-2 text-center tabular-nums font-semibold">{b.box_amount}</td>
                   <td className="px-3 py-2 text-rose-700 font-semibold break-words max-w-[260px]">
                     {b.note || "-"}
