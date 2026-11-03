@@ -374,7 +374,7 @@ function SummaryCard({ label, value, unit, sub, icon, tint, ring = "ring-blue-10
 
 // ─── Driver card ──────────────────────────────────────────────────────────────
 
-function DriverCard({ r }: { r: DriverReport }) {
+function DriverCard({ r, date }: { r: DriverReport; date: string }) {
   const [open, setOpen] = useState(true);
   const totalStores = r.in_progress.store_count + r.done.store_count + r.back.store_count;
   const totalBoxes = r.in_progress.box_count + r.done.box_count + r.back.box_count;
@@ -385,7 +385,11 @@ function DriverCard({ r }: { r: DriverReport }) {
     const times = r.deliveries.map((d) => d.shipping_finish_time).filter((t): t is string => !!t);
     return times.length ? times.reduce((a, b) => (new Date(a) < new Date(b) ? a : b)) : null;
   }, [r.deliveries]);
-  const outToFirstMin = minutesBetween(r.shipping_out_time, firstStoreTime);
+  // backend ส่งเวลาออกรถที่เก่าสุดของ shipping ที่ยังค้าง "กำลังส่ง" มาด้วย (อาจข้ามวัน/ข้ามเดือน)
+  // คิดระยะเวลาเฉพาะเมื่อออกรถในวันที่เลือก ไม่งั้นได้ตัวเลขหลายวันที่ไม่มีความหมาย
+  const outIsToday = !!r.shipping_out_time && dayjs(r.shipping_out_time).format("YYYY-MM-DD") === date;
+  const outToFirstMin = outIsToday ? minutesBetween(r.shipping_out_time, firstStoreTime) : null;
+  const staleOut = r.shipping_out_time && !outIsToday ? `ค้างจาก ${dayjs(r.shipping_out_time).format("DD/MM")}` : undefined;
 
   const rows = useMemo<Row[]>(() => {
     const list: Row[] = [
@@ -470,9 +474,9 @@ function DriverCard({ r }: { r: DriverReport }) {
         {/* ไทม์ไลน์ */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mt-2.5">
           <Kpi label="ขึ้นของแรก" value={fmtTime(r.first_load_time)} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" /></svg>} />
-          <Kpi label="ออกรถ" value={fmtTime(r.shipping_out_time)} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>} />
+          <Kpi label="ออกรถ" value={fmtTime(r.shipping_out_time)} sub={staleOut} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>} />
           <Kpi label="ถึงร้านแรก" value={fmtTime(firstStoreTime)} icon={MapPin} />
-          <Kpi label="ออกรถ → ร้านแรก" value={fmtDur(outToFirstMin)} accent icon={ClockIcon} />
+          <Kpi label="ออกรถ → ร้านแรก" value={fmtDur(outToFirstMin)} sub={staleOut && firstStoreTime ? "ไม่มีเวลาออกรถของวันนี้" : undefined} accent icon={ClockIcon} />
           <Kpi label="จบงาน" value={r.shift_end ? fmtTime(r.shift_end.shift_end_time) : "-"} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
           <Kpi label="ระยะทาง" value={r.distance ? `${r.distance.total_km} กม.` : "-"} sub={fmtDur(r.distance?.total_minutes ?? null)} icon={MapPin} />
         </div>
@@ -803,7 +807,7 @@ export default function ReportLogistic() {
                 ไม่พบพนักงานตามตัวกรอง
               </div>
             ) : (
-              filtered.map((r) => <DriverCard key={r.emp_code} r={r} />)
+              filtered.map((r) => <DriverCard key={r.emp_code} r={r} date={date} />)
             )}
           </>
         )}
