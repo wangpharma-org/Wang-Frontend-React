@@ -369,7 +369,7 @@ function SummaryCard({ label, value, unit, sub, icon, tint, ring = "ring-blue-10
   label: string; value: string | number; unit?: string; sub?: string; icon: React.ReactNode; tint: string; ring?: string; accent?: boolean;
 }) {
   return (
-    <div className={`rounded-2xl shadow-sm p-4 min-w-0 ring-1 ${accent ? "bg-emerald-600 ring-emerald-500" : `bg-white ${ring}`}`}>
+    <div className={`rounded-3xl shadow-sm p-4 min-w-0 ring-1 ${accent ? "bg-emerald-600 ring-emerald-500" : `bg-white ${ring}`}`}>
       <span className={`w-10 h-10 rounded-xl grid place-items-center ${tint}`}>{icon}</span>
       <div className="mt-3 flex items-baseline gap-1 min-w-0">
         <span className={`text-2xl font-extrabold tabular-nums leading-none truncate ${accent ? "text-white" : "text-slate-800"}`}>{value}</span>
@@ -434,7 +434,7 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
   }, [r]);
 
   return (
-    <div className="rounded-2xl bg-white ring-1 ring-blue-100 shadow-sm overflow-hidden">
+    <div className="rounded-3xl bg-white ring-1 ring-blue-100 shadow-sm overflow-hidden">
       {/* Header สีฟ้า */}
       <div className="bg-gradient-to-br from-blue-800 via-blue-600 to-sky-500 px-5 py-5">
         <div className="flex items-start justify-between gap-4">
@@ -802,7 +802,7 @@ export default function ReportLogistic() {
             <button onClick={load} className="bg-blue-600 text-white text-base font-semibold rounded-xl px-5 py-2.5">ลองใหม่</button>
           </div>
         ) : data.length === 0 ? (
-          <div className="rounded-2xl bg-white ring-1 ring-blue-100 p-16 text-center">
+          <div className="rounded-3xl bg-white ring-1 ring-blue-100 p-16 text-center">
             <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4 text-blue-300">
               <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
             </div>
@@ -830,7 +830,7 @@ export default function ReportLogistic() {
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
             </div>
             {filtered.length === 0 ? (
-              <div className="rounded-2xl bg-white ring-1 ring-blue-100 p-12 text-center text-slate-400 text-base">
+              <div className="rounded-3xl bg-white ring-1 ring-blue-100 p-12 text-center text-slate-400 text-base">
                 ไม่พบพนักงานตามตัวกรอง
               </div>
             ) : (

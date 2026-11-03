@@ -85,7 +85,7 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
   const [open, setOpen] = useState(d.back_count + d.pending_count > 0);
   const deps = d.departures.map((t) => fmtTime(t));
   return (
-    <div className="rounded-2xl bg-white ring-1 ring-blue-100 shadow-sm overflow-hidden">
+    <div className="rounded-3xl bg-white ring-1 ring-blue-100 shadow-sm overflow-hidden">
       <div className="bg-gradient-to-br from-blue-800 via-blue-600 to-sky-500 px-5 py-4 space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-0 flex-1">
@@ -253,7 +253,7 @@ export default function DailyStoresTab({ date, empQuery }: { date: string; empQu
         </button>
       </div>
       {filtered.length === 0 ? (
-        <div className="rounded-2xl bg-white ring-1 ring-blue-100 p-12 text-center text-slate-400">ไม่มีข้อมูลในวันที่เลือก</div>
+        <div className="rounded-3xl bg-white ring-1 ring-blue-100 p-12 text-center text-slate-400">ไม่มีข้อมูลในวันที่เลือก</div>
       ) : (
         filtered.map((d) => <DriverStoresCard key={d.emp_code} d={d} isToday={isToday} date={date} />)
       )}

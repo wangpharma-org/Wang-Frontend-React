@@ -330,9 +330,9 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
           <button onClick={load} className="bg-blue-600 text-white font-semibold rounded-xl px-5 py-2.5">ลองใหม่</button>
         </div>
       ) : rows.length === 0 ? (
-        <div className="rounded-2xl bg-white ring-1 ring-blue-100 p-12 text-center text-slate-400">ไม่มีข้อมูลในช่วงที่เลือก</div>
+        <div className="rounded-3xl bg-white ring-1 ring-blue-100 p-12 text-center text-slate-400">ไม่มีข้อมูลในช่วงที่เลือก</div>
       ) : (
-        <div className="rounded-2xl bg-white ring-1 ring-blue-100 shadow-sm overflow-hidden">
+        <div className="rounded-3xl bg-white ring-1 ring-blue-100 shadow-sm overflow-hidden">
           <div className="px-5 py-4 flex flex-wrap items-center gap-3 border-b border-blue-50">
             <div>
               <div className="font-extrabold text-lg text-slate-800">อัตราส่งสำเร็จรายเดือน</div>
