@@ -165,9 +165,9 @@ function BackStores({ empCode, from, to }: { empCode: string; from: string; to: 
       ) : rows.length === 0 ? (
         <div className="text-sm text-slate-400">ไม่มีร้านที่ตีกลับในช่วงนี้</div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[75vh]">
           <table className="w-full text-[length:calc(14px*var(--fs,1))] border-collapse min-w-[960px] [&_td]:border [&_th]:border [&_td]:border-rose-100 [&_th]:border-rose-200">
-            <thead>
+            <thead className="sticky top-0 z-[5] bg-rose-50">
               <tr className="bg-rose-50 text-rose-800 text-sm">
                 <th className="text-left font-extrabold px-3 py-2">วันที่</th>
                 <th className="text-left font-extrabold px-3 py-2">เวลา</th>
@@ -363,9 +363,9 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
               ))}
             </div>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[75vh]">
             <table className="w-full border-collapse text-[length:calc(15px*var(--fs,1))] min-w-[760px] [&_td]:border [&_th]:border [&_td]:border-slate-200 [&_th]:border-blue-200">
-              <thead>
+              <thead className="sticky top-0 z-[6] bg-blue-50">
                 <tr className="bg-blue-50 text-blue-800 text-sm">
                   <th className="text-left font-extrabold px-4 py-3 sticky left-0 bg-blue-50">พนักงาน</th>
                   {months.map((m) => <th key={m} className="font-extrabold px-1 py-3 text-center">{fmtMonth(m)}</th>)}

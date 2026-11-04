@@ -29,6 +29,7 @@ interface DeliveryTimeline {
   mem_name: string;
   box_amount: number;
   driver: string | null;
+  driver_code: string | null;
   driver_tel: string | null;
   car_number: string | null;
   route_code: string | null;
@@ -191,24 +192,72 @@ function chronological(events: TimelineEvent[], side: Side): Node[] {
   return [...out, ...events.filter((e) => !e.at).map((e) => ({ ...e, side }))];
 }
 
-/** skipped = ไม่มีเวลาแต่ขั้นหลังจากนี้มีแล้ว → ไม่มีบันทึกของขั้นนี้ (ไม่ใช่ยังรอ) */
-function TimelineNode({ n, prevAt, showDate, skipped }: { n: Node; prevAt: string | null; showDate: boolean; skipped: boolean }) {
-  const tone = TONE[EXTRA_STEPS.has(n.step) ? n.step : n.side];
-  const done = !!n.at;
-  const gap = done ? fmtGap(minutesBetween(prevAt, n.at)) : "";
+interface Cell { n: Node; prevAt: string | null; skipped: boolean; first: boolean }
+
+const COL_W = { width: "calc(7.5rem * var(--fs, 1))", minWidth: "calc(7.5rem * var(--fs, 1))" };
+const ROW_HEAD = "sticky left-0 z-10 bg-slate-50 text-left text-xs font-bold text-slate-500 px-3 py-1.5 whitespace-nowrap border-r border-slate-200";
+// เส้นแบ่งระหว่างฝั่งคลังกับขนส่ง
+const sideStart = (c: Cell) => (c.first ? "border-l-2 border-dashed border-slate-300" : "");
+
+/** หัวแถวด้านซ้าย + หนึ่งคอลัมน์ต่อขั้น — ทุกขั้นเรียงตรงกันทุกแถว (ขั้นตอน / เวลา / วันที่ / พนักงาน / ห่างจากขั้นก่อน) */
+function TimelineTable({ cells, groups }: { cells: Cell[]; groups: { label: string; span: number; tone: string }[] }) {
   return (
-    <div className="relative flex-none pt-9" style={{ width: "calc(7rem * var(--fs, 1))" }}>
-      {/* เส้นเชื่อม + ระยะเวลาจากขั้นก่อนหน้า */}
-      <div className={`absolute left-0 right-0 top-[18px] h-0.5 ${done ? "bg-slate-300" : "bg-slate-200 border-t border-dashed border-slate-300"}`} />
-      {gap && <div className="absolute left-0 top-0 text-center whitespace-nowrap -translate-x-1/2 bg-white px-1 text-[length:calc(11px*var(--fs,1))] font-semibold text-slate-500 tabular-nums">{gap}</div>}
-      <span className={`absolute left-1/2 -translate-x-1/2 top-2.5 w-4 h-4 rounded-full ring-4 ${done ? tone.dot : "bg-white ring-slate-200 border-2 border-slate-300"}`} />
-      <div className="px-2 text-center">
-        <div className={`text-sm font-extrabold leading-tight ${done ? tone.text : "text-slate-400"}`}>{n.label}</div>
-        <div className={`tabular-nums mt-0.5 ${done ? "text-base font-extrabold text-slate-800" : skipped ? "text-xs font-semibold text-slate-400" : "text-base font-extrabold text-slate-300"}`}>{done ? fmtTime(n.at) : skipped ? "ไม่มีบันทึก" : "รอ"}</div>
-        {done && showDate && <div className="text-[length:calc(11px*var(--fs,1))] font-semibold text-slate-500">{fmtDate(n.at)}</div>}
-        {n.detail && <div className="text-[length:calc(11px*var(--fs,1))] text-slate-500 mt-0.5 break-words" title={n.detail}>{n.detail}</div>}
-      </div>
-    </div>
+    <table className="border-separate border-spacing-0 text-center">
+      <thead>
+        <tr>
+          <th scope="col" className={`${ROW_HEAD} border-b`}>ฝ่าย</th>
+          {groups.map((g, i) => (
+            <th key={g.label} scope="colgroup" colSpan={g.span}
+              className={`text-xs font-extrabold px-2 py-1.5 border-b border-slate-200 ${g.tone} ${i > 0 ? "border-l-2 border-dashed border-l-slate-300" : ""}`}>
+              {g.label}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row" className={ROW_HEAD}>ขั้นตอน</th>
+          {cells.map((c, i) => {
+            const tone = TONE[EXTRA_STEPS.has(c.n.step) ? c.n.step : c.n.side];
+            const done = !!c.n.at;
+            return (
+              <td key={i} style={COL_W} className={`relative px-2 pt-8 pb-1 align-top ${sideStart(c)}`}>
+                {/* เส้นเชื่อม + จุด */}
+                <div className={`absolute left-0 right-0 top-[14px] h-0.5 ${done ? "bg-slate-300" : "border-t border-dashed border-slate-300"}`} />
+                <span className={`absolute left-1/2 -translate-x-1/2 top-1.5 w-4 h-4 rounded-full ring-4 ${done ? tone.dot : "bg-white ring-slate-200 border-2 border-slate-300"}`} />
+                <div className={`text-sm font-extrabold leading-tight ${done ? tone.text : "text-slate-400"}`}>{c.n.label}</div>
+              </td>
+            );
+          })}
+        </tr>
+        <tr>
+          <th scope="row" className={ROW_HEAD}>เวลา</th>
+          {cells.map((c, i) => (
+            <td key={i} className={`px-2 py-1 tabular-nums ${sideStart(c)} ${c.n.at ? "text-base font-extrabold text-slate-800" : c.skipped ? "text-xs font-semibold text-slate-400" : "text-base font-extrabold text-slate-300"}`}>
+              {c.n.at ? fmtTime(c.n.at) : c.skipped ? "ไม่มีบันทึก" : "รอ"}
+            </td>
+          ))}
+        </tr>
+        <tr>
+          <th scope="row" className={ROW_HEAD}>วันที่</th>
+          {cells.map((c, i) => (
+            <td key={i} className={`px-2 py-1 text-xs font-semibold text-slate-500 tabular-nums ${sideStart(c)}`}>{c.n.at ? fmtDate(c.n.at) : "-"}</td>
+          ))}
+        </tr>
+        <tr>
+          <th scope="row" className={ROW_HEAD}>พนักงาน / รายละเอียด</th>
+          {cells.map((c, i) => (
+            <td key={i} className={`px-2 py-1 text-xs text-slate-600 break-words align-top ${sideStart(c)}`} title={c.n.detail ?? ""}>{c.n.detail ?? "-"}</td>
+          ))}
+        </tr>
+        <tr>
+          <th scope="row" className={ROW_HEAD}>ห่างจากขั้นก่อน</th>
+          {cells.map((c, i) => (
+            <td key={i} className={`px-2 py-1 text-xs font-semibold text-slate-500 tabular-nums ${sideStart(c)}`}>{c.n.at ? fmtGap(minutesBetween(c.prevAt, c.n.at)) || "-" : "-"}</td>
+          ))}
+        </tr>
+      </tbody>
+    </table>
   );
 }
 
@@ -248,16 +297,19 @@ export default function OrderTimeline({ shRunning, onClose }: { shRunning: strin
   const finish = nodes.find((n) => n.step === "delivered" && n.at)?.at ?? null;
   const pickingCount = nodes.filter((n) => n.side === "picking").length;
 
-  // วันที่แสดงเมื่อเปลี่ยนวันจากขั้นก่อนหน้า (ขั้นแรกแสดงเสมอ)
+  // ระยะห่างคิดจากขั้นก่อนหน้าที่มีเวลา
   let lastAt: string | null = null;
-  let lastDay = "";
   const lastTimed = nodes.reduce((acc, n, i) => (n.at ? i : acc), -1);
-  const rendered = nodes.map((n, i) => {
-    const day = n.at ? fmtDate(n.at) : "";
-    const node = { n, prevAt: lastAt, showDate: !!n.at && day !== lastDay, skipped: !n.at && i < lastTimed };
-    if (n.at) { lastAt = n.at; lastDay = day; }
-    return node;
+  const cells: Cell[] = nodes.map((n, i) => {
+    const cell = { n, prevAt: lastAt, skipped: !n.at && i < lastTimed, first: i === pickingCount && pickingCount > 0 };
+    if (n.at) lastAt = n.at;
+    return cell;
   });
+  const deliveryCount = nodes.length - pickingCount;
+  const groups = [
+    ...(pickingCount ? [{ label: "คลังสินค้า", span: pickingCount, tone: "text-blue-700 bg-blue-50" }] : []),
+    ...(deliveryCount ? [{ label: "ขนส่ง", span: deliveryCount, tone: "text-emerald-700 bg-emerald-50" }] : []),
+  ];
 
   const latestEvent = timed[timed.length - 1] ?? null;
   const shareText = buildShareText(shRunning, picking, delivery, latestEvent);
@@ -281,7 +333,7 @@ export default function OrderTimeline({ shRunning, onClose }: { shRunning: strin
             </div>
             {(delivery?.driver || route) && (
               <div className="text-sm text-slate-600 mt-0.5 flex flex-wrap gap-x-3" aria-label="ข้อมูลขนส่ง">
-                {delivery?.driver && <span>คนขับ <b className="text-slate-800">{delivery.driver}</b></span>}
+                {delivery?.driver && <span>คนขับ <b className="text-slate-800">{delivery.driver}</b>{delivery.driver_code && delivery.driver_code !== delivery.driver ? <span className="text-slate-500"> ({delivery.driver_code})</span> : null}</span>}
                 {route && <span>เส้นทาง <b className="text-slate-800">{route}</b></span>}
                 {delivery?.driver && <span>โทร {delivery.driver_tel
                   ? <a href={`tel:${delivery.driver_tel}`} className="font-bold text-blue-700 hover:underline">{delivery.driver_tel}</a>
@@ -308,19 +360,15 @@ export default function OrderTimeline({ shRunning, onClose }: { shRunning: strin
           <>
           {delivery?.live_location && <LiveLocationBar live={delivery.live_location} />}
           <div className="px-4 md:px-6 py-4">
-            {/* ป้ายกลุ่ม */}
-            <div className="flex gap-4 text-xs font-bold mb-1">
-              <span className="text-blue-700">● คลังสินค้า {errors.picking ? `(${errors.picking})` : ""}</span>
-              <span className="text-emerald-700">● ขนส่ง {errors.delivery ? `(${errors.delivery})` : ""}</span>
-            </div>
-            <div className="overflow-x-auto pb-2">
-              <ol className="flex min-w-max pl-6 pr-6">
-                {rendered.map(({ n, prevAt, showDate, skipped }, i) => (
-                  <li key={`${n.side}-${n.step}-${i}`} className={`flex ${i === pickingCount && pickingCount > 0 ? "ml-6 pl-6 border-l-2 border-dashed border-slate-200" : ""}`}>
-                    <TimelineNode n={n} prevAt={prevAt} showDate={showDate} skipped={skipped} />
-                  </li>
-                ))}
-              </ol>
+            {/* หัวกลุ่มอยู่ในตารางแล้ว — ตรงนี้แจ้งเฉพาะฝั่งที่โหลดไม่ได้ */}
+            {(errors.picking || errors.delivery) && (
+              <div className="flex gap-4 text-xs font-bold mb-1">
+                {errors.picking && <span className="text-blue-700">● คลังสินค้า ({errors.picking})</span>}
+                {errors.delivery && <span className="text-emerald-700">● ขนส่ง ({errors.delivery})</span>}
+              </div>
+            )}
+            <div className="overflow-x-auto pb-2 rounded-xl ring-1 ring-slate-200">
+              <TimelineTable cells={cells} groups={groups} />
             </div>
             <div className="text-[length:calc(11px*var(--fs,1))] text-slate-400 mt-2">
               เวลาระหว่างขั้นคิดจากขั้นก่อนหน้าที่มีเวลา · "รอ" = ยังไม่ถึงขั้นนั้น · "ไม่มีบันทึก" = ผ่านขั้นนั้นไปแล้วแต่ระบบไม่ได้เก็บเวลา · เริ่มจัดใช้เวลาที่เร็วกว่าระหว่างเวลาเริ่มจัดของร้านกับรายการแรกที่หยิบ

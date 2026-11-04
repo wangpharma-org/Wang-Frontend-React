@@ -73,10 +73,21 @@ function TimeBox({ label, time, sub }: { label: string; time: string | null; sub
   );
 }
 
-// เวลาที่ใช้ตั้งแต่ขึ้นของจนส่ง/ตีกลับ (นาที) — ยังไม่ส่ง หรือไม่มีเวลาขึ้นของ = null
-const loadToDoneMin = (s: StoreVisit) => {
-  if (!s.loaded_at || !s.time) return null;
-  const m = Math.round((new Date(s.time).getTime() - new Date(s.loaded_at).getTime()) / 60000);
+/**
+ * เวลารถออกของร้านนี้ = รอบออกรถล่าสุดของคนขับ (วันที่เลือก) ที่ออกก่อนเวลาส่ง/ตีกลับ
+ * ยังไม่ส่ง = รอบล่าสุดของวัน · ไม่ใช้ Shipping.shipping_out_id เพราะตอนตีกลับถูกล้าง
+ */
+const departedAt = (s: StoreVisit, departures: string[]) => {
+  const t = s.time ? new Date(s.time).getTime() : Infinity;
+  let best: string | null = null;
+  for (const d of departures) if (new Date(d).getTime() <= t) best = d;
+  return best;
+};
+// เวลารถออก → ส่ง/ตีกลับ (นาที) — ยังไม่ส่ง หรือไม่มีรอบออกรถ = null
+const departToDoneMin = (s: StoreVisit, departures: string[]) => {
+  const dep = departedAt(s, departures);
+  if (!dep || !s.time) return null;
+  const m = Math.round((new Date(s.time).getTime() - new Date(dep).getTime()) / 60000);
   return m >= 0 ? m : null;
 };
 const fmtMin = (m: number | null) => (m == null ? "-" : m >= 60 ? `${Math.floor(m / 60)} ชม. ${m % 60} น.` : `${m} น.`);
@@ -141,9 +152,9 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
         </div>
       </div>
       {open && (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-[length:calc(13px*var(--fs,1))] min-w-[1100px]">
-            <thead>
+        <div className="overflow-auto max-h-[75vh]">
+          <table className="w-full border-separate border-spacing-0 text-[length:calc(13px*var(--fs,1))] min-w-[1200px]">
+            <thead className="sticky top-0 z-[5] shadow-[0_1px_0_0_rgb(219,234,254)]">
               <tr className="bg-blue-50 text-blue-700 text-xs">
                 <th className="text-left font-bold px-4 py-2">สถานะ</th>
                 <th className="text-left font-bold px-3 py-2">ร้าน</th>
@@ -151,15 +162,16 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
                 <th className="text-left font-bold px-3 py-2">เลขที่บิล</th>
                 <th className="text-center font-bold px-3 py-2">ลัง · บิล</th>
                 <th className="text-left font-bold px-3 py-2">ขึ้นของ</th>
+                <th className="text-left font-bold px-3 py-2">รถออก</th>
                 <th className="text-left font-bold px-3 py-2">ส่ง / ตีกลับ</th>
-                <th className="text-right font-bold px-3 py-2 whitespace-nowrap">ขึ้นของ → ส่ง/ตีกลับ</th>
+                <th className="text-right font-bold px-3 py-2 whitespace-nowrap">รถออก → ส่ง/ตีกลับ</th>
                 <th className="text-left font-bold px-3 py-2">หมายเหตุ</th>
               </tr>
             </thead>
             <tbody>
               {d.stores.map((s, i) => (
                 <Fragment key={`${s.status}-${s.mem_code}-${i}`}>
-                <tr className={`border-t border-blue-50 align-top ${s.status === "done" ? "" : "bg-rose-50/30"}`}>
+                <tr className={`align-top [&>td]:border-t [&>td]:border-blue-50 ${s.status === "done" ? "" : "bg-rose-50/30"}`}>
                   <td className="px-4 py-2.5">
                     <span className={`inline-block text-[length:calc(11px*var(--fs,1))] font-bold px-2 py-0.5 rounded-full ring-1 w-20 text-center ${STATUS_STYLE[s.status]}`}>
                       {statusLabel(s.status, isToday)}
@@ -174,11 +186,12 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
                   <td className="px-3 py-2.5 font-mono text-xs text-slate-600">{s.bill_notes.length ? s.bill_notes.map((no) => <div key={no}>{no}</div>) : <span className="text-slate-300">-</span>}</td>
                   <td className="px-3 py-2.5 text-center tabular-nums text-slate-700">{s.box_amount} · {s.bill_count}</td>
                   <td className="px-3 py-2.5"><DateTime iso={s.loaded_at} empty="-" /></td>
+                  <td className="px-3 py-2.5"><DateTime iso={departedAt(s, d.departures)} empty="-" /></td>
                   <td className="px-3 py-2.5"><DateTime iso={s.time} empty="ยังไม่ส่ง" /></td>
-                  <td className={`px-3 py-2.5 text-right tabular-nums whitespace-nowrap ${loadToDoneMin(s) == null ? "text-slate-300" : s.status === "back" ? "font-bold text-rose-600" : "font-bold text-slate-800"}`}>{fmtMin(loadToDoneMin(s))}</td>
+                  <td className={`px-3 py-2.5 text-right tabular-nums whitespace-nowrap ${departToDoneMin(s, d.departures) == null ? "text-slate-300" : s.status === "back" ? "font-bold text-rose-600" : "font-bold text-slate-800"}`}>{fmtMin(departToDoneMin(s, d.departures))}</td>
                   <td className={`px-3 py-2.5 text-xs break-words max-w-[220px] ${s.status === "back" ? "text-rose-600 font-medium" : "text-slate-500"}`}>{s.note ?? ""}</td>
                 </tr>
-                {openAt(i) && <TimelineRow so={openAt(i)!} colSpan={9} onClose={() => setOpenSo(null)} />}
+                {openAt(i) && <TimelineRow so={openAt(i)!} colSpan={10} onClose={() => setOpenSo(null)} />}
                 </Fragment>
               ))}
             </tbody>
@@ -253,9 +266,11 @@ export default function DailyStoresTab({ date, empQuery }: { date: string; empQu
         "เลขที่บิล": s.bill_notes.join(", "),
         "วันที่ขึ้นของ": s.loaded_at ? fmtDate(s.loaded_at) : "",
         "เวลาขึ้นของ": s.loaded_at ? fmtTime(s.loaded_at) : "",
+        "วันที่รถออก": departedAt(s, d.departures) ? fmtDate(departedAt(s, d.departures)) : "",
+        "เวลารถออก": departedAt(s, d.departures) ? fmtTime(departedAt(s, d.departures)) : "",
         "วันที่ส่ง/ตีกลับ": s.time ? fmtDate(s.time) : "",
         "เวลาส่ง/ตีกลับ": s.time ? fmtTime(s.time) : "",
-        "ขึ้นของ→ส่ง/ตีกลับ (นาที)": loadToDoneMin(s) ?? "",
+        "รถออก→ส่ง/ตีกลับ (นาที)": departToDoneMin(s, d.departures) ?? "",
         "ลัง": s.box_amount,
         "บิล": s.bill_count,
         "หมายเหตุ": s.note ?? "",

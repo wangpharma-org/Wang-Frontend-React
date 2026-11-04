@@ -114,9 +114,9 @@ function RouteDetail({ r, query, loadStores, onClose }: { r: WaitingRoute; query
       ) : shown.length === 0 ? (
         <div className="px-4 py-6 text-sm text-slate-500">ไม่มีร้าน{q ? "ตามที่ค้นหา" : ""}</div>
       ) : (
-      <div className="overflow-x-auto">
+      <div className="overflow-auto max-h-[75vh]">
         <table className="w-full text-[length:calc(13px*var(--fs,1))] border-collapse min-w-[640px]">
-          <thead>
+          <thead className="sticky top-0 z-[5] bg-amber-50">
             <tr className="bg-amber-50 text-amber-900 text-xs">
               <th className="text-left font-bold px-4 py-2">ร้าน</th>
               <th className="text-left font-bold px-3 py-2">เลข SO / บิล / ใบกำกับ</th>
