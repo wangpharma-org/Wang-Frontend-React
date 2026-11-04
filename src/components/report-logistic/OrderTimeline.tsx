@@ -171,7 +171,7 @@ export default function OrderTimeline({ shRunning, onClose }: { shRunning: strin
               {picking?.mem_name ?? delivery?.mem_name ?? ""}
               {picking?.mem_code ? <span className="font-mono text-slate-400"> · {picking.mem_code}</span> : null}
               {picking?.route_code ? ` · ${picking.route_code}` : ""}
-              {picking?.bill_number ? ` · บิล ${picking.bill_number}` : ""}
+              {picking?.bill_number ? ` · ใบกำกับ ${picking.bill_number}` : ""}
               {delivery?.driver ? ` · คนขับ ${delivery.driver}` : ""}
             </div>
           </div>

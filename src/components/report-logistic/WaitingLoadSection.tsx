@@ -3,6 +3,7 @@ import axios from "axios";
 import dayjs from "dayjs";
 import { API, authHeader, fmtDate, fmtTime } from "./shared";
 import { SoButton, TimelineRow } from "./OrderTimeline";
+import { useBillNumbers } from "./billNumbers";
 
 // OPHMBC-331 — งานรอขึ้นของ: พร้อมส่งแล้ว (พิมพ์สติกเกอร์) แต่ยังไม่มีใครสแกนขึ้นรถ จัดกลุ่มตามเส้นทาง
 
@@ -78,6 +79,7 @@ type LoadStores = (routeCode: string | null) => Promise<WaitingStore[]>;
 
 function RouteDetail({ r, query, loadStores, onClose }: { r: WaitingRoute; query: string; loadStores: LoadStores; onClose: () => void }) {
   const [stores, setStores] = useState<WaitingStore[] | null>(null);
+  const invoice = useBillNumbers((stores ?? []).flatMap((s) => s.sh_runnings));
   const [error, setError] = useState(false);
   useEffect(() => {
     let alive = true;
@@ -115,7 +117,7 @@ function RouteDetail({ r, query, loadStores, onClose }: { r: WaitingRoute; query
           <thead>
             <tr className="bg-amber-50 text-amber-900 text-xs">
               <th className="text-left font-bold px-4 py-2">ร้าน</th>
-              <th className="text-left font-bold px-3 py-2">เลข SO</th>
+              <th className="text-left font-bold px-3 py-2">เลข SO / ใบกำกับ</th>
               <th className="text-center font-bold px-3 py-2">ลัง</th>
               <th className="text-left font-bold px-3 py-2">พร้อมส่งเมื่อ</th>
               <th className="text-left font-bold px-3 py-2">รอมาแล้ว</th>
@@ -132,7 +134,7 @@ function RouteDetail({ r, query, loadStores, onClose }: { r: WaitingRoute; query
                 </td>
                 <td className="px-3 py-2 font-mono text-xs">
                   {s.sh_runnings.length ? s.sh_runnings.map((so) => (
-                    <SoButton key={so} so={so} active={openSo === `${i}|${so}`} onToggle={() => toggle(i, so)} />
+                    <div key={so}><SoButton so={so} active={openSo === `${i}|${so}`} onToggle={() => toggle(i, so)} />{invoice(so) && <div className="text-[11px] font-sans text-slate-500">ใบกำกับ <span className="font-mono text-slate-700">{invoice(so)}</span></div>}</div>
                   )) : "-"}
                 </td>
                 <td className="px-3 py-2 text-center tabular-nums font-semibold">{s.box_amount}</td>

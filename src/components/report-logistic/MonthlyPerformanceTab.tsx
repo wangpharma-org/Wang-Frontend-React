@@ -3,6 +3,7 @@ import axios from "axios";
 import dayjs from "dayjs";
 import { API, authHeader, ExcelIcon, exportXlsx, fmtDate, fmtMonth, fmtTime } from "./shared";
 import { SoButton, TimelineRow } from "./OrderTimeline";
+import { useBillNumbers } from "./billNumbers";
 
 // MA-363 — อัตราส่งสำเร็จย้อนหลังรายเดือน (ตัดรอบสิ้นเดือน) + ตัวชี้วัดพฤติกรรม
 
@@ -136,6 +137,7 @@ function BackStores({ empCode, from, to }: { empCode: string; from: string; to: 
   const openAt = (row: number | string) => (openSo?.startsWith(`${row}|`) ? openSo.slice(String(row).length + 1) : null);
   const [rows, setRows] = useState<BackStore[] | null>(null);
   const [limit, setLimit] = useState(0);
+  const invoice = useBillNumbers((rows ?? []).flatMap((b) => b.sh_runnings));
   const [error, setError] = useState(false);
 
   useEffect(() => {
@@ -171,7 +173,7 @@ function BackStores({ empCode, from, to }: { empCode: string; from: string; to: 
                 <th className="text-left font-extrabold px-3 py-2">เวลา</th>
                 <th className="text-left font-extrabold px-3 py-2">ร้าน</th>
                 <th className="text-left font-extrabold px-3 py-2">เส้นทาง</th>
-                <th className="text-left font-extrabold px-3 py-2">เลข SO</th>
+                <th className="text-left font-extrabold px-3 py-2">เลข SO / ใบกำกับ</th>
                 <th className="text-left font-extrabold px-3 py-2">เลขที่บิล</th>
                 <th className="text-center font-extrabold px-3 py-2">ลัง</th>
                 <th className="text-left font-extrabold px-3 py-2">เหตุผล</th>
@@ -189,7 +191,7 @@ function BackStores({ empCode, from, to }: { empCode: string; from: string; to: 
                     <div className="text-xs text-slate-500 font-mono">{b.mem_code}</div>
                   </td>
                   <td className="px-3 py-2 text-slate-700">{b.route_code ? <><b>{b.route_code}</b> {b.route_name ?? ""}</> : "-"}</td>
-                  <td className="px-3 py-2 font-mono text-xs text-slate-600">{b.sh_runnings.length ? b.sh_runnings.map((so) => <SoButton key={so} so={so} active={openSo === `${i}|${so}`} onToggle={() => toggle(i, so)} />) : "-"}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-slate-600">{b.sh_runnings.length ? b.sh_runnings.map((so) => <div key={so}><SoButton so={so} active={openSo === `${i}|${so}`} onToggle={() => toggle(i, so)} />{invoice(so) && <div className="text-[11px] font-sans text-slate-500">ใบกำกับ <span className="font-mono text-slate-700">{invoice(so)}</span></div>}</div>) : "-"}</td>
                   <td className="px-3 py-2 font-mono text-xs text-slate-600">{b.bill_notes.length ? b.bill_notes.map((no) => <div key={no}>{no}</div>) : "-"}</td>
                   <td className="px-3 py-2 text-center tabular-nums font-semibold">{b.box_amount}</td>
                   <td className="px-3 py-2 text-rose-700 font-semibold break-words max-w-[260px]">

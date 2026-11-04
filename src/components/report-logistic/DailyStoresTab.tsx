@@ -4,6 +4,7 @@ import dayjs from "dayjs";
 import { API, authHeader, ExcelIcon, exportXlsx, fmtDate, fmtTime } from "./shared";
 import WaitingLoadSection from "./WaitingLoadSection";
 import { SoButton, TimelineRow } from "./OrderTimeline";
+import { billNumberOf, fetchBillNumbers, useBillNumbers } from "./billNumbers";
 
 // MA-363 — ร้านที่พนักงานแต่ละคนขึ้นของ / ส่งแล้ว / ไม่ได้ส่ง ของวันที่เลือก
 
@@ -89,6 +90,8 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
   const toggle = (row: number | string, so: string) => setOpenSo((cur) => (cur === `${row}|${so}` ? null : `${row}|${so}`));
   const openAt = (row: number | string) => (openSo?.startsWith(`${row}|`) ? openSo.slice(String(row).length + 1) : null);
   const [open, setOpen] = useState(d.back_count + d.pending_count > 0);
+  // เลขที่ใบกำกับดึงเฉพาะตอนการ์ดเปิดอยู่
+  const invoice = useBillNumbers(open ? d.stores.flatMap((s) => s.sh_runnings) : []);
   const deps = d.departures.map((t) => fmtTime(t));
   return (
     <div className="rounded-3xl bg-white ring-1 ring-blue-100 shadow-sm overflow-hidden">
@@ -136,7 +139,7 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
               <tr className="bg-blue-50 text-blue-700 text-xs">
                 <th className="text-left font-bold px-4 py-2">สถานะ</th>
                 <th className="text-left font-bold px-3 py-2">ร้าน</th>
-                <th className="text-left font-bold px-3 py-2">เลข SO</th>
+                <th className="text-left font-bold px-3 py-2">เลข SO / ใบกำกับ</th>
                 <th className="text-left font-bold px-3 py-2">เลขที่บิล</th>
                 <th className="text-center font-bold px-3 py-2">ลัง · บิล</th>
                 <th className="text-left font-bold px-3 py-2">ขึ้นของ</th>
@@ -158,7 +161,7 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
                     <div className="text-xs text-slate-400"><span className="font-mono">{s.mem_code}</span></div>
                     {s.route_code && <div className="text-xs text-slate-500">เส้นทาง <b className="text-slate-700">{s.route_code}</b>{s.route_name ? ` ${s.route_name}` : ""}</div>}
                   </td>
-                  <td className="px-3 py-2.5 font-mono text-xs text-slate-600">{s.sh_runnings.length ? s.sh_runnings.map((no) => <SoButton key={no} so={no} active={openSo === `${i}|${no}`} onToggle={() => toggle(i, no)} />) : <span className="text-slate-300">-</span>}</td>
+                  <td className="px-3 py-2.5 font-mono text-xs text-slate-600">{s.sh_runnings.length ? s.sh_runnings.map((no) => <div key={no}><SoButton so={no} active={openSo === `${i}|${no}`} onToggle={() => toggle(i, no)} />{invoice(no) && <div className="text-[11px] font-sans text-slate-500">ใบกำกับ <span className="font-mono text-slate-700">{invoice(no)}</span></div>}</div>) : <span className="text-slate-300">-</span>}</td>
                   <td className="px-3 py-2.5 font-mono text-xs text-slate-600">{s.bill_notes.length ? s.bill_notes.map((no) => <div key={no}>{no}</div>) : <span className="text-slate-300">-</span>}</td>
                   <td className="px-3 py-2.5 text-center tabular-nums text-slate-700">{s.box_amount} · {s.bill_count}</td>
                   <td className="px-3 py-2.5"><DateTime iso={s.loaded_at} empty="-" /></td>
@@ -215,7 +218,12 @@ export default function DailyStoresTab({ date, empQuery }: { date: string; empQu
     pending: filtered.reduce((s, d) => s + d.pending_count, 0),
   }), [filtered]);
 
-  const exportExcel = () =>
+  const [exporting, setExporting] = useState(false);
+  // เลขที่ใบกำกับของทุกบิลในไฟล์ ดึงตอนกด Export ครั้งเดียว (ดึงไม่ได้ก็ยัง export ได้ แค่คอลัมน์นี้ว่าง)
+  const exportExcel = async () => {
+    setExporting(true);
+    await fetchBillNumbers(filtered.flatMap((d) => d.stores.flatMap((s) => s.sh_runnings))).catch(() => {});
+    setExporting(false);
     exportXlsx(`ร้านขึ้นของ-ส่ง-ไม่ได้ส่ง_${date}.xlsx`, [{
       name: date,
       rows: filtered.flatMap((d) => d.stores.map((s) => ({
@@ -231,6 +239,7 @@ export default function DailyStoresTab({ date, empQuery }: { date: string; empQu
         "ร้าน": s.mem_name,
         "เส้นทาง": [s.route_code, s.route_name].filter(Boolean).join(" "),
         "เลข SO": s.sh_runnings.join(", "),
+        "เลขที่ใบกำกับภาษี": s.sh_runnings.map((so) => billNumberOf(so)).filter(Boolean).join(", "),
         "เลขที่บิล": s.bill_notes.join(", "),
         "วันที่ขึ้นของ": s.loaded_at ? fmtDate(s.loaded_at) : "",
         "เวลาขึ้นของ": s.loaded_at ? fmtTime(s.loaded_at) : "",
@@ -241,6 +250,7 @@ export default function DailyStoresTab({ date, empQuery }: { date: string; empQu
         "หมายเหตุ": s.note ?? "",
       }))),
     }]);
+  };
 
   if (loading) return <div className="flex justify-center py-24"><div className="w-10 h-10 border-[3px] border-blue-600 border-t-transparent rounded-full animate-spin" /></div>;
   if (error) return (
@@ -258,7 +268,7 @@ export default function DailyStoresTab({ date, empQuery }: { date: string; empQu
           ขึ้นของ <b className="tabular-nums">{totals.loaded}</b> ร้าน · ส่งแล้ว <b className="text-emerald-700 tabular-nums">{totals.done}</b> ·
           ตีกลับ <b className="text-rose-600 tabular-nums">{totals.back}</b> · {isToday ? "กำลังส่ง" : "ค้างไม่ส่ง"} <b className="text-amber-700 tabular-nums">{totals.pending}</b>
         </div>
-        <button onClick={exportExcel} disabled={!filtered.length}
+        <button onClick={exportExcel} disabled={!filtered.length || exporting}
           className="ml-auto inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl px-4 py-2 transition">
           {ExcelIcon} Export Excel
         </button>
