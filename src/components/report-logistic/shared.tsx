@@ -16,6 +16,16 @@ export const fmtDateTime = (iso: string | null) => {
   return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")} ${fmtTime(iso)}`;
 };
 
+/** นาทีระหว่างสองเวลา — ไม่ครบ หรือเวลาจบมาก่อนเวลาเริ่ม = null */
+export const minutesBetween = (from: string | null | undefined, to: string | null | undefined) => {
+  if (!from || !to) return null;
+  const m = Math.round((new Date(to).getTime() - new Date(from).getTime()) / 60000);
+  return m >= 0 ? m : null;
+};
+
+export const fmtDuration = (m: number | null) =>
+  m == null ? "-" : m >= 60 ? `${Math.floor(m / 60)} ชม. ${m % 60} น.` : `${m} น.`;
+
 // เดือนไทยแบบย่อ — '2026-11' → 'พ.ย. 69'
 const TH_MONTHS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 

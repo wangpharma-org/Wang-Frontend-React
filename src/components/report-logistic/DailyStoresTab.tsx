@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
-import { API, authHeader, ExcelIcon, exportXlsx, fmtDate, fmtTime } from "./shared";
+import { API, authHeader, ExcelIcon, exportXlsx, fmtDate, fmtDuration, fmtTime, minutesBetween } from "./shared";
 
 // MA-363 — ร้านที่พนักงานแต่ละคนขึ้นของ / ส่งแล้ว / ไม่ได้ส่ง ของวันที่เลือก
 
@@ -31,6 +31,8 @@ interface DriverStores {
   departures: string[];
   start_time: string | null;
   end_time: string | null;
+  /** เวลาเข้างานจาก HRSoft — backend ยังไม่ส่ง (รอ API ย้อนหลังของ HRSoft) */
+  clock_in_at?: string | null;
   first_store: StoreVisit | null;
   last_store: StoreVisit | null;
   loaded_count: number;
@@ -59,13 +61,31 @@ function Count({ label, n, tone }: { label: string; n: number; tone: string }) {
   );
 }
 
-// ช่องเวลาในแถบฟ้า
-function TimeBox({ label, time, sub }: { label: string; time: string | null; sub?: string }) {
+// ช่วงเวลาในแถบฟ้า — เวลาเริ่ม → เวลาจบ อยู่ช่องเดียวกัน พร้อมระยะเวลา
+function SpanBox({ label, from, to, fromLabel, toLabel, fromSub, toSub, missing }: {
+  label: string; from: string | null; to: string | null;
+  fromLabel: string; toLabel: string; fromSub?: string; toSub?: string; missing?: string;
+}) {
   return (
-    <div className="rounded-lg bg-white/15 px-3 py-2 min-w-0">
-      <div className="text-[11px] font-semibold text-blue-50/85">{label}</div>
-      <div className="text-white font-extrabold text-base leading-tight tabular-nums">{fmtTime(time)}</div>
-      {sub && <div className="text-[11px] text-blue-50/85 truncate" title={sub}>{sub}</div>}
+    <div className="rounded-xl bg-white/15 px-4 py-3 min-w-0">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-xs font-bold text-blue-50">{label}</span>
+        <span className="text-white font-extrabold text-lg tabular-nums">{fmtDuration(minutesBetween(from, to))}</span>
+      </div>
+      <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-2 mt-1.5">
+        <div className="min-w-0">
+          <div className="text-[11px] text-blue-50/80">{fromLabel}</div>
+          <div className="text-white font-bold tabular-nums">{fmtTime(from)}</div>
+          {fromSub && <div className="text-[11px] text-blue-50/80 truncate" title={fromSub}>{fromSub}</div>}
+        </div>
+        <span className="text-blue-50/70 pt-4">→</span>
+        <div className="min-w-0 text-right">
+          <div className="text-[11px] text-blue-50/80">{toLabel}</div>
+          <div className="text-white font-bold tabular-nums">{fmtTime(to)}</div>
+          {toSub && <div className="text-[11px] text-blue-50/80 truncate" title={toSub}>{toSub}</div>}
+        </div>
+      </div>
+      {missing && <div className="text-[11px] text-amber-100 mt-1">{missing}</div>}
     </div>
   );
 }
@@ -88,7 +108,8 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
     <div className="rounded-3xl bg-white ring-1 ring-blue-100 shadow-sm overflow-hidden">
       <div className="bg-gradient-to-br from-blue-800 via-blue-600 to-sky-500 px-5 md:px-8 py-6 space-y-4">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="min-w-0 flex-1">
+          {/* มือถือ: ชื่อ + เส้นทางเต็มแถว ตัวเลขสถานะลงบรรทัดถัดไป */}
+          <div className="min-w-0 flex-1 basis-full sm:basis-0">
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
               <span className="text-white font-extrabold text-base">{d.emp_name}</span>
               <span className="text-blue-50 text-sm font-semibold tabular-nums">โทร {d.emp_tel || "-"}</span>
@@ -115,12 +136,17 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
             {open ? "ย่อ" : "ขยาย"}
           </button>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-          <TimeBox label="เวลาเริ่ม (ขึ้นของแรก)" time={d.start_time} />
-          <TimeBox label="ออกรถ" time={d.departures[0] ?? null} sub={deps.length > 1 ? `ออก ${deps.length} รอบ: ${deps.join(", ")}` : undefined} />
-          <TimeBox label="ร้านแรกที่เริ่มส่ง" time={d.first_store?.time ?? null} sub={d.first_store?.mem_name} />
-          <TimeBox label="ร้านสุดท้าย" time={d.last_store?.time ?? null} sub={d.last_store?.mem_name} />
-          <TimeBox label="เวลาจบ (จบกะ)" time={d.end_time} />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <SpanBox label="เวลาขึ้นของ" fromLabel="เวลาเริ่ม (ขึ้นของแรก)" toLabel="ออกรถ"
+            from={d.start_time} to={d.departures[0] ?? null}
+            toSub={deps.length > 1 ? `ออก ${deps.length} รอบ: ${deps.join(", ")}` : undefined} />
+          {/* นับทั้งร้านที่ส่งแล้วและตีกลับ (เวลาที่ไปถึงร้าน) */}
+          <SpanBox label="เวลาส่งจริง" fromLabel="ร้านแรกที่เริ่มส่ง" toLabel="ร้านสุดท้าย"
+            from={d.first_store?.time ?? null} to={d.last_store?.time ?? null}
+            fromSub={d.first_store?.mem_name} toSub={d.last_store?.mem_name} />
+          <SpanBox label="เวลาทำงานทั้งกะ" fromLabel="เวลาเข้างาน" toLabel="เวลาจบกะ"
+            from={d.clock_in_at ?? null} to={d.end_time}
+            missing={d.clock_in_at ? undefined : "ยังไม่มีเวลาเข้างานจาก HRSoft"} />
         </div>
       </div>
       {open && (
@@ -215,7 +241,13 @@ export default function DailyStoresTab({ date, empQuery }: { date: string; empQu
         "เบอร์โทร": d.emp_tel ?? "",
         "เวลาเริ่ม": d.start_time ? fmtTime(d.start_time) : "",
         "ออกรถ": d.departures.map((t) => fmtTime(t)).join(", "),
+        "เวลาขึ้นของ (นาที)": minutesBetween(d.start_time, d.departures[0]) ?? "",
+        "ร้านแรก": d.first_store ? `${fmtTime(d.first_store.time)} ${d.first_store.mem_name}` : "",
+        "ร้านสุดท้าย": d.last_store ? `${fmtTime(d.last_store.time)} ${d.last_store.mem_name}` : "",
+        "เวลาส่งจริง (นาที)": minutesBetween(d.first_store?.time, d.last_store?.time) ?? "",
+        "เวลาเข้างาน": d.clock_in_at ? fmtTime(d.clock_in_at) : "",
         "เวลาจบ": d.end_time ? fmtTime(d.end_time) : "",
+        "เวลาทำงานทั้งกะ (นาที)": minutesBetween(d.clock_in_at, d.end_time) ?? "",
         "สถานะ": statusLabel(s.status, isToday),
         "รหัสร้าน": s.mem_code,
         "ร้าน": s.mem_name,
