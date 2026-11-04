@@ -702,11 +702,12 @@ export default function ReportLogistic() {
     return Array.from(m, ([code, name]) => ({ code, name })).sort((a, b) => a.code.localeCompare(b.code));
   }, [data]);
 
-  // filter ฝั่ง client: รหัส/ชื่อพนักงาน + เส้นทางที่วิ่งวันนั้น
+  // filter ฝั่ง client: รหัส/ชื่อพนักงาน/เส้นทาง (ช่องค้นหา) + เส้นทางที่วิ่งวันนั้น (dropdown)
   const filtered = useMemo(() => {
     const q = empQuery.trim().toLowerCase();
     return data.filter((d) => {
-      const empOk = !q || d.emp_code.toLowerCase().includes(q) || d.emp_name.toLowerCase().includes(q);
+      const empOk = !q || d.emp_code.toLowerCase().includes(q) || d.emp_name.toLowerCase().includes(q)
+        || d.routes.some((r) => r.route_code.toLowerCase().includes(q) || (r.route_name ?? "").toLowerCase().includes(q));
       const routeOk = !routeFilter || d.routes.some((r) => r.route_code === routeFilter);
       return empOk && routeOk;
     });
@@ -747,10 +748,10 @@ export default function ReportLogistic() {
               type="text"
               value={empQuery}
               onChange={(e) => setEmpQuery(e.target.value)}
-              placeholder="ค้นหารหัส / ชื่อพนักงาน"
+              placeholder={tab === "monthly" ? "ค้นหารหัส / ชื่อพนักงาน" : "ค้นหาพนักงาน / เส้นทาง"}
               className="border border-blue-200 rounded-xl px-3.5 py-2 text-sm text-slate-700 w-52 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
-            {tab === "daily" && (
+            {tab !== "monthly" && (
               <select
                 value={routeFilter}
                 onChange={(e) => setRouteFilter(e.target.value)}
@@ -789,7 +790,7 @@ export default function ReportLogistic() {
 
       <div className="max-w-[1600px] mx-auto px-4 md:px-12 py-8 space-y-8">
         {tab === "stores" ? (
-          <DailyStoresTab key={reloadKey} date={date} empQuery={empQuery} />
+          <DailyStoresTab key={reloadKey} date={date} empQuery={empQuery} routeFilter={routeFilter} />
         ) : tab === "monthly" ? (
           <MonthlyPerformanceTab key={reloadKey} empQuery={empQuery} />
         ) : loading ? (
