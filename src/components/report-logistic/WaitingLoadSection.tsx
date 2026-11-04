@@ -13,6 +13,8 @@ interface WaitingStore {
   box_amount: number;
   shipping_count: number;
   sh_runnings: string[];
+  /** เลขใบวางบิล — งานที่ไม่มีเลข SO */
+  bill_notes: string[];
   ready_at: string | null;
   carried_over: boolean;
 }
@@ -117,7 +119,7 @@ function RouteDetail({ r, query, loadStores, onClose }: { r: WaitingRoute; query
           <thead>
             <tr className="bg-amber-50 text-amber-900 text-xs">
               <th className="text-left font-bold px-4 py-2">ร้าน</th>
-              <th className="text-left font-bold px-3 py-2">เลข SO / ใบกำกับ</th>
+              <th className="text-left font-bold px-3 py-2">เลข SO / บิล / ใบกำกับ</th>
               <th className="text-center font-bold px-3 py-2">ลัง</th>
               <th className="text-left font-bold px-3 py-2">พร้อมส่งเมื่อ</th>
               <th className="text-left font-bold px-3 py-2">รอมาแล้ว</th>
@@ -133,9 +135,14 @@ function RouteDetail({ r, query, loadStores, onClose }: { r: WaitingRoute; query
                   <div className="text-xs text-slate-500">เส้นทาง <b className="text-slate-700">{r.route_code ?? "-"}</b>{r.route_name ? ` ${r.route_name}` : ""}</div>
                 </td>
                 <td className="px-3 py-2 font-mono text-xs">
-                  {s.sh_runnings.length ? s.sh_runnings.map((so) => (
+                  {s.sh_runnings.map((so) => (
                     <div key={so}><SoButton so={so} active={openSo === `${i}|${so}`} onToggle={() => toggle(i, so)} />{invoice(so) && <div className="text-[11px] font-sans text-slate-500">ใบกำกับ <span className="font-mono text-slate-700">{invoice(so)}</span></div>}</div>
-                  )) : "-"}
+                  ))}
+                  {/* งานที่มีแต่ใบวางบิล (ไม่มีเลข SO) — แสดงเลขบิล กดดู timeline ได้เหมือนกัน */}
+                  {(s.bill_notes ?? []).map((no) => (
+                    <div key={no}><SoButton so={no} active={openSo === `${i}|${no}`} onToggle={() => toggle(i, no)} /><div className="text-[11px] font-sans text-slate-500">ใบวางบิล</div></div>
+                  ))}
+                  {!s.sh_runnings.length && !(s.bill_notes ?? []).length && "-"}
                 </td>
                 <td className="px-3 py-2 text-center tabular-nums font-semibold">{s.box_amount}</td>
                 <td className="px-3 py-2 tabular-nums">
