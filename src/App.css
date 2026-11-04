@@ -1,1 +1,19 @@
 @import "tailwindcss";
+/* OPHMBC-331 — ขยายตัวอักษรทั้งหน้า (Report ขนส่ง): ตั้ง --fs ที่ wrapper แล้วขนาด text-* ทั้งหมดคูณตาม
+   ขนาดแบบ px ตายตัวในหน้านั้นเขียนเป็น text-[length:calc(Npx*var(--fs,1))] */
+.fs-scale {
+  --text-xs: calc(0.75rem * var(--fs, 1));
+  --text-sm: calc(0.875rem * var(--fs, 1));
+  --text-base: calc(1rem * var(--fs, 1));
+  --text-lg: calc(1.125rem * var(--fs, 1));
+  --text-xl: calc(1.25rem * var(--fs, 1));
+  --text-2xl: calc(1.5rem * var(--fs, 1));
+  --text-3xl: calc(1.875rem * var(--fs, 1));
+  font-size: calc(1rem * var(--fs, 1));
+}
+/* จอโทรศัพท์: ตัวอักษร 2 เท่าทำให้หน้าล้นแนวนอน — ใช้ขนาดปกติเสมอ (ปุ่มสลับซ่อนบนมือถือ) */
+@media (max-width: 767px) {
+  .fs-scale {
+    --fs: 1 !important;
+  }
+}

@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
 import { API, authHeader, ExcelIcon, exportXlsx, fmtDate, fmtDuration, fmtTime, minutesBetween } from "./shared";
+import WaitingLoadSection from "./WaitingLoadSection";
+import { SoButton, TimelineRow } from "./OrderTimeline";
+import { billNumberOf, fetchBillNumbers, useBillNumbers } from "./billNumbers";
 
 // MA-363 — ร้านที่พนักงานแต่ละคนขึ้นของ / ส่งแล้ว / ไม่ได้ส่ง ของวันที่เลือก
 
@@ -55,8 +58,8 @@ const STATUS_STYLE: Record<Status, string> = {
 function Count({ label, n, tone }: { label: string; n: number; tone: string }) {
   return (
     <div className={`rounded-lg px-3 py-1.5 text-center ${n > 0 ? tone : "bg-white/10 text-blue-50/60"}`}>
-      <div className="text-lg font-extrabold leading-none tabular-nums">{n}</div>
-      <div className="text-[11px] font-semibold mt-0.5">{label}</div>
+      <div className="text-lg font-extrabold leading-none tabular-nums">{n} <span className="text-xs font-bold">ร้าน</span></div>
+      <div className="text-[length:calc(11px*var(--fs,1))] font-semibold mt-0.5">{label}</div>
     </div>
   );
 }
@@ -74,21 +77,40 @@ function SpanBox({ label, from, to, fromLabel, toLabel, fromSub, toSub, missing 
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-2 mt-1.5">
         <div className="min-w-0">
-          <div className="text-[11px] text-blue-50/80">{fromLabel}</div>
+          <div className="text-[length:calc(11px*var(--fs,1))] text-blue-50/80">{fromLabel}</div>
           <div className="text-white font-bold tabular-nums">{fmtTime(from)}</div>
-          {fromSub && <div className="text-[11px] text-blue-50/80 truncate" title={fromSub}>{fromSub}</div>}
+          {fromSub && <div className="text-[length:calc(11px*var(--fs,1))] text-blue-50/80 truncate" title={fromSub}>{fromSub}</div>}
         </div>
         <span className="text-blue-50/70 pt-4">→</span>
         <div className="min-w-0 text-right">
-          <div className="text-[11px] text-blue-50/80">{toLabel}</div>
+          <div className="text-[length:calc(11px*var(--fs,1))] text-blue-50/80">{toLabel}</div>
           <div className="text-white font-bold tabular-nums">{fmtTime(to)}</div>
-          {toSub && <div className="text-[11px] text-blue-50/80 truncate" title={toSub}>{toSub}</div>}
+          {toSub && <div className="text-[length:calc(11px*var(--fs,1))] text-blue-50/80 truncate" title={toSub}>{toSub}</div>}
         </div>
       </div>
-      {missing && <div className="text-[11px] text-amber-100 mt-1">{missing}</div>}
+      {missing && <div className="text-[length:calc(11px*var(--fs,1))] text-amber-100 mt-1">{missing}</div>}
     </div>
   );
 }
+
+/**
+ * เวลารถออกของร้านนี้ = รอบออกรถล่าสุดของคนขับ (วันที่เลือก) ที่ออกก่อนเวลาส่ง/ตีกลับ
+ * ยังไม่ส่ง = รอบล่าสุดของวัน · ไม่ใช้ Shipping.shipping_out_id เพราะตอนตีกลับถูกล้าง
+ */
+const departedAt = (s: StoreVisit, departures: string[]) => {
+  const t = s.time ? new Date(s.time).getTime() : Infinity;
+  let best: string | null = null;
+  for (const d of departures) if (new Date(d).getTime() <= t) best = d;
+  return best;
+};
+// เวลารถออก → ส่ง/ตีกลับ (นาที) — ยังไม่ส่ง หรือไม่มีรอบออกรถ = null
+const departToDoneMin = (s: StoreVisit, departures: string[]) => {
+  const dep = departedAt(s, departures);
+  if (!dep || !s.time) return null;
+  const m = Math.round((new Date(s.time).getTime() - new Date(dep).getTime()) / 60000);
+  return m >= 0 ? m : null;
+};
+const fmtMin = (m: number | null) => (m == null ? "-" : m >= 60 ? `${Math.floor(m / 60)} ชม. ${m % 60} น.` : `${m} น.`);
 
 // เวลาบรรทัดบน วันที่บรรทัดล่าง
 function DateTime({ iso, empty }: { iso: string | null; empty: string }) {
@@ -96,13 +118,19 @@ function DateTime({ iso, empty }: { iso: string | null; empty: string }) {
   return (
     <>
       <div className="font-bold text-slate-700 tabular-nums">{fmtTime(iso)}</div>
-      <div className="text-[11px] text-slate-400">{fmtDate(iso)}</div>
+      <div className="text-[length:calc(11px*var(--fs,1))] text-slate-400">{fmtDate(iso)}</div>
     </>
   );
 }
 
 function DriverStoresCard({ d, isToday, date, routeFilter }: { d: DriverStores; isToday: boolean; date: string; routeFilter: string }) {
+  // OPHMBC-331 — เลข SO ที่กาง timeline อยู่ ("แถว|SO") กดซ้ำเพื่อพับ
+  const [openSo, setOpenSo] = useState<string | null>(null);
+  const toggle = (row: number | string, so: string) => setOpenSo((cur) => (cur === `${row}|${so}` ? null : `${row}|${so}`));
+  const openAt = (row: number | string) => (openSo?.startsWith(`${row}|`) ? openSo.slice(String(row).length + 1) : null);
   const [open, setOpen] = useState(d.back_count + d.pending_count > 0);
+  // เลขที่ใบกำกับดึงเฉพาะตอนการ์ดเปิดอยู่
+  const invoice = useBillNumbers(open ? d.stores.flatMap((s) => s.sh_runnings) : []);
   const deps = d.departures.map((t) => fmtTime(t));
   // เลือกเส้นทาง → ตารางเหลือเฉพาะร้านในเส้นทางนั้น (แถบฟ้ายังเป็นของทั้งวัน)
   const stores = routeFilter ? d.stores.filter((s) => s.route_code === routeFilter) : d.stores;
@@ -152,39 +180,47 @@ function DriverStoresCard({ d, isToday, date, routeFilter }: { d: DriverStores; 
         </div>
       </div>
       {open && (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-[13px] min-w-[1000px]">
-            <thead>
+        <div className="overflow-auto max-h-[75vh]">
+          <table className="w-full border-separate border-spacing-0 text-[length:calc(13px*var(--fs,1))] min-w-[1200px]">
+            <thead className="sticky top-0 z-[5] shadow-[0_1px_0_0_rgb(219,234,254)]">
               <tr className="bg-blue-50 text-blue-700 text-xs">
                 <th className="text-left font-bold px-4 py-2">สถานะ</th>
                 <th className="text-left font-bold px-3 py-2">ร้าน</th>
-                <th className="text-left font-bold px-3 py-2">เลข SO</th>
+                <th className="text-left font-bold px-3 py-2">เลข SO / ใบกำกับ</th>
                 <th className="text-left font-bold px-3 py-2">เลขที่บิล</th>
                 <th className="text-center font-bold px-3 py-2">ลัง · บิล</th>
                 <th className="text-left font-bold px-3 py-2">ขึ้นของ</th>
+                <th className="text-left font-bold px-3 py-2">รถออก</th>
                 <th className="text-left font-bold px-3 py-2">ส่ง / ตีกลับ</th>
+                <th className="text-right font-bold px-3 py-2 whitespace-nowrap">รถออก → ส่ง/ตีกลับ</th>
                 <th className="text-left font-bold px-3 py-2">หมายเหตุ</th>
               </tr>
             </thead>
             <tbody>
               {stores.map((s, i) => (
-                <tr key={`${s.status}-${s.mem_code}-${i}`} className={`border-t border-blue-50 align-top ${s.status === "done" ? "" : "bg-rose-50/30"}`}>
+                <Fragment key={`${s.status}-${s.mem_code}-${i}`}>
+                <tr className={`align-top [&>td]:border-t [&>td]:border-blue-50 ${s.status === "done" ? "" : "bg-rose-50/30"}`}>
                   <td className="px-4 py-2.5">
-                    <span className={`inline-block text-[11px] font-bold px-2 py-0.5 rounded-full ring-1 w-20 text-center ${STATUS_STYLE[s.status]}`}>
+                    <span className={`inline-block text-[length:calc(11px*var(--fs,1))] font-bold px-2 py-0.5 rounded-full ring-1 w-20 text-center ${STATUS_STYLE[s.status]}`}>
                       {statusLabel(s.status, isToday)}
                     </span>
                   </td>
                   <td className="px-3 py-2.5">
                     <div className="font-bold text-slate-800 break-words">{s.mem_name}</div>
-                    <div className="text-xs text-slate-400"><span className="font-mono">{s.mem_code}</span>{s.route_code ? ` · ${s.route_code}` : ""}</div>
+                    <div className="text-xs text-slate-400"><span className="font-mono">{s.mem_code}</span></div>
+                    {s.route_code && <div className="text-xs text-slate-500">เส้นทาง <b className="text-slate-700">{s.route_code}</b>{s.route_name ? ` ${s.route_name}` : ""}</div>}
                   </td>
-                  <td className="px-3 py-2.5 font-mono text-xs text-slate-600">{s.sh_runnings.length ? s.sh_runnings.map((no) => <div key={no}>{no}</div>) : <span className="text-slate-300">-</span>}</td>
+                  <td className="px-3 py-2.5 font-mono text-xs text-slate-600">{s.sh_runnings.length ? s.sh_runnings.map((no) => <div key={no}><SoButton so={no} active={openSo === `${i}|${no}`} onToggle={() => toggle(i, no)} />{invoice(no) && <div className="text-[length:calc(11px*var(--fs,1))] font-sans text-slate-500">ใบกำกับ <span className="font-mono text-slate-700">{invoice(no)}</span></div>}</div>) : <span className="text-slate-300">-</span>}</td>
                   <td className="px-3 py-2.5 font-mono text-xs text-slate-600">{s.bill_notes.length ? s.bill_notes.map((no) => <div key={no}>{no}</div>) : <span className="text-slate-300">-</span>}</td>
                   <td className="px-3 py-2.5 text-center tabular-nums text-slate-700">{s.box_amount} · {s.bill_count}</td>
                   <td className="px-3 py-2.5"><DateTime iso={s.loaded_at} empty="-" /></td>
+                  <td className="px-3 py-2.5"><DateTime iso={departedAt(s, d.departures)} empty="-" /></td>
                   <td className="px-3 py-2.5"><DateTime iso={s.time} empty="ยังไม่ส่ง" /></td>
+                  <td className={`px-3 py-2.5 text-right tabular-nums whitespace-nowrap ${departToDoneMin(s, d.departures) == null ? "text-slate-300" : s.status === "back" ? "font-bold text-rose-600" : "font-bold text-slate-800"}`}>{fmtMin(departToDoneMin(s, d.departures))}</td>
                   <td className={`px-3 py-2.5 text-xs break-words max-w-[220px] ${s.status === "back" ? "text-rose-600 font-medium" : "text-slate-500"}`}>{s.note ?? ""}</td>
                 </tr>
+                {openAt(i) && <TimelineRow so={openAt(i)!} colSpan={10} onClose={() => setOpenSo(null)} />}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -241,7 +277,12 @@ export default function DailyStoresTab({ date, empQuery, routeFilter = "" }: { d
     return { loaded: all.length, done: count("done"), back: count("back"), pending: count("pending") };
   }, [filtered, visibleStores]);
 
-  const exportExcel = () =>
+  const [exporting, setExporting] = useState(false);
+  // เลขที่ใบกำกับของทุกบิลในไฟล์ ดึงตอนกด Export ครั้งเดียว (ดึงไม่ได้ก็ยัง export ได้ แค่คอลัมน์นี้ว่าง)
+  const exportExcel = async () => {
+    setExporting(true);
+    await fetchBillNumbers(filtered.flatMap((d) => visibleStores(d).flatMap((s) => s.sh_runnings))).catch(() => {});
+    setExporting(false);
     exportXlsx(`ร้านขึ้นของ-ส่ง-ไม่ได้ส่ง_${date}${routeFilter ? `_${routeFilter}` : ""}.xlsx`, [{
       name: date,
       rows: filtered.flatMap((d) => visibleStores(d).map((s) => ({
@@ -263,16 +304,21 @@ export default function DailyStoresTab({ date, empQuery, routeFilter = "" }: { d
         "ร้าน": s.mem_name,
         "เส้นทาง": [s.route_code, s.route_name].filter(Boolean).join(" "),
         "เลข SO": s.sh_runnings.join(", "),
+        "เลขที่ใบกำกับภาษี": s.sh_runnings.map((so) => billNumberOf(so)).filter(Boolean).join(", "),
         "เลขที่บิล": s.bill_notes.join(", "),
         "วันที่ขึ้นของ": s.loaded_at ? fmtDate(s.loaded_at) : "",
         "เวลาขึ้นของ": s.loaded_at ? fmtTime(s.loaded_at) : "",
+        "วันที่รถออก": departedAt(s, d.departures) ? fmtDate(departedAt(s, d.departures)) : "",
+        "เวลารถออก": departedAt(s, d.departures) ? fmtTime(departedAt(s, d.departures)) : "",
         "วันที่ส่ง/ตีกลับ": s.time ? fmtDate(s.time) : "",
         "เวลาส่ง/ตีกลับ": s.time ? fmtTime(s.time) : "",
+        "รถออก→ส่ง/ตีกลับ (นาที)": departToDoneMin(s, d.departures) ?? "",
         "ลัง": s.box_amount,
         "บิล": s.bill_count,
         "หมายเหตุ": s.note ?? "",
       }))),
     }]);
+  };
 
   if (loading) return <div className="flex justify-center py-24"><div className="w-10 h-10 border-[3px] border-blue-600 border-t-transparent rounded-full animate-spin" /></div>;
   if (error) return (
@@ -284,12 +330,13 @@ export default function DailyStoresTab({ date, empQuery, routeFilter = "" }: { d
 
   return (
     <div className="space-y-8">
+      <WaitingLoadSection date={date} query={empQuery} />
       <div className="flex flex-wrap items-center gap-2">
         <div className="text-sm text-slate-600">
           ขึ้นของ <b className="tabular-nums">{totals.loaded}</b> ร้าน · ส่งแล้ว <b className="text-emerald-700 tabular-nums">{totals.done}</b> ·
           ตีกลับ <b className="text-rose-600 tabular-nums">{totals.back}</b> · {isToday ? "กำลังส่ง" : "ค้างไม่ส่ง"} <b className="text-amber-700 tabular-nums">{totals.pending}</b>
         </div>
-        <button onClick={exportExcel} disabled={!filtered.length}
+        <button onClick={exportExcel} disabled={!filtered.length || exporting}
           className="ml-auto inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl px-4 py-2 transition">
           {ExcelIcon} Export Excel
         </button>
