@@ -101,9 +101,11 @@ function DateTime({ iso, empty }: { iso: string | null; empty: string }) {
   );
 }
 
-function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: boolean; date: string }) {
+function DriverStoresCard({ d, isToday, date, routeFilter }: { d: DriverStores; isToday: boolean; date: string; routeFilter: string }) {
   const [open, setOpen] = useState(d.back_count + d.pending_count > 0);
   const deps = d.departures.map((t) => fmtTime(t));
+  // เลือกเส้นทาง → ตารางเหลือเฉพาะร้านในเส้นทางนั้น (แถบฟ้ายังเป็นของทั้งวัน)
+  const stores = routeFilter ? d.stores.filter((s) => s.route_code === routeFilter) : d.stores;
   return (
     <div className="rounded-3xl bg-white ring-1 ring-blue-100 shadow-sm overflow-hidden">
       <div className="bg-gradient-to-br from-blue-800 via-blue-600 to-sky-500 px-5 md:px-8 py-6 space-y-4">
@@ -165,7 +167,7 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
               </tr>
             </thead>
             <tbody>
-              {d.stores.map((s, i) => (
+              {stores.map((s, i) => (
                 <tr key={`${s.status}-${s.mem_code}-${i}`} className={`border-t border-blue-50 align-top ${s.status === "done" ? "" : "bg-rose-50/30"}`}>
                   <td className="px-4 py-2.5">
                     <span className={`inline-block text-[11px] font-bold px-2 py-0.5 rounded-full ring-1 w-20 text-center ${STATUS_STYLE[s.status]}`}>
@@ -192,7 +194,7 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
   );
 }
 
-export default function DailyStoresTab({ date, empQuery }: { date: string; empQuery: string }) {
+export default function DailyStoresTab({ date, empQuery, routeFilter = "" }: { date: string; empQuery: string; routeFilter?: string }) {
   const [data, setData] = useState<DriverStores[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -216,25 +218,33 @@ export default function DailyStoresTab({ date, empQuery }: { date: string; empQu
 
   useEffect(() => { load(); }, [load]);
 
+  // ช่องค้นหา: รหัส/ชื่อพนักงาน หรือรหัส/ชื่อเส้นทาง · dropdown: คนที่วิ่งเส้นทางนั้น
   const filtered = useMemo(() => {
     const q = empQuery.trim().toLowerCase();
     return data
-      .filter((d) => !q || d.emp_code.toLowerCase().includes(q) || d.emp_name.toLowerCase().includes(q))
+      .filter((d) => !q || d.emp_code.toLowerCase().includes(q) || d.emp_name.toLowerCase().includes(q)
+        || d.routes.some((r) => r.route_code.toLowerCase().includes(q) || (r.route_name ?? "").toLowerCase().includes(q)))
+      .filter((d) => !routeFilter || d.routes.some((r) => r.route_code === routeFilter))
       // คนที่มีปัญหาขึ้นก่อน
       .sort((a, b) => b.back_count + b.pending_count - (a.back_count + a.pending_count));
-  }, [data, empQuery]);
+  }, [data, empQuery, routeFilter]);
 
-  const totals = useMemo(() => ({
-    loaded: filtered.reduce((s, d) => s + d.loaded_count, 0),
-    done: filtered.reduce((s, d) => s + d.done_count, 0),
-    back: filtered.reduce((s, d) => s + d.back_count, 0),
-    pending: filtered.reduce((s, d) => s + d.pending_count, 0),
-  }), [filtered]);
+  // ร้านที่แสดง — เลือกเส้นทางแล้วนับเฉพาะร้านในเส้นทางนั้น
+  const visibleStores = useCallback(
+    (d: DriverStores) => (routeFilter ? d.stores.filter((s) => s.route_code === routeFilter) : d.stores),
+    [routeFilter],
+  );
+
+  const totals = useMemo(() => {
+    const all = filtered.flatMap(visibleStores);
+    const count = (st: Status) => all.filter((s) => s.status === st).length;
+    return { loaded: all.length, done: count("done"), back: count("back"), pending: count("pending") };
+  }, [filtered, visibleStores]);
 
   const exportExcel = () =>
-    exportXlsx(`ร้านขึ้นของ-ส่ง-ไม่ได้ส่ง_${date}.xlsx`, [{
+    exportXlsx(`ร้านขึ้นของ-ส่ง-ไม่ได้ส่ง_${date}${routeFilter ? `_${routeFilter}` : ""}.xlsx`, [{
       name: date,
-      rows: filtered.flatMap((d) => d.stores.map((s) => ({
+      rows: filtered.flatMap((d) => visibleStores(d).map((s) => ({
         "วันที่": date,
         "รหัสพนักงาน": d.emp_code,
         "พนักงาน": d.emp_name,
@@ -287,7 +297,7 @@ export default function DailyStoresTab({ date, empQuery }: { date: string; empQu
       {filtered.length === 0 ? (
         <div className="rounded-3xl bg-white ring-1 ring-blue-100 p-12 text-center text-slate-400">ไม่มีข้อมูลในวันที่เลือก</div>
       ) : (
-        filtered.map((d) => <DriverStoresCard key={d.emp_code} d={d} isToday={isToday} date={date} />)
+        filtered.map((d) => <DriverStoresCard key={d.emp_code} d={d} isToday={isToday} date={date} routeFilter={routeFilter} />)
       )}
     </div>
   );
