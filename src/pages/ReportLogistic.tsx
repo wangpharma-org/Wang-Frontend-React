@@ -5,6 +5,7 @@ import dayjs from "dayjs";
 import DailyStoresTab from "../components/report-logistic/DailyStoresTab";
 import MonthlyPerformanceTab from "../components/report-logistic/MonthlyPerformanceTab";
 import OrderTimeline from "../components/report-logistic/OrderTimeline";
+import { billPriceOf, sumBillPrices, useBillPrices } from "../components/report-logistic/billPrices";
 
 type Tab = "daily" | "stores" | "monthly";
 const TABS: { key: Tab; label: string }[] = [
@@ -39,6 +40,8 @@ interface Delivery {
   box_amount: number;
   bill_count: number;
   shipping_count: number;
+  /** เลขบิลของจุดส่งนี้ — ราคาดึงจาก order-picking (OPHMBC-331) */
+  sh_runnings?: string[];
   bills: BillPrice[];
   total_price: number | null;
 }
@@ -53,11 +56,26 @@ interface Back {
   box_amount: number;
   bill_count: number;
   shipping_count: number;
+  sh_runnings?: string[];
   bills: BillPrice[];
   total_price: number | null;
 }
 
-interface StatusSummary { store_count: number; bill_count: number; box_count: number; total_price: number | null }
+interface StatusSummary { store_count: number; bill_count: number; box_count: number; total_price: number | null; sh_runnings?: string[] }
+
+/** เติมมูลค่าต่อบิลที่ดึงจาก order-picking — ค่าที่ backend ส่งมาเองมาก่อน (ถ้ามี) */
+const withBillPrices = (d: DriverReport): DriverReport => {
+  const status = (s: StatusSummary): StatusSummary => ({ ...s, total_price: s.total_price ?? sumBillPrices(s.sh_runnings) });
+  const visit = <T extends Delivery | Back>(v: T): T => {
+    const bills = v.bills?.length ? v.bills : (v.sh_runnings ?? []).map((so) => ({ sh_running: so, price: billPriceOf(so) }));
+    return { ...v, bills, total_price: v.total_price ?? sumBillPrices(v.sh_runnings) };
+  };
+  return {
+    ...d,
+    in_progress: status(d.in_progress), done: status(d.done), back: status(d.back),
+    deliveries: d.deliveries.map(visit), backs: d.backs.map(visit),
+  };
+};
 
 interface DriverReport {
   emp_code: string;
@@ -370,10 +388,11 @@ function SummaryCard({ label, value, unit, sub, icon, tint, ring = "ring-blue-10
   label: string; value: string | number; unit?: string; sub?: string; icon: React.ReactNode; tint: string; ring?: string; accent?: boolean;
 }) {
   return (
-    <div className={`rounded-3xl shadow-sm p-4 min-w-0 ring-1 ${accent ? "bg-emerald-600 ring-emerald-500" : `bg-white ${ring}`}`}>
+    // การ์ดมูลค่า (accent) กว้าง 2 ช่อง — ตัวเลขหลักล้านไม่ล้นกรอบตอนตัวอักษร 2 เท่า
+    <div className={`rounded-3xl shadow-sm p-4 min-w-0 ring-1 ${accent ? "bg-emerald-600 ring-emerald-500 col-span-2" : `bg-white ${ring}`}`}>
       <span className={`w-10 h-10 rounded-xl grid place-items-center ${tint}`}>{icon}</span>
-      <div className="mt-3 flex items-baseline gap-1 min-w-0">
-        <span className={`text-2xl font-extrabold tabular-nums leading-none break-words ${accent ? "text-white" : "text-slate-800"}`}>{value}</span>
+      <div className="mt-3 flex flex-wrap items-baseline gap-x-1 min-w-0">
+        <span className={`text-2xl font-extrabold tabular-nums leading-none whitespace-nowrap ${accent ? "text-white" : "text-slate-800"}`}>{value}</span>
         {unit && <span className={`text-sm font-medium flex-shrink-0 ${accent ? "text-emerald-100" : "text-slate-400"}`}>{unit}</span>}
       </div>
       <div className={`text-sm mt-1 font-medium ${accent ? "text-emerald-50" : "text-slate-500"}`}>{label}</div>
@@ -716,15 +735,23 @@ export default function ReportLogistic() {
   }, [data]);
 
   // filter ฝั่ง client: รหัส/ชื่อพนักงาน/เส้นทาง (ช่องค้นหา) + เส้นทางที่วิ่งวันนั้น (dropdown)
+  // มูลค่า: ดึงราคาของทุกบิลในรายงานวันนั้น (ครั้งเดียวต่อเลขบิล) แล้วรวมต่อร้าน / คนขับ / ทั้งหมด
+  const priceVersion = useBillPrices(useMemo(
+    () => data.flatMap((d) => [d.in_progress, d.done, d.back].flatMap((s) => s.sh_runnings ?? [])),
+    [data],
+  ));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- priceVersion เปลี่ยนเมื่อได้ราคาใหม่ใน cache
+  const priced = useMemo(() => data.map(withBillPrices), [data, priceVersion]);
+
   const filtered = useMemo(() => {
     const q = empQuery.trim().toLowerCase();
-    return data.filter((d) => {
+    return priced.filter((d) => {
       const empOk = !q || d.emp_code.toLowerCase().includes(q) || d.emp_name.toLowerCase().includes(q)
         || d.routes.some((r) => r.route_code.toLowerCase().includes(q) || (r.route_name ?? "").toLowerCase().includes(q));
       const routeOk = !routeFilter || d.routes.some((r) => r.route_code === routeFilter);
       return empOk && routeOk;
     });
-  }, [data, empQuery, routeFilter]);
+  }, [priced, empQuery, routeFilter]);
 
   const agg = useMemo(() => {
     const sum = (f: (d: DriverReport) => number) => filtered.reduce((s, d) => s + f(d), 0);
@@ -842,7 +869,7 @@ export default function ReportLogistic() {
         ) : (
           <>
             {/* เรียงตามความสำคัญ: ตีกลับ > กำลังส่ง > ส่งสำเร็จ */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
               <SummaryCard label="ตีกลับ" value={agg.backStores} unit="ร้าน" sub={`${agg.backBoxes} ลัง`}
                 tint={agg.backStores > 0 ? "bg-rose-500 text-white" : "bg-rose-50 text-rose-400"} ring={agg.backStores > 0 ? "ring-rose-300 ring-2" : undefined}
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>} />
