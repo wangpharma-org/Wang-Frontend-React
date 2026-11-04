@@ -73,6 +73,14 @@ function TimeBox({ label, time, sub }: { label: string; time: string | null; sub
   );
 }
 
+// เวลาที่ใช้ตั้งแต่ขึ้นของจนส่ง/ตีกลับ (นาที) — ยังไม่ส่ง หรือไม่มีเวลาขึ้นของ = null
+const loadToDoneMin = (s: StoreVisit) => {
+  if (!s.loaded_at || !s.time) return null;
+  const m = Math.round((new Date(s.time).getTime() - new Date(s.loaded_at).getTime()) / 60000);
+  return m >= 0 ? m : null;
+};
+const fmtMin = (m: number | null) => (m == null ? "-" : m >= 60 ? `${Math.floor(m / 60)} ชม. ${m % 60} น.` : `${m} น.`);
+
 // เวลาบรรทัดบน วันที่บรรทัดล่าง
 function DateTime({ iso, empty }: { iso: string | null; empty: string }) {
   if (!iso) return <span className="text-slate-400">{empty}</span>;
@@ -134,7 +142,7 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
       </div>
       {open && (
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-[13px] min-w-[1000px]">
+          <table className="w-full border-collapse text-[13px] min-w-[1100px]">
             <thead>
               <tr className="bg-blue-50 text-blue-700 text-xs">
                 <th className="text-left font-bold px-4 py-2">สถานะ</th>
@@ -144,6 +152,7 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
                 <th className="text-center font-bold px-3 py-2">ลัง · บิล</th>
                 <th className="text-left font-bold px-3 py-2">ขึ้นของ</th>
                 <th className="text-left font-bold px-3 py-2">ส่ง / ตีกลับ</th>
+                <th className="text-right font-bold px-3 py-2 whitespace-nowrap">ขึ้นของ → ส่ง/ตีกลับ</th>
                 <th className="text-left font-bold px-3 py-2">หมายเหตุ</th>
               </tr>
             </thead>
@@ -166,9 +175,10 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
                   <td className="px-3 py-2.5 text-center tabular-nums text-slate-700">{s.box_amount} · {s.bill_count}</td>
                   <td className="px-3 py-2.5"><DateTime iso={s.loaded_at} empty="-" /></td>
                   <td className="px-3 py-2.5"><DateTime iso={s.time} empty="ยังไม่ส่ง" /></td>
+                  <td className={`px-3 py-2.5 text-right tabular-nums whitespace-nowrap ${loadToDoneMin(s) == null ? "text-slate-300" : s.status === "back" ? "font-bold text-rose-600" : "font-bold text-slate-800"}`}>{fmtMin(loadToDoneMin(s))}</td>
                   <td className={`px-3 py-2.5 text-xs break-words max-w-[220px] ${s.status === "back" ? "text-rose-600 font-medium" : "text-slate-500"}`}>{s.note ?? ""}</td>
                 </tr>
-                {openAt(i) && <TimelineRow so={openAt(i)!} colSpan={8} onClose={() => setOpenSo(null)} />}
+                {openAt(i) && <TimelineRow so={openAt(i)!} colSpan={9} onClose={() => setOpenSo(null)} />}
                 </Fragment>
               ))}
             </tbody>
@@ -245,6 +255,7 @@ export default function DailyStoresTab({ date, empQuery }: { date: string; empQu
         "เวลาขึ้นของ": s.loaded_at ? fmtTime(s.loaded_at) : "",
         "วันที่ส่ง/ตีกลับ": s.time ? fmtDate(s.time) : "",
         "เวลาส่ง/ตีกลับ": s.time ? fmtTime(s.time) : "",
+        "ขึ้นของ→ส่ง/ตีกลับ (นาที)": loadToDoneMin(s) ?? "",
         "ลัง": s.box_amount,
         "บิล": s.bill_count,
         "หมายเหตุ": s.note ?? "",
