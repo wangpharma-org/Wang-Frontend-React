@@ -6,6 +6,14 @@ import { SoButton, TimelineRow } from "./OrderTimeline";
 import { useBillNumbers } from "./billNumbers";
 
 // MA-363 — อัตราส่งสำเร็จย้อนหลังรายเดือน (ตัดรอบสิ้นเดือน) + ตัวชี้วัดพฤติกรรม
+// OPHMBC-331 — ดูเป็นรายวันของเดือนที่เลือกได้ (คอลัมน์ = วันที่ ตัดรอบสิ้นวัน)
+
+type Period = "month" | "day";
+const TH_DOW = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
+/** หัวคอลัมน์: เดือน "พ.ย. 69" หรือวัน "3 อ." */
+const fmtPeriod = (key: string) =>
+  key.length === 10 ? `${Number(key.slice(8))} ${TH_DOW[dayjs(key).day()]}.` : fmtMonth(key);
+const fmtPeriodLong = (key: string) => (key.length === 10 ? fmtDate(`${key}T00:00:00`) : fmtMonth(key));
 
 interface Metrics {
   work_days: number;
@@ -78,14 +86,14 @@ const ROWS: { group: string; label: string; get: (m: Metrics) => string; risk?: 
 ];
 
 function DriverDetail({ d, months }: { d: DriverMonthly; months: string[] }) {
-  const cols = [...months.map((m) => ({ key: m, label: fmtMonth(m), m: d.months[m] })), { key: "total", label: "รวม", m: d.total }];
+  const cols = [...months.map((m) => ({ key: m, label: fmtPeriod(m), m: d.months[m] })), { key: "total", label: "รวม", m: d.total }];
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-[length:calc(14px*var(--fs,1))] border-collapse min-w-[640px] [&_td]:border [&_th]:border [&_td]:border-slate-200 [&_th]:border-slate-200">
         <thead>
           <tr className="text-sm text-slate-700 bg-slate-50">
             <th className="text-left font-extrabold px-3 py-2 w-56">ตัวชี้วัด</th>
-            {cols.map((c) => <th key={c.key} className={`text-right font-extrabold px-3 py-2 ${c.key === "total" ? "bg-blue-50 text-blue-700" : ""}`}>{c.label}</th>)}
+            {cols.map((c) => <th key={c.key} className={`text-right font-extrabold px-3 py-2 whitespace-nowrap ${c.key === "total" ? "bg-blue-50 text-blue-700" : ""}`}>{c.label}</th>)}
           </tr>
         </thead>
         <tbody>
@@ -219,6 +227,11 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
   const thisMonth = dayjs().format("YYYY-MM");
   const [from, setFrom] = useState(dayjs().subtract(5, "month").format("YYYY-MM"));
   const [to, setTo] = useState(thisMonth);
+  const [period, setPeriod] = useState<Period>("month");
+  const [dayMonth, setDayMonth] = useState(thisMonth); // รายวัน: ดูทีละเดือน
+  // ช่วงที่ใช้จริง — รายวันใช้เดือนเดียว (ส่งต่อให้รายการร้านตีกลับด้วย)
+  const rangeFrom = period === "day" ? dayMonth : from;
+  const rangeTo = period === "day" ? dayMonth : to;
   const [months, setMonths] = useState<string[]>([]);
   const [data, setData] = useState<DriverMonthly[]>([]);
   const [loading, setLoading] = useState(true);
@@ -231,7 +244,7 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
     setError(null);
     try {
       const res = await axios.get<{ months: string[]; drivers: DriverMonthly[] }>(`${API}/api/logistic/driver-performance/monthly`, {
-        params: { from, to },
+        params: { from: rangeFrom, to: rangeTo, ...(period === "day" ? { by: "day" } : {}) },
         headers: authHeader(),
       });
       setMonths(res.data.months ?? []);
@@ -242,7 +255,7 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
     } finally {
       setLoading(false);
     }
-  }, [from, to]);
+  }, [rangeFrom, rangeTo, period]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -257,8 +270,12 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
   const team = useMemo(() => Object.fromEntries([...months, "total"].map((m) => {
     const ms = rows.map((d) => (m === "total" ? d.total : d.months[m]));
     const done = ms.reduce((s, x) => s + x.done_stores, 0);
-    const all = ms.reduce((s, x) => s + x.done_stores + x.back_stores + x.leftover_stores, 0);
-    return [m, { rate: all ? Math.round((done / all) * 1000) / 10 : null, all }];
+    const back = ms.reduce((s, x) => s + x.back_stores, 0);
+    const left = ms.reduce((s, x) => s + x.leftover_stores, 0);
+    const all = done + back + left;
+    const r = (n: number) => (all ? Math.round((n / all) * 1000) / 10 : null);
+    // ค้างส่ง = ตีกลับ + ค้างไม่ส่ง (ไม่ถึงมือลูกค้า) ÷ ร้านทั้งหมด
+    return [m, { rate: r(done), pending: r(back + left), back, left, all }];
   })), [rows, months]);
 
   const exportExcel = () => {
@@ -284,30 +301,43 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
       "จบกะนอกพื้นที่บริษัท": m.shift_end_outside,
       "ของตีกลับยังไม่คืนคลัง": m.back_not_returned,
     });
-    exportXlsx(`ประเมินขนส่ง_${from}_ถึง_${to}.xlsx`, [
+    const unit = period === "day" ? "วันที่" : "เดือน";
+    exportXlsx(period === "day" ? `ประเมินขนส่ง_รายวัน_${dayMonth}.xlsx` : `ประเมินขนส่ง_${from}_ถึง_${to}.xlsx`, [
       {
         name: "อัตราส่งสำเร็จ",
         rows: rows.map((d) => ({
           "รหัสพนักงาน": d.emp_code,
           "พนักงาน": d.emp_name,
-          ...Object.fromEntries(months.map((m) => [fmtMonth(m), d.months[m].success_rate ?? ""])),
+          ...Object.fromEntries(months.map((m) => [fmtPeriodLong(m), d.months[m].success_rate ?? ""])),
           "รวมทั้งช่วง": d.total.success_rate ?? "",
         })),
       },
       {
-        name: "ตัวชี้วัดรายเดือน",
+        name: period === "day" ? "ตัวชี้วัดรายวัน" : "ตัวชี้วัดรายเดือน",
         rows: rows.flatMap((d) => [...months, "total"].map((m) => ({
           "รหัสพนักงาน": d.emp_code,
           "พนักงาน": d.emp_name,
-          "เดือน": m === "total" ? "รวมทั้งช่วง" : fmtMonth(m),
+          [unit]: m === "total" ? "รวมทั้งช่วง" : fmtPeriodLong(m),
           ...metricRow(m === "total" ? d.total : d.months[m]),
         }))),
+      },
+      {
+        name: "ทั้งทีม",
+        rows: [...months, "total"].map((m) => ({
+          [unit]: m === "total" ? "รวมทั้งช่วง" : fmtPeriodLong(m),
+          "ร้านทั้งหมด": team[m].all,
+          "อัตราส่งสำเร็จ (%)": team[m].rate ?? "",
+          "อัตราค้างส่ง/ตีกลับ (%)": team[m].pending ?? "",
+          "ตีกลับ (ร้าน)": team[m].back,
+          "ค้างไม่ส่ง (ร้าน)": team[m].left,
+        })),
       },
       {
         name: "หมายเหตุ",
         rows: [
           { "หัวข้อ": "อัตราส่งสำเร็จ", "รายละเอียด": "ร้านส่งสำเร็จ ÷ (ส่งสำเร็จ + ตีกลับ + ค้างไม่ส่ง) นับเป็นจำนวนร้าน" },
-          { "หัวข้อ": "ตัดรอบ", "รายละเอียด": "สิ้นเดือนตามเวลาไทย" },
+          { "หัวข้อ": "ตัดรอบ", "รายละเอียด": period === "day" ? "สิ้นวันตามเวลาไทย" : "สิ้นเดือนตามเวลาไทย" },
+          { "หัวข้อ": "อัตราค้างส่ง/ตีกลับ", "รายละเอียด": "(ตีกลับ + ค้างไม่ส่ง) ÷ ร้านทั้งหมด" },
           { "หัวข้อ": "ค้างไม่ส่ง", "รายละเอียด": "งานที่ยังสถานะกำลังส่ง และขึ้นของก่อนวันนี้ (นับตามเดือนที่ขึ้นของ)" },
           { "หัวข้อ": "ข้อจำกัด", "รายละเอียด": "งานตีกลับที่ถูกขึ้นรถใหม่/โอนงาน จะนับให้พนักงานคนล่าสุด ตัวเลขรายคนเป็นค่าประมาณ" },
           { "หัวข้อ": "ไม่นับ", "รายละเอียด": "งานที่ Admin ยืนยันส่งแทน" },
@@ -320,12 +350,30 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
     <div className="space-y-6">
       {/* ตัวกรองช่วงเดือน + export — แถวเดียวเหนือข้อมูล */}
       <div className="flex flex-wrap items-center gap-2">
-        <label className="text-sm text-slate-600">ตั้งแต่</label>
-        <input type="month" value={from} max={to} onChange={(e) => e.target.value && setFrom(e.target.value)}
-          className="border border-blue-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white" />
-        <label className="text-sm text-slate-600">ถึง</label>
-        <input type="month" value={to} min={from} max={thisMonth} onChange={(e) => e.target.value && setTo(e.target.value)}
-          className="border border-blue-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white" />
+        <div role="group" aria-label="ดูเป็น" className="inline-flex rounded-xl ring-1 ring-blue-200 bg-white p-0.5">
+          {(["month", "day"] as const).map((p) => (
+            <button key={p} type="button" aria-pressed={period === p} onClick={() => { setPeriod(p); setOpenEmp(null); }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-bold ${period === p ? "bg-blue-600 text-white" : "text-blue-700 hover:bg-blue-50"}`}>
+              {p === "month" ? "รายเดือน" : "รายวัน"}
+            </button>
+          ))}
+        </div>
+        {period === "month" ? (
+          <>
+            <label className="text-sm text-slate-600">ตั้งแต่</label>
+            <input type="month" value={from} max={to} onChange={(e) => e.target.value && setFrom(e.target.value)}
+              className="border border-blue-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white" />
+            <label className="text-sm text-slate-600">ถึง</label>
+            <input type="month" value={to} min={from} max={thisMonth} onChange={(e) => e.target.value && setTo(e.target.value)}
+              className="border border-blue-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white" />
+          </>
+        ) : (
+          <>
+            <label className="text-sm text-slate-600">เดือน</label>
+            <input type="month" aria-label="เดือนที่ดูรายวัน" value={dayMonth} max={thisMonth} onChange={(e) => e.target.value && setDayMonth(e.target.value)}
+              className="border border-blue-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white" />
+          </>
+        )}
         <select value={sortBy} onChange={(e) => setSortBy(e.target.value as "worst" | "name")}
           className="border border-blue-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white">
           <option value="worst">เรียง: อัตราสำเร็จต่ำสุดก่อน</option>
@@ -350,8 +398,8 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
         <div className="rounded-3xl bg-white ring-1 ring-blue-100 shadow-sm overflow-hidden">
           <div className="px-5 md:px-8 py-6 flex flex-wrap items-center gap-3 border-b border-blue-50">
             <div>
-              <div className="font-extrabold text-lg text-slate-800">อัตราส่งสำเร็จรายเดือน</div>
-              <div className="text-sm text-slate-500">ส่งสำเร็จ ÷ (สำเร็จ + ตีกลับ + ค้างไม่ส่ง) · ตัดรอบสิ้นเดือน · กดชื่อเพื่อดูตัวชี้วัด</div>
+              <div className="font-extrabold text-lg text-slate-800">{period === "day" ? `อัตราส่งสำเร็จรายวัน · ${fmtMonth(dayMonth)}` : "อัตราส่งสำเร็จรายเดือน"}</div>
+              <div className="text-sm text-slate-500">ส่งสำเร็จ ÷ (สำเร็จ + ตีกลับ + ค้างไม่ส่ง) · ตัดรอบสิ้น{period === "day" ? "วัน" : "เดือน"} · กดชื่อเพื่อดูตัวชี้วัด</div>
             </div>
             {/* legend — ทุกช่องมีตัวเลขกำกับ ไม่พึ่งสีอย่างเดียว */}
             <div className="ml-auto flex flex-wrap gap-3 text-sm text-slate-700">
@@ -364,18 +412,28 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
             </div>
           </div>
           <div className="overflow-auto max-h-[75vh]">
-            <table className="w-full border-collapse text-[length:calc(15px*var(--fs,1))] min-w-[760px] [&_td]:border [&_th]:border [&_td]:border-slate-200 [&_th]:border-blue-200">
+            <table className="w-full border-separate border-spacing-0 text-[length:calc(15px*var(--fs,1))] min-w-[760px] [&_td]:border-b [&_td]:border-r [&_th]:border-b [&_th]:border-r [&_td]:border-slate-200 [&_th]:border-blue-200">
               <thead className="sticky top-0 z-[6] bg-blue-50">
                 <tr className="bg-blue-50 text-blue-800 text-sm">
                   <th className="text-left font-extrabold px-4 py-3 sticky left-0 bg-blue-50">พนักงาน</th>
-                  {months.map((m) => <th key={m} className="font-extrabold px-1 py-3 text-center">{fmtMonth(m)}</th>)}
+                  {months.map((m) => <th key={m} className="font-extrabold px-1 py-3 text-center whitespace-nowrap">{fmtPeriod(m)}</th>)}
                   <th className="font-extrabold px-3 py-3 text-center">รวม</th>
                   <th className="font-extrabold px-3 py-3 text-center" title="จำนวนตัวชี้วัดพฤติกรรมที่มีค่ามากกว่า 0 ในช่วงนี้">ควรตรวจสอบ</th>
                 </tr>
                 <tr className="text-sm text-slate-700 bg-slate-50">
-                  <td className="px-4 py-2 font-extrabold sticky left-0 bg-slate-50">ทั้งทีม</td>
+                  <td className="px-4 py-2 font-extrabold sticky left-0 bg-slate-50 whitespace-nowrap">ทั้งทีม · ส่งสำเร็จ</td>
                   {[...months, "total"].map((m) => (
                     <td key={m} className="px-1 py-2 text-center tabular-nums font-extrabold">{pct(team[m]?.rate ?? null)}</td>
+                  ))}
+                  <td />
+                </tr>
+                <tr className="text-sm text-rose-800 bg-rose-50">
+                  <td className="px-4 py-2 font-extrabold sticky left-0 bg-rose-50 whitespace-nowrap" title="(ตีกลับ + ค้างไม่ส่ง) ÷ ร้านทั้งหมด">ทั้งทีม · ค้างส่ง/ตีกลับ</td>
+                  {[...months, "total"].map((m) => (
+                    <td key={m} className="px-1 py-2 text-center tabular-nums font-extrabold"
+                      title={team[m]?.all ? `ตีกลับ ${team[m].back} · ค้างไม่ส่ง ${team[m].left} จาก ${team[m].all} ร้าน` : undefined}>
+                      {pct(team[m]?.pending ?? null)}
+                    </td>
                   ))}
                   <td />
                 </tr>
@@ -387,17 +445,18 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
                   return (
                     <Fragment key={d.emp_code}>
                       <tr className={`border-t border-slate-100 cursor-pointer hover:bg-blue-50/40 ${open ? "bg-blue-50/50" : ""}`} onClick={() => setOpenEmp(open ? null : d.emp_code)}>
-                        <td className="px-4 py-2 sticky left-0 bg-inherit">
+                        <td className="px-4 py-2 sticky left-0 z-[1] bg-white">
                           <div className="font-extrabold text-slate-900">{d.emp_name}</div>
                           <div className="text-xs text-slate-500 font-mono font-semibold">{d.emp_code}</div>
                         </td>
                         {[...months.map((m) => [m, d.months[m]] as const), ["total", d.total] as const].map(([m, x]) => {
                           const lv = level(x.success_rate);
                           return (
-                            <td key={m} className="px-[2px] py-[2px]">
+                            <td key={m} className="px-[2px] py-[2px] min-w-[calc(4.5rem*var(--fs,1))]">
                               <div
-                                className={`rounded-md h-14 flex flex-col items-center justify-center tabular-nums ${LEVEL[lv].cell} ${m === "total" ? "ring-2 ring-blue-300" : ""}`}
-                                title={`${d.emp_name} · ${m === "total" ? "รวม" : fmtMonth(m)}\nส่งสำเร็จ ${x.done_stores} · ตีกลับ ${x.back_stores} · ค้าง ${x.leftover_stores} ร้าน`}
+                                style={{ height: "calc(3.5rem * var(--fs, 1))" }}
+                                className={`rounded-md flex flex-col items-center justify-center tabular-nums ${LEVEL[lv].cell} ${m === "total" ? "ring-2 ring-blue-300" : ""}`}
+                                title={`${d.emp_name} · ${m === "total" ? "รวม" : fmtPeriodLong(m)}\nส่งสำเร็จ ${x.done_stores} · ตีกลับ ${x.back_stores} · ค้าง ${x.leftover_stores} ร้าน`}
                               >
                                 <span className={`text-lg font-extrabold leading-none ${LEVEL[lv].text}`}>{pct(x.success_rate)}</span>
                                 {x.success_rate != null && <span className={`text-xs font-semibold mt-1 ${LEVEL[lv].sub}`}>{x.done_stores + x.back_stores + x.leftover_stores} ร้าน</span>}
@@ -415,7 +474,7 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
                         <tr className="bg-white">
                           <td colSpan={months.length + 3} className="px-2 pb-4 border-b border-blue-100">
                             <DriverDetail d={d} months={months} />
-                            <BackStores empCode={d.emp_code} from={from} to={to} />
+                            <BackStores empCode={d.emp_code} from={rangeFrom} to={rangeTo} />
                           </td>
                         </tr>
                       )}
