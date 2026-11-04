@@ -81,7 +81,7 @@ function DriverDetail({ d, months }: { d: DriverMonthly; months: string[] }) {
   const cols = [...months.map((m) => ({ key: m, label: fmtMonth(m), m: d.months[m] })), { key: "total", label: "รวม", m: d.total }];
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-[14px] border-collapse min-w-[640px] [&_td]:border [&_th]:border [&_td]:border-slate-200 [&_th]:border-slate-200">
+      <table className="w-full text-[length:calc(14px*var(--fs,1))] border-collapse min-w-[640px] [&_td]:border [&_th]:border [&_td]:border-slate-200 [&_th]:border-slate-200">
         <thead>
           <tr className="text-sm text-slate-700 bg-slate-50">
             <th className="text-left font-extrabold px-3 py-2 w-56">ตัวชี้วัด</th>
@@ -166,7 +166,7 @@ function BackStores({ empCode, from, to }: { empCode: string; from: string; to: 
         <div className="text-sm text-slate-400">ไม่มีร้านที่ตีกลับในช่วงนี้</div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-[14px] border-collapse min-w-[960px] [&_td]:border [&_th]:border [&_td]:border-rose-100 [&_th]:border-rose-200">
+          <table className="w-full text-[length:calc(14px*var(--fs,1))] border-collapse min-w-[960px] [&_td]:border [&_th]:border [&_td]:border-rose-100 [&_th]:border-rose-200">
             <thead>
               <tr className="bg-rose-50 text-rose-800 text-sm">
                 <th className="text-left font-extrabold px-3 py-2">วันที่</th>
@@ -191,7 +191,7 @@ function BackStores({ empCode, from, to }: { empCode: string; from: string; to: 
                     <div className="text-xs text-slate-500 font-mono">{b.mem_code}</div>
                   </td>
                   <td className="px-3 py-2 text-slate-700">{b.route_code ? <><b>{b.route_code}</b> {b.route_name ?? ""}</> : "-"}</td>
-                  <td className="px-3 py-2 font-mono text-xs text-slate-600">{b.sh_runnings.length ? b.sh_runnings.map((so) => <div key={so}><SoButton so={so} active={openSo === `${i}|${so}`} onToggle={() => toggle(i, so)} />{invoice(so) && <div className="text-[11px] font-sans text-slate-500">ใบกำกับ <span className="font-mono text-slate-700">{invoice(so)}</span></div>}</div>) : "-"}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-slate-600">{b.sh_runnings.length ? b.sh_runnings.map((so) => <div key={so}><SoButton so={so} active={openSo === `${i}|${so}`} onToggle={() => toggle(i, so)} />{invoice(so) && <div className="text-[length:calc(11px*var(--fs,1))] font-sans text-slate-500">ใบกำกับ <span className="font-mono text-slate-700">{invoice(so)}</span></div>}</div>) : "-"}</td>
                   <td className="px-3 py-2 font-mono text-xs text-slate-600">{b.bill_notes.length ? b.bill_notes.map((no) => <div key={no}>{no}</div>) : "-"}</td>
                   <td className="px-3 py-2 text-center tabular-nums font-semibold">{b.box_amount}</td>
                   <td className="px-3 py-2 text-rose-700 font-semibold break-words max-w-[260px]">
@@ -357,14 +357,14 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
             <div className="ml-auto flex flex-wrap gap-3 text-sm text-slate-700">
               {(["perfect", "good", "warn", "bad"] as const).map((k) => (
                 <span key={k} className="inline-flex items-center gap-1.5 font-semibold">
-                  <span className={`w-5 h-5 rounded grid place-items-center text-[11px] font-bold ${LEVEL[k].text} ${LEVEL[k].cell}`}>{LEVEL[k].icon}</span>
+                  <span className={`w-5 h-5 rounded grid place-items-center text-[length:calc(11px*var(--fs,1))] font-bold ${LEVEL[k].text} ${LEVEL[k].cell}`}>{LEVEL[k].icon}</span>
                   {LEVEL[k].label}
                 </span>
               ))}
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-[15px] min-w-[760px] [&_td]:border [&_th]:border [&_td]:border-slate-200 [&_th]:border-blue-200">
+            <table className="w-full border-collapse text-[length:calc(15px*var(--fs,1))] min-w-[760px] [&_td]:border [&_th]:border [&_td]:border-slate-200 [&_th]:border-blue-200">
               <thead>
                 <tr className="bg-blue-50 text-blue-800 text-sm">
                   <th className="text-left font-extrabold px-4 py-3 sticky left-0 bg-blue-50">พนักงาน</th>

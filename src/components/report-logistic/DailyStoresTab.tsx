@@ -57,7 +57,7 @@ function Count({ label, n, tone }: { label: string; n: number; tone: string }) {
   return (
     <div className={`rounded-lg px-3 py-1.5 text-center ${n > 0 ? tone : "bg-white/10 text-blue-50/60"}`}>
       <div className="text-lg font-extrabold leading-none tabular-nums">{n}</div>
-      <div className="text-[11px] font-semibold mt-0.5">{label}</div>
+      <div className="text-[length:calc(11px*var(--fs,1))] font-semibold mt-0.5">{label}</div>
     </div>
   );
 }
@@ -66,9 +66,9 @@ function Count({ label, n, tone }: { label: string; n: number; tone: string }) {
 function TimeBox({ label, time, sub }: { label: string; time: string | null; sub?: string }) {
   return (
     <div className="rounded-lg bg-white/15 px-3 py-2 min-w-0">
-      <div className="text-[11px] font-semibold text-blue-50/85">{label}</div>
+      <div className="text-[length:calc(11px*var(--fs,1))] font-semibold text-blue-50/85">{label}</div>
       <div className="text-white font-extrabold text-base leading-tight tabular-nums">{fmtTime(time)}</div>
-      {sub && <div className="text-[11px] text-blue-50/85 truncate" title={sub}>{sub}</div>}
+      {sub && <div className="text-[length:calc(11px*var(--fs,1))] text-blue-50/85 truncate" title={sub}>{sub}</div>}
     </div>
   );
 }
@@ -87,7 +87,7 @@ function DateTime({ iso, empty }: { iso: string | null; empty: string }) {
   return (
     <>
       <div className="font-bold text-slate-700 tabular-nums">{fmtTime(iso)}</div>
-      <div className="text-[11px] text-slate-400">{fmtDate(iso)}</div>
+      <div className="text-[length:calc(11px*var(--fs,1))] text-slate-400">{fmtDate(iso)}</div>
     </>
   );
 }
@@ -142,7 +142,7 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
       </div>
       {open && (
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-[13px] min-w-[1100px]">
+          <table className="w-full border-collapse text-[length:calc(13px*var(--fs,1))] min-w-[1100px]">
             <thead>
               <tr className="bg-blue-50 text-blue-700 text-xs">
                 <th className="text-left font-bold px-4 py-2">สถานะ</th>
@@ -161,7 +161,7 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
                 <Fragment key={`${s.status}-${s.mem_code}-${i}`}>
                 <tr className={`border-t border-blue-50 align-top ${s.status === "done" ? "" : "bg-rose-50/30"}`}>
                   <td className="px-4 py-2.5">
-                    <span className={`inline-block text-[11px] font-bold px-2 py-0.5 rounded-full ring-1 w-20 text-center ${STATUS_STYLE[s.status]}`}>
+                    <span className={`inline-block text-[length:calc(11px*var(--fs,1))] font-bold px-2 py-0.5 rounded-full ring-1 w-20 text-center ${STATUS_STYLE[s.status]}`}>
                       {statusLabel(s.status, isToday)}
                     </span>
                   </td>
@@ -170,7 +170,7 @@ function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: bool
                     <div className="text-xs text-slate-400"><span className="font-mono">{s.mem_code}</span></div>
                     {s.route_code && <div className="text-xs text-slate-500">เส้นทาง <b className="text-slate-700">{s.route_code}</b>{s.route_name ? ` ${s.route_name}` : ""}</div>}
                   </td>
-                  <td className="px-3 py-2.5 font-mono text-xs text-slate-600">{s.sh_runnings.length ? s.sh_runnings.map((no) => <div key={no}><SoButton so={no} active={openSo === `${i}|${no}`} onToggle={() => toggle(i, no)} />{invoice(no) && <div className="text-[11px] font-sans text-slate-500">ใบกำกับ <span className="font-mono text-slate-700">{invoice(no)}</span></div>}</div>) : <span className="text-slate-300">-</span>}</td>
+                  <td className="px-3 py-2.5 font-mono text-xs text-slate-600">{s.sh_runnings.length ? s.sh_runnings.map((no) => <div key={no}><SoButton so={no} active={openSo === `${i}|${no}`} onToggle={() => toggle(i, no)} />{invoice(no) && <div className="text-[length:calc(11px*var(--fs,1))] font-sans text-slate-500">ใบกำกับ <span className="font-mono text-slate-700">{invoice(no)}</span></div>}</div>) : <span className="text-slate-300">-</span>}</td>
                   <td className="px-3 py-2.5 font-mono text-xs text-slate-600">{s.bill_notes.length ? s.bill_notes.map((no) => <div key={no}>{no}</div>) : <span className="text-slate-300">-</span>}</td>
                   <td className="px-3 py-2.5 text-center tabular-nums text-slate-700">{s.box_amount} · {s.bill_count}</td>
                   <td className="px-3 py-2.5"><DateTime iso={s.loaded_at} empty="-" /></td>

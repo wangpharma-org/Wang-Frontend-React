@@ -29,7 +29,111 @@ interface DeliveryTimeline {
   mem_name: string;
   box_amount: number;
   driver: string | null;
+  driver_tel: string | null;
+  car_number: string | null;
+  route_code: string | null;
+  route_name: string | null;
+  /** มีเฉพาะตอนกำลังส่ง (ออกรถแล้ว ยังไม่ส่งสำเร็จ) — พิกัดจากมือถือคนขับตอนออกรถ / ตอนปิดงานร้านล่าสุด */
+  live_location: LiveLocation | null;
   events: TimelineEvent[];
+}
+
+interface LiveLocation {
+  type: "STORE_DELIVERED" | "DEPARTURE";
+  store_name: string | null;
+  at: string | null;
+  maps_url: string | null;
+  stores_delivered: number;
+  stores_total: number;
+}
+
+const fmtDateTime = (iso: string | null) => (iso ? `${fmtDate(iso)} ${fmtTime(iso)}` : "");
+
+/**
+ * ข้อความส่งลูกค้า — ไม่ใส่ชื่อร้านอื่นที่รถเพิ่งไปส่ง (เหมือนหน้า tracking ของลูกค้า ที่ไม่ส่งรหัสร้านอื่นออกไป)
+ * บอกแค่เวลา + จำนวนร้านที่ส่งแล้ว + ลิงก์แผนที่
+ */
+function buildShareText(so: string, picking: PickingTimeline | null, delivery: DeliveryTimeline | null, latest: TimelineEvent | null) {
+  const lines = [`สถานะออเดอร์ ${so}`];
+  const store = picking?.mem_name ?? delivery?.mem_name;
+  if (store) lines.push(`ร้าน: ${store}`);
+  if (picking?.bill_number) lines.push(`ใบกำกับ: ${picking.bill_number}`);
+  const status = delivery?.status ?? (picking ? "อยู่ในคลัง" : "");
+  if (status) lines.push(`สถานะ: ${status}${latest?.at ? ` (${latest.label} ${fmtDateTime(latest.at)})` : ""}`);
+  if (delivery?.driver) {
+    const route = [delivery.route_code, delivery.route_name].filter(Boolean).join(" ");
+    lines.push(`คนขับ: ${delivery.driver}${route ? ` · เส้นทาง ${route}` : ""}`);
+  }
+  if (delivery?.driver_tel) lines.push(`เบอร์คนขับ: ${delivery.driver_tel}`);
+  if (delivery?.car_number) lines.push(`ทะเบียนรถ: ${delivery.car_number}`);
+  const live = delivery?.live_location;
+  if (live) {
+    lines.push(live.type === "STORE_DELIVERED"
+      ? `ตำแหน่งรถล่าสุด: ส่งแล้ว ${live.stores_delivered}/${live.stores_total} ร้าน (อัปเดต ${fmtTime(live.at)})`
+      : `ตำแหน่งรถล่าสุด: ออกรถแล้ว ยังไม่ถึงร้านแรก (ออก ${fmtTime(live.at)})`);
+    if (live.maps_url) lines.push(`แผนที่: ${live.maps_url}`);
+  }
+  return lines.join("\n");
+}
+
+/** clipboard API ใช้ได้เฉพาะ https/localhost — หน้าที่เปิดผ่าน http ใช้ textarea + execCommand แทน */
+async function copyText(text: string) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch { /* ใช้วิธีสำรองด้านล่าง */ }
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.select();
+  const ok = document.execCommand("copy");
+  ta.remove();
+  return ok;
+}
+
+function ShareButtons({ text }: { text: string }) {
+  const [msg, setMsg] = useState("");
+  const flash = (m: string) => { setMsg(m); window.setTimeout(() => setMsg(""), 2000); };
+  const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+  return (
+    <div className="flex items-center gap-2">
+      <button type="button" onClick={async () => flash((await copyText(text)) ? "คัดลอกแล้ว" : "คัดลอกไม่สำเร็จ")}
+        className="text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 ring-1 ring-blue-200 rounded-lg px-3 py-1.5" title={text}>
+        คัดลอกส่งลูกค้า
+      </button>
+      {canShare && (
+        <button type="button" onClick={() => navigator.share({ text }).catch(() => {})}
+          className="text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 ring-1 ring-emerald-200 rounded-lg px-3 py-1.5">
+          แชร์
+        </button>
+      )}
+      {msg && <span role="status" className="text-xs font-semibold text-slate-500">{msg}</span>}
+    </div>
+  );
+}
+
+/** รถอยู่ที่ไหน — แสดงระหว่างออกรถ → ส่งสำเร็จ */
+function LiveLocationBar({ live }: { live: LiveLocation }) {
+  return (
+    <div className="mx-4 md:mx-6 mt-3 rounded-xl bg-amber-50 ring-1 ring-amber-200 px-4 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-1" role="group" aria-label="ตำแหน่งรถล่าสุด">
+      <span className="text-sm font-extrabold text-amber-800">ตำแหน่งรถล่าสุด</span>
+      <span className="text-sm text-slate-700">
+        {live.type === "STORE_DELIVERED"
+          ? <>ส่งร้านล่าสุด <b>{live.store_name}</b> เมื่อ <b className="tabular-nums">{fmtTime(live.at)}</b></>
+          : <>ออกรถแล้ว ยังไม่ถึงร้านแรก · ออกรถ <b className="tabular-nums">{fmtTime(live.at)}</b></>}
+        <span className="text-slate-500"> · ส่งแล้ว {live.stores_delivered}/{live.stores_total} ร้าน</span>
+      </span>
+      {live.maps_url
+        ? <a href={live.maps_url} target="_blank" rel="noreferrer" className="text-sm font-semibold text-blue-700 hover:underline">เปิดแผนที่ ↗</a>
+        : <span className="text-xs text-slate-400">ไม่มีพิกัด</span>}
+      <span className="text-xs text-slate-400 w-full">พิกัดจากมือถือคนขับตอนออกรถ / ตอนปิดงานแต่ละร้าน (ไม่ใช่ GPS สด)</span>
+    </div>
+  );
 }
 
 type Side = "picking" | "delivery";
@@ -93,16 +197,16 @@ function TimelineNode({ n, prevAt, showDate, skipped }: { n: Node; prevAt: strin
   const done = !!n.at;
   const gap = done ? fmtGap(minutesBetween(prevAt, n.at)) : "";
   return (
-    <div className="relative flex-none w-28 pt-9">
+    <div className="relative flex-none pt-9" style={{ width: "calc(7rem * var(--fs, 1))" }}>
       {/* เส้นเชื่อม + ระยะเวลาจากขั้นก่อนหน้า */}
       <div className={`absolute left-0 right-0 top-[18px] h-0.5 ${done ? "bg-slate-300" : "bg-slate-200 border-t border-dashed border-slate-300"}`} />
-      {gap && <div className="absolute -left-10 top-0 w-20 text-center text-[11px] font-semibold text-slate-500 tabular-nums">{gap}</div>}
+      {gap && <div className="absolute left-0 top-0 text-center whitespace-nowrap -translate-x-1/2 bg-white px-1 text-[length:calc(11px*var(--fs,1))] font-semibold text-slate-500 tabular-nums">{gap}</div>}
       <span className={`absolute left-1/2 -translate-x-1/2 top-2.5 w-4 h-4 rounded-full ring-4 ${done ? tone.dot : "bg-white ring-slate-200 border-2 border-slate-300"}`} />
       <div className="px-2 text-center">
         <div className={`text-sm font-extrabold leading-tight ${done ? tone.text : "text-slate-400"}`}>{n.label}</div>
         <div className={`tabular-nums mt-0.5 ${done ? "text-base font-extrabold text-slate-800" : skipped ? "text-xs font-semibold text-slate-400" : "text-base font-extrabold text-slate-300"}`}>{done ? fmtTime(n.at) : skipped ? "ไม่มีบันทึก" : "รอ"}</div>
-        {done && showDate && <div className="text-[11px] font-semibold text-slate-500">{fmtDate(n.at)}</div>}
-        {n.detail && <div className="text-[11px] text-slate-500 mt-0.5 break-words" title={n.detail}>{n.detail}</div>}
+        {done && showDate && <div className="text-[length:calc(11px*var(--fs,1))] font-semibold text-slate-500">{fmtDate(n.at)}</div>}
+        {n.detail && <div className="text-[length:calc(11px*var(--fs,1))] text-slate-500 mt-0.5 break-words" title={n.detail}>{n.detail}</div>}
       </div>
     </div>
   );
@@ -155,6 +259,9 @@ export default function OrderTimeline({ shRunning, onClose }: { shRunning: strin
     return node;
   });
 
+  const latestEvent = timed[timed.length - 1] ?? null;
+  const shareText = buildShareText(shRunning, picking, delivery, latestEvent);
+  const route = [delivery?.route_code ?? picking?.route_code, delivery?.route_name].filter(Boolean).join(" ");
   const status = delivery?.status ?? (picking ? "อยู่ในคลัง" : "");
   const statusTone = status === "ส่งแล้ว" ? "bg-emerald-100 text-emerald-700" : status === "ตีกลับ" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-800";
 
@@ -170,10 +277,18 @@ export default function OrderTimeline({ shRunning, onClose }: { shRunning: strin
             <div className="text-sm text-slate-600 mt-0.5">
               {picking?.mem_name ?? delivery?.mem_name ?? ""}
               {picking?.mem_code ? <span className="font-mono text-slate-400"> · {picking.mem_code}</span> : null}
-              {picking?.route_code ? ` · ${picking.route_code}` : ""}
               {picking?.bill_number ? ` · ใบกำกับ ${picking.bill_number}` : ""}
-              {delivery?.driver ? ` · คนขับ ${delivery.driver}` : ""}
             </div>
+            {(delivery?.driver || route) && (
+              <div className="text-sm text-slate-600 mt-0.5 flex flex-wrap gap-x-3" aria-label="ข้อมูลขนส่ง">
+                {delivery?.driver && <span>คนขับ <b className="text-slate-800">{delivery.driver}</b></span>}
+                {route && <span>เส้นทาง <b className="text-slate-800">{route}</b></span>}
+                {delivery?.driver && <span>โทร {delivery.driver_tel
+                  ? <a href={`tel:${delivery.driver_tel}`} className="font-bold text-blue-700 hover:underline">{delivery.driver_tel}</a>
+                  : <span className="text-slate-400">ไม่มีเบอร์ในระบบ</span>}</span>}
+                {delivery?.driver && <span>ทะเบียน {delivery.car_number ? <b className="text-slate-800">{delivery.car_number}</b> : <span className="text-slate-400">ไม่ได้ผูกรถ</span>}</span>}
+              </div>
+            )}
           </div>
           {first && (
             <div className="text-right">
@@ -181,6 +296,7 @@ export default function OrderTimeline({ shRunning, onClose }: { shRunning: strin
               <div className="text-xl font-extrabold text-slate-900 tabular-nums">{fmtGap(minutesBetween(first, finish ?? new Date().toISOString()))}</div>
             </div>
           )}
+          {!loading && nodes.length > 0 && <ShareButtons text={shareText} />}
           <button type="button" onClick={onClose} className="text-slate-500 hover:text-slate-800 text-sm font-semibold bg-slate-100 hover:bg-slate-200 rounded-lg px-3 py-1.5">ปิด</button>
         </div>
 
@@ -189,6 +305,8 @@ export default function OrderTimeline({ shRunning, onClose }: { shRunning: strin
         ) : nodes.length === 0 ? (
           <div className="py-8 text-center text-slate-500">ไม่พบบิล {shRunning} ทั้งในระบบคลังและระบบขนส่ง</div>
         ) : (
+          <>
+          {delivery?.live_location && <LiveLocationBar live={delivery.live_location} />}
           <div className="px-4 md:px-6 py-4">
             {/* ป้ายกลุ่ม */}
             <div className="flex gap-4 text-xs font-bold mb-1">
@@ -204,10 +322,11 @@ export default function OrderTimeline({ shRunning, onClose }: { shRunning: strin
                 ))}
               </ol>
             </div>
-            <div className="text-[11px] text-slate-400 mt-2">
+            <div className="text-[length:calc(11px*var(--fs,1))] text-slate-400 mt-2">
               เวลาระหว่างขั้นคิดจากขั้นก่อนหน้าที่มีเวลา · "รอ" = ยังไม่ถึงขั้นนั้น · "ไม่มีบันทึก" = ผ่านขั้นนั้นไปแล้วแต่ระบบไม่ได้เก็บเวลา · เริ่มจัดใช้เวลาที่เร็วกว่าระหว่างเวลาเริ่มจัดของร้านกับรายการแรกที่หยิบ
             </div>
           </div>
+          </>
         )}
     </section>
   );

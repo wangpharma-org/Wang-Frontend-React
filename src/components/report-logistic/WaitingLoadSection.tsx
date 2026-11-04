@@ -70,7 +70,7 @@ function RouteCard({ r, active, onToggle }: { r: WaitingRoute; active: boolean; 
         รอนานสุด {waited(r.oldest_ready_at)}
       </div>
       {r.carried_over_count > 0 && (
-        <span className="mt-1.5 inline-block text-[11px] font-bold text-rose-700 bg-rose-100 rounded-full px-2 py-0.5">ค้างข้ามวัน {r.carried_over_count} ร้าน</span>
+        <span className="mt-1.5 inline-block text-[length:calc(11px*var(--fs,1))] font-bold text-rose-700 bg-rose-100 rounded-full px-2 py-0.5">ค้างข้ามวัน {r.carried_over_count} ร้าน</span>
       )}
     </button>
   );
@@ -115,7 +115,7 @@ function RouteDetail({ r, query, loadStores, onClose }: { r: WaitingRoute; query
         <div className="px-4 py-6 text-sm text-slate-500">ไม่มีร้าน{q ? "ตามที่ค้นหา" : ""}</div>
       ) : (
       <div className="overflow-x-auto">
-        <table className="w-full text-[13px] border-collapse min-w-[640px]">
+        <table className="w-full text-[length:calc(13px*var(--fs,1))] border-collapse min-w-[640px]">
           <thead>
             <tr className="bg-amber-50 text-amber-900 text-xs">
               <th className="text-left font-bold px-4 py-2">ร้าน</th>
@@ -136,18 +136,18 @@ function RouteDetail({ r, query, loadStores, onClose }: { r: WaitingRoute; query
                 </td>
                 <td className="px-3 py-2 font-mono text-xs">
                   {s.sh_runnings.map((so) => (
-                    <div key={so}><SoButton so={so} active={openSo === `${i}|${so}`} onToggle={() => toggle(i, so)} />{invoice(so) && <div className="text-[11px] font-sans text-slate-500">ใบกำกับ <span className="font-mono text-slate-700">{invoice(so)}</span></div>}</div>
+                    <div key={so}><SoButton so={so} active={openSo === `${i}|${so}`} onToggle={() => toggle(i, so)} />{invoice(so) && <div className="text-[length:calc(11px*var(--fs,1))] font-sans text-slate-500">ใบกำกับ <span className="font-mono text-slate-700">{invoice(so)}</span></div>}</div>
                   ))}
                   {/* งานที่มีแต่ใบวางบิล (ไม่มีเลข SO) — แสดงเลขบิล กดดู timeline ได้เหมือนกัน */}
                   {(s.bill_notes ?? []).map((no) => (
-                    <div key={no}><SoButton so={no} active={openSo === `${i}|${no}`} onToggle={() => toggle(i, no)} /><div className="text-[11px] font-sans text-slate-500">ใบวางบิล</div></div>
+                    <div key={no}><SoButton so={no} active={openSo === `${i}|${no}`} onToggle={() => toggle(i, no)} /><div className="text-[length:calc(11px*var(--fs,1))] font-sans text-slate-500">ใบวางบิล</div></div>
                   ))}
                   {!s.sh_runnings.length && !(s.bill_notes ?? []).length && "-"}
                 </td>
                 <td className="px-3 py-2 text-center tabular-nums font-semibold">{s.box_amount}</td>
                 <td className="px-3 py-2 tabular-nums">
                   <div className="font-bold text-slate-700">{fmtTime(s.ready_at)}</div>
-                  <div className="text-[11px] text-slate-400">{fmtDate(s.ready_at)}</div>
+                  <div className="text-[length:calc(11px*var(--fs,1))] text-slate-400">{fmtDate(s.ready_at)}</div>
                 </td>
                 <td className={`px-3 py-2 tabular-nums font-semibold ${s.carried_over ? "text-rose-700" : "text-slate-700"}`}>{waited(s.ready_at)}</td>
               </tr>
@@ -249,7 +249,7 @@ export default function WaitingLoadSection({ date, query }: { date: string; quer
                 );
               })}
             </div>
-            <div className="px-5 py-2 text-[11px] text-slate-400 border-t border-amber-100">
+            <div className="px-5 py-2 text-[length:calc(11px*var(--fs,1))] text-slate-400 border-t border-amber-100">
               สถานะ ณ ตอนนี้: งานที่พร้อมส่ง (พิมพ์สติกเกอร์แล้ว) แต่ยังไม่สแกนขึ้นรถ ตั้งแต่ {data.lookback_days} วันก่อนถึง{isToday ? "วันนี้" : "วันที่เลือก"} · งานที่เคยรอแล้วขึ้นรถไปแล้วไม่อยู่ในรายการ
             </div>
           </>
