@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
 import { API, authHeader, fmtDate, fmtTime } from "./shared";
@@ -16,6 +16,7 @@ interface WaitingStore {
   carried_over: boolean;
 }
 
+// สรุปต่อเส้นทาง — รายชื่อร้านดึงแยกตอนกดกล่อง (waiting-load/stores)
 interface WaitingRoute {
   route_code: string | null;
   route_name: string | null;
@@ -23,7 +24,6 @@ interface WaitingRoute {
   box_count: number;
   carried_over_count: number;
   oldest_ready_at: string | null;
-  stores: WaitingStore[];
 }
 
 interface WaitingLoad {
@@ -74,7 +74,24 @@ function RouteCard({ r, active, onToggle }: { r: WaitingRoute; active: boolean; 
 }
 
 /** แผงรายละเอียดของเส้นทาง — กว้างเต็มแถว อยู่ใต้แถวของกล่องที่กด */
-function RouteDetail({ r, onClose }: { r: WaitingRoute; onClose: () => void }) {
+type LoadStores = (routeCode: string | null) => Promise<WaitingStore[]>;
+
+function RouteDetail({ r, query, loadStores, onClose }: { r: WaitingRoute; query: string; loadStores: LoadStores; onClose: () => void }) {
+  const [stores, setStores] = useState<WaitingStore[] | null>(null);
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    setStores(null);
+    setError(false);
+    loadStores(r.route_code)
+      .then((list) => { if (alive) setStores(list); })
+      .catch(() => { if (alive) setError(true); });
+    return () => { alive = false; };
+  }, [loadStores, r.route_code]);
+  // ช่องค้นหาของหน้า: ถ้าไม่ได้ค้นด้วยชื่อเส้นทาง ให้กรองร้านในแผง
+  const q = query.trim().toLowerCase();
+  const routeMatch = !q || (r.route_code ?? "").toLowerCase().includes(q) || (r.route_name ?? "").toLowerCase().includes(q);
+  const shown = (stores ?? []).filter((s) => routeMatch || s.mem_name.toLowerCase().includes(q) || s.mem_code.toLowerCase().includes(q));
   // OPHMBC-331 — เลข SO ที่กาง timeline อยู่ ("แถว|SO") กดซ้ำเพื่อพับ
   const [openSo, setOpenSo] = useState<string | null>(null);
   const toggle = (row: number | string, so: string) => setOpenSo((cur) => (cur === `${row}|${so}` ? null : `${row}|${so}`));
@@ -86,6 +103,13 @@ function RouteDetail({ r, onClose }: { r: WaitingRoute; onClose: () => void }) {
         <span className="text-sm text-slate-700 tabular-nums"><b>{r.store_count}</b> ร้าน · <b>{r.box_count}</b> ลัง</span>
         <button type="button" onClick={onClose} className="ml-auto text-slate-500 hover:text-slate-800 text-sm font-semibold bg-white hover:bg-slate-100 rounded-lg px-3 py-1">ปิด</button>
       </div>
+      {stores == null ? (
+        error
+          ? <div className="px-4 py-6 text-sm text-slate-500">โหลดรายชื่อร้านไม่สำเร็จ</div>
+          : <div className="flex justify-center py-6"><div className="w-7 h-7 border-[3px] border-blue-600 border-t-transparent rounded-full animate-spin" /></div>
+      ) : shown.length === 0 ? (
+        <div className="px-4 py-6 text-sm text-slate-500">ไม่มีร้าน{q ? "ตามที่ค้นหา" : ""}</div>
+      ) : (
       <div className="overflow-x-auto">
         <table className="w-full text-[13px] border-collapse min-w-[640px]">
           <thead>
@@ -98,12 +122,13 @@ function RouteDetail({ r, onClose }: { r: WaitingRoute; onClose: () => void }) {
             </tr>
           </thead>
           <tbody>
-            {r.stores.map((s, i) => (
+            {shown.map((s, i) => (
               <Fragment key={`${s.mem_code}-${s.ready_at}`}>
               <tr className={`border-t border-amber-50 align-top ${s.carried_over ? "bg-rose-50/40" : ""}`}>
                 <td className="px-4 py-2">
                   <div className="font-bold text-slate-800">{s.mem_name}</div>
-                  <div className="text-xs text-slate-400 font-mono">{s.mem_code}{s.shipping_count > 1 ? ` · ${s.shipping_count} ใบ` : ""}</div>
+                  <div className="text-xs text-slate-400"><span className="font-mono">{s.mem_code}</span>{s.shipping_count > 1 ? ` · ${s.shipping_count} ใบ` : ""}</div>
+                  <div className="text-xs text-slate-500">เส้นทาง <b className="text-slate-700">{r.route_code ?? "-"}</b>{r.route_name ? ` ${r.route_name}` : ""}</div>
                 </td>
                 <td className="px-3 py-2 font-mono text-xs">
                   {s.sh_runnings.length ? s.sh_runnings.map((so) => (
@@ -123,6 +148,7 @@ function RouteDetail({ r, onClose }: { r: WaitingRoute; onClose: () => void }) {
           </tbody>
         </table>
       </div>
+      )}
     </section>
   );
 }
@@ -132,6 +158,26 @@ export default function WaitingLoadSection({ date, query }: { date: string; quer
   const [error, setError] = useState(false);
   const [open, setOpen] = useState(true);
   const [selected, setSelected] = useState<string | null>(null); // route_code ที่กางรายละเอียด ("" = ไม่ระบุเส้นทาง)
+  // ร้านของแต่ละเส้นทางดึงตอนเปิดดูครั้งแรกเท่านั้น — เก็บ promise ไว้ใช้ซ้ำ (เปิดซ้ำ / StrictMode ไม่ยิงซ้ำ) ล้างเมื่อเปลี่ยนวัน
+  const storeCache = useRef(new Map<string, Promise<WaitingStore[]>>());
+  const loadStores = useMemo<LoadStores>(() => {
+    storeCache.current = new Map();
+    return (routeCode) => {
+      const key = routeCode ?? "";
+      let hit = storeCache.current.get(key);
+      if (!hit) {
+        hit = axios
+          .get<{ stores: WaitingStore[] }>(`${API}/api/logistic/driver-performance/waiting-load/stores`, {
+            params: { date, route_code: key },
+            headers: authHeader(),
+          })
+          .then((res) => res.data.stores ?? []);
+        hit.catch(() => storeCache.current.delete(key)); // ไม่จำค่าที่ error
+        storeCache.current.set(key, hit);
+      }
+      return hit;
+    };
+  }, [date]);
 
   useEffect(() => {
     let alive = true;
@@ -143,17 +189,11 @@ export default function WaitingLoadSection({ date, query }: { date: string; quer
     return () => { alive = false; };
   }, [date]);
 
-  // ช่องค้นหาเดียวกับหน้า: กรองตามรหัส/ชื่อเส้นทาง หรือชื่อ/รหัสร้าน
+  // ช่องค้นหาเดียวกับหน้า: กรองกล่องตามรหัส/ชื่อเส้นทาง
   const routes = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!data || !q) return data?.routes ?? [];
-    return data.routes
-      .map((r) => {
-        if ((r.route_code ?? "").toLowerCase().includes(q) || (r.route_name ?? "").toLowerCase().includes(q)) return r;
-        const stores = r.stores.filter((s) => s.mem_name.toLowerCase().includes(q) || s.mem_code.toLowerCase().includes(q));
-        return stores.length ? { ...r, stores, store_count: stores.length, box_count: stores.reduce((n, s) => n + s.box_amount, 0), carried_over_count: stores.filter((s) => s.carried_over).length } : null;
-      })
-      .filter((r): r is WaitingRoute => !!r);
+    return data.routes.filter((r) => (r.route_code ?? "").toLowerCase().includes(q) || (r.route_name ?? "").toLowerCase().includes(q));
   }, [data, query]);
 
   const isToday = date === dayjs().format("YYYY-MM-DD");
@@ -195,7 +235,7 @@ export default function WaitingLoadSection({ date, query }: { date: string; quer
                 return (
                   <Fragment key={key || "-"}>
                     <RouteCard r={r} active={active} onToggle={() => setSelected(active ? null : key)} />
-                    {active && <RouteDetail r={r} onClose={() => setSelected(null)} />}
+                    {active && <RouteDetail r={r} query={query} loadStores={loadStores} onClose={() => setSelected(null)} />}
                   </Fragment>
                 );
               })}
