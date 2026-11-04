@@ -58,7 +58,7 @@ const STATUS_STYLE: Record<Status, string> = {
 function Count({ label, n, tone }: { label: string; n: number; tone: string }) {
   return (
     <div className={`rounded-lg px-3 py-1.5 text-center ${n > 0 ? tone : "bg-white/10 text-blue-50/60"}`}>
-      <div className="text-lg font-extrabold leading-none tabular-nums">{n}</div>
+      <div className="text-lg font-extrabold leading-none tabular-nums">{n} <span className="text-xs font-bold">ร้าน</span></div>
       <div className="text-[length:calc(11px*var(--fs,1))] font-semibold mt-0.5">{label}</div>
     </div>
   );

@@ -798,7 +798,7 @@ export default function ReportLogistic() {
               />
             )}
             <button type="button" onClick={toggleBigText} aria-pressed={bigText} title="สลับขนาดตัวอักษร"
-              className="border border-blue-200 rounded-xl px-3 py-2 text-sm font-bold text-blue-700 bg-white hover:bg-blue-50">
+              className="hidden md:inline-block border border-blue-200 rounded-xl px-3 py-2 text-sm font-bold text-blue-700 bg-white hover:bg-blue-50">
               {bigText ? "ตัวอักษรปกติ" : "ตัวอักษร ×2"}
             </button>
             <button onClick={() => (tab === "daily" ? load() : setReloadKey((k) => k + 1))}

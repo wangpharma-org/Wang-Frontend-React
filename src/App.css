@@ -11,3 +11,9 @@
   --text-3xl: calc(1.875rem * var(--fs, 1));
   font-size: calc(1rem * var(--fs, 1));
 }
+/* จอโทรศัพท์: ตัวอักษร 2 เท่าทำให้หน้าล้นแนวนอน — ใช้ขนาดปกติเสมอ (ปุ่มสลับซ่อนบนมือถือ) */
+@media (max-width: 767px) {
+  .fs-scale {
+    --fs: 1 !important;
+  }
+}

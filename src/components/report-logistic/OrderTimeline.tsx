@@ -42,6 +42,7 @@ interface DeliveryTimeline {
 interface LiveLocation {
   type: "STORE_DELIVERED" | "DEPARTURE";
   store_name: string | null;
+  mem_code: string | null;
   at: string | null;
   maps_url: string | null;
   stores_delivered: number;
@@ -125,7 +126,7 @@ function LiveLocationBar({ live }: { live: LiveLocation }) {
       <span className="text-sm font-extrabold text-amber-800">ตำแหน่งรถล่าสุด</span>
       <span className="text-sm text-slate-700">
         {live.type === "STORE_DELIVERED"
-          ? <>ส่งร้านล่าสุด <b>{live.store_name}</b> เมื่อ <b className="tabular-nums">{fmtTime(live.at)}</b></>
+          ? <>ส่งร้านล่าสุด <b>{live.store_name}</b>{live.mem_code ? <span className="font-mono text-slate-500"> ({live.mem_code})</span> : null} เมื่อ <b className="tabular-nums">{fmtTime(live.at)}</b></>
           : <>ออกรถแล้ว ยังไม่ถึงร้านแรก · ออกรถ <b className="tabular-nums">{fmtTime(live.at)}</b></>}
         <span className="text-slate-500"> · ส่งแล้ว {live.stores_delivered}/{live.stores_total} ร้าน</span>
       </span>
