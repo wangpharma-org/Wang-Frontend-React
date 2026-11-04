@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
 import { API, authHeader, fmtDate, fmtTime } from "./shared";
+import { SoButton, TimelineRow } from "./OrderTimeline";
 
 // OPHMBC-331 — งานรอขึ้นของ: พร้อมส่งแล้ว (พิมพ์สติกเกอร์) แต่ยังไม่มีใครสแกนขึ้นรถ จัดกลุ่มตามเส้นทาง
 
@@ -43,8 +44,12 @@ const waited = (iso: string | null) => {
   return `${Math.floor(m / 1440)} วัน ${Math.floor((m % 1440) / 60)} ชม.`;
 };
 
-function RouteRow({ r, onOpenSo }: { r: WaitingRoute; onOpenSo?: (so: string) => void }) {
+function RouteRow({ r }: { r: WaitingRoute }) {
   const [open, setOpen] = useState(false);
+  // OPHMBC-331 — เลข SO ที่กาง timeline อยู่ ("แถว|SO") กดซ้ำเพื่อพับ
+  const [openSo, setOpenSo] = useState<string | null>(null);
+  const toggle = (row: number | string, so: string) => setOpenSo((cur) => (cur === `${row}|${so}` ? null : `${row}|${so}`));
+  const openAt = (row: number | string) => (openSo?.startsWith(`${row}|`) ? openSo.slice(String(row).length + 1) : null);
   return (
     <div className="border-t border-amber-100">
       <button type="button" onClick={() => setOpen((v) => !v)} className="w-full text-left px-5 py-3 flex flex-wrap items-center gap-x-4 gap-y-1 hover:bg-amber-50/60">
@@ -69,15 +74,16 @@ function RouteRow({ r, onOpenSo }: { r: WaitingRoute; onOpenSo?: (so: string) =>
               </tr>
             </thead>
             <tbody>
-              {r.stores.map((s) => (
-                <tr key={`${s.mem_code}-${s.ready_at}`} className={`border-t border-amber-50 align-top ${s.carried_over ? "bg-rose-50/40" : ""}`}>
+              {r.stores.map((s, i) => (
+                <Fragment key={`${s.mem_code}-${s.ready_at}`}>
+                <tr className={`border-t border-amber-50 align-top ${s.carried_over ? "bg-rose-50/40" : ""}`}>
                   <td className="px-5 py-2">
                     <div className="font-bold text-slate-800">{s.mem_name}</div>
                     <div className="text-xs text-slate-400 font-mono">{s.mem_code}{s.shipping_count > 1 ? ` · ${s.shipping_count} ใบ` : ""}</div>
                   </td>
                   <td className="px-3 py-2 font-mono text-xs">
                     {s.sh_runnings.length ? s.sh_runnings.map((so) => (
-                      <button key={so} type="button" onClick={() => onOpenSo?.(so)} className="block text-blue-700 hover:text-blue-900 hover:underline font-semibold" title="ดู timeline ออเดอร์">{so}</button>
+                      <SoButton key={so} so={so} active={openSo === `${i}|${so}`} onToggle={() => toggle(i, so)} />
                     )) : "-"}
                   </td>
                   <td className="px-3 py-2 text-center tabular-nums font-semibold">{s.box_amount}</td>
@@ -87,6 +93,8 @@ function RouteRow({ r, onOpenSo }: { r: WaitingRoute; onOpenSo?: (so: string) =>
                   </td>
                   <td className={`px-3 py-2 tabular-nums font-semibold ${s.carried_over ? "text-rose-700" : "text-slate-700"}`}>{waited(s.ready_at)}</td>
                 </tr>
+                {openAt(i) && <TimelineRow so={openAt(i)!} colSpan={5} onClose={() => setOpenSo(null)} />}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -96,7 +104,7 @@ function RouteRow({ r, onOpenSo }: { r: WaitingRoute; onOpenSo?: (so: string) =>
   );
 }
 
-export default function WaitingLoadSection({ date, query, onOpenSo }: { date: string; query: string; onOpenSo?: (so: string) => void }) {
+export default function WaitingLoadSection({ date, query }: { date: string; query: string }) {
   const [data, setData] = useState<WaitingLoad | null>(null);
   const [error, setError] = useState(false);
   const [open, setOpen] = useState(true);
@@ -155,7 +163,7 @@ export default function WaitingLoadSection({ date, query, onOpenSo }: { date: st
           <div className="px-5 py-6 text-sm text-slate-500">ไม่มีงานรอขึ้นของ{query ? " ตามที่ค้นหา" : ""}</div>
         ) : (
           <>
-            {routes.map((r) => <RouteRow key={r.route_code ?? "-"} r={r} onOpenSo={onOpenSo} />)}
+            {routes.map((r) => <RouteRow key={r.route_code ?? "-"} r={r} />)}
             <div className="px-5 py-2 text-[11px] text-slate-400 border-t border-amber-100">
               สถานะ ณ ตอนนี้: งานที่พร้อมส่ง (พิมพ์สติกเกอร์แล้ว) แต่ยังไม่สแกนขึ้นรถ ตั้งแต่ {data.lookback_days} วันก่อนถึง{isToday ? "วันนี้" : "วันที่เลือก"} · งานที่เคยรอแล้วขึ้นรถไปแล้วไม่อยู่ในรายการ
             </div>

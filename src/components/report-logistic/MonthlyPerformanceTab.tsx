@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
 import { API, authHeader, ExcelIcon, exportXlsx, fmtDate, fmtMonth, fmtTime } from "./shared";
+import { SoButton, TimelineRow } from "./OrderTimeline";
 
 // MA-363 — อัตราส่งสำเร็จย้อนหลังรายเดือน (ตัดรอบสิ้นเดือน) + ตัวชี้วัดพฤติกรรม
 
@@ -128,7 +129,11 @@ interface BackStore {
 }
 
 // รายละเอียดร้านที่ตีกลับของพนักงานคนนี้ในช่วงเดือนที่เลือก
-function BackStores({ empCode, from, to, onOpenSo }: { empCode: string; from: string; to: string; onOpenSo?: (so: string) => void }) {
+function BackStores({ empCode, from, to }: { empCode: string; from: string; to: string }) {
+  // OPHMBC-331 — เลข SO ที่กาง timeline อยู่ ("แถว|SO") กดซ้ำเพื่อพับ
+  const [openSo, setOpenSo] = useState<string | null>(null);
+  const toggle = (row: number | string, so: string) => setOpenSo((cur) => (cur === `${row}|${so}` ? null : `${row}|${so}`));
+  const openAt = (row: number | string) => (openSo?.startsWith(`${row}|`) ? openSo.slice(String(row).length + 1) : null);
   const [rows, setRows] = useState<BackStore[] | null>(null);
   const [limit, setLimit] = useState(0);
   const [error, setError] = useState(false);
@@ -175,7 +180,8 @@ function BackStores({ empCode, from, to, onOpenSo }: { empCode: string; from: st
             </thead>
             <tbody>
               {rows.map((b, i) => (
-                <tr key={`${b.mem_code}-${b.time}-${i}`} className="align-top">
+                <Fragment key={`${b.mem_code}-${b.time}-${i}`}>
+                <tr className="align-top">
                   <td className="px-3 py-2 font-semibold text-slate-700 whitespace-nowrap">{fmtDate(b.time)}</td>
                   <td className="px-3 py-2 font-bold text-slate-800 tabular-nums">{fmtTime(b.time)}</td>
                   <td className="px-3 py-2">
@@ -183,7 +189,7 @@ function BackStores({ empCode, from, to, onOpenSo }: { empCode: string; from: st
                     <div className="text-xs text-slate-500 font-mono">{b.mem_code}</div>
                   </td>
                   <td className="px-3 py-2 text-slate-700">{b.route_code ? <><b>{b.route_code}</b> {b.route_name ?? ""}</> : "-"}</td>
-                  <td className="px-3 py-2 font-mono text-xs text-slate-600">{b.sh_runnings.length ? b.sh_runnings.map((so) => <button key={so} type="button" onClick={() => onOpenSo?.(so)} className="block text-blue-700 hover:text-blue-900 hover:underline font-semibold" title="ดู timeline ออเดอร์">{so}</button>) : "-"}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-slate-600">{b.sh_runnings.length ? b.sh_runnings.map((so) => <SoButton key={so} so={so} active={openSo === `${i}|${so}`} onToggle={() => toggle(i, so)} />) : "-"}</td>
                   <td className="px-3 py-2 font-mono text-xs text-slate-600">{b.bill_notes.length ? b.bill_notes.map((no) => <div key={no}>{no}</div>) : "-"}</td>
                   <td className="px-3 py-2 text-center tabular-nums font-semibold">{b.box_amount}</td>
                   <td className="px-3 py-2 text-rose-700 font-semibold break-words max-w-[260px]">
@@ -196,6 +202,8 @@ function BackStores({ empCode, from, to, onOpenSo }: { empCode: string; from: st
                       : b.status === "ตีกลับ" ? <span className="text-amber-700 font-bold">! ยังไม่คืน</span> : <span className="text-slate-500">{b.status}</span>}
                   </td>
                 </tr>
+                {openAt(i) && <TimelineRow so={openAt(i)!} colSpan={9} onClose={() => setOpenSo(null)} />}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -205,7 +213,7 @@ function BackStores({ empCode, from, to, onOpenSo }: { empCode: string; from: st
   );
 }
 
-export default function MonthlyPerformanceTab({ empQuery, onOpenSo }: { empQuery: string; onOpenSo?: (so: string) => void }) {
+export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }) {
   const thisMonth = dayjs().format("YYYY-MM");
   const [from, setFrom] = useState(dayjs().subtract(5, "month").format("YYYY-MM"));
   const [to, setTo] = useState(thisMonth);
@@ -405,7 +413,7 @@ export default function MonthlyPerformanceTab({ empQuery, onOpenSo }: { empQuery
                         <tr className="bg-white">
                           <td colSpan={months.length + 3} className="px-2 pb-4 border-b border-blue-100">
                             <DriverDetail d={d} months={months} />
-                            <BackStores empCode={d.emp_code} from={from} to={to} onOpenSo={onOpenSo} />
+                            <BackStores empCode={d.emp_code} from={from} to={to} />
                           </td>
                         </tr>
                       )}

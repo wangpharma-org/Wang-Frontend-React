@@ -3,6 +3,7 @@ import axios from "axios";
 import { API, authHeader, fmtDate, fmtTime } from "./shared";
 
 // OPHMBC-331 — timeline ของออเดอร์หนึ่งใบ แนวนอน: ฝั่งคลัง (order-picking) ต่อด้วยฝั่งขนส่ง (logistics)
+// แสดงในหน้า (กางใต้แถวในตาราง / แผงจากช่องค้นหา) ไม่ใช่ popup
 
 const ORDER_API = import.meta.env.VITE_API_URL_ORDER ?? "";
 
@@ -107,7 +108,7 @@ function TimelineNode({ n, prevAt, showDate, skipped }: { n: Node; prevAt: strin
   );
 }
 
-export default function OrderTimelineModal({ shRunning, onClose }: { shRunning: string; onClose: () => void }) {
+export default function OrderTimeline({ shRunning, onClose }: { shRunning: string; onClose: () => void }) {
   const [picking, setPicking] = useState<PickingTimeline | null>(null);
   const [delivery, setDelivery] = useState<DeliveryTimeline | null>(null);
   const [errors, setErrors] = useState<Partial<Record<Side, string>>>({});
@@ -134,12 +135,6 @@ export default function OrderTimelineModal({ shRunning, onClose }: { shRunning: 
     return () => { alive = false; };
   }, [shRunning]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   const nodes = useMemo(
     () => [...arrange(picking?.events ?? [], "picking"), ...chronological(delivery?.events ?? [], "delivery")],
     [picking, delivery],
@@ -164,12 +159,11 @@ export default function OrderTimelineModal({ shRunning, onClose }: { shRunning: 
   const statusTone = status === "ส่งแล้ว" ? "bg-emerald-100 text-emerald-700" : status === "ตีกลับ" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-800";
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-3" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-[1500px] max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={`Timeline ออเดอร์ ${shRunning}`}>
-        <div className="px-5 md:px-8 py-5 border-b border-slate-100 flex flex-wrap items-start gap-3">
+    <section className="rounded-2xl bg-white ring-1 ring-blue-200 shadow-sm text-left" aria-label={`Timeline ออเดอร์ ${shRunning}`}>
+        <div className="px-4 md:px-6 py-3 border-b border-slate-100 flex flex-wrap items-start gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-lg font-extrabold text-slate-900">Timeline ออเดอร์</span>
+              <span className="text-base font-extrabold text-slate-900">Timeline ออเดอร์</span>
               <span className="font-mono font-bold text-blue-700">{shRunning}</span>
               {status && <span className={`text-xs font-bold rounded-full px-2.5 py-0.5 ${statusTone}`}>{status}</span>}
             </div>
@@ -187,15 +181,15 @@ export default function OrderTimelineModal({ shRunning, onClose }: { shRunning: 
               <div className="text-xl font-extrabold text-slate-900 tabular-nums">{fmtGap(minutesBetween(first, finish ?? new Date().toISOString()))}</div>
             </div>
           )}
-          <button onClick={onClose} className="text-slate-500 hover:text-slate-800 text-sm font-semibold bg-slate-100 hover:bg-slate-200 rounded-lg px-3 py-1.5">ปิด</button>
+          <button type="button" onClick={onClose} className="text-slate-500 hover:text-slate-800 text-sm font-semibold bg-slate-100 hover:bg-slate-200 rounded-lg px-3 py-1.5">ปิด</button>
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-16"><div className="w-9 h-9 border-[3px] border-blue-600 border-t-transparent rounded-full animate-spin" /></div>
+          <div className="flex justify-center py-8"><div className="w-8 h-8 border-[3px] border-blue-600 border-t-transparent rounded-full animate-spin" /></div>
         ) : nodes.length === 0 ? (
-          <div className="py-16 text-center text-slate-500">ไม่พบบิล {shRunning} ทั้งในระบบคลังและระบบขนส่ง</div>
+          <div className="py-8 text-center text-slate-500">ไม่พบบิล {shRunning} ทั้งในระบบคลังและระบบขนส่ง</div>
         ) : (
-          <div className="px-5 md:px-8 py-5">
+          <div className="px-4 md:px-6 py-4">
             {/* ป้ายกลุ่ม */}
             <div className="flex gap-4 text-xs font-bold mb-1">
               <span className="text-blue-700">● คลังสินค้า {errors.picking ? `(${errors.picking})` : ""}</span>
@@ -215,7 +209,27 @@ export default function OrderTimelineModal({ shRunning, onClose }: { shRunning: 
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </section>
+  );
+}
+
+/** เลข SO ในตาราง — กดเพื่อกาง/พับ timeline ใต้แถว */
+export function SoButton({ so, active, onToggle }: { so: string; active: boolean; onToggle: () => void }) {
+  return (
+    <button type="button" onClick={onToggle} aria-expanded={active} title={active ? "พับ timeline" : "ดู timeline ออเดอร์"}
+      className={`block font-semibold hover:underline ${active ? "text-blue-900" : "text-blue-700 hover:text-blue-900"}`}>
+      {so} <span aria-hidden="true">{active ? "▴" : "▾"}</span>
+    </button>
+  );
+}
+
+/** แถวที่กางใต้แถวร้าน — กินทุกคอลัมน์ */
+export function TimelineRow({ so, colSpan, onClose }: { so: string; colSpan: number; onClose: () => void }) {
+  return (
+    <tr className="bg-blue-50/40">
+      <td colSpan={colSpan} className="px-3 py-3">
+        <OrderTimeline shRunning={so} onClose={onClose} />
+      </td>
+    </tr>
   );
 }

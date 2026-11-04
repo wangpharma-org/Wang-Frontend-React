@@ -4,7 +4,7 @@ import axios from "axios";
 import dayjs from "dayjs";
 import DailyStoresTab from "../components/report-logistic/DailyStoresTab";
 import MonthlyPerformanceTab from "../components/report-logistic/MonthlyPerformanceTab";
-import OrderTimelineModal from "../components/report-logistic/OrderTimelineModal";
+import OrderTimeline from "../components/report-logistic/OrderTimeline";
 
 type Tab = "daily" | "stores" | "monthly";
 const TABS: { key: Tab; label: string }[] = [
@@ -803,10 +803,11 @@ export default function ReportLogistic() {
       </div>
 
       <div className="max-w-[1600px] mx-auto px-4 md:px-12 py-8 space-y-8">
+        {timelineSo && <OrderTimeline key={timelineSo} shRunning={timelineSo} onClose={() => setTimelineSo(null)} />}
         {tab === "stores" ? (
-          <DailyStoresTab key={reloadKey} date={date} empQuery={empQuery} onOpenSo={setTimelineSo} />
+          <DailyStoresTab key={reloadKey} date={date} empQuery={empQuery} />
         ) : tab === "monthly" ? (
-          <MonthlyPerformanceTab key={reloadKey} empQuery={empQuery} onOpenSo={setTimelineSo} />
+          <MonthlyPerformanceTab key={reloadKey} empQuery={empQuery} />
         ) : loading ? (
           <div className="flex items-center justify-center py-24">
             <div className="w-10 h-10 border-[3px] border-blue-600 border-t-transparent rounded-full animate-spin" />
@@ -854,7 +855,6 @@ export default function ReportLogistic() {
           </>
         )}
       </div>
-      {timelineSo && <OrderTimelineModal shRunning={timelineSo} onClose={() => setTimelineSo(null)} />}
     </div>
   );
 }

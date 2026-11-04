@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
 import { API, authHeader, ExcelIcon, exportXlsx, fmtDate, fmtTime } from "./shared";
 import WaitingLoadSection from "./WaitingLoadSection";
+import { SoButton, TimelineRow } from "./OrderTimeline";
 
 // MA-363 — ร้านที่พนักงานแต่ละคนขึ้นของ / ส่งแล้ว / ไม่ได้ส่ง ของวันที่เลือก
 
@@ -82,7 +83,11 @@ function DateTime({ iso, empty }: { iso: string | null; empty: string }) {
   );
 }
 
-function DriverStoresCard({ d, isToday, date, onOpenSo }: { d: DriverStores; isToday: boolean; date: string; onOpenSo?: (so: string) => void }) {
+function DriverStoresCard({ d, isToday, date }: { d: DriverStores; isToday: boolean; date: string }) {
+  // OPHMBC-331 — เลข SO ที่กาง timeline อยู่ ("แถว|SO") กดซ้ำเพื่อพับ
+  const [openSo, setOpenSo] = useState<string | null>(null);
+  const toggle = (row: number | string, so: string) => setOpenSo((cur) => (cur === `${row}|${so}` ? null : `${row}|${so}`));
+  const openAt = (row: number | string) => (openSo?.startsWith(`${row}|`) ? openSo.slice(String(row).length + 1) : null);
   const [open, setOpen] = useState(d.back_count + d.pending_count > 0);
   const deps = d.departures.map((t) => fmtTime(t));
   return (
@@ -141,7 +146,8 @@ function DriverStoresCard({ d, isToday, date, onOpenSo }: { d: DriverStores; isT
             </thead>
             <tbody>
               {d.stores.map((s, i) => (
-                <tr key={`${s.status}-${s.mem_code}-${i}`} className={`border-t border-blue-50 align-top ${s.status === "done" ? "" : "bg-rose-50/30"}`}>
+                <Fragment key={`${s.status}-${s.mem_code}-${i}`}>
+                <tr className={`border-t border-blue-50 align-top ${s.status === "done" ? "" : "bg-rose-50/30"}`}>
                   <td className="px-4 py-2.5">
                     <span className={`inline-block text-[11px] font-bold px-2 py-0.5 rounded-full ring-1 w-20 text-center ${STATUS_STYLE[s.status]}`}>
                       {statusLabel(s.status, isToday)}
@@ -151,13 +157,15 @@ function DriverStoresCard({ d, isToday, date, onOpenSo }: { d: DriverStores; isT
                     <div className="font-bold text-slate-800 break-words">{s.mem_name}</div>
                     <div className="text-xs text-slate-400"><span className="font-mono">{s.mem_code}</span>{s.route_code ? ` · ${s.route_code}` : ""}</div>
                   </td>
-                  <td className="px-3 py-2.5 font-mono text-xs text-slate-600">{s.sh_runnings.length ? s.sh_runnings.map((no) => <button key={no} type="button" onClick={() => onOpenSo?.(no)} className="block text-blue-700 hover:text-blue-900 hover:underline font-semibold" title="ดู timeline ออเดอร์">{no}</button>) : <span className="text-slate-300">-</span>}</td>
+                  <td className="px-3 py-2.5 font-mono text-xs text-slate-600">{s.sh_runnings.length ? s.sh_runnings.map((no) => <SoButton key={no} so={no} active={openSo === `${i}|${no}`} onToggle={() => toggle(i, no)} />) : <span className="text-slate-300">-</span>}</td>
                   <td className="px-3 py-2.5 font-mono text-xs text-slate-600">{s.bill_notes.length ? s.bill_notes.map((no) => <div key={no}>{no}</div>) : <span className="text-slate-300">-</span>}</td>
                   <td className="px-3 py-2.5 text-center tabular-nums text-slate-700">{s.box_amount} · {s.bill_count}</td>
                   <td className="px-3 py-2.5"><DateTime iso={s.loaded_at} empty="-" /></td>
                   <td className="px-3 py-2.5"><DateTime iso={s.time} empty="ยังไม่ส่ง" /></td>
                   <td className={`px-3 py-2.5 text-xs break-words max-w-[220px] ${s.status === "back" ? "text-rose-600 font-medium" : "text-slate-500"}`}>{s.note ?? ""}</td>
                 </tr>
+                {openAt(i) && <TimelineRow so={openAt(i)!} colSpan={8} onClose={() => setOpenSo(null)} />}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -167,7 +175,7 @@ function DriverStoresCard({ d, isToday, date, onOpenSo }: { d: DriverStores; isT
   );
 }
 
-export default function DailyStoresTab({ date, empQuery, onOpenSo }: { date: string; empQuery: string; onOpenSo?: (so: string) => void }) {
+export default function DailyStoresTab({ date, empQuery }: { date: string; empQuery: string }) {
   const [data, setData] = useState<DriverStores[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -243,7 +251,7 @@ export default function DailyStoresTab({ date, empQuery, onOpenSo }: { date: str
 
   return (
     <div className="space-y-8">
-      <WaitingLoadSection date={date} query={empQuery} onOpenSo={onOpenSo} />
+      <WaitingLoadSection date={date} query={empQuery} />
       <div className="flex flex-wrap items-center gap-2">
         <div className="text-sm text-slate-600">
           ขึ้นของ <b className="tabular-nums">{totals.loaded}</b> ร้าน · ส่งแล้ว <b className="text-emerald-700 tabular-nums">{totals.done}</b> ·
@@ -257,7 +265,7 @@ export default function DailyStoresTab({ date, empQuery, onOpenSo }: { date: str
       {filtered.length === 0 ? (
         <div className="rounded-3xl bg-white ring-1 ring-blue-100 p-12 text-center text-slate-400">ไม่มีข้อมูลในวันที่เลือก</div>
       ) : (
-        filtered.map((d) => <DriverStoresCard key={d.emp_code} d={d} isToday={isToday} date={date} onOpenSo={onOpenSo} />)
+        filtered.map((d) => <DriverStoresCard key={d.emp_code} d={d} isToday={isToday} date={date} />)
       )}
     </div>
   );
