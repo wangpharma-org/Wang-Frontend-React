@@ -4,6 +4,8 @@ import axios from "axios";
 import dayjs from "dayjs";
 import DailyStoresTab from "../components/report-logistic/DailyStoresTab";
 import MonthlyPerformanceTab from "../components/report-logistic/MonthlyPerformanceTab";
+import OrderTimeline from "../components/report-logistic/OrderTimeline";
+import { billPriceOf, sumBillPrices, useBillPrices } from "../components/report-logistic/billPrices";
 
 type Tab = "daily" | "stores" | "monthly";
 const TABS: { key: Tab; label: string }[] = [
@@ -38,6 +40,8 @@ interface Delivery {
   box_amount: number;
   bill_count: number;
   shipping_count: number;
+  /** เลขบิลของจุดส่งนี้ — ราคาดึงจาก order-picking (OPHMBC-331) */
+  sh_runnings?: string[];
   bills: BillPrice[];
   total_price: number | null;
 }
@@ -52,11 +56,26 @@ interface Back {
   box_amount: number;
   bill_count: number;
   shipping_count: number;
+  sh_runnings?: string[];
   bills: BillPrice[];
   total_price: number | null;
 }
 
-interface StatusSummary { store_count: number; bill_count: number; box_count: number; total_price: number | null }
+interface StatusSummary { store_count: number; bill_count: number; box_count: number; total_price: number | null; sh_runnings?: string[] }
+
+/** เติมมูลค่าต่อบิลที่ดึงจาก order-picking — ค่าที่ backend ส่งมาเองมาก่อน (ถ้ามี) */
+const withBillPrices = (d: DriverReport): DriverReport => {
+  const status = (s: StatusSummary): StatusSummary => ({ ...s, total_price: s.total_price ?? sumBillPrices(s.sh_runnings) });
+  const visit = <T extends Delivery | Back>(v: T): T => {
+    const bills = v.bills?.length ? v.bills : (v.sh_runnings ?? []).map((so) => ({ sh_running: so, price: billPriceOf(so) }));
+    return { ...v, bills, total_price: v.total_price ?? sumBillPrices(v.sh_runnings) };
+  };
+  return {
+    ...d,
+    in_progress: status(d.in_progress), done: status(d.done), back: status(d.back),
+    deliveries: d.deliveries.map(visit), backs: d.backs.map(visit),
+  };
+};
 
 interface DriverReport {
   emp_code: string;
@@ -250,9 +269,9 @@ function Photo({ url, label, caption, shareTitle, w = 54, h = 54, contain = fals
         style={{ width: w, height: h }}
       >
         <img src={url} alt={label} className={`w-full h-full ${contain ? "object-contain" : "object-cover"}`} />
-        <span className="absolute inset-x-0 bottom-0 bg-slate-900/60 text-white text-[9px] font-semibold text-center leading-none py-[3px]">{label}</span>
+        <span className="absolute inset-x-0 bottom-0 bg-slate-900/60 text-white text-[length:calc(9px*var(--fs,1))] font-semibold text-center leading-none py-[3px]">{label}</span>
       </button>
-      {caption && <div className="text-[10px] leading-tight text-slate-500 mt-1 text-center break-words">{caption}</div>}
+      {caption && <div className="text-[length:calc(10px*var(--fs,1))] leading-tight text-slate-500 mt-1 text-center break-words">{caption}</div>}
       {open && (
         <div className="fixed inset-0 z-[60] bg-slate-900/90 backdrop-blur-sm flex flex-col items-center justify-center p-4" onClick={() => setOpen(false)}>
           <div className="text-white text-sm font-semibold mb-1">{label}</div>
@@ -323,12 +342,12 @@ function Kpi({ label, value, sub, icon, accent = false }: {
 }) {
   return (
     <div className={`rounded-xl px-3 py-2.5 min-w-0 ${accent ? "bg-sky-300/30 ring-1 ring-sky-200/60" : "bg-white/10"}`}>
-      <div className="flex items-center gap-1.5 text-[11px] font-medium text-blue-50/80">
+      <div className="flex items-center gap-1.5 text-[length:calc(11px*var(--fs,1))] font-medium text-blue-50/80">
         <span className="text-blue-100">{icon}</span>
         {label}
       </div>
-      <div className="text-lg font-extrabold leading-none tabular-nums mt-1 truncate text-white">{value}</div>
-      {sub && <div className="text-[11px] mt-1 text-blue-50/70 truncate">{sub}</div>}
+      <div className="text-lg font-extrabold leading-none tabular-nums mt-1 break-words text-white">{value}</div>
+      {sub && <div className="text-[length:calc(11px*var(--fs,1))] mt-1 text-blue-50/70 break-words">{sub}</div>}
     </div>
   );
 }
@@ -358,7 +377,7 @@ function CountUnit({ n, label }: { n: number; label: string }) {
   return (
     <div className="text-center">
       <div className="text-base font-extrabold text-slate-800 leading-none tabular-nums">{n}</div>
-      <div className="text-[11px] text-slate-400 mt-1">{label}</div>
+      <div className="text-[length:calc(11px*var(--fs,1))] text-slate-400 mt-1">{label}</div>
     </div>
   );
 }
@@ -369,10 +388,11 @@ function SummaryCard({ label, value, unit, sub, icon, tint, ring = "ring-blue-10
   label: string; value: string | number; unit?: string; sub?: string; icon: React.ReactNode; tint: string; ring?: string; accent?: boolean;
 }) {
   return (
-    <div className={`rounded-3xl shadow-sm p-4 min-w-0 ring-1 ${accent ? "bg-emerald-600 ring-emerald-500" : `bg-white ${ring}`}`}>
+    // การ์ดมูลค่า (accent) กว้าง 2 ช่อง — ตัวเลขหลักล้านไม่ล้นกรอบตอนตัวอักษร 2 เท่า
+    <div className={`rounded-3xl shadow-sm p-4 min-w-0 ring-1 ${accent ? "bg-emerald-600 ring-emerald-500 col-span-2" : `bg-white ${ring}`}`}>
       <span className={`w-10 h-10 rounded-xl grid place-items-center ${tint}`}>{icon}</span>
-      <div className="mt-3 flex items-baseline gap-1 min-w-0">
-        <span className={`text-2xl font-extrabold tabular-nums leading-none truncate ${accent ? "text-white" : "text-slate-800"}`}>{value}</span>
+      <div className="mt-3 flex flex-wrap items-baseline gap-x-1 min-w-0">
+        <span className={`text-2xl font-extrabold tabular-nums leading-none whitespace-nowrap ${accent ? "text-white" : "text-slate-800"}`}>{value}</span>
         {unit && <span className={`text-sm font-medium flex-shrink-0 ${accent ? "text-emerald-100" : "text-slate-400"}`}>{unit}</span>}
       </div>
       <div className={`text-sm mt-1 font-medium ${accent ? "text-emerald-50" : "text-slate-500"}`}>{label}</div>
@@ -453,7 +473,7 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
             </div>
             <div className="flex flex-wrap gap-2 mt-3">
               {r.routes.map((rt) => (
-                <span key={rt.route_code} className="inline-flex items-center gap-1.5 bg-white/15 text-white text-[13px] px-2.5 py-1 rounded-lg">
+                <span key={rt.route_code} className="inline-flex items-center gap-1.5 bg-white/15 text-white text-[length:calc(13px*var(--fs,1))] px-2.5 py-1 rounded-lg">
                   <span className="font-extrabold">{rt.route_code}</span>
                   <span className="text-blue-50/85">{rt.route_name}</span>
                 </span>
@@ -473,10 +493,10 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
           <StatusTile label="ส่งแล้ว" s={r.done} tone="success" icon={CheckIcon} />
           <div className="rounded-xl px-3.5 py-3 min-w-0 bg-white ring-1 ring-emerald-200">
             <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700">{CoinIcon}มูลค่าออเดอร์ที่ออกส่ง</div>
-            <div className="text-2xl font-extrabold leading-none tabular-nums mt-1.5 text-emerald-700 truncate">
+            <div className="text-2xl font-extrabold leading-none tabular-nums mt-1.5 text-emerald-700 break-words">
               {fmtBahtInt(totalPrice)} <span className="text-sm font-semibold">บาท</span>
             </div>
-            <div className="text-xs mt-1 text-slate-500 tabular-nums truncate">ส่งสำเร็จแล้ว {fmtBahtInt(r.done.total_price)} บาท</div>
+            <div className="text-xs mt-1 text-slate-500 tabular-nums break-words">ส่งสำเร็จแล้ว {fmtBahtInt(r.done.total_price)} บาท</div>
           </div>
         </div>
 
@@ -509,7 +529,7 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className={`font-extrabold tabular-nums ${done ? "text-emerald-600" : "text-rose-500"}`}>{fmtTime(row.time)}</span>
-                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${done ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" : "bg-rose-100 text-rose-600 ring-1 ring-rose-200"}`}>
+                        <span className={`text-[length:calc(11px*var(--fs,1))] font-bold px-2 py-0.5 rounded-full ${done ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" : "bg-rose-100 text-rose-600 ring-1 ring-rose-200"}`}>
                           {done ? "ส่งสำเร็จ" : "ตีกลับ"}
                         </span>
                       </div>
@@ -520,10 +540,10 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
                     </div>
                     <div className="text-right flex-shrink-0">
                       <div className="font-extrabold text-emerald-700 tabular-nums">{fmtBaht(row.total_price)}</div>
-                      <div className="text-[11px] text-slate-400">บาท</div>
+                      <div className="text-[length:calc(11px*var(--fs,1))] text-slate-400">บาท</div>
                     </div>
                   </div>
-                  {row.note && <div className={`text-[13px] ${done ? "text-slate-600" : "text-rose-600 font-medium"}`}>{row.note}</div>}
+                  {row.note && <div className={`text-[length:calc(13px*var(--fs,1))] ${done ? "text-slate-600" : "text-rose-600 font-medium"}`}>{row.note}</div>}
                   {row.photos.length > 0 && (
                     <div className="flex gap-2 flex-wrap">
                       {row.photos.map((p) => <Photo key={p.label} {...p} shareTitle={shareTitle} w={132} h={92} />)}
@@ -548,7 +568,7 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
             })}
           </div>
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full table-fixed border-collapse min-w-[1400px] text-[13px]">
+            <table className="w-full table-fixed border-collapse min-w-[1400px] text-[length:calc(13px*var(--fs,1))]">
               <colgroup>
                 <col className="w-[112px]" />
                 <col className="w-[18%]" />
@@ -578,8 +598,8 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
                     <tr key={`${row.mem_code}-${i}`} className={`border-t border-blue-50 hover:bg-blue-50/40 transition align-top ${done ? "" : "bg-rose-50/40"}`}>
                       {/* เวลา + สถานะ */}
                       <td className="px-4 py-4">
-                        <div className={`font-extrabold text-[15px] tabular-nums ${done ? "text-emerald-600" : "text-rose-500"}`}>{fmtTime(row.time)}</div>
-                        <span className={`mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full ${done ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" : "bg-rose-100 text-rose-600 ring-1 ring-rose-200"}`}>
+                        <div className={`font-extrabold text-[length:calc(15px*var(--fs,1))] tabular-nums ${done ? "text-emerald-600" : "text-rose-500"}`}>{fmtTime(row.time)}</div>
+                        <span className={`mt-1.5 inline-flex items-center gap-1.5 text-[length:calc(11px*var(--fs,1))] font-bold px-2 py-0.5 rounded-full ${done ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" : "bg-rose-100 text-rose-600 ring-1 ring-rose-200"}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${done ? "bg-emerald-500" : "bg-rose-500"}`} />
                           {done ? "ส่งสำเร็จ" : "ตีกลับ"}
                         </span>
@@ -627,7 +647,7 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
                       {/* หมายเหตุ */}
                       <td className="px-4 py-4">
                         {row.note ? (
-                          <span className={`text-[13px] break-words ${done ? "text-slate-600" : "text-rose-600 font-medium"}`}>{row.note}</span>
+                          <span className={`text-[length:calc(13px*var(--fs,1))] break-words ${done ? "text-slate-600" : "text-rose-600 font-medium"}`}>{row.note}</span>
                         ) : (
                           <span className="text-slate-300">-</span>
                         )}
@@ -636,11 +656,11 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
                       <td className="px-3 py-4">
                         {row.total_price != null ? (
                           <div className="rounded-xl bg-emerald-50 ring-1 ring-emerald-200 px-2.5 py-2">
-                            <div className="text-right font-extrabold text-emerald-700 tabular-nums text-[15px]">{fmtBaht(row.total_price)}</div>
+                            <div className="text-right font-extrabold text-emerald-700 tabular-nums text-[length:calc(15px*var(--fs,1))]">{fmtBaht(row.total_price)}</div>
                             {row.bills.length > 0 && (
                               <div className="mt-1.5 space-y-0.5 border-t border-emerald-200/60 pt-1.5">
                                 {row.bills.map((b) => (
-                                  <div key={b.sh_running} className="flex items-baseline justify-between gap-2 text-[11px] tabular-nums">
+                                  <div key={b.sh_running} className="flex items-baseline justify-between gap-2 text-[length:calc(11px*var(--fs,1))] tabular-nums">
                                     <span className="font-mono text-emerald-600/70 whitespace-nowrap">{b.sh_running}</span>
                                     <span className="text-emerald-700/80 font-semibold">{fmtBaht(b.price)}</span>
                                   </div>
@@ -667,6 +687,8 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+const FS_KEY = "report-logistic-fs";
+
 export default function ReportLogistic() {
   const [date, setDate] = useState(dayjs().format("YYYY-MM-DD"));
   const [data, setData] = useState<DriverReport[]>([]);
@@ -674,8 +696,18 @@ export default function ReportLogistic() {
   const [error, setError] = useState<string | null>(null);
   const [empQuery, setEmpQuery] = useState("");
   const [routeFilter, setRouteFilter] = useState(""); // "" = ทุกเส้นทาง
+  const [soQuery, setSoQuery] = useState("");
+  const [timelineSo, setTimelineSo] = useState<string | null>(null); // OPHMBC-331
   const [tab, setTab] = useState<Tab>("daily");
   const [reloadKey, setReloadKey] = useState(0); // รีเฟรชแท็บอื่นด้วยการ remount
+  // OPHMBC-331 — ตัวอักษร 2 เท่า (ค่าเริ่มต้น) สลับกลับขนาดปกติได้ จำค่าไว้ในเครื่อง
+  const [bigText, setBigText] = useState(() => {
+    try { return localStorage.getItem(FS_KEY) !== "1"; } catch { return true; }
+  });
+  const toggleBigText = () => setBigText((v) => {
+    try { localStorage.setItem(FS_KEY, v ? "1" : "2"); } catch { /* ไม่มี storage ก็ใช้ได้ แค่ไม่จำ */ }
+    return !v;
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -702,15 +734,24 @@ export default function ReportLogistic() {
     return Array.from(m, ([code, name]) => ({ code, name })).sort((a, b) => a.code.localeCompare(b.code));
   }, [data]);
 
-  // filter ฝั่ง client: รหัส/ชื่อพนักงาน + เส้นทางที่วิ่งวันนั้น
+  // filter ฝั่ง client: รหัส/ชื่อพนักงาน/เส้นทาง (ช่องค้นหา) + เส้นทางที่วิ่งวันนั้น (dropdown)
+  // มูลค่า: ดึงราคาของทุกบิลในรายงานวันนั้น (ครั้งเดียวต่อเลขบิล) แล้วรวมต่อร้าน / คนขับ / ทั้งหมด
+  const priceVersion = useBillPrices(useMemo(
+    () => data.flatMap((d) => [d.in_progress, d.done, d.back].flatMap((s) => s.sh_runnings ?? [])),
+    [data],
+  ));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- priceVersion เปลี่ยนเมื่อได้ราคาใหม่ใน cache
+  const priced = useMemo(() => data.map(withBillPrices), [data, priceVersion]);
+
   const filtered = useMemo(() => {
     const q = empQuery.trim().toLowerCase();
-    return data.filter((d) => {
-      const empOk = !q || d.emp_code.toLowerCase().includes(q) || d.emp_name.toLowerCase().includes(q);
+    return priced.filter((d) => {
+      const empOk = !q || d.emp_code.toLowerCase().includes(q) || d.emp_name.toLowerCase().includes(q)
+        || d.routes.some((r) => r.route_code.toLowerCase().includes(q) || (r.route_name ?? "").toLowerCase().includes(q));
       const routeOk = !routeFilter || d.routes.some((r) => r.route_code === routeFilter);
       return empOk && routeOk;
     });
-  }, [data, empQuery, routeFilter]);
+  }, [priced, empQuery, routeFilter]);
 
   const agg = useMemo(() => {
     const sum = (f: (d: DriverReport) => number) => filtered.reduce((s, d) => s + f(d), 0);
@@ -729,7 +770,7 @@ export default function ReportLogistic() {
   }, [filtered]);
 
   return (
-    <div className="min-h-screen bg-[#eaf1fe]">
+    <div className="min-h-screen bg-[#eaf1fe] fs-scale" style={{ ["--fs" as string]: bigText ? 2 : 1 }}>
       {/* Top bar */}
       <div className="bg-white/90 backdrop-blur border-b border-blue-100 sticky top-0 z-20">
         <div className="max-w-[1600px] mx-auto px-4 md:px-12 py-3 flex flex-wrap items-center gap-4">
@@ -743,14 +784,26 @@ export default function ReportLogistic() {
             </div>
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
+            {/* OPHMBC-331 — พิมพ์เลข SO แล้ว Enter เพื่อดู timeline */}
+            <form onSubmit={(e) => { e.preventDefault(); const so = soQuery.trim(); if (so) setTimelineSo(so); }} className="flex">
+              <input
+                type="text"
+                value={soQuery}
+                onChange={(e) => setSoQuery(e.target.value)}
+                placeholder="เลข SO → timeline"
+                aria-label="ค้นเลข SO เพื่อดู timeline ออเดอร์"
+                className="border border-blue-200 rounded-l-xl px-3 py-2 text-sm text-slate-700 w-40 font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+              <button type="submit" className="bg-blue-50 border border-l-0 border-blue-200 rounded-r-xl px-3 text-sm font-semibold text-blue-700 hover:bg-blue-100">ดู</button>
+            </form>
             <input
               type="text"
               value={empQuery}
               onChange={(e) => setEmpQuery(e.target.value)}
-              placeholder="ค้นหารหัส / ชื่อพนักงาน"
+              placeholder={tab === "monthly" ? "ค้นหารหัส / ชื่อพนักงาน" : "ค้นหาพนักงาน / เส้นทาง"}
               className="border border-blue-200 rounded-xl px-3.5 py-2 text-sm text-slate-700 w-52 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
-            {tab === "daily" && (
+            {tab !== "monthly" && (
               <select
                 value={routeFilter}
                 onChange={(e) => setRouteFilter(e.target.value)}
@@ -771,6 +824,10 @@ export default function ReportLogistic() {
                 className="border border-blue-200 rounded-xl px-3.5 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
             )}
+            <button type="button" onClick={toggleBigText} aria-pressed={bigText} title="สลับขนาดตัวอักษร"
+              className="hidden md:inline-block border border-blue-200 rounded-xl px-3 py-2 text-sm font-bold text-blue-700 bg-white hover:bg-blue-50">
+              {bigText ? "ตัวอักษรปกติ" : "ตัวอักษร ×2"}
+            </button>
             <button onClick={() => (tab === "daily" ? load() : setReloadKey((k) => k + 1))}
               className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl px-5 py-2 shadow-sm shadow-blue-600/25 transition">
               รีเฟรช
@@ -788,8 +845,9 @@ export default function ReportLogistic() {
       </div>
 
       <div className="max-w-[1600px] mx-auto px-4 md:px-12 py-8 space-y-8">
+        {timelineSo && <OrderTimeline key={timelineSo} shRunning={timelineSo} onClose={() => setTimelineSo(null)} />}
         {tab === "stores" ? (
-          <DailyStoresTab key={reloadKey} date={date} empQuery={empQuery} />
+          <DailyStoresTab key={reloadKey} date={date} empQuery={empQuery} routeFilter={routeFilter} />
         ) : tab === "monthly" ? (
           <MonthlyPerformanceTab key={reloadKey} empQuery={empQuery} />
         ) : loading ? (
@@ -811,7 +869,7 @@ export default function ReportLogistic() {
         ) : (
           <>
             {/* เรียงตามความสำคัญ: ตีกลับ > กำลังส่ง > ส่งสำเร็จ */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
               <SummaryCard label="ตีกลับ" value={agg.backStores} unit="ร้าน" sub={`${agg.backBoxes} ลัง`}
                 tint={agg.backStores > 0 ? "bg-rose-500 text-white" : "bg-rose-50 text-rose-400"} ring={agg.backStores > 0 ? "ring-rose-300 ring-2" : undefined}
                 icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>} />
