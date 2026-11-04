@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
 import { API, authHeader, ExcelIcon, exportXlsx, fmtDate, fmtTime } from "./shared";
+import WaitingLoadSection from "./WaitingLoadSection";
 
 // MA-363 — ร้านที่พนักงานแต่ละคนขึ้นของ / ส่งแล้ว / ไม่ได้ส่ง ของวันที่เลือก
 
@@ -242,6 +243,7 @@ export default function DailyStoresTab({ date, empQuery, onOpenSo }: { date: str
 
   return (
     <div className="space-y-8">
+      <WaitingLoadSection date={date} query={empQuery} onOpenSo={onOpenSo} />
       <div className="flex flex-wrap items-center gap-2">
         <div className="text-sm text-slate-600">
           ขึ้นของ <b className="tabular-nums">{totals.loaded}</b> ร้าน · ส่งแล้ว <b className="text-emerald-700 tabular-nums">{totals.done}</b> ·
