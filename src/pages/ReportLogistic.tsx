@@ -4,6 +4,7 @@ import axios from "axios";
 import dayjs from "dayjs";
 import DailyStoresTab from "../components/report-logistic/DailyStoresTab";
 import MonthlyPerformanceTab from "../components/report-logistic/MonthlyPerformanceTab";
+import OrderTimelineModal from "../components/report-logistic/OrderTimelineModal";
 
 type Tab = "daily" | "stores" | "monthly";
 const TABS: { key: Tab; label: string }[] = [
@@ -674,6 +675,8 @@ export default function ReportLogistic() {
   const [error, setError] = useState<string | null>(null);
   const [empQuery, setEmpQuery] = useState("");
   const [routeFilter, setRouteFilter] = useState(""); // "" = ทุกเส้นทาง
+  const [soQuery, setSoQuery] = useState("");
+  const [timelineSo, setTimelineSo] = useState<string | null>(null); // OPHMBC-331
   const [tab, setTab] = useState<Tab>("daily");
   const [reloadKey, setReloadKey] = useState(0); // รีเฟรชแท็บอื่นด้วยการ remount
 
@@ -743,6 +746,18 @@ export default function ReportLogistic() {
             </div>
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
+            {/* OPHMBC-331 — พิมพ์เลข SO แล้ว Enter เพื่อดู timeline */}
+            <form onSubmit={(e) => { e.preventDefault(); const so = soQuery.trim(); if (so) setTimelineSo(so); }} className="flex">
+              <input
+                type="text"
+                value={soQuery}
+                onChange={(e) => setSoQuery(e.target.value)}
+                placeholder="เลข SO → timeline"
+                aria-label="ค้นเลข SO เพื่อดู timeline ออเดอร์"
+                className="border border-blue-200 rounded-l-xl px-3 py-2 text-sm text-slate-700 w-40 font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+              <button type="submit" className="bg-blue-50 border border-l-0 border-blue-200 rounded-r-xl px-3 text-sm font-semibold text-blue-700 hover:bg-blue-100">ดู</button>
+            </form>
             <input
               type="text"
               value={empQuery}
@@ -789,9 +804,9 @@ export default function ReportLogistic() {
 
       <div className="max-w-[1600px] mx-auto px-4 md:px-12 py-8 space-y-8">
         {tab === "stores" ? (
-          <DailyStoresTab key={reloadKey} date={date} empQuery={empQuery} />
+          <DailyStoresTab key={reloadKey} date={date} empQuery={empQuery} onOpenSo={setTimelineSo} />
         ) : tab === "monthly" ? (
-          <MonthlyPerformanceTab key={reloadKey} empQuery={empQuery} />
+          <MonthlyPerformanceTab key={reloadKey} empQuery={empQuery} onOpenSo={setTimelineSo} />
         ) : loading ? (
           <div className="flex items-center justify-center py-24">
             <div className="w-10 h-10 border-[3px] border-blue-600 border-t-transparent rounded-full animate-spin" />
@@ -839,6 +854,7 @@ export default function ReportLogistic() {
           </>
         )}
       </div>
+      {timelineSo && <OrderTimelineModal shRunning={timelineSo} onClose={() => setTimelineSo(null)} />}
     </div>
   );
 }
