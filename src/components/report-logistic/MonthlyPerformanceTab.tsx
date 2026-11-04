@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
 import { API, authHeader, ExcelIcon, exportXlsx, fmtDate, fmtMonth, fmtTime } from "./shared";
@@ -14,6 +14,29 @@ const TH_DOW = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
 const fmtPeriod = (key: string) =>
   key.length === 10 ? `${Number(key.slice(8))} ${TH_DOW[dayjs(key).day()]}.` : fmtMonth(key);
 const fmtPeriodLong = (key: string) => (key.length === 10 ? fmtDate(`${key}T00:00:00`) : fmtMonth(key));
+
+// รายวันแบบ Google Calendar: 3 วัน (ถึงวันที่เลือก) / 7 วัน (อาทิตย์–เสาร์ของสัปดาห์นั้น) / เดือน
+type Span = "3" | "7" | "month";
+const SPANS: { key: Span; label: string }[] = [
+  { key: "3", label: "3 วัน" },
+  { key: "7", label: "7 วัน" },
+  { key: "month", label: "เดือน" },
+];
+const DAY = "YYYY-MM-DD";
+function spanRange(span: Span, anchor: string) {
+  const a = dayjs(anchor);
+  if (span === "3") return { from: a.subtract(2, "day").format(DAY), to: a.format(DAY) };
+  if (span === "7") return { from: a.subtract(a.day(), "day").format(DAY), to: a.add(6 - a.day(), "day").format(DAY) };
+  return { from: a.startOf("month").format(DAY), to: a.endOf("month").format(DAY) };
+}
+const shiftAnchor = (span: Span, anchor: string, dir: 1 | -1) =>
+  span === "month" ? dayjs(anchor).add(dir, "month").format(DAY) : dayjs(anchor).add(dir * Number(span), "day").format(DAY);
+/** "1–3 พ.ย. 69" / "29 ต.ค. – 4 พ.ย. 69" / "พ.ย. 69" */
+function fmtSpan(span: Span, from: string, to: string) {
+  if (span === "month") return fmtMonth(from.slice(0, 7));
+  const [f, t] = [fmtDate(`${from}T00:00:00`), fmtDate(`${to}T00:00:00`)];
+  return from.slice(0, 7) === to.slice(0, 7) ? `${Number(from.slice(8))}–${t}` : `${f.replace(/ \d+$/, "")} – ${t}`;
+}
 
 interface Metrics {
   work_days: number;
@@ -228,10 +251,14 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
   const [from, setFrom] = useState(dayjs().subtract(5, "month").format("YYYY-MM"));
   const [to, setTo] = useState(thisMonth);
   const [period, setPeriod] = useState<Period>("month");
-  const [dayMonth, setDayMonth] = useState(thisMonth); // รายวัน: ดูทีละเดือน
-  // ช่วงที่ใช้จริง — รายวันใช้เดือนเดียว (ส่งต่อให้รายการร้านตีกลับด้วย)
-  const rangeFrom = period === "day" ? dayMonth : from;
-  const rangeTo = period === "day" ? dayMonth : to;
+  const today = dayjs().format(DAY);
+  const [span, setSpan] = useState<Span>("7");
+  const [anchor, setAnchor] = useState(today); // วันที่อ้างอิงของช่วงรายวัน
+  const dayRange = spanRange(span, anchor);
+  // ช่วงที่ใช้จริง — รายวันเป็นวันที่ (ส่งต่อให้รายการร้านตีกลับด้วย)
+  const rangeFrom = period === "day" ? dayRange.from : from;
+  const rangeTo = period === "day" ? dayRange.to : to;
+  const atLatest = dayRange.to >= today; // ช่วงนี้ถึงวันนี้แล้ว เลื่อนไปข้างหน้าไม่ได้
   const [months, setMonths] = useState<string[]>([]);
   const [data, setData] = useState<DriverMonthly[]>([]);
   const [loading, setLoading] = useState(true);
@@ -239,7 +266,10 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
   const [sortBy, setSortBy] = useState<"worst" | "name">("worst");
   const [openEmp, setOpenEmp] = useState<string | null>(null);
 
+  // สลับช่วงเร็วๆ แล้ว response เก่ามาทีหลัง — ใช้เฉพาะของ request ล่าสุด
+  const reqId = useRef(0);
   const load = useCallback(async () => {
+    const id = ++reqId.current;
     setLoading(true);
     setError(null);
     try {
@@ -247,13 +277,15 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
         params: { from: rangeFrom, to: rangeTo, ...(period === "day" ? { by: "day" } : {}) },
         headers: authHeader(),
       });
+      if (id !== reqId.current) return;
       setMonths(res.data.months ?? []);
       setData(res.data.drivers ?? []);
     } catch (e) {
+      if (id !== reqId.current) return;
       const msg = axios.isAxiosError(e) ? (e.response?.data as { message?: string })?.message : undefined;
       setError(msg ?? "โหลดข้อมูลไม่สำเร็จ");
     } finally {
-      setLoading(false);
+      if (id === reqId.current) setLoading(false);
     }
   }, [rangeFrom, rangeTo, period]);
 
@@ -302,7 +334,7 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
       "ของตีกลับยังไม่คืนคลัง": m.back_not_returned,
     });
     const unit = period === "day" ? "วันที่" : "เดือน";
-    exportXlsx(period === "day" ? `ประเมินขนส่ง_รายวัน_${dayMonth}.xlsx` : `ประเมินขนส่ง_${from}_ถึง_${to}.xlsx`, [
+    exportXlsx(period === "day" ? `ประเมินขนส่ง_รายวัน_${rangeFrom}_ถึง_${rangeTo}.xlsx` : `ประเมินขนส่ง_${from}_ถึง_${to}.xlsx`, [
       {
         name: "อัตราส่งสำเร็จ",
         rows: rows.map((d) => ({
@@ -369,8 +401,23 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
           </>
         ) : (
           <>
-            <label className="text-sm text-slate-600">เดือน</label>
-            <input type="month" aria-label="เดือนที่ดูรายวัน" value={dayMonth} max={thisMonth} onChange={(e) => e.target.value && setDayMonth(e.target.value)}
+            {/* แบบ Google Calendar: วันนี้ · ‹ › · ช่วง · 3 วัน / 7 วัน / เดือน */}
+            <button type="button" onClick={() => setAnchor(today)} disabled={atLatest && dayRange.from <= today}
+              className="border border-blue-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 bg-white hover:bg-blue-50 disabled:opacity-50">วันนี้</button>
+            <button type="button" aria-label="ช่วงก่อนหน้า" onClick={() => setAnchor(shiftAnchor(span, anchor, -1))}
+              className="w-9 h-9 rounded-full text-xl font-bold text-slate-700 hover:bg-blue-100">‹</button>
+            <button type="button" aria-label="ช่วงถัดไป" disabled={atLatest} onClick={() => setAnchor(shiftAnchor(span, anchor, 1))}
+              className="w-9 h-9 rounded-full text-xl font-bold text-slate-700 hover:bg-blue-100 disabled:opacity-30">›</button>
+            <span className="text-base font-extrabold text-slate-800 tabular-nums min-w-[9rem]" aria-live="polite">{fmtSpan(span, dayRange.from, dayRange.to)}</span>
+            <div role="group" aria-label="ช่วงรายวัน" className="inline-flex rounded-xl ring-1 ring-blue-200 bg-white p-0.5">
+              {SPANS.map((sp) => (
+                <button key={sp.key} type="button" aria-pressed={span === sp.key} onClick={() => setSpan(sp.key)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-bold ${span === sp.key ? "bg-blue-100 text-blue-800" : "text-slate-600 hover:bg-blue-50"}`}>
+                  {sp.label}
+                </button>
+              ))}
+            </div>
+            <input type="date" aria-label="เลือกวันที่" value={anchor} max={today} onChange={(e) => e.target.value && setAnchor(e.target.value)}
               className="border border-blue-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white" />
           </>
         )}
@@ -398,7 +445,7 @@ export default function MonthlyPerformanceTab({ empQuery }: { empQuery: string }
         <div className="rounded-3xl bg-white ring-1 ring-blue-100 shadow-sm overflow-hidden">
           <div className="px-5 md:px-8 py-6 flex flex-wrap items-center gap-3 border-b border-blue-50">
             <div>
-              <div className="font-extrabold text-lg text-slate-800">{period === "day" ? `อัตราส่งสำเร็จรายวัน · ${fmtMonth(dayMonth)}` : "อัตราส่งสำเร็จรายเดือน"}</div>
+              <div className="font-extrabold text-lg text-slate-800">{period === "day" ? `อัตราส่งสำเร็จรายวัน · ${fmtSpan(span, dayRange.from, dayRange.to)}` : "อัตราส่งสำเร็จรายเดือน"}</div>
               <div className="text-sm text-slate-500">ส่งสำเร็จ ÷ (สำเร็จ + ตีกลับ + ค้างไม่ส่ง) · ตัดรอบสิ้น{period === "day" ? "วัน" : "เดือน"} · กดชื่อเพื่อดูตัวชี้วัด</div>
             </div>
             {/* legend — ทุกช่องมีตัวเลขกำกับ ไม่พึ่งสีอย่างเดียว */}
