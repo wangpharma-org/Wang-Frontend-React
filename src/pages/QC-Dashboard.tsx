@@ -50,6 +50,9 @@ import {
 } from "../components/noBarcodeApproval";
 
 const TAB_KEY = "qc-dashboard";
+// ไม่ได้ตั้งค่า = false → ช่อง Barcode สินค้าพิมพ์เองได้
+const QC_BARCODE_SCANNER_ONLY =
+  import.meta.env.VITE_QC_BARCODE_SCANNER_ONLY === "true";
 
 export interface Root {
   sh_running: string;
@@ -2286,6 +2289,7 @@ const QCDashboard = () => {
   const lastBarcodeInputTimeRef = useRef<number | null>(null);
   const [barcodeWarning, setBarcodeWarning] = useState(false);
   const handleBarcodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!QC_BARCODE_SCANNER_ONLY) return;
     const now = Date.now();
     const isFirstChar = e.target.value.length <= 1;
 
@@ -2303,6 +2307,7 @@ const QCDashboard = () => {
   };
 
   const blockClipboard = (e: React.SyntheticEvent) => {
+    if (!QC_BARCODE_SCANNER_ONLY) return;
     e.preventDefault();
     setBarcodeWarning(true);
   };
