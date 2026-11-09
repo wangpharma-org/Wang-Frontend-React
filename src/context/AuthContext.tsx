@@ -27,7 +27,13 @@ interface UserInfo {
 /** OPHMBC-325 — login ไม่ผ่านพร้อมเหตุผลจาก auth (รหัสผิด / ยังไม่ลงเวลา / ถูกระงับ / HRSoft ล่ม ฯลฯ) */
 export type LoginResult =
   | { ok: true }
-  | { ok: false; code?: string; message?: string };
+  | {
+      ok: false;
+      code?: string;
+      message?: string;
+      /** body ทั้งก้อนจาก auth — OPHMBC-339 ใช้ method / challenge_ticket / enroll_ticket / methods */
+      data?: Record<string, unknown>;
+    };
 
 interface AuthContextType {
   accessToken: string | null;
@@ -35,7 +41,13 @@ interface AuthContextType {
   userInfo: UserInfo | null;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (username: string, password: string) => Promise<LoginResult>;
+  login: (
+    username: string,
+    password: string,
+    opts?: { totpCode?: string }
+  ) => Promise<LoginResult>;
+  /** OPHMBC-339 — ได้ token จากทางอื่น (ยืนยัน 2FA / สมัคร 2FA ด้วยตั๋ว) แล้วเข้าสู่ระบบ */
+  completeLogin: (accessToken: string, refreshToken: string) => LoginResult;
   logout: () => void;
 }
 
@@ -61,22 +73,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     setLoading(false);
   }, []);
 
-  const login = async (
-    username: string,
-    password: string
-  ): Promise<LoginResult> => {
-    try {
-      const res = await axios.post(
-        `${import.meta.env.VITE_API_URL_AUTH}/api/auth/login`,
-        {
-          username,
-          password,
-        }
-      );
-
-      const { access_token, refresh_token } = res.data;
-
-      const base64Url = access_token.split(".")[1];
+  const completeLogin = (
+    access_token: string,
+    refresh_token: string
+  ): LoginResult => {
+    const base64Url = access_token.split(".")[1];
       const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
       const binary = atob(base64);
       const bytes = new Uint8Array([...binary].map((c) => c.charCodeAt(0)));
@@ -125,8 +126,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         }
       }
 
-
       return { ok: true };
+  };
+
+  const login = async (
+    username: string,
+    password: string,
+    opts: { totpCode?: string } = {}
+  ): Promise<LoginResult> => {
+    try {
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL_AUTH}/api/auth/login`,
+        {
+          username,
+          password,
+          // OPHMBC-339 — รหัส 6 หลักของ HRSoft เมื่อได้ TOTP_REQUIRED
+          ...(opts.totpCode ? { totp_code: opts.totpCode } : {}),
+        }
+      );
+      const { access_token, refresh_token } = res.data;
+      return completeLogin(access_token, refresh_token);
     } catch (error) {
       console.error("Login failed:", error);
       // auth ตอบ { code, message } (OPHMBC-325) — ส่งต่อให้หน้า login แสดงเหตุผลจริง
@@ -135,6 +154,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         ok: false,
         code: typeof data?.code === "string" ? data.code : undefined,
         message: typeof data?.message === "string" ? data.message : undefined,
+        data: data && typeof data === "object" ? data : undefined,
       };
     }
   };
@@ -185,6 +205,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         isAuthenticated: !!accessToken,
         loading,
         login,
+        completeLogin,
         logout,
       }}
     >
