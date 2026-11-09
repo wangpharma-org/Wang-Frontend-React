@@ -206,10 +206,22 @@ function AdminSection() {
 
   const toggle = async (empCode: string, selected: boolean) => {
     setBusyEmp(empCode);
+    // ติ๊กให้เห็นทันที แล้วโหลดค่าจริงจาก auth (บันทึกไม่ได้ = load คืนค่าเดิม)
+    setData((d) =>
+      d
+        ? {
+            ...d,
+            users: d.users.map((u) =>
+              u.emp_code === empCode ? { ...u, selected: !selected } : u
+            ),
+          }
+        : d
+    );
     try {
       await adminSetRequired(empCode, !selected);
       await load();
     } catch (e) {
+      await load();
       Swal.fire({ icon: "error", title: "บันทึกไม่ได้", text: apiError(e).message });
     } finally {
       setBusyEmp(null);
