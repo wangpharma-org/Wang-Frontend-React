@@ -22,10 +22,12 @@ import { useNavigate } from "react-router";
 import { fetchPrintLabelFlag } from "../components/noBarcodeApproval";
 import { fetchMyScanPolicy } from "../components/employeeScanSetting";
 import { PICKING_CONTROL_FLAG, fetchFlag } from "../components/picking-control/pickingControlApi";
+import { fetchTwoFactorStatus } from "../components/twoFactor";
 
 const PRINT_LABEL_HREF = "/product-barcode-print-select";
 const EMPLOYEE_SETTINGS_HREF = "/employee-settings";
 const PICKING_CONTROL_HREF = "/picking-control";
+const TWO_FACTOR_HREF = "/two-factor";
 const listMenu = [
   {
     id: 24,
@@ -221,6 +223,14 @@ const listMenu = [
     imageSrc: settingsIcon,
     admin: false,
   },
+  {
+    // OPHMBC-339 — เห็นเมื่อ auth เปิด TWO_FACTOR_ENABLED (ทุกคนตั้งค่าของตัวเองได้)
+    id: 28,
+    name: "ยืนยันตัวตน 2 ชั้น",
+    href: TWO_FACTOR_HREF,
+    imageSrc: settingsIcon,
+    admin: false,
+  },
 ];
 const Home = () => {
   const navigate = useNavigate()
@@ -252,6 +262,13 @@ const Home = () => {
           // OPHMBC-322 — เห็นเมื่อเปิด flag picking-control-page (เมนู admin อยู่แล้ว) — โหลดไม่ได้ให้ซ่อน
           if (menu.href === PICKING_CONTROL_HREF) {
             const visible = await fetchFlag(PICKING_CONTROL_FLAG).catch(() => false);
+            return { id: menu.id, visible };
+          }
+          // OPHMBC-339 — เห็นเมื่อ auth เปิด 2FA — โหลดไม่ได้ให้ซ่อน
+          if (menu.href === TWO_FACTOR_HREF) {
+            const visible = await fetchTwoFactorStatus()
+              .then((st) => st.feature_enabled)
+              .catch(() => false);
             return { id: menu.id, visible };
           }
           // OPHMBC-316 — เห็นเมื่อเปิด flag employee-scan-setting และพนักงานมี manage_qc = Yes

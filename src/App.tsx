@@ -54,6 +54,7 @@ import DailyIpLogsPage from "./pages/DailyIpLogsPage";
 import NoBarcodeApprovalSettings from "./pages/NoBarcodeApprovalSettings";
 import UnitRatioBackfill from "./pages/UnitRatioBackfill";
 import EmployeeSettings from "./pages/EmployeeSettings";
+import TwoFactorSettings from "./pages/TwoFactorSettings";
 import ScanBox from "./pages/ScanBox";
 import ScanBasket from "./pages/ScanBasket";
 import ScanConfirmSticker from "./pages/ScanConfirmSticker";
@@ -449,6 +450,17 @@ function App() {
                 <Navbar />
                 <RequireAuth>
                   <UnitRatioBackfill />
+                </RequireAuth>
+              </div>
+            }
+          />
+          <Route
+            path="/two-factor"
+            element={
+              <div>
+                <Navbar />
+                <RequireAuth>
+                  <TwoFactorSettings />
                 </RequireAuth>
               </div>
             }
