@@ -38,12 +38,23 @@ interface Delivery {
   lng: string | null;
   receiver_type: string | null;
   box_amount: number;
+  /** ลังจริง = box_amount - 1 ต่อ shipping (ลังที่ 1 คือซองบิล) — backend เก่าไม่ส่งมา */
+  real_box_amount?: number;
+  box_sets?: BoxSet[];
   bill_count: number;
   shipping_count: number;
   /** เลขบิลของจุดส่งนี้ — ราคาดึงจาก order-picking (OPHMBC-331) */
   sh_runnings?: string[];
   bills: BillPrice[];
   total_price: number | null;
+}
+
+/** 1 ชุดสติกเกอร์ (shipping) — บิลในชุดเดียวกันแชร์ลังกัน */
+interface BoxSet {
+  shipping_id: number;
+  box_amount: number;
+  real_box_amount: number;
+  sh_runnings: string[];
 }
 
 interface Back {
@@ -54,6 +65,8 @@ interface Back {
   photo_url: string | null;
   report_image_url: string | null;
   box_amount: number;
+  real_box_amount?: number;
+  box_sets?: BoxSet[];
   bill_count: number;
   shipping_count: number;
   sh_runnings?: string[];
@@ -103,6 +116,9 @@ interface Row {
   lat: string | null;
   lng: string | null;
   box_amount: number;
+  /** null = backend ยังไม่ส่งลังจริงมา */
+  real_box_amount: number | null;
+  box_sets: BoxSet[];
   shipping_count: number;
   bill_count: number;
   bills: BillPrice[];
@@ -382,6 +398,37 @@ function CountUnit({ n, label }: { n: number; label: string }) {
   );
 }
 
+// ─── ลังจริงรายบิล (ลังที่ 1 = ซองบิล จึงหักออก 1 ต่อชุดสติกเกอร์) ─────────────
+
+/** บิลที่อยู่ในลังเดียวกัน (shipping เดียวกัน) นับเป็น 1 บิล — backend เก่าไม่มี box_sets ใช้ bill_count เดิม */
+const billSetCount = (row: Row) => (row.box_sets.length > 0 ? row.box_sets.length : row.bill_count);
+
+function RealBoxes({ row }: { row: Row }) {
+  if (row.real_box_amount == null) return <span className="text-slate-300">-</span>;
+  return (
+    <div>
+      <div className="font-extrabold text-slate-800 tabular-nums text-[length:calc(15px*var(--fs,1))]">
+        {row.real_box_amount} <span className="text-xs font-medium text-slate-400">ลัง</span>
+      </div>
+      {row.box_sets.length > 0 && (
+        <div className="mt-1.5 space-y-1 border-t border-slate-100 pt-1.5">
+          {row.box_sets.map((set) => (
+            <div key={set.shipping_id} className="flex items-start justify-between gap-2 text-[length:calc(11px*var(--fs,1))] tabular-nums">
+              {/* บิลในชุดเดียวกันแชร์ลังกัน — แสดงจำนวนลังครั้งเดียวต่อชุด */}
+              <span className="font-mono text-slate-500 min-w-0">
+                {set.sh_runnings.length > 0
+                  ? set.sh_runnings.map((so) => <span key={so} className="block whitespace-nowrap">{so}</span>)
+                  : "-"}
+              </span>
+              <span className="font-semibold text-slate-700 whitespace-nowrap">{set.real_box_amount} ลัง</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Overview summary card ────────────────────────────────────────────────────
 
 function SummaryCard({ label, value, unit, sub, icon, tint, ring = "ring-blue-100", accent = false }: {
@@ -434,6 +481,7 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
         return {
           status: "done", time: d.shipping_finish_time, mem_code: d.mem_code, mem_name: d.mem_name,
           lat: d.lat, lng: d.lng, box_amount: d.box_amount,
+          real_box_amount: d.real_box_amount ?? null, box_sets: d.box_sets ?? [],
           shipping_count: d.shipping_count, bill_count: d.bill_count,
           bills: d.bills ?? [], total_price: d.total_price ?? null, note: d.note, photos, signs,
         };
@@ -445,6 +493,7 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
         return {
           status: "back", time: b.shipping_finish_time, mem_code: b.mem_code, mem_name: b.mem_name,
           lat: null, lng: null, box_amount: b.box_amount,
+          real_box_amount: b.real_box_amount ?? null, box_sets: b.box_sets ?? [],
           shipping_count: b.shipping_count, bill_count: b.bill_count,
           bills: b.bills ?? [], total_price: b.total_price ?? null, note: b.reason, photos, signs: [],
         };
@@ -535,7 +584,7 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
                       </div>
                       <div className="font-bold text-slate-800 leading-snug mt-1 break-words">{row.mem_name}</div>
                       <div className="text-xs text-slate-400">
-                        <span className="font-mono">{row.mem_code}</span> · {row.box_amount} ลัง · {row.bill_count} บิล
+                        <span className="font-mono">{row.mem_code}</span> · {row.real_box_amount ?? row.box_amount} ลัง · {billSetCount(row)} บิล
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
@@ -543,6 +592,12 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
                       <div className="text-[length:calc(11px*var(--fs,1))] text-slate-400">บาท</div>
                     </div>
                   </div>
+                  {row.real_box_amount != null && (
+                    <div className="rounded-lg bg-slate-50 ring-1 ring-slate-100 px-3 py-2">
+                      <div className="text-[length:calc(11px*var(--fs,1))] font-bold text-slate-500 mb-0.5">ลังจริงรายบิล</div>
+                      <RealBoxes row={row} />
+                    </div>
+                  )}
                   {row.note && <div className={`text-[length:calc(13px*var(--fs,1))] ${done ? "text-slate-600" : "text-rose-600 font-medium"}`}>{row.note}</div>}
                   {row.photos.length > 0 && (
                     <div className="flex gap-2 flex-wrap">
@@ -568,11 +623,12 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
             })}
           </div>
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full table-fixed border-collapse min-w-[1400px] text-[length:calc(13px*var(--fs,1))]">
+            <table className="w-full table-fixed border-collapse min-w-[1660px] text-[length:calc(13px*var(--fs,1))]">
               <colgroup>
                 <col className="w-[112px]" />
                 <col className="w-[18%]" />
                 <col className="w-[96px]" />
+                <col className="w-[260px]" />
                 <col className="w-[30%]" />
                 <col className="w-[284px]" />
                 <col className="w-[12%]" />
@@ -583,6 +639,7 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
                   <th className="text-left font-bold px-4 py-3">เวลา · สถานะ</th>
                   <th className="text-left font-bold px-4 py-3">ร้าน</th>
                   <th className="text-center font-bold px-4 py-3">ลัง · บิล</th>
+                  <th className="text-left font-bold px-4 py-3" title="ลังที่ 1 คือซองบิล จึงหักออก 1 ต่อชุดสติกเกอร์">ลังจริงรายบิล</th>
                   <th className="text-left font-bold px-4 py-3">รูปหลักฐาน</th>
                   <th className="text-left font-bold px-4 py-3">ลายเซ็น</th>
                   <th className="text-left font-bold px-4 py-3">หมายเหตุ</th>
@@ -618,10 +675,14 @@ function DriverCard({ r, date }: { r: DriverReport; date: string }) {
                       {/* ลัง · บิล */}
                       <td className="px-4 py-4">
                         <div className="flex items-start justify-center gap-3">
-                          <CountUnit n={row.box_amount} label="ลัง" />
+                          <CountUnit n={row.real_box_amount ?? row.box_amount} label="ลัง" />
                           <span className="text-slate-200 text-lg leading-none">|</span>
-                          <CountUnit n={row.bill_count} label="บิล" />
+                          <CountUnit n={billSetCount(row)} label="บิล" />
                         </div>
+                      </td>
+                      {/* ลังจริงรายบิล */}
+                      <td className="px-4 py-4">
+                        <RealBoxes row={row} />
                       </td>
                       {/* รูปหลักฐาน + แชร์ทั้งหมด */}
                       <td className="px-4 py-4">
