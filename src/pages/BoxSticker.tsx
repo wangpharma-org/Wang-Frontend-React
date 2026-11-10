@@ -46,6 +46,23 @@ export interface Address {
   emp: Employees;
 }
 
+/// เวลาคาดว่าจะถึง จากระบบขนส่ง (OP: GET /api/box-sticker/expected-arrival/:mem_code)
+export interface BoxStickerEta {
+  /// flag box-sticker-eta ปิด = false → แสดงแถบแบบเดิม
+  enabled: boolean;
+  /// null = ไม่มีประวัติส่ง / ระบบขนส่งไม่ตอบ → แสดง "-"
+  expected_arrival: { date: string; time: string } | null;
+}
+
+/// รอเวลาคาดว่าจะถึงไม่เกินนี้ก่อนสั่งพิมพ์ — ไม่ให้ระบบขนส่งช้าแล้ว QC พิมพ์ไม่ได้
+const ETA_TIMEOUT_MS = 4000;
+const ETA_DISABLED: BoxStickerEta = { enabled: false, expected_arrival: null };
+
+const formatEta = (eta: BoxStickerEta["expected_arrival"]) =>
+  eta
+    ? `${dayjs(eta.date).locale("th").format("ddd D MMM")} ~${eta.time} น.`
+    : "-";
+
 const styles = {
   container: {
     width: "98mm",
@@ -70,6 +87,8 @@ const BoxSticker = () => {
   const [JSONQCEmpData, setJSONQCEmpData] = useState<dataForEmp>();
   const [JSONprepareEmpData, setJSONprepareEmpData] = useState<dataForEmp>();
   const [dataPrint, setDataPrint] = useState<Address | null>(null);
+  /// undefined = ยังโหลดไม่เสร็จ (ยังไม่สั่งพิมพ์)
+  const [eta, setEta] = useState<BoxStickerEta>();
   const sh_running = queryParams.get("sh_running");
 
   useEffect(() => {
@@ -81,19 +100,45 @@ const BoxSticker = () => {
   }, [prepareEmpData, QCEmpData, packedEmpData]);
 
   useEffect(() => {
-    if (JSONQCEmpData && JSONpackedEmpData && JSONprepareEmpData && dataPrint) {
+    if (
+      JSONQCEmpData &&
+      JSONpackedEmpData &&
+      JSONprepareEmpData &&
+      dataPrint &&
+      eta
+    ) {
       window.onafterprint = () => {
         window.close();
       };
       window.print();
     }
-  }, [JSONQCEmpData, JSONpackedEmpData, JSONprepareEmpData, dataPrint]);
+  }, [JSONQCEmpData, JSONpackedEmpData, JSONprepareEmpData, dataPrint, eta]);
 
   useEffect(() => {
     if (mem_code) {
       handleGet();
+      handleGetEta();
+    } else {
+      setEta(ETA_DISABLED);
     }
   }, []);
+
+  // เรียกไม่ได้ (เช่น BE ยังไม่ deploy) → แถบแบบเดิม สติกเกอร์ยังพิมพ์ได้
+  const handleGetEta = async () => {
+    try {
+      const res = await axios.get<BoxStickerEta>(
+        `${import.meta.env.VITE_API_URL_ORDER}/api/box-sticker/expected-arrival/${mem_code}`,
+        { timeout: ETA_TIMEOUT_MS },
+      );
+      setEta(
+        res.data && typeof res.data.enabled === "boolean"
+          ? res.data
+          : ETA_DISABLED,
+      );
+    } catch {
+      setEta(ETA_DISABLED);
+    }
+  };
 
   useEffect(() => {
     if (dataPrint) {
@@ -179,16 +224,28 @@ const BoxSticker = () => {
             />
           </div>
         </div>
-        <div className="flex justify-between mt-1 border-t-1 border-b-1 py-1 px-26">
-          <div className="flex items-center gap-1">
-            <img src={calendar} className="w-3"></img>
-            <p className="text-[7px]">อาทิตย์ - อาทิตย์</p>
-          </div>
-          <div className="flex items-center gap-1">
+        {eta?.enabled ? (
+          <div className="flex justify-center items-center gap-1.5 mt-1 border-t-1 border-b-1 py-0.5">
             <img src={clock} className="w-3"></img>
-            <p className="text-[7px]">00.00 - 00.00</p>
+            <p className="text-[11px]">
+              คาดว่าจะถึง{" "}
+              <span className="font-bold text-[12px]">
+                {formatEta(eta.expected_arrival)}
+              </span>
+            </p>
           </div>
-        </div>
+        ) : (
+          <div className="flex justify-between mt-1 border-t-1 border-b-1 py-1 px-26">
+            <div className="flex items-center gap-1">
+              <img src={calendar} className="w-3"></img>
+              <p className="text-[7px]">อาทิตย์ - อาทิตย์</p>
+            </div>
+            <div className="flex items-center gap-1">
+              <img src={clock} className="w-3"></img>
+              <p className="text-[7px]">00.00 - 00.00</p>
+            </div>
+          </div>
+        )}
         <div className="flex justify-center items-center border-b-1 mt-0.5">
           <p
             className={`${
