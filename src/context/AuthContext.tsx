@@ -6,8 +6,47 @@ import React, {
   useRef,
   ReactNode,
 } from "react";
-import axios from "axios";
+import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import Swal from "sweetalert2";
+
+const AUTH_URL = `${import.meta.env.VITE_API_URL_AUTH}/api/auth`;
+
+type RetryableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
+
+interface TokenPair {
+  access_token: string;
+  refresh_token: string;
+}
+
+// NNRB-1776 — access token อายุ 15 นาที · หลาย request ได้ 401 พร้อมกันต้อง refresh ครั้งเดียว (refresh token ถูก rotate ใช้ซ้ำไม่ได้)
+let refreshPromise: Promise<string> | null = null;
+
+function refreshAccessToken(): Promise<string> {
+  refreshPromise ??= (async () => {
+    const refreshToken = sessionStorage.getItem("refresh_token");
+    if (!refreshToken) throw new Error("No refresh token");
+    const res = await axios.post<TokenPair>(`${AUTH_URL}/refresh`, {
+      refreshToken,
+    });
+    sessionStorage.setItem("access_token", res.data.access_token);
+    sessionStorage.setItem("refresh_token", res.data.refresh_token);
+    return res.data.access_token;
+  })().finally(() => {
+    refreshPromise = null;
+  });
+  return refreshPromise;
+}
+
+function tokenExpiresAt(token: string): number | null {
+  try {
+    const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const payload: unknown = JSON.parse(atob(base64));
+    const exp = (payload as { exp?: unknown } | null)?.exp;
+    return typeof exp === "number" ? exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
 
 interface UserInfo {
   user_id: number;
@@ -50,15 +89,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = sessionStorage.getItem("access_token");
-    const refresh = sessionStorage.getItem("refresh_token");
-    const user = sessionStorage.getItem("user_info");
+    const restore = async () => {
+      let token = sessionStorage.getItem("access_token");
+      const user = sessionStorage.getItem("user_info");
 
-    if (token) setAccessToken(token);
-    if (refresh) setRefreshToken(refresh);
-    if (user) setUserInfo(JSON.parse(user));
+      // เปิดหน้าใหม่ตอน access หมดอายุ — refresh ก่อน ไม่งั้น socket ที่ต่อตอน mount จะใช้ token เก่าแล้วต่อไม่ติด
+      const expiresAt = token ? tokenExpiresAt(token) : null;
+      if (token && expiresAt !== null && expiresAt <= Date.now()) {
+        token = await refreshAccessToken().catch(() => null);
+        if (!token) {
+          sessionStorage.removeItem("access_token");
+          sessionStorage.removeItem("refresh_token");
+          sessionStorage.removeItem("user_info");
+        }
+      }
 
-    setLoading(false);
+      if (token) {
+        setAccessToken(token);
+        setRefreshToken(sessionStorage.getItem("refresh_token"));
+        if (user) setUserInfo(JSON.parse(user));
+      }
+      setLoading(false);
+    };
+    void restore();
   }, []);
 
   const login = async (
@@ -175,6 +228,59 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     });
     return () => axios.interceptors.response.eject(id);
   }, []);
+
+  // NNRB-1776 — request ที่แนบ Bearer แล้วได้ 401 → refresh แล้วยิงซ้ำ 1 ครั้ง · refresh ไม่ผ่าน (เกิน 12 ชม. / login ที่อื่น) = logout
+  useEffect(() => {
+    const id = axios.interceptors.response.use(undefined, async (error: AxiosError<{ code?: string }>) => {
+      const config = error.config as RetryableConfig | undefined;
+      const hadBearer = String(config?.headers?.Authorization ?? "").startsWith("Bearer ");
+      if (
+        error.response?.status !== 401 ||
+        !config ||
+        config._retry ||
+        !hadBearer ||
+        error.response.data?.code === "SESSION_REVOKED" ||
+        config.url?.startsWith(AUTH_URL)
+      ) {
+        return Promise.reject(error);
+      }
+      config._retry = true;
+      try {
+        const token = await refreshAccessToken();
+        setAccessToken(token);
+        setRefreshToken(sessionStorage.getItem("refresh_token"));
+        config.headers.Authorization = `Bearer ${token}`;
+        return axios(config);
+      } catch (refreshError: unknown) {
+        // เน็ตหลุด (ไม่มี response) ไม่ logout ให้ลองใหม่ได้
+        if (!axios.isAxiosError(refreshError) || refreshError.response) {
+          logout();
+        }
+        return Promise.reject(error);
+      }
+    });
+    return () => axios.interceptors.response.eject(id);
+  }, []);
+
+  // refresh ก่อนหมดอายุ 1 นาที — หน้าที่เพิ่งเปิดแล้วต่อ socket ด้วย token จาก sessionStorage จะได้ตัวที่ยังใช้ได้
+  useEffect(() => {
+    if (!accessToken) return;
+    const expiresAt = tokenExpiresAt(accessToken);
+    if (expiresAt === null) return;
+    const timer = window.setTimeout(() => {
+      refreshAccessToken()
+        .then((token) => {
+          setAccessToken(token);
+          setRefreshToken(sessionStorage.getItem("refresh_token"));
+        })
+        .catch((refreshError: unknown) => {
+          if (!axios.isAxiosError(refreshError) || refreshError.response) {
+            logout();
+          }
+        });
+    }, Math.max(expiresAt - Date.now() - 60_000, 0));
+    return () => window.clearTimeout(timer);
+  }, [accessToken]);
 
   return (
     <AuthContext.Provider
