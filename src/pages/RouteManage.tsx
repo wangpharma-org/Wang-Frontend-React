@@ -1,4 +1,5 @@
 import axios from "axios";
+import { OrderSortMode, OrderSortSnapshot } from "../components/order-sort/orderSort";
 import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import {
@@ -184,6 +185,10 @@ const RouteManage = () => {
     const [savingBatchMode, setSavingBatchMode] = useState<boolean>(false);
     const [savingGroups, setSavingGroups] = useState<boolean>(false);
     const [savingThreshold, setSavingThreshold] = useState<boolean>(false);
+    // วิธีเรียงร้านที่ยังไม่จัดบนหน้าจัดออเดอร์ — บังคับได้เฉพาะ manage_route (backend เช็คซ้ำ)
+    const [orderSort, setOrderSort] = useState<OrderSortSnapshot | null>(null);
+    const [savingOrderSort, setSavingOrderSort] = useState<boolean>(false);
+    const canForceOrderSort = parsedUserAuth ? parsedUserAuth.manage_route == "Yes" : false;
     const dndSensors = useSensors(useSensor(PointerSensor));
 
     useEffect(() => {
@@ -194,6 +199,7 @@ const RouteManage = () => {
         fetchPickerOptions();
         fetchRouteBatchMode();
         fetchRouteBatchGroups();
+        fetchOrderSort();
     }, []);
 
     // Auto-refresh สถานะรูปแบบการจัดทุก 1 นาที พร้อมนับถอยหลังให้เห็น
@@ -395,6 +401,42 @@ const RouteManage = () => {
             Swal.fire({ icon: "error", title: "อัปเดตเส้นทางไม่สำเร็จ" });
         } finally {
             setBulkLoading(false);
+        }
+    };
+
+    // ---------- วิธีเรียงหน้าจัดออเดอร์ ----------
+
+    const fetchOrderSort = async () => {
+        try {
+            const res = await axios.get<OrderSortSnapshot>(
+                `${import.meta.env.VITE_API_URL_ORDER}/api/order-sort-setting`,
+                authHeaders()
+            );
+            setOrderSort(res.data);
+        } catch (error) {
+            // backend รุ่นก่อนไม่มี endpoint นี้ — ซ่อนส่วนนี้ไป
+            console.error("Error fetching order sort setting:", error);
+        }
+    };
+
+    const handleSetOrderSort = async (forcedMode: OrderSortMode | null) => {
+        setSavingOrderSort(true);
+        try {
+            const res = await axios.put<OrderSortSnapshot>(
+                `${import.meta.env.VITE_API_URL_ORDER}/api/order-sort-setting`,
+                { forced_mode: forcedMode },
+                authHeaders()
+            );
+            setOrderSort(res.data);
+            Swal.fire({ icon: "success", title: "บันทึกสำเร็จ", timer: 1200, showConfirmButton: false });
+        } catch (error) {
+            const message =
+                axios.isAxiosError(error) && error.response?.data?.message
+                    ? (error.response.data.message as string)
+                    : "บันทึกไม่สำเร็จ";
+            Swal.fire({ icon: "error", title: "เกิดข้อผิดพลาด", text: message });
+        } finally {
+            setSavingOrderSort(false);
         }
     };
 
@@ -780,6 +822,39 @@ const RouteManage = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* วิธีเรียงร้านที่ยังไม่จัดบนหน้าจัดออเดอร์ (flag order-list-departure-sort) */}
+                {orderSort?.enabled && (
+                    <div className="bg-white rounded-lg shadow-lg p-6 mb-6" data-testid="order-sort-setting">
+                        <label className="text-sm font-medium text-gray-700 mb-2 block">
+                            วิธีเรียงร้านที่ยังไม่จัด (หน้าจัดออเดอร์)
+                        </label>
+                        <div className="flex flex-col gap-2">
+                            {([
+                                [null, "ให้พนักงานเลือกเอง"],
+                                ["departure", "บังคับ: เวลารถออกก่อน แล้วค่อยวันที่เข้าระบบ"],
+                                ["normal", "บังคับ: แบบปกติ (วันที่เข้าระบบ)"],
+                            ] as [OrderSortMode | null, string][]).map(([value, label]) => (
+                                <label key={value ?? "none"} className="flex items-center gap-2">
+                                    <input
+                                        type="radio"
+                                        name="orderSortForcedMode"
+                                        checked={orderSort.forced_mode === value}
+                                        disabled={savingOrderSort || !canForceOrderSort}
+                                        onChange={() => handleSetOrderSort(value)}
+                                    />
+                                    {label}
+                                </label>
+                            ))}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                            เวลารถออกมาจากชุดเส้นทางด้านล่าง เส้นทางที่ไม่อยู่ในชุดหรือไม่ได้ตั้งเวลาจะอยู่ท้ายรายการ
+                        </p>
+                        {!canForceOrderSort && (
+                            <p className="text-xs text-amber-600 mt-1">ต้องมีสิทธิ์จัดการเส้นทาง (manage_route) ถึงจะเปลี่ยนได้</p>
+                        )}
+                    </div>
+                )}
 
                 {/* ตั้งค่าชุดเส้นทางสำหรับโหมดเปิดทีละชุด — แก้ไขได้เฉพาะตอนอยู่โหมดปกติ */}
                 {routeBatchSetting?.mode !== "batch" && (

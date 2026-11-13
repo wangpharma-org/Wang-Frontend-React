@@ -11,6 +11,15 @@ import print from "../assets/printing_black.png";
 import box from "../assets/product-17.png";
 import Swal from "sweetalert2";
 import FeatureSuspendedScreen from "../components/FeatureSuspendedScreen";
+import {
+  OrderSortMode,
+  OrderSortSnapshot,
+  comparePendingOrders,
+  departureTimeOf,
+  readUserSortMode,
+  resolveSortMode,
+  saveUserSortMode,
+} from "../components/order-sort/orderSort";
 
 interface Product {
   [x: string]: ReactNode;
@@ -202,6 +211,17 @@ const OrderList = () => {
   const [pickingRuleStatus, setPickingRuleStatus] = useState<PickingRuleStatus | null>(null);
   const [viewingMemCodes, setViewingMemCodes] = useState<string[]>([]);
   const [orderBlock, setOrderBlock] = useState<OrderBlockSnapshot | null>(null);
+  // วิธีเรียงร้านที่ยังไม่จัด (flag order-list-departure-sort) — backend รุ่นก่อนไม่ส่ง orderSort มา
+  const [orderSort, setOrderSort] = useState<OrderSortSnapshot | null>(null);
+  const [userSortMode, setUserSortMode] = useState<OrderSortMode>(readUserSortMode);
+  const sortMode = resolveSortMode(orderSort, userSortMode);
+  const sortLockedByAdmin = !!orderSort?.enabled && orderSort.forced_mode !== null;
+  const toggleSortMode = () => {
+    if (sortLockedByAdmin) return;
+    const next: OrderSortMode = userSortMode === "departure" ? "normal" : "departure";
+    setUserSortMode(next);
+    saveUserSortMode(next);
+  };
 
   const blockedRouteCodes = useMemo(
     () => new Set(orderBlock?.blocked_route_codes ?? []),
@@ -441,6 +461,7 @@ const OrderList = () => {
       setPickingRuleStatus(data.pickingRule ?? null);
       setViewingMemCodes(data.viewingMemCodes ?? []);
       setOrderBlock(data.orderBlock ?? null);
+      setOrderSort(data.orderSort ?? null);
       console.log("time", data.lastestDate);
       setLoading(false);
     });
@@ -1224,6 +1245,27 @@ const OrderList = () => {
                 ))}
               </select>
             </div>
+            {orderSort?.enabled && (
+              <button
+                type="button"
+                data-testid="order-sort-toggle"
+                onClick={toggleSortMode}
+                disabled={sortLockedByAdmin}
+                title={
+                  sortLockedByAdmin
+                    ? "แอดมินกำหนดวิธีเรียงไว้ เปลี่ยนเองไม่ได้"
+                    : "สลับวิธีเรียงร้านที่ยังไม่จัด"
+                }
+                className={`ml-2 shrink-0 whitespace-nowrap rounded px-2 py-1 text-xs font-medium ${
+                  sortMode === "departure"
+                    ? "bg-sky-600 text-white"
+                    : "bg-white text-gray-700"
+                } ${sortLockedByAdmin ? "opacity-80 cursor-not-allowed" : ""}`}
+              >
+                {sortMode === "departure" ? "เรียง: รถออก" : "เรียง: ปกติ"}
+                {sortLockedByAdmin && " 🔒"}
+              </button>
+            )}
             <div
               className="ml-2 mr-2 flex items-center space-x-1 cursor-pointer"
               onClick={() => setShowRequestList(!showRequestList)}
@@ -1446,7 +1488,13 @@ const OrderList = () => {
                             new Date(sh.sh_datetime).getTime()
                           )
                         );
-                        return maxA - maxB;
+                        // ร้านที่ยังไม่จัด: เวลารถออกก่อน (ถ้าเลือก) แล้วค่อยวันที่เข้าระบบ
+                        return comparePendingOrders(
+                          { routeCode: a.mem_route?.route_code, latestBillTime: maxA },
+                          { routeCode: b.mem_route?.route_code, latestBillTime: maxB },
+                          sortMode,
+                          orderSort
+                        );
                       })
                       .filter((order) => filteredData.includes(order))
                       .map((order) => {
@@ -1585,8 +1633,14 @@ const OrderList = () => {
                                     &nbsp;
                                     <p>{order?.emp?.emp_nickname}</p>
                                   </div>
-                                  <div className="flex justify-center">
+                                  <div className="flex justify-center items-center gap-1">
                                     <p>({order?.mem_route?.route_name})</p>
+                                    {sortMode === "departure" &&
+                                      departureTimeOf(order?.mem_route?.route_code, orderSort) && (
+                                        <span className="text-xs bg-sky-100 text-sky-700 rounded px-1">
+                                          รถออก {departureTimeOf(order?.mem_route?.route_code, orderSort)}
+                                        </span>
+                                      )}
                                   </div>
                                   <div className="flex justify-end pb-1">
                                     <p className="font-bold">
