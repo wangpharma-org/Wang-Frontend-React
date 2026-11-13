@@ -22,10 +22,14 @@ import { useNavigate } from "react-router";
 import { fetchPrintLabelFlag } from "../components/noBarcodeApproval";
 import { fetchMyScanPolicy } from "../components/employeeScanSetting";
 import { PICKING_CONTROL_FLAG, fetchFlag } from "../components/picking-control/pickingControlApi";
+import { canSeeFleetMap } from "../components/fleet-map/api";
+import LogisticsSection from "../components/logistics/LogisticsSection";
+import { LOGISTICS_MENU_IDS } from "../components/logistics/logisticsMenu";
 
 const PRINT_LABEL_HREF = "/product-barcode-print-select";
 const EMPLOYEE_SETTINGS_HREF = "/employee-settings";
 const PICKING_CONTROL_HREF = "/picking-control";
+const FLEET_MAP_HREF = "/fleet-map";
 const listMenu = [
   {
     id: 24,
@@ -187,6 +191,14 @@ const listMenu = [
     admin: false,
   },
   {
+    // MA-377 — GPS รถจาก Cartrack · เห็นเฉพาะ user_role MANAGER/ADMIN (ดู canSeeFleetMap)
+    id: 29,
+    name: "ระบบติดตามรถ (GPS)",
+    href: FLEET_MAP_HREF,
+    imageSrc: routeDashboardIcon,
+    admin: false,
+  },
+  {
     id: 22,
     name: "จัดตารางเส้นทางขนส่ง",
     href: "/route-schedule",
@@ -249,6 +261,10 @@ const Home = () => {
             const visible = await fetchPrintLabelFlag().catch(() => false);
             return { id: menu.id, visible };
           }
+          // MA-377 — ตำแหน่งรถสดผูกกับตัวคนขับ: เห็นเฉพาะ MANAGER/ADMIN (backend ตรวจซ้ำ)
+          if (menu.href === FLEET_MAP_HREF) {
+            return { id: menu.id, visible: canSeeFleetMap() };
+          }
           // OPHMBC-322 — เห็นเมื่อเปิด flag picking-control-page (เมนู admin อยู่แล้ว) — โหลดไม่ได้ให้ซ่อน
           if (menu.href === PICKING_CONTROL_HREF) {
             const visible = await fetchFlag(PICKING_CONTROL_FLAG).catch(() => false);
@@ -295,7 +311,7 @@ const Home = () => {
 
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           {listMenu
-            .filter((menu) => !menu.admin && visibilityMap[menu.id] !== false) // แสดงเฉพาะเมนูที่ไม่ใช่ admin
+            .filter((menu) => !menu.admin && visibilityMap[menu.id] !== false && !LOGISTICS_MENU_IDS.has(menu.id)) // แสดงเฉพาะเมนูที่ไม่ใช่ admin (เมนูขนส่งอยู่หมวดของตัวเอง)
             .map((menu) => (
               <a
                 id={`${menu.name}`}
@@ -316,6 +332,9 @@ const Home = () => {
             ))}
         </div>
 
+        {/* MA-377 — หมวดขนส่ง: รวม Report ขนส่ง / แผนที่รถ / เหตุการณ์ระหว่างวัน / จัดตารางเส้นทาง ไว้ที่เดียว */}
+        <LogisticsSection hidden={(id) => visibilityMap[id] === false} />
+
         {/* เมนูสำหรับผู้ดูแล (แสดงเฉพาะเมื่อเป็น admin หรือมีสิทธิ์ manage_route) */}
         {(admin || canManageRoute) && (
           <div className="mt-12">
@@ -326,6 +345,7 @@ const Home = () => {
               {listMenu
                 .filter((menu) =>
                   visibilityMap[menu.id] !== false &&
+                  !LOGISTICS_MENU_IDS.has(menu.id) && // อยู่หมวดขนส่งแล้ว
                   // manage_route ที่ไม่ใช่ admin เต็ม เห็นได้แค่เมนู route-manage (id 7)
                   (admin ? menu.admin : menu.id === 7)
                 ) // แสดงเฉพาะเมนู admin

@@ -6,6 +6,7 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { useAuth } from "../context/AuthContext";
+import LogisticsNav from "../components/logistics/LogisticsNav";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -245,6 +246,7 @@ export default function TransportDailyEvents() {
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+      <LogisticsNav className="mb-5" />
       <div className="flex flex-wrap items-end justify-between gap-5">
         <div>
           <p className="text-sm font-medium text-orange-600">สำหรับผู้ดูแล · ขนส่ง</p>

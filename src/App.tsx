@@ -59,6 +59,18 @@ import ScanBasket from "./pages/ScanBasket";
 import ScanConfirmSticker from "./pages/ScanConfirmSticker";
 import LogisticDriverReport from "./pages/LogisticDriverReport";
 import ReportLogistic from "./pages/ReportLogistic";
+import FleetMap from "./pages/FleetMap";
+import FleetDashboard from "./pages/FleetDashboard";
+import FleetGeofences from "./pages/FleetGeofences";
+import FleetHeatmap from "./pages/FleetHeatmap";
+import FleetLists from "./pages/FleetLists";
+import FleetAlerts from "./pages/FleetAlerts";
+import FleetReports from "./pages/FleetReports";
+import FleetCamera from "./pages/FleetCamera";
+import FleetDrivers from "./pages/FleetDrivers";
+import FleetDeliveries from "./pages/FleetDeliveries";
+import FleetShopLocations from "./pages/FleetShopLocations";
+import FleetMore from "./pages/FleetMore";
 
 function App() {
   useEffect(() => {
@@ -513,6 +525,54 @@ function App() {
           <Route
             path="/report-logistic"
             element={<RequireAuth><ReportLogistic /></RequireAuth>}
+          />
+          <Route
+            path="/fleet-map"
+            element={<RequireAuth><FleetMap /></RequireAuth>}
+          />
+          <Route
+            path="/fleet-dashboard"
+            element={<RequireAuth><FleetDashboard /></RequireAuth>}
+          />
+          <Route
+            path="/fleet-geofences"
+            element={<RequireAuth><FleetGeofences /></RequireAuth>}
+          />
+          <Route
+            path="/fleet-heatmap"
+            element={<RequireAuth><FleetHeatmap /></RequireAuth>}
+          />
+          <Route
+            path="/fleet-lists"
+            element={<RequireAuth><FleetLists /></RequireAuth>}
+          />
+          <Route
+            path="/fleet-alerts"
+            element={<RequireAuth><FleetAlerts /></RequireAuth>}
+          />
+          <Route
+            path="/fleet-reports"
+            element={<RequireAuth><FleetReports /></RequireAuth>}
+          />
+          <Route
+            path="/fleet-camera"
+            element={<RequireAuth><FleetCamera /></RequireAuth>}
+          />
+          <Route
+            path="/fleet-drivers"
+            element={<RequireAuth><FleetDrivers /></RequireAuth>}
+          />
+          <Route
+            path="/fleet-deliveries"
+            element={<RequireAuth><FleetDeliveries /></RequireAuth>}
+          />
+          <Route
+            path="/fleet-shop-locations"
+            element={<RequireAuth><FleetShopLocations /></RequireAuth>}
+          />
+          <Route
+            path="/fleet-more"
+            element={<RequireAuth><FleetMore /></RequireAuth>}
           />
         </Routes>
       </Router>
