@@ -31,6 +31,7 @@ import {
 } from "../components/fleet-map/api";
 import FleetGoogleMap, { FitRequest } from "../components/fleet-map/FleetGoogleMap";
 import CameraStrip from "../components/fleet-map/CameraStrip";
+import { useAllowedZones } from "../components/fleet-map/useAllowedZones";
 import ConnectionBanner, { ConnectionDot } from "../components/fleet-map/ConnectionBanner";
 import VehicleDetail, { StatusBadge } from "../components/fleet-map/VehicleDetail";
 import { ago, todayBkk } from "../components/fleet-map/format";
@@ -72,6 +73,12 @@ export default function FleetMap() {
   const [driverFilter, setDriverFilter] = useState<"all" | "with" | "without">("all");
   const [sortBy, setSortBy] = useState<"name" | "status" | "recent" | "speed">("name");
   const [cluster, setCluster] = useState(true);
+  // ชั้น "จุดที่อนุญาต" (จาก HRSoft) — โหลดเมื่อเปิดเท่านั้น
+  const [showZones, setShowZones] = useState(false);
+  const zonesState = useAllowedZones(showZones);
+  const allowedZones = showZones && zonesState.data?.ok ? zonesState.data.zones : null;
+  const zoneOwnerName = (code: string) =>
+    (zonesState.data?.ok ? zonesState.data.drivers.find((d) => d.employeeCode === code)?.empName : null) ?? null;
   const [fit, setFit] = useState<FitRequest | null>(null);
   const fitId = useRef(0);
   const fittedOnce = useRef(false);
@@ -520,7 +527,18 @@ export default function FleetMap() {
                     <input type="checkbox" checked={cluster} onChange={(e) => setCluster(e.target.checked)} />
                     รวมหมุดที่อยู่ใกล้กันเป็นกลุ่ม
                   </label>
+                  <label className="flex items-center gap-1" title="จุดของบริษัทและบ้านพักของคนขับรถร่วม ที่ลงเวลาเข้าหรือออกงานได้ ตามข้อมูลในระบบ HRSoft">
+                    <input type="checkbox" checked={showZones} onChange={(e) => setShowZones(e.target.checked)} />
+                    แสดงจุดที่อนุญาต
+                  </label>
                 </div>
+                {showZones && (zonesState.loading || zonesState.error || (zonesState.data && !zonesState.data.ok)) && (
+                  <p className={`px-3 pb-1 text-xs ${zonesState.loading ? "text-gray-500" : "text-amber-800"}`}>
+                    {zonesState.loading
+                      ? "กำลังโหลดจุดที่อนุญาต"
+                      : zonesState.error ?? (zonesState.data && !zonesState.data.ok ? zonesState.data.message : "")}
+                  </p>
+                )}
                 <div className="flex">
                   {tabs.map(([key, label, n]) => (
                     <button
@@ -586,6 +604,8 @@ export default function FleetMap() {
             <APIProvider apiKey={MAPS_KEY} language="th" region="TH">
               <FleetGoogleMap
                 cluster={cluster}
+                zones={allowedZones}
+                zoneOwnerName={zoneOwnerName}
                 vehicles={filtered}
                 selected={selected}
                 path={path}

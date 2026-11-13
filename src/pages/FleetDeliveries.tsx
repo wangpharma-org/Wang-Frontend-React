@@ -21,6 +21,8 @@ import DateRange from "../components/fleet-map/DateRange";
 import { StopSessionCard } from "../components/fleet-map/StopList";
 import ActivityTimeline from "../components/fleet-map/ActivityTimeline";
 import RoundEtaCard from "../components/fleet-map/RoundEtaCard";
+import { useAllowedZones } from "../components/fleet-map/useAllowedZones";
+import { EndParking, ZONE_KIND_LABEL } from "../components/fleet-map/api";
 import { ago, hm, todayBkk } from "../components/fleet-map/format";
 
 /**
@@ -42,6 +44,12 @@ export default function FleetDeliveries() {
   const [cursor, setCursor] = useState<number | null>(null);
   const [query, setQuery] = useState("");
   const [onlyFlagged, setOnlyFlagged] = useState(false);
+  // ชั้น "จุดที่อนุญาต" (จาก HRSoft) — โหลดเมื่อเปิดเท่านั้น
+  const [showZones, setShowZones] = useState(false);
+  const zonesState = useAllowedZones(showZones);
+  const allowedZones = showZones && zonesState.data?.ok ? zonesState.data.zones : null;
+  const zoneOwnerName = (code: string) =>
+    (zonesState.data?.ok ? zonesState.data.drivers.find((d) => d.employeeCode === code)?.empName : null) ?? null;
   const [fit, setFit] = useState<FitRequest | null>(null);
   const fitId = useRef(0);
   const loadToken = useRef(0);
@@ -211,6 +219,7 @@ export default function FleetDeliveries() {
                     รถคันนี้ยังไม่ได้จับคู่กับระบบ GPS จึงไม่สามารถตรวจสอบตำแหน่งรถได้ กรุณาจับคู่รถที่เมนูข้อมูลและตั้งค่า หัวข้อจับคู่รถกับระบบ GPS
                   </p>
                 )}
+                {selected.endParking && <EndParkingNote p={selected.endParking} />}
                 {selected.gpsAvailable && selected.gpsNoSignal && (
                   <p className="mt-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-900">
                     ระบบ GPS ไม่มีข้อมูลของรถคันนี้{" "}
@@ -256,6 +265,17 @@ export default function FleetDeliveries() {
                   <input type="checkbox" checked={onlyFlagged} onChange={(e) => setOnlyFlagged(e.target.checked)} />
                   แสดงเฉพาะรอบที่มีร้านที่ควรตรวจสอบ
                 </label>
+                <label className="flex items-center gap-2 text-sm text-gray-700" title="จุดของบริษัทและบ้านพักของคนขับรถร่วม ที่ลงเวลาเข้าหรือออกงานได้ ตามข้อมูลในระบบ HRSoft">
+                  <input type="checkbox" checked={showZones} onChange={(e) => setShowZones(e.target.checked)} />
+                  แสดงจุดที่อนุญาตบนแผนที่
+                </label>
+                {showZones && (zonesState.loading || zonesState.error || (zonesState.data && !zonesState.data.ok)) && (
+                  <p className={`text-xs ${zonesState.loading ? "text-gray-500" : "text-amber-800"}`}>
+                    {zonesState.loading
+                      ? "กำลังโหลดจุดที่อนุญาต"
+                      : zonesState.error ?? (zonesState.data && !zonesState.data.ok ? zonesState.data.message : "")}
+                  </p>
+                )}
                 {t && (
                   <div className="grid grid-cols-4 gap-1 text-center">
                     {([
@@ -301,6 +321,8 @@ export default function FleetDeliveries() {
               path={path}
               replay={cursor != null && path ? replayAt(path, cursor) : null}
               stops={{ sessions: selected ? [selected] : sessions }}
+              zones={allowedZones}
+              zoneOwnerName={zoneOwnerName}
               fit={fit}
               onSelect={(v) => {
                 const round =
@@ -350,5 +372,31 @@ function RoundCard({ s, vehicle, live, onClick }: { s: ReviewSession; vehicle: F
         )}
       </div>
     </button>
+  );
+}
+
+const distanceText = (m: number) =>
+  m >= 1000 ? `${(m / 1000).toLocaleString("th-TH", { maximumFractionDigits: 1 })} กิโลเมตร` : `${m.toLocaleString("th-TH")} เมตร`;
+
+/** จุดจอดล่าสุดของวัน เทียบกับจุดที่คนขับลงเวลาออกงานได้ (HRSoft) */
+function EndParkingNote({ p }: { p: EndParking }) {
+  const since = `ตั้งแต่เวลา ${hm(p.since)} น.`;
+  if (p.allowed === true && p.zone)
+    return (
+      <p className="mt-2 rounded-lg bg-emerald-50 p-2 text-xs text-emerald-900">
+        จุดจอดล่าสุดของวัน: {p.zone.name} ({ZONE_KIND_LABEL[p.zone.kind]}) {since} อยู่ในจุดที่คนขับลงเวลาออกงานได้
+      </p>
+    );
+  if (p.allowed === false)
+    return (
+      <p className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-900">
+        จุดจอดล่าสุดของวันอยู่นอกจุดที่คนขับลงเวลาออกงานได้ {since}
+        {p.nearest ? ` ห่างจาก${p.nearest.name} ${distanceText(p.nearest.distanceM)}` : ""}
+      </p>
+    );
+  return (
+    <p className="mt-2 rounded-lg bg-gray-50 p-2 text-xs text-gray-700">
+      จุดจอดล่าสุดของวัน {since} ระบบ HRSoft ยังไม่มีข้อมูลจุดลงเวลาออกงานของคนขับคนนี้ จึงไม่สามารถตรวจสอบได้
+    </p>
   );
 }

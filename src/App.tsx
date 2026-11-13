@@ -68,6 +68,7 @@ import FleetAlerts from "./pages/FleetAlerts";
 import FleetReports from "./pages/FleetReports";
 import FleetCamera from "./pages/FleetCamera";
 import FleetDrivers from "./pages/FleetDrivers";
+import FleetZones from "./pages/FleetZones";
 import FleetDeliveries from "./pages/FleetDeliveries";
 import FleetShopLocations from "./pages/FleetShopLocations";
 import FleetMore from "./pages/FleetMore";
@@ -561,6 +562,10 @@ function App() {
           <Route
             path="/fleet-drivers"
             element={<RequireAuth><FleetDrivers /></RequireAuth>}
+          />
+          <Route
+            path="/fleet-zones"
+            element={<RequireAuth><FleetZones /></RequireAuth>}
           />
           <Route
             path="/fleet-deliveries"

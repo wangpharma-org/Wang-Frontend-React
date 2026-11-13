@@ -630,6 +630,8 @@ export interface ReviewSession extends DayDriver {
   gpsLastSignalAt?: string | null;
   /** จับคู่แล้ว แต่กล่อง GPS ไม่ส่งข้อมูลตั้งแต่ก่อนออกรอบ */
   gpsNoSignal?: boolean;
+  /** รอบสุดท้ายของวันของรถคันนี้: จุดที่รถจอดล่าสุด เทียบกับจุดที่คนขับลงเวลาออกงานได้ (HRSoft) */
+  endParking?: EndParking | null;
   summary: StopsSummary;
   stops: Stop[];
 }
@@ -642,10 +644,50 @@ export interface FlaggedStop extends Stop {
 }
 export interface DeliveriesReview {
   date: string;
-  totals: StopsSummary & { sessions: number };
+  totals: StopsSummary & { sessions: number; parkingOutside?: number };
+  /** โหลดจุดที่อนุญาตจาก HRSoft ได้ไหม */
+  zones?: { available: true; fetchedAt: string } | { available: false; message: string };
   sessions: ReviewSession[];
   flagged: FlaggedStop[];
 }
+
+// ─────────────────────────── จุดที่อนุญาตของคนขับ (จาก HRSoft · MA-374) ───────────────────────────
+
+export interface AllowedZone {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  radiusMeters: number;
+  /** company = จุดของบริษัท · personal = บ้านพักของคนขับรถร่วม */
+  kind: "company" | "personal";
+  ownerEmployeeCode: string | null;
+}
+export interface AllowedDriver {
+  employeeCode: string;
+  empName: string | null;
+  found: boolean;
+  allowAll: boolean;
+  policyEnabled: boolean;
+  checkinZoneIds: string[];
+  checkoutZoneIds: string[];
+  homeZoneIds: string[];
+}
+export type AllowedZones =
+  | { ok: true; fetchedAt: string; zones: AllowedZone[]; drivers: AllowedDriver[] }
+  | { ok: false; message: string };
+export interface EndParking {
+  lat: number;
+  lng: number;
+  since: string;
+  /** true = จอดในจุดที่ลงเวลาออกงานได้ · false = นอกจุด · null = ไม่มีข้อมูลจุดของคนขับ */
+  allowed: boolean | null;
+  zone: { id: string; name: string; kind: AllowedZone["kind"] } | null;
+  nearest: { name: string; distanceM: number } | null;
+}
+export const fetchAllowedZones = () => get<AllowedZones>("/allowed-zones");
+export const ZONE_COLOR: Record<AllowedZone["kind"], string> = { company: "#2563eb", personal: "#9333ea" };
+export const ZONE_KIND_LABEL: Record<AllowedZone["kind"], string> = { company: "จุดของบริษัท", personal: "บ้านพักคนขับ" };
 export const fetchDeliveriesReview = (date: string) => get<DeliveriesReview>("/deliveries-review", { date });
 
 export type LocationAdvice = "fill" | "fill_low_confidence" | "review" | "ok";

@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import FollowLayer, { FollowState } from "./FollowLayer";
+import ZonesLayer from "./ZonesLayer";
 import { truckIcon } from "./truckIcon";
 import { InfoWindow, Map as GMap, Marker, Polyline, useApiIsLoaded, useMap } from "@vis.gl/react-google-maps";
-import { FleetVehicle, MAP_EVENT_TYPES, STATUS_META, VehiclePath, Stop, STOP_COLOR, PATH_STATE_META, PathPoint, PathState } from "./api";
+import { FleetVehicle, MAP_EVENT_TYPES, STATUS_META, VehiclePath, Stop, STOP_COLOR, PATH_STATE_META, PathPoint, PathState, AllowedZone } from "./api";
 import { ago } from "./format";
 
 // กลางภาคใต้ — รถส่วนใหญ่อยู่สุราษฎร์ฯ–สงขลา
@@ -26,6 +27,10 @@ interface Props {
   /** ตำแหน่งรถย้อนหลัง ณ เวลาที่เลือกบนแถบช่วงเวลา */
   replay?: { p: PathPoint; bearing: number } | null;
   fit: FitRequest | null;
+  /** ชั้น "จุดที่อนุญาต" จาก HRSoft — ไม่ส่ง = ไม่แสดง */
+  zones?: AllowedZone[] | null;
+  /** ชื่อเล่นคนขับจากรหัส สำหรับป้ายบ้านพัก */
+  zoneOwnerName?: (code: string) => string | null;
   onSelect: (v: FleetVehicle) => void;
   onUserMove: () => void;
 }
@@ -147,7 +152,7 @@ function stopIcon(s: Stop): google.maps.Symbol {
   };
 }
 
-export default function FleetGoogleMap({ cluster = false, vehicles, selected, path, stops, follow, onFollowTime, replay, fit, onSelect, onUserMove }: Props) {
+export default function FleetGoogleMap({ cluster = false, vehicles, selected, path, stops, follow, onFollowTime, replay, fit, zones, zoneOwnerName, onSelect, onUserMove }: Props) {
   // หมุดใช้ google.maps.SymbolPath — ต้องรอ script ของ Google โหลดเสร็จก่อน ไม่งั้น undefined
   const ready = useApiIsLoaded();
   const located = vehicles.filter((v) => v.lat != null && v.lng != null && v.registration !== follow?.vehicle.registration);
@@ -166,6 +171,7 @@ export default function FleetGoogleMap({ cluster = false, vehicles, selected, pa
       style={{ width: "100%", height: "100%" }}
     >
       <FitBounds fit={fit} />
+      {ready && zones?.length ? <ZonesLayer zones={zones} ownerName={zoneOwnerName} /> : null}
       {ready && (
         <>
 
