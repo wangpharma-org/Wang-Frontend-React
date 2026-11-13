@@ -626,6 +626,10 @@ export interface ReviewSession extends DayDriver {
   vehicleName: string | null;
   /** รถยังไม่ได้จับคู่กับระบบ GPS จึงตรวจตำแหน่งรถไม่ได้ */
   gpsAvailable: boolean;
+  /** เวลาที่กล่อง GPS ส่งข้อมูลล่าสุด */
+  gpsLastSignalAt?: string | null;
+  /** จับคู่แล้ว แต่กล่อง GPS ไม่ส่งข้อมูลตั้งแต่ก่อนออกรอบ */
+  gpsNoSignal?: boolean;
   summary: StopsSummary;
   stops: Stop[];
 }

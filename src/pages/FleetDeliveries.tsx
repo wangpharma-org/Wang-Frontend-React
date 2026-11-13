@@ -211,6 +211,15 @@ export default function FleetDeliveries() {
                     รถคันนี้ยังไม่ได้จับคู่กับระบบ GPS จึงไม่สามารถตรวจสอบตำแหน่งรถได้ กรุณาจับคู่รถที่เมนูข้อมูลและตั้งค่า หัวข้อจับคู่รถกับระบบ GPS
                   </p>
                 )}
+                {selected.gpsAvailable && selected.gpsNoSignal && (
+                  <p className="mt-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-900">
+                    ระบบ GPS ไม่มีข้อมูลของรถคันนี้{" "}
+                    {selected.gpsLastSignalAt
+                      ? `ตั้งแต่วันที่ ${new Date(selected.gpsLastSignalAt).toLocaleString("th-TH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} น.`
+                      : ""}{" "}
+                    อาจเป็นเพราะอุปกรณ์ GPS ไม่ส่งข้อมูล หรือคนขับใช้รถคันอื่น จึงไม่สามารถตรวจสอบได้ว่ารถไปถึงร้านค้าหรือไม่
+                  </p>
+                )}
                 {selected.registration && (
                   <button
                     onClick={() => navigate(`/fleet-map?reg=${encodeURIComponent(selected.registration!)}&date=${date}&tab=stops`)}
