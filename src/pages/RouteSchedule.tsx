@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import dayjs, { Dayjs } from "dayjs";
 import Swal from "sweetalert2";
+import LogisticsNav from "../components/logistics/LogisticsNav";
 
 const API = import.meta.env.VITE_API_URL_LOGISTIC ?? "";
 
@@ -164,6 +165,7 @@ const RouteSchedule = () => {
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="p-6 md:p-10 mx-auto max-w-6xl w-full">
+                <LogisticsNav className="mb-5" />
                 <div className="mb-6">
                     <h1 className="text-2xl md:text-3xl font-bold text-gray-900">จัดตารางเส้นทางขนส่งล่วงหน้า</h1>
                     <p className="text-sm text-gray-500 mt-1">

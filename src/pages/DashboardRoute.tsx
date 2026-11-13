@@ -1,6 +1,7 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 import Marquee from 'react-fast-marquee';
+import LogisticsNav from "../components/logistics/LogisticsNav";
 
 interface DashboardRouteProps { route_code: string, route_name: string, Success: number, NotSuccess: number, order_count: number }
 
@@ -178,6 +179,7 @@ const DashboardRoute = () => {
     return (
         <div className="p-4 bg-white min-h-screen">
             <div className="max-w-8xl mx-auto">
+                <LogisticsNav className="mb-3" />
                 <p className="text-4xl font-bold text-center pb-2">Dashboard เส้นทางการจัดส่ง</p>
 
                 {lastFetchTime && (

@@ -6,6 +6,7 @@ import DailyStoresTab from "../components/report-logistic/DailyStoresTab";
 import MonthlyPerformanceTab from "../components/report-logistic/MonthlyPerformanceTab";
 import OrderTimeline from "../components/report-logistic/OrderTimeline";
 import { billPriceOf, sumBillPrices, useBillPrices } from "../components/report-logistic/billPrices";
+import LogisticsNav from "../components/logistics/LogisticsNav";
 
 type Tab = "daily" | "stores" | "monthly";
 const TABS: { key: Tab; label: string }[] = [
@@ -770,6 +771,10 @@ export default function ReportLogistic() {
   }, [filtered]);
 
   return (
+    <>
+    <div className="border-b border-blue-100 bg-white px-4 py-1.5 md:px-12">
+      <LogisticsNav className="mx-auto max-w-[1600px]" />
+    </div>
     <div className="min-h-screen bg-[#eaf1fe] fs-scale" style={{ ["--fs" as string]: bigText ? 2 : 1 }}>
       {/* Top bar */}
       <div className="bg-white/90 backdrop-blur border-b border-blue-100 sticky top-0 z-20">
@@ -898,5 +903,6 @@ export default function ReportLogistic() {
         )}
       </div>
     </div>
+    </>
   );
 }
