@@ -761,7 +761,7 @@ export interface RoundEta {
   /** จุดเริ่มของแผน = ตำแหน่งรถตอนกดออกรถ */
   start: { lat: number; lng: number; name: string; atDepot: boolean };
   method: "road" | "straight";
-  orderSource: "driver" | "route" | "optimized" | "delivered";
+  orderSource: "driver" | "route" | "optimized" | "delivered" | "delivered_then_optimized";
   orderSourceLabel: string;
   departure: { actual: string; scheduled: string | null; lateMin: number | null };
   serviceMinutes: { plan: number; live: number; observed: boolean };
