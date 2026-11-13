@@ -86,14 +86,14 @@ export default function RoundEtaCard({ shippingOutId, date, onFocus }: { shippin
       </ul>
 
       <div className="mt-2 overflow-x-auto">
-        <table className="w-full min-w-[420px] text-xs">
+        <table className="w-full text-xs">
           <thead>
             <tr className="border-b text-left text-gray-500">
               <th className="py-1 pr-2 font-medium">#</th>
               <th className="py-1 pr-2 font-medium">ร้าน</th>
-              <th className="py-1 pr-2 font-medium">ตามแผน</th>
-              <th className="py-1 pr-2 font-medium">เวลาจริงหรือประมาณการใหม่</th>
-              <th className="py-1 font-medium">เทียบแผน</th>
+              <th className="whitespace-nowrap py-1 pr-2 font-medium">แผน</th>
+              <th className="py-1 pr-2 font-medium">จริงหรือประมาณใหม่</th>
+              <th className="whitespace-nowrap py-1 font-medium">เทียบแผน</th>
             </tr>
           </thead>
           <tbody>
@@ -122,7 +122,7 @@ export default function RoundEtaCard({ shippingOutId, date, onFocus }: { shippin
                     <span className="text-gray-400">{r.status === "pending" ? "-" : r.statusLabel}</span>
                   )}
                 </td>
-                <td className={`py-1 ${delayClass(r.delayMin)}`}>{delayText(r.delayMin)}</td>
+                <td className={`whitespace-nowrap py-1 ${delayClass(r.delayMin)}`}>{delayText(r.delayMin)}</td>
               </tr>
             ))}
             <tr className="align-top font-medium">
@@ -130,7 +130,7 @@ export default function RoundEtaCard({ shippingOutId, date, onFocus }: { shippin
               <td className="py-1 pr-2 text-gray-900">กลับถึง{eta.depot.name}</td>
               <td className="py-1 pr-2 tabular-nums">{hm(ret.planned)}</td>
               <td className="py-1 pr-2 tabular-nums">{ret.actual ? `${hm(ret.actual)} (เวลาจริง)` : ret.estimated ? `ประมาณ ${hm(ret.estimated)}` : "-"}</td>
-              <td className={`py-1 ${delayClass(retDelay)}`}>{delayText(retDelay)}</td>
+              <td className={`whitespace-nowrap py-1 ${delayClass(retDelay)}`}>{delayText(retDelay)}</td>
             </tr>
           </tbody>
         </table>
